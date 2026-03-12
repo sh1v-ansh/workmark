@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workmark — Work that speaks for itself</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1a18;
+  --ink-2: #3d3d3a;
+  --ink-3: #888780;
+  --ink-4: #b4b2a9;
+  --surface: #faf8f3;
+  --surface-2: #f1efe8;
+  --surface-3: #e8e6df;
+  --purple: #534AB7;
+  --purple-light: #7F77DD;
+  --purple-pale: #EEEDFE;
+  --purple-dark: #3C3489;
+  --teal: #0F6E56;
+  --teal-light: #1D9E75;
+  --teal-pale: #E1F5EE;
+  --amber: #854F0B;
+  --amber-light: #EF9F27;
+  --amber-pale: #FAEEDA;
+  --coral: #993C1D;
+  --coral-pale: #FAECE7;
+  --border: rgba(26,26,24,0.1);
+  --border-strong: rgba(26,26,24,0.2);
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --shadow: 0 1px 3px rgba(26,26,24,0.08), 0 4px 16px rgba(26,26,24,0.04);
+  --shadow-lg: 0 4px 24px rgba(26,26,24,0.12), 0 1px 4px rgba(26,26,24,0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+/* ── UTILS ── */
+.hidden { display: none !important; }
+.mono { font-family: 'DM Mono', monospace; }
+.serif { font-family: 'DM Serif Display', serif; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(250,248,243,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; text-decoration: none; color: inherit;
+}
+.nav-mark {
+  width: 32px; height: 32px; background: var(--ink);
+  border-radius: 7px; display: grid; grid-template-columns: 1fr 1fr;
+  gap: 3px; padding: 6px;
+}
+.nav-mark span { border-radius: 2px; }
+.nav-mark span:nth-child(1),.nav-mark span:nth-child(2) { background: #f8f6f1; }
+.nav-mark span:nth-child(1) { background: #f8f6f1; }
+.nav-mark span:nth-child(2) { background: var(--purple-light); }
+.nav-mark span:nth-child(3) { background: var(--purple-light); }
+.nav-mark span:nth-child(4) { background: #f8f6f1; }
+.nav-wordmark { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+.nav-links { display: flex; align-items: center; gap: 4px; }
+.nav-links button {
+  background: none; border: none; cursor: pointer;
+  padding: 6px 12px; border-radius: 6px;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 500;
+  color: var(--ink-3); transition: all 0.15s;
+}
+.nav-links button:hover { background: var(--surface-2); color: var(--ink); }
+.nav-links button.active { background: var(--surface-3); color: var(--ink); }
+.nav-right { display: flex; align-items: center; gap: 8px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: var(--radius);
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; border: 1px solid transparent;
+  text-decoration: none; white-space: nowrap;
+}
+.btn-ghost { background: none; border-color: var(--border-strong); color: var(--ink-2); }
+.btn-ghost:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.btn-primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.btn-primary:hover { background: var(--ink-2); }
+.btn-purple { background: var(--purple); color: white; border-color: var(--purple); }
+.btn-purple:hover { background: var(--purple-dark); }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn-lg { padding: 12px 24px; font-size: 15px; }
+
+/* ── VIEWS ── */
+.view { display: none; padding-top: 60px; min-height: 100vh; }
+.view.active { display: block; }
+
+/* ── LANDING ── */
+#view-landing {
+  background: var(--surface);
+  overflow: hidden;
+}
+.hero {
+  max-width: 1100px; margin: 0 auto;
+  padding: 100px 32px 80px;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 60px; align-items: center;
+}
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--purple-pale); color: var(--purple-dark);
+  padding: 4px 12px; border-radius: 100px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  margin-bottom: 24px;
+}
+.hero-eyebrow::before { content: ''; width: 6px; height: 6px; background: var(--purple); border-radius: 50%; }
+.hero h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 58px; line-height: 1.05; letter-spacing: -1px;
+  margin-bottom: 24px; color: var(--ink);
+}
+.hero h1 em { font-style: italic; color: var(--purple); }
+.hero-sub {
+  font-size: 17px; color: var(--ink-3); line-height: 1.7;
+  margin-bottom: 36px; font-weight: 400;
+}
+.hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero-visual {
+  position: relative;
+}
+.profile-card {
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius-xl); padding: 28px;
+  box-shadow: var(--shadow-lg);
+}
+.profile-card-header {
+  display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+}
+.avatar {
+  width: 48px; height: 48px; border-radius: 50%;
+  background: var(--purple-pale); display: flex; align-items: center;
+  justify-content: center; font-size: 18px; font-weight: 700; color: var(--purple);
+  flex-shrink: 0;
+}
+.avatar-sm { width: 32px; height: 32px; font-size: 12px; }
+.profile-name { font-size: 16px; font-weight: 700; }
+.profile-meta { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.verified-badge {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 5px;
+  background: var(--teal-pale); color: var(--teal);
+  padding: 4px 10px; border-radius: 100px; font-size: 11px; font-weight: 700;
+}
+.verified-badge::before { content: '✓'; font-weight: 800; }
+.skills-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+.skill-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 600;
+}
+.skill-tag.verified {
+  background: var(--purple-pale); color: var(--purple-dark);
+  border: 1px solid rgba(83,74,183,0.2);
+}
+.skill-tag.verified::before { content: '✓'; font-size: 10px; }
+.skill-tag.unverified {
+  background: var(--surface-2); color: var(--ink-3);
+  border: 1px solid var(--border);
+}
+.match-bar {
+  background: var(--surface-2); border-radius: 8px; padding: 12px 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 16px;
+}
+.match-score { font-size: 22px; font-weight: 800; color: var(--purple); }
+.match-label { font-size: 11px; color: var(--ink-3); }
+.floating-chip {
+  position: absolute; background: white; border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px; box-shadow: var(--shadow);
+  font-size: 12px; font-weight: 600;
+}
+.chip-top { top: -16px; right: -16px; color: var(--teal); }
+.chip-bottom { bottom: 20px; left: -20px; color: var(--amber); background: var(--amber-pale); border-color: rgba(133,79,11,0.15); }
+
+.features-strip {
+  border-top: 1px solid var(--border);
+  background: white;
+  padding: 60px 32px;
+}
+.features-inner { max-width: 1100px; margin: 0 auto; }
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;
+  margin-top: 48px;
+}
+.feature-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 16px;
+}
+.feature h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+.feature p { font-size: 14px; color: var(--ink-3); line-height: 1.6; }
+
+/* ── FORMS / ONBOARDING ── */
+.onboard-wrap {
+  max-width: 520px; margin: 0 auto; padding: 60px 24px;
+}
+.onboard-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 36px; line-height: 1.1; margin-bottom: 8px;
+}
+.onboard-sub { font-size: 14px; color: var(--ink-3); margin-bottom: 36px; }
+.form-group { margin-bottom: 18px; }
+.form-label {
+  display: block; font-size: 12px; font-weight: 700;
+  letter-spacing: 0.5px; margin-bottom: 6px; color: var(--ink-2);
+}
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 10px 14px;
+  border: 1px solid var(--border-strong); border-radius: var(--radius);
+  font-family: 'Syne', sans-serif; font-size: 14px; color: var(--ink);
+  background: white; transition: border-color 0.15s;
+  outline: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 3px rgba(83,74,183,0.1);
+}
+.form-textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-hint { font-size: 11px; color: var(--ink-4); margin-top: 5px; }
+.skills-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.skill-chip {
+  padding: 5px 12px; border-radius: 100px; border: 1px solid var(--border-strong);
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  background: white; color: var(--ink-3);
+  user-select: none;
+}
+.skill-chip.selected { background: var(--purple-pale); color: var(--purple-dark); border-color: rgba(83,74,183,0.3); }
+.step-indicator {
+  display: flex; gap: 6px; margin-bottom: 32px;
+}
+.step-dot {
+  height: 3px; border-radius: 2px; flex: 1;
+  background: var(--surface-3); transition: background 0.3s;
+}
+.step-dot.done { background: var(--purple); }
+
+/* ── MAIN LAYOUT ── */
+.app-layout {
+  display: grid; grid-template-columns: 240px 1fr;
+  min-height: calc(100vh - 60px);
+}
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  position: sticky; top: 60px;
+  height: calc(100vh - 60px);
+  overflow-y: auto;
+  background: white;
+}
+.sidebar-section { margin-bottom: 32px; }
+.sidebar-label {
+  font-size: 10px; font-weight: 800; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--ink-4);
+  padding: 0 10px; margin-bottom: 6px;
+}
+.sidebar-btn {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 8px 10px; border-radius: 8px;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 500;
+  color: var(--ink-2); background: none; border: none;
+  cursor: pointer; transition: all 0.15s; text-align: left;
+}
+.sidebar-btn:hover { background: var(--surface-2); color: var(--ink); }
+.sidebar-btn.active { background: var(--purple-pale); color: var(--purple-dark); font-weight: 600; }
+.sidebar-icon { font-size: 16px; width: 20px; text-align: center; }
+.sidebar-badge {
+  margin-left: auto; background: var(--purple); color: white;
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 100px;
+}
+.main-content { padding: 32px; max-width: 900px; }
+
+/* ── PAGE HEADERS ── */
+.page-header { margin-bottom: 32px; }
+.page-title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+.page-sub { font-size: 14px; color: var(--ink-3); margin-top: 4px; }
+.page-actions { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
+
+/* ── CARDS ── */
+.card {
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 24px;
+  box-shadow: var(--shadow);
+}
+.card + .card { margin-top: 16px; }
+.card-header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.card-title { font-size: 15px; font-weight: 700; }
+.card-sub { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+
+/* ── PROJECTS ── */
+.project-grid { display: grid; gap: 16px; }
+.project-card {
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px 24px;
+  cursor: pointer; transition: all 0.15s;
+  box-shadow: var(--shadow);
+}
+.project-card:hover { border-color: var(--purple-light); box-shadow: var(--shadow-lg); transform: translateY(-1px); }
+.project-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.project-title { font-size: 15px; font-weight: 700; }
+.project-org { font-size: 12px; color: var(--ink-3); margin-top: 3px; }
+.project-body { font-size: 13px; color: var(--ink-2); line-height: 1.6; margin-bottom: 16px; }
+.project-footer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 9px; border-radius: 5px;
+  font-size: 11px; font-weight: 600;
+}
+.tag-skill { background: var(--surface-2); color: var(--ink-2); }
+.tag-paid { background: var(--teal-pale); color: var(--teal); }
+.tag-unpaid { background: var(--surface-2); color: var(--ink-3); }
+.tag-status-open { background: var(--teal-pale); color: var(--teal); }
+.tag-status-active { background: var(--amber-pale); color: var(--amber); }
+.tag-status-done { background: var(--purple-pale); color: var(--purple-dark); }
+.tag-status-review { background: var(--coral-pale); color: var(--coral); }
+.duration { font-size: 11px; color: var(--ink-4); margin-left: auto; }
+
+/* ── ATTESTATION ── */
+.rubric-section { margin-bottom: 28px; }
+.rubric-title {
+  font-size: 11px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--ink-3); margin-bottom: 14px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--border);
+}
+.rubric-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; border-bottom: 1px solid var(--surface-2);
+}
+.rubric-row:last-child { border-bottom: none; }
+.rubric-q { font-size: 13px; color: var(--ink-2); flex: 1; }
+.rubric-opts { display: flex; gap: 8px; }
+.rubric-opt {
+  padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border-strong);
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  background: white; color: var(--ink-3); font-family: 'Syne', sans-serif;
+}
+.rubric-opt:hover { border-color: var(--purple-light); color: var(--purple); }
+.rubric-opt.selected { background: var(--purple); color: white; border-color: var(--purple); }
+.rubric-opt.yes { }
+.rubric-opt.selected.yes { background: var(--teal); border-color: var(--teal); }
+.rubric-opt.no.selected { background: var(--coral); border-color: var(--coral); }
+.skills-attest { display: flex; flex-wrap: wrap; gap: 8px; }
+.skill-attest-chip {
+  padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border-strong);
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s;
+  background: white; color: var(--ink-3); user-select: none;
+}
+.skill-attest-chip.checked { background: var(--purple-pale); color: var(--purple-dark); border-color: rgba(83,74,183,0.3); }
+.attestation-legal {
+  background: var(--surface-2); border-radius: var(--radius); padding: 14px 16px;
+  font-size: 12px; color: var(--ink-3); line-height: 1.6; margin-top: 24px;
+}
+.attestation-legal label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }
+.attestation-legal input[type=checkbox] { margin-top: 2px; accent-color: var(--purple); }
+
+/* ── PROFILE ── */
+.profile-hero {
+  background: var(--ink); border-radius: var(--radius-xl); padding: 32px;
+  margin-bottom: 24px; position: relative; overflow: hidden;
+}
+.profile-hero::before {
+  content: ''; position: absolute; top: -40px; right: -40px;
+  width: 200px; height: 200px; border-radius: 50%;
+  background: rgba(83,74,183,0.3);
+}
+.profile-hero-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 32px; color: white; margin-bottom: 4px;
+}
+.profile-hero-meta { font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 20px; }
+.profile-hero-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+.hero-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.8);
+  padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600;
+}
+.match-card {
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  display: flex; align-items: center; gap: 16px;
+  cursor: pointer; transition: all 0.15s; box-shadow: var(--shadow);
+  margin-bottom: 12px;
+}
+.match-card:hover { border-color: var(--purple-light); transform: translateX(4px); }
+.match-score-ring {
+  width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800;
+}
+.match-high { background: var(--teal-pale); color: var(--teal); border: 2px solid var(--teal-light); }
+.match-mid { background: var(--amber-pale); color: var(--amber); border: 2px solid var(--amber-light); }
+.match-info { flex: 1; }
+.match-title { font-size: 14px; font-weight: 700; }
+.match-company { font-size: 12px; color: var(--ink-3); }
+.match-why { font-size: 11px; color: var(--purple); margin-top: 4px; font-weight: 600; }
+
+/* ── ENGAGEMENT LOG ── */
+.log-entry {
+  display: flex; gap: 14px; padding: 14px 0;
+  border-bottom: 1px solid var(--surface-2);
+}
+.log-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--purple-light);
+  margin-top: 6px; flex-shrink: 0;
+}
+.log-time { font-size: 11px; color: var(--ink-4); font-family: 'DM Mono', monospace; white-space: nowrap; }
+.log-text { font-size: 13px; color: var(--ink-2); flex: 1; }
+.log-actor { font-weight: 700; color: var(--ink); }
+
+/* ── STAT CARDS ── */
+.stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 28px; }
+.stat-card {
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.stat-val { font-size: 28px; font-weight: 800; color: var(--ink); }
+.stat-label { font-size: 11px; color: var(--ink-3); margin-top: 4px; font-weight: 600; }
+.stat-delta { font-size: 11px; color: var(--teal); margin-top: 2px; }
+
+/* ── NOTIFICATION ── */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: var(--ink); color: white;
+  padding: 14px 20px; border-radius: var(--radius-lg);
+  font-size: 13px; font-weight: 600; box-shadow: var(--shadow-lg);
+  display: flex; align-items: center; gap: 10px;
+  transform: translateY(80px); opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast-icon { font-size: 16px; }
+
+/* ── EMPTY STATES ── */
+.empty-state {
+  text-align: center; padding: 60px 20px;
+  color: var(--ink-3);
+}
+.empty-state h3 { font-size: 16px; color: var(--ink-2); margin-bottom: 8px; }
+.empty-state p { font-size: 13px; line-height: 1.6; margin-bottom: 20px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+  z-index: 200; display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.modal {
+  background: white; border-radius: var(--radius-xl);
+  width: 100%; max-width: 580px; max-height: 90vh;
+  overflow-y: auto; padding: 32px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; }
+.modal-title { font-size: 20px; font-weight: 800; }
+.modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--ink-3); padding: 4px; }
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 2px; background: var(--surface-2); border-radius: 8px; padding: 3px; margin-bottom: 24px; }
+.tab {
+  flex: 1; padding: 7px 12px; border-radius: 6px; border: none;
+  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; background: none; color: var(--ink-3);
+}
+.tab.active { background: white; color: var(--ink); box-shadow: var(--shadow); }
+
+/* ── APPLICANT CARD ── */
+.applicant-card {
+  background: white; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 18px 20px;
+  margin-bottom: 12px; box-shadow: var(--shadow);
+}
+.applicant-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.applicant-body { font-size: 13px; color: var(--ink-2); line-height: 1.6; margin-bottom: 14px; }
+.applicant-actions { display: flex; gap: 8px; }
+
+/* ── VERIFIED HISTORY ── */
+.work-item {
+  border-left: 3px solid var(--purple-light); padding-left: 18px; margin-bottom: 24px;
+}
+.work-item-header { display: flex; align-items: flex-start; justify-content: space-between; }
+.work-role { font-size: 14px; font-weight: 700; }
+.work-org { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.work-duration { font-size: 11px; color: var(--ink-4); font-family: 'DM Mono', monospace; }
+.work-attestation {
+  background: var(--surface-2); border-radius: 8px; padding: 10px 14px;
+  margin-top: 10px; font-size: 12px;
+}
+.work-attestation-header { font-weight: 700; color: var(--ink-2); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.attest-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.attest-item { display: flex; align-items: center; gap: 5px; color: var(--ink-3); }
+.attest-item .yes { color: var(--teal); font-weight: 700; }
+.attest-item .no { color: var(--coral); }
+
+/* ── HIRE SIGNAL ── */
+.hire-signal {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 700;
+}
+.hire-yes { background: var(--teal-pale); color: var(--teal); }
+.hire-maybe { background: var(--amber-pale); color: var(--amber); }
+.hire-no { background: var(--coral-pale); color: var(--coral); }
+
+/* ── DIVIDER ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+/* ── RESPONSIVE HELPERS ── */
+@media (max-width: 768px) {
+  .app-layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .hero { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.4s ease both; }
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="main-nav">
+  <a class="nav-logo" onclick="showView('landing')">
+    <div class="nav-mark">
+      <span></span><span></span><span></span><span></span>
+    </div>
+    <span class="nav-wordmark">workmark</span>
+  </a>
+  <div class="nav-links" id="nav-links"></div>
+  <div class="nav-right" id="nav-right">
+    <button class="btn btn-ghost btn-sm" onclick="startOnboard('company')">For companies</button>
+    <button class="btn btn-primary btn-sm" onclick="startOnboard('student')">Get started</button>
+  </div>
+</nav>
+
+<!-- TOAST -->
+<div class="toast" id="toast">
+  <span class="toast-icon" id="toast-icon">✓</span>
+  <span id="toast-msg"></span>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!--  VIEW: LANDING                          -->
+<!-- ════════════════════════════════════════ -->
+<div id="view-landing" class="view active">
+  <section class="hero">
+    <div class="fade-up">
+      <div class="hero-eyebrow">Verified work records</div>
+      <h1>Work that <em>speaks</em> for itself.</h1>
+      <p class="hero-sub">Workmark connects students to real projects at startups and nonprofits, then builds a verified skill record that automatically matches them to jobs. No more self-reported résumés.</p>
+      <div class="hero-ctas">
+        <button class="btn btn-primary btn-lg" onclick="startOnboard('student')">I'm a student →</button>
+        <button class="btn btn-ghost btn-lg" onclick="startOnboard('company')">Post a project</button>
+      </div>
+    </div>
+    <div class="hero-visual fade-up delay-2">
+      <div class="floating-chip chip-top">✓ 3 new job matches</div>
+      <div class="profile-card">
+        <div class="profile-card-header">
+          <div class="avatar">AS</div>
+          <div>
+            <div class="profile-name">Aisha Syed</div>
+            <div class="profile-meta">UMass Amherst · CS + Math · 2026</div>
+          </div>
+          <div class="verified-badge">Verified</div>
+        </div>
+        <div class="skills-grid">
+          <span class="skill-tag verified">React</span>
+          <span class="skill-tag verified">Python</span>
+          <span class="skill-tag verified">Data Analysis</span>
+          <span class="skill-tag verified">Project Mgmt</span>
+          <span class="skill-tag unverified">Machine Learning</span>
+        </div>
+        <div style="font-size:11px;color:var(--ink-4);margin-bottom:8px;">4 verified engagements · attested by 4 employers</div>
+        <div class="match-bar">
+          <div>
+            <div class="match-score">94%</div>
+            <div class="match-label">match · Software Eng @ Seed Stage</div>
+          </div>
+          <button class="btn btn-purple btn-sm">View match</button>
+        </div>
+      </div>
+      <div class="floating-chip chip-bottom">↑ Skills verified by employer</div>
+    </div>
+  </section>
+
+  <section class="features-strip">
+    <div class="features-inner">
+      <div style="text-align:center;">
+        <div class="hero-eyebrow" style="display:inline-flex;margin-bottom:12px;">How it works</div>
+        <h2 class="serif" style="font-size:36px;letter-spacing:-0.5px;">The resume is broken.<br>We fixed it.</h2>
+      </div>
+      <div class="features-grid">
+        <div class="feature fade-up delay-1">
+          <div class="feature-icon" style="background:var(--purple-pale);">🔨</div>
+          <h3>Do real work</h3>
+          <p>Match with startups, nonprofits, and small businesses for scoped projects — real deliverables, not busy work.</p>
+        </div>
+        <div class="feature fade-up delay-2">
+          <div class="feature-icon" style="background:var(--teal-pale);">✓</div>
+          <h3>Get employer-verified</h3>
+          <p>After every engagement, your employer completes a structured attestation rubric. Skills are verified, not self-reported.</p>
+        </div>
+        <div class="feature fade-up delay-3">
+          <div class="feature-icon" style="background:var(--amber-pale);">⚡</div>
+          <h3>Auto-match to jobs</h3>
+          <p>Your verified skill graph gets matched automatically to open roles. Employers see proof, not promises.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!--  VIEW: STUDENT ONBOARDING               -->
+<!-- ════════════════════════════════════════ -->
+<div id="view-student-onboard" class="view">
+  <div class="onboard-wrap">
+    <div class="step-indicator">
+      <div class="step-dot done" id="sdot-1"></div>
+      <div class="step-dot" id="sdot-2"></div>
+      <div class="step-dot" id="sdot-3"></div>
+    </div>
+    <div id="student-step-1">
+      <div class="onboard-title">Create your profile</div>
+      <p class="onboard-sub">Tell us about yourself. Your skills will be verified through real work — so self-reported is fine for now.</p>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">First name</label>
+          <input class="form-input" id="s-fname" placeholder="Maya" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Last name</label>
+          <input class="form-input" id="s-lname" placeholder="Rodriguez" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">University email</label>
+        <input class="form-input" id="s-email" placeholder="you@umass.edu" />
+        <div class="form-hint">Must be a .edu address to verify student status.</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">University</label>
+          <input class="form-input" id="s-uni" placeholder="UMass Amherst" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Graduation year</label>
+          <select class="form-select" id="s-grad">
+            <option>2025</option><option selected>2026</option><option>2027</option><option>2028</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Major(s)</label>
+        <input class="form-input" id="s-major" placeholder="Computer Science, Mathematics" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="studentStep(2)">Continue →</button>
+    </div>
+
+    <div id="student-step-2" class="hidden">
+      <div class="onboard-title">What can you do?</div>
+      <p class="onboard-sub">Select your current skills. These are self-reported for now — you'll earn verified badges through projects.</p>
+      <div class="form-group">
+        <label class="form-label">Technical skills</label>
+        <div class="skills-picker" id="tech-skills-picker">
+          <span class="skill-chip" onclick="toggleChip(this)">Python</span>
+          <span class="skill-chip" onclick="toggleChip(this)">JavaScript</span>
+          <span class="skill-chip" onclick="toggleChip(this)">React</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Node.js</span>
+          <span class="skill-chip" onclick="toggleChip(this)">SQL</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Data Analysis</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Machine Learning</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Figma / Design</span>
+          <span class="skill-chip" onclick="toggleChip(this)">AWS / Cloud</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Git / GitHub</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:20px;">
+        <label class="form-label">Business / soft skills</label>
+        <div class="skills-picker" id="biz-skills-picker">
+          <span class="skill-chip" onclick="toggleChip(this)">Project Management</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Research</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Writing</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Marketing</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Operations</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Fundraising</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Financial Analysis</span>
+        </div>
+      </div>
+      <div class="form-group" style="margin-top:20px;">
+        <label class="form-label">Short bio</label>
+        <textarea class="form-textarea" id="s-bio" placeholder="I'm a junior studying CS and Math at UMass. I love building products and have experience with full-stack development and ML research..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="btn btn-ghost" onclick="studentStep(1)">← Back</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="studentStep(3)">Continue →</button>
+      </div>
+    </div>
+
+    <div id="student-step-3" class="hidden">
+      <div class="onboard-title">You're all set.</div>
+      <p class="onboard-sub">Your profile is created. Now browse open projects and start building your verified work record.</p>
+      <div class="card" style="margin-bottom:16px;">
+        <div style="font-size:13px;color:var(--ink-3);margin-bottom:14px;font-weight:600;">YOUR PROFILE PREVIEW</div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+          <div class="avatar" id="s-avatar-preview">?</div>
+          <div>
+            <div style="font-weight:700;" id="s-name-preview">Your Name</div>
+            <div style="font-size:12px;color:var(--ink-3);" id="s-meta-preview">University · Major · Year</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--ink-4);background:var(--surface-2);border-radius:8px;padding:10px;line-height:1.6;">
+          <strong style="color:var(--purple-dark);">0 verified skills</strong> · 0 completed engagements<br>
+          <span style="color:var(--ink-3);">Complete your first project to earn your first verified badge.</span>
+        </div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;" onclick="enterApp('student')">Browse open projects →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!--  VIEW: COMPANY ONBOARDING               -->
+<!-- ════════════════════════════════════════ -->
+<div id="view-company-onboard" class="view">
+  <div class="onboard-wrap">
+    <div class="step-indicator">
+      <div class="step-dot done"></div>
+      <div class="step-dot" id="cdot-2"></div>
+    </div>
+    <div id="company-step-1">
+      <div class="onboard-title">Post your first project</div>
+      <p class="onboard-sub">Tell us about your organization. We verify all companies before they can post — no fake listings.</p>
+      <div class="form-group">
+        <label class="form-label">Organization name</label>
+        <input class="form-input" id="c-name" placeholder="Western Mass Nonprofit" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Work email</label>
+        <input class="form-input" id="c-email" placeholder="you@yourorg.org" />
+        <div class="form-hint">No Gmail / personal email. Must match your org domain.</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Org type</label>
+          <select class="form-select" id="c-type">
+            <option>Startup</option>
+            <option>Nonprofit / NGO</option>
+            <option>Small Business</option>
+            <option>SMB (51–200)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">EIN / Tax ID</label>
+          <input class="form-input" id="c-ein" placeholder="XX-XXXXXXX" />
+          <div class="form-hint">Verified against IRS records.</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">LinkedIn company URL</label>
+        <input class="form-input" id="c-linkedin" placeholder="linkedin.com/company/yourorg" />
+      </div>
+      <button class="btn btn-primary" style="width:100%;margin-top:8px;" onclick="companyStep(2)">Verify & continue →</button>
+    </div>
+
+    <div id="company-step-2" class="hidden">
+      <div class="onboard-title" style="color:var(--teal);">✓ Org verified.</div>
+      <p class="onboard-sub">Your organization has passed identity verification. Now post your first project.</p>
+      <div class="form-group">
+        <label class="form-label">Project title</label>
+        <input class="form-input" id="p-title" placeholder="Build a donor dashboard in React" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-textarea" id="p-desc" placeholder="We need a student to build a dashboard that shows our monthly donor data..."></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Duration</label>
+          <select class="form-select" id="p-duration">
+            <option>2 weeks</option><option>4 weeks</option>
+            <option selected>6 weeks</option><option>8 weeks</option>
+            <option>12 weeks</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Compensation</label>
+          <select class="form-select" id="p-comp">
+            <option>Unpaid (experience)</option>
+            <option>$500 stipend</option>
+            <option>$1,000 stipend</option>
+            <option>$1,500 stipend</option>
+            <option>Hourly ($20/hr)</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Skills required (select all that apply)</label>
+        <div class="skills-picker" id="proj-skills-picker">
+          <span class="skill-chip" onclick="toggleChip(this)">Python</span>
+          <span class="skill-chip" onclick="toggleChip(this)">JavaScript</span>
+          <span class="skill-chip" onclick="toggleChip(this)">React</span>
+          <span class="skill-chip" onclick="toggleChip(this)">SQL</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Data Analysis</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Figma / Design</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Project Management</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Writing</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Marketing</span>
+          <span class="skill-chip" onclick="toggleChip(this)">Research</span>
+        </div>
+        <div class="form-hint">Only these skills can be attested at project completion — this prevents skill inflation.</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="btn btn-ghost" onclick="companyStep(1)">← Back</button>
+        <button class="btn btn-purple" style="flex:1;" onclick="enterApp('company')">Post project →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!--  VIEW: STUDENT APP                      -->
+<!-- ════════════════════════════════════════ -->
+<div id="view-student-app" class="view">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Student</div>
+        <button class="sidebar-btn active" id="sb-browse" onclick="studentTab('browse')">
+          <span class="sidebar-icon">🔍</span> Browse projects
+        </button>
+        <button class="sidebar-btn" id="sb-applied" onclick="studentTab('applied')">
+          <span class="sidebar-icon">📋</span> My applications
+          <span class="sidebar-badge">2</span>
+        </button>
+        <button class="sidebar-btn" id="sb-active" onclick="studentTab('active')">
+          <span class="sidebar-icon">⚡</span> Active project
+        </button>
+        <button class="sidebar-btn" id="sb-matches" onclick="studentTab('matches')">
+          <span class="sidebar-icon">💼</span> Job matches
+          <span class="sidebar-badge">3</span>
+        </button>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-label">Profile</div>
+        <button class="sidebar-btn" id="sb-profile" onclick="studentTab('profile')">
+          <span class="sidebar-icon">👤</span> My profile
+        </button>
+      </div>
+    </aside>
+    <div class="main-content">
+
+      <!-- BROWSE -->
+      <div id="st-browse">
+        <div class="page-header">
+          <div class="page-title">Open projects</div>
+          <div class="page-sub">Verified companies · real deliverables · employer attestation on completion</div>
+        </div>
+        <div class="tabs">
+          <button class="tab active" onclick="filterProjects('all',this)">All (6)</button>
+          <button class="tab" onclick="filterProjects('tech',this)">Tech</button>
+          <button class="tab" onclick="filterProjects('design',this)">Design</button>
+          <button class="tab" onclick="filterProjects('ops',this)">Ops / Research</button>
+        </div>
+        <div class="project-grid" id="project-list"></div>
+      </div>
+
+      <!-- APPLIED -->
+      <div id="st-applied" class="hidden">
+        <div class="page-header">
+          <div class="page-title">My applications</div>
+          <div class="page-sub">Track your project applications</div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Donor dashboard — React</div>
+              <div class="card-sub">Human Service Forum · Applied 2 days ago</div>
+            </div>
+            <span class="tag tag-status-review">Under review</span>
+          </div>
+          <div style="font-size:13px;color:var(--ink-3);">Skills: React, Data Analysis · 6 weeks · $500 stipend</div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">SEO content strategy</div>
+              <div class="card-sub">GreenBiz Amherst · Applied 4 days ago</div>
+            </div>
+            <span class="tag tag-status-open">Pending</span>
+          </div>
+          <div style="font-size:13px;color:var(--ink-3);">Skills: Writing, Marketing, Research · 4 weeks · Unpaid</div>
+        </div>
+      </div>
+
+      <!-- ACTIVE PROJECT -->
+      <div id="st-active" class="hidden">
+        <div class="page-header">
+          <div class="page-title">Active engagement</div>
+          <div class="page-sub">Week 3 of 6 · Human Service Forum</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;">
+          <div class="stat-card">
+            <div class="stat-val">3</div>
+            <div class="stat-label">Weeks completed</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val">3</div>
+            <div class="stat-label">Weeks remaining</div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-header">
+            <div class="card-title">Donor dashboard — React</div>
+            <span class="tag tag-status-active">Active</span>
+          </div>
+          <div style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:16px;">
+            Build a React dashboard showing monthly donor trends, geographic breakdown, and YoY comparison. Data provided via CSV export from Salesforce.
+          </div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;color:var(--ink-4);margin-bottom:10px;">SKILLS BEING TRACKED</div>
+          <div class="skills-grid">
+            <span class="skill-tag verified">React</span>
+            <span class="skill-tag verified">Data Analysis</span>
+            <span class="skill-tag verified">SQL</span>
+          </div>
+          <hr class="divider">
+          <div style="font-size:12px;color:var(--ink-3);background:var(--amber-pale);border-radius:8px;padding:10px 14px;color:var(--amber);">
+            <strong>Mid-project check-in due in 2 days.</strong> Both you and your employer must confirm this engagement is active.
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:16px;">Activity log</div>
+          <div id="engagement-log"></div>
+          <div style="margin-top:16px;display:flex;gap:10px;">
+            <input class="form-input" id="log-msg" placeholder="Add a message or update..." style="flex:1;" />
+            <button class="btn btn-primary btn-sm" onclick="addLogEntry()">Send</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- JOB MATCHES -->
+      <div id="st-matches" class="hidden">
+        <div class="page-header">
+          <div class="page-title">Job matches</div>
+          <div class="page-sub">Auto-matched based on your verified skill graph — not your self-reported résumé</div>
+        </div>
+        <div style="background:var(--purple-pale);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:24px;font-size:13px;color:var(--purple-dark);">
+          <strong>Your verified skills:</strong> React ✓ · Data Analysis ✓ · Project Management ✓<br>
+          <span style="font-size:12px;opacity:0.8;margin-top:4px;display:block;">2 more skills will be verified when your current project completes.</span>
+        </div>
+        <div id="job-matches-list"></div>
+      </div>
+
+      <!-- PROFILE -->
+      <div id="st-profile" class="hidden">
+        <div class="profile-hero">
+          <div class="profile-hero-name" id="ph-name">Your Name</div>
+          <div class="profile-hero-meta" id="ph-meta">University · Major · Class of 20XX</div>
+          <div class="profile-hero-badges">
+            <div class="hero-badge">✓ 2 verified engagements</div>
+            <div class="hero-badge">⚡ 1 active project</div>
+            <div class="hero-badge">💼 3 job matches</div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title" style="margin-bottom:16px;">Verified work record</div>
+          <div class="work-item">
+            <div class="work-item-header">
+              <div>
+                <div class="work-role">Web Developer</div>
+                <div class="work-org">Pioneer Valley Food Co-op</div>
+              </div>
+              <div class="work-duration">Jan 2025 — Feb 2025 · 6 wks</div>
+            </div>
+            <div class="work-attestation">
+              <div class="work-attestation-header">
+                <span>✓</span> Employer attestation · Sarah Chen, Operations Director
+              </div>
+              <div class="attest-grid">
+                <div class="attest-item"><span class="yes">✓</span> Delivered on time</div>
+                <div class="attest-item"><span class="yes">✓</span> Would hire again</div>
+                <div class="attest-item"><span class="yes">✓</span> Proactive communicator</div>
+                <div class="attest-item"><span class="yes">✓</span> Met project brief</div>
+              </div>
+              <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span class="skill-tag verified">React</span>
+                <span class="skill-tag verified">SQL</span>
+                <div class="hire-signal hire-yes">Would hire · Yes</div>
+              </div>
+            </div>
+          </div>
+          <div class="work-item">
+            <div class="work-item-header">
+              <div>
+                <div class="work-role">Data Analyst</div>
+                <div class="work-org">BuildUMass</div>
+              </div>
+              <div class="work-duration">Oct 2024 — Dec 2024 · 8 wks</div>
+            </div>
+            <div class="work-attestation">
+              <div class="work-attestation-header">
+                <span>✓</span> Employer attestation · James Park, President
+              </div>
+              <div class="attest-grid">
+                <div class="attest-item"><span class="yes">✓</span> Delivered on time</div>
+                <div class="attest-item"><span class="yes">✓</span> Would hire again</div>
+                <div class="attest-item"><span class="yes">✓</span> Proactive communicator</div>
+                <div class="attest-item"><span class="no">✗</span> Minor revisions needed</div>
+              </div>
+              <div style="margin-top:10px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <span class="skill-tag verified">Data Analysis</span>
+                <span class="skill-tag verified">Python</span>
+                <span class="skill-tag verified">Project Management</span>
+                <div class="hire-signal hire-maybe">Would hire · Maybe</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="margin-bottom:12px;">Self-reported skills (unverified)</div>
+          <div style="font-size:12px;color:var(--ink-3);margin-bottom:12px;">These appear on your profile but carry no verification weight in job matching.</div>
+          <div class="skills-grid">
+            <span class="skill-tag unverified">Machine Learning</span>
+            <span class="skill-tag unverified">Node.js</span>
+            <span class="skill-tag unverified">AWS / Cloud</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!--  VIEW: COMPANY APP                      -->
+<!-- ════════════════════════════════════════ -->
+<div id="view-company-app" class="view">
+  <div class="app-layout">
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Company</div>
+        <button class="sidebar-btn active" id="cb-dashboard" onclick="companyTab('dashboard')">
+          <span class="sidebar-icon">📊</span> Dashboard
+        </button>
+        <button class="sidebar-btn" id="cb-projects" onclick="companyTab('projects')">
+          <span class="sidebar-icon">📁</span> My projects
+        </button>
+        <button class="sidebar-btn" id="cb-applicants" onclick="companyTab('applicants')">
+          <span class="sidebar-icon">👥</span> Applicants
+          <span class="sidebar-badge">4</span>
+        </button>
+        <button class="sidebar-btn" id="cb-attest" onclick="companyTab('attest')">
+          <span class="sidebar-icon">✓</span> Attest student
+        </button>
+        <button class="sidebar-btn" id="cb-talent" onclick="companyTab('talent')">
+          <span class="sidebar-icon">🔍</span> Browse talent
+        </button>
+      </div>
+    </aside>
+    <div class="main-content">
+
+      <!-- DASHBOARD -->
+      <div id="co-dashboard">
+        <div class="page-header">
+          <div class="page-title" id="co-org-name">Your Organization</div>
+          <div class="page-sub">Verified company · Western Massachusetts</div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-val">2</div>
+            <div class="stat-label">Open projects</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val">4</div>
+            <div class="stat-label">Applicants</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val">1</div>
+            <div class="stat-label">Active engagements</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-val">3</div>
+            <div class="stat-label">Completed projects</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Your posted project</div>
+            <span class="tag tag-status-open">Open</span>
+          </div>
+          <div class="card-sub" id="co-project-preview">Project title will appear here</div>
+          <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" onclick="companyTab('applicants')">View 4 applicants →</button>
+            <button class="btn btn-purple btn-sm" onclick="companyTab('attest')">Attest student →</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PROJECTS -->
+      <div id="co-projects" class="hidden">
+        <div class="page-header">
+          <div class="page-title">My projects</div>
+          <div class="page-actions">
+            <button class="btn btn-purple" onclick="showToast('Project posting form coming in v2!','📋')">+ Post new project</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title" id="co-proj-title-2">Project title</div>
+              <div class="card-sub">Posted today · 0 applicants</div>
+            </div>
+            <span class="tag tag-status-open">Open</span>
+          </div>
+          <div style="font-size:13px;color:var(--ink-2);" id="co-proj-desc-2">Project description...</div>
+        </div>
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Website redesign</div>
+              <div class="card-sub">Posted 3 weeks ago · Completed</div>
+            </div>
+            <span class="tag tag-status-done">Completed</span>
+          </div>
+          <div style="font-size:13px;color:var(--ink-2);">Redesign our public-facing website. Required Figma and HTML/CSS skills.</div>
+        </div>
+      </div>
+
+      <!-- APPLICANTS -->
+      <div id="co-applicants" class="hidden">
+        <div class="page-header">
+          <div class="page-title">Applicants</div>
+          <div class="page-sub">4 students applied to your project</div>
+        </div>
+        <div id="applicant-list"></div>
+      </div>
+
+      <!-- ATTESTATION -->
+      <div id="co-attest" class="hidden">
+        <div class="page-header">
+          <div class="page-title">Attest student work</div>
+          <div class="page-sub">This is the core of Workmark — your attestation becomes part of the student's verified record</div>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="avatar">AS</div>
+            <div>
+              <div style="font-weight:700;">Aisha Syed</div>
+              <div style="font-size:12px;color:var(--ink-3);">Donor dashboard · React · 6 weeks</div>
+            </div>
+            <span class="tag tag-status-done" style="margin-left:auto;">Completed</span>
+          </div>
+        </div>
+        <div class="card" id="attestation-form">
+          <div class="rubric-section">
+            <div class="rubric-title">Delivery</div>
+            <div class="rubric-row">
+              <span class="rubric-q">Student submitted work by the agreed deadline</span>
+              <div class="rubric-opts">
+                <button class="rubric-opt yes" onclick="selectOpt(this,'delivery-deadline')">Yes</button>
+                <button class="rubric-opt no" onclick="selectOpt(this,'delivery-deadline')">No</button>
+              </div>
+            </div>
+            <div class="rubric-row">
+              <span class="rubric-q">Quality of final output</span>
+              <div class="rubric-opts">
+                <button class="rubric-opt" onclick="selectOpt(this,'delivery-quality')">Met brief</button>
+                <button class="rubric-opt" onclick="selectOpt(this,'delivery-quality')">Minor revisions</button>
+                <button class="rubric-opt" onclick="selectOpt(this,'delivery-quality')">Major revisions</button>
+              </div>
+            </div>
+          </div>
+          <div class="rubric-section">
+            <div class="rubric-title">Communication</div>
+            <div class="rubric-row">
+              <span class="rubric-q">Responded to messages within 24 hours consistently</span>
+              <div class="rubric-opts">
+                <button class="rubric-opt yes" onclick="selectOpt(this,'comm-response')">Yes</button>
+                <button class="rubric-opt no" onclick="selectOpt(this,'comm-response')">No</button>
+              </div>
+            </div>
+            <div class="rubric-row">
+              <span class="rubric-q">Proactively flagged blockers before they became issues</span>
+              <div class="rubric-opts">
+                <button class="rubric-opt yes" onclick="selectOpt(this,'comm-proactive')">Yes</button>
+                <button class="rubric-opt no" onclick="selectOpt(this,'comm-proactive')">No</button>
+              </div>
+            </div>
+          </div>
+          <div class="rubric-section">
+            <div class="rubric-title">Skills actually used (select only what the student demonstrably used)</div>
+            <div class="skills-attest">
+              <span class="skill-attest-chip" onclick="toggleAttest(this)">React</span>
+              <span class="skill-attest-chip" onclick="toggleAttest(this)">Data Analysis</span>
+              <span class="skill-attest-chip" onclick="toggleAttest(this)">SQL</span>
+            </div>
+            <div class="form-hint" style="margin-top:8px;">Only skills scoped at project creation appear here. You cannot add new skills retroactively.</div>
+          </div>
+          <div class="rubric-section">
+            <div class="rubric-title">Hire signal</div>
+            <div class="rubric-row">
+              <span class="rubric-q">Would you hire this student for a paid role?</span>
+              <div class="rubric-opts">
+                <button class="rubric-opt yes" onclick="selectOpt(this,'hire-signal')">Yes</button>
+                <button class="rubric-opt" onclick="selectOpt(this,'hire-signal')">Maybe</button>
+                <button class="rubric-opt no" onclick="selectOpt(this,'hire-signal')">No</button>
+              </div>
+            </div>
+            <div class="rubric-row">
+              <span class="rubric-q">Would you post another project on Workmark?</span>
+              <div class="rubric-opts">
+                <button class="rubric-opt yes" onclick="selectOpt(this,'platform-signal')">Yes</button>
+                <button class="rubric-opt no" onclick="selectOpt(this,'platform-signal')">No</button>
+              </div>
+            </div>
+          </div>
+          <div class="attestation-legal">
+            <label>
+              <input type="checkbox" id="legal-check" />
+              <span>I confirm I am an authorized representative of this organization, and that this attestation is accurate to the best of my knowledge. I understand this attestation will become part of the student's permanent verified work record and may be shared with potential employers.</span>
+            </label>
+          </div>
+          <button class="btn btn-purple" style="width:100%;margin-top:20px;" onclick="submitAttestation()">Submit attestation →</button>
+        </div>
+      </div>
+
+      <!-- TALENT BROWSE -->
+      <div id="co-talent" class="hidden">
+        <div class="page-header">
+          <div class="page-title">Browse verified talent</div>
+          <div class="page-sub">Only students with at least one verified engagement appear here</div>
+        </div>
+        <div id="talent-list"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!--  MODAL: PROJECT APPLY                   -->
+<!-- ════════════════════════════════════════ -->
+<div class="modal-overlay hidden" id="apply-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="apply-modal-title">Apply to project</div>
+      <button class="modal-close" onclick="closeModal('apply-modal')">✕</button>
+    </div>
+    <div style="background:var(--surface-2);border-radius:var(--radius);padding:14px;margin-bottom:20px;font-size:13px;" id="apply-modal-meta"></div>
+    <div class="form-group">
+      <label class="form-label">Why are you a good fit?</label>
+      <textarea class="form-textarea" id="apply-pitch" placeholder="Briefly describe your relevant experience and why you want this project..."></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Relevant links (optional)</label>
+      <input class="form-input" id="apply-links" placeholder="GitHub, portfolio, previous work..." />
+    </div>
+    <div class="attestation-legal" style="margin-bottom:20px;">
+      <label>
+        <input type="checkbox" id="apply-check" />
+        <span>I confirm I have the skills listed and can commit to the full project duration.</span>
+      </label>
+    </div>
+    <button class="btn btn-purple" style="width:100%;" onclick="submitApplication()">Submit application →</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+const state = {
+  userType: null,
+  studentName: '',
+  companyName: '',
+  projectTitle: '',
+  currentProject: null,
+  engagementLog: [
+    { actor: 'System', text: 'Project started. Engagement tracking active.', time: 'Mar 1, 9:00am' },
+    { actor: 'Human Service Forum', text: 'Sent initial brief and Salesforce CSV export. Let me know if you have questions!', time: 'Mar 1, 10:15am' },
+    { actor: 'You', text: 'Received the data. Starting on the component architecture.', time: 'Mar 2, 2:30pm' },
+    { actor: 'You', text: 'First draft of the donation trend chart is ready. Sharing a Loom link for review.', time: 'Mar 5, 4:45pm' },
+    { actor: 'Human Service Forum', text: 'Looks great! Can we add a filter for donor type (individual vs org)?', time: 'Mar 6, 11:20am' },
+  ]
+};
+
+const PROJECTS = [
+  { id:1, title:'Donor dashboard in React', org:'Human Service Forum', type:'tech', desc:'Build a React dashboard showing monthly donor trends, geographic breakdown, and YoY comparison from Salesforce CSV exports.', skills:['React','Data Analysis','SQL'], comp:'$500 stipend', duration:'6 weeks', paid:true },
+  { id:2, title:'ML model for crop yield prediction', org:'Pioneer Valley Food Co-op', type:'tech', desc:'Train a lightweight regression model to predict monthly produce yield from weather and soil data. Python + scikit-learn.', skills:['Python','Machine Learning','Data Analysis'], comp:'$750 stipend', duration:'8 weeks', paid:true },
+  { id:3, title:'Brand identity refresh', org:'GreenBiz Amherst', type:'design', desc:'Redesign our logo, color palette, and core collateral (business cards, website header) for a sustainable goods retailer.', skills:['Figma / Design'], comp:'Unpaid', duration:'4 weeks', paid:false },
+  { id:4, title:'SEO & content strategy', org:'Valley Free Radio', type:'ops', desc:'Audit our existing content, identify keyword opportunities, and create a 3-month editorial calendar with 6 sample posts.', skills:['Writing','Marketing','Research'], comp:'Unpaid', duration:'4 weeks', paid:false },
+  { id:5, title:'Internal ops automation', org:'Northampton Community Arts', type:'ops', desc:'Automate our volunteer scheduling using Airtable and Zapier, replacing a spreadsheet-based system managing 80+ volunteers.', skills:['Operations','Research'], comp:'$300 stipend', duration:'3 weeks', paid:true },
+  { id:6, title:'Full-stack event platform', org:'HackHer UMass', type:'tech', desc:'Build a registration + scheduling platform for a 200-person hackathon. Next.js frontend, Supabase backend, email confirmations.', skills:['JavaScript','React','SQL'], comp:'$1,000 stipend', duration:'8 weeks', paid:true },
+];
+
+const JOB_MATCHES = [
+  { score:94, title:'Software Engineer', company:'Seed stage fintech (Boston)', why:'React ✓ · SQL ✓ · Data Analysis ✓ — 3 verified skill matches', level:'mid' },
+  { score:87, title:'Frontend Developer', company:'Series A health startup (Remote)', why:'React ✓ · Project Mgmt ✓ — 2 verified matches + hire signal', level:'mid' },
+  { score:71, title:'Data Analyst Intern', company:'Western MA nonprofit', why:'Data Analysis ✓ · Python (unverified) — 1 verified + 1 potential', level:'entry' },
+];
+
+const APPLICANTS = [
+  { name:'Aisha Syed', uni:'UMass Amherst · CS · 2026', pitch:'I built a similar dashboard for BuildUMass last semester using React and Chart.js. My GitHub repo shows the full project.', skills:['React','Data Analysis','SQL'], verified:2 },
+  { name:'Marcus Johnson', uni:'UMass Amherst · Info Systems · 2025', pitch:'Strong background in data viz. Interned at a fintech startup doing exactly this kind of work.', skills:['React','Data Analysis'], verified:1 },
+  { name:'Priya Nair', uni:'Smith College · Statistics · 2026', pitch:'I specialize in data cleaning and visualization. Comfortable with SQL and have done 2 verified projects on Workmark already.', skills:['SQL','Data Analysis'], verified:2 },
+  { name:'Diego Herrera', uni:'UMass Amherst · CS · 2027', pitch:'First project on Workmark but strong React developer. Can share my portfolio.', skills:['React','SQL'], verified:0 },
+];
+
+const TALENT = [
+  { name:'Aisha Syed', uni:'UMass Amherst · CS · 2026', skills:['React','Data Analysis','SQL','Python','Project Management'], verified:3, hire:'Yes' },
+  { name:'Priya Nair', uni:'Smith College · Statistics · 2026', skills:['SQL','Data Analysis','Python','Research'], verified:2, hire:'Yes' },
+  { name:'Marcus Johnson', uni:'UMass Amherst · Info Systems · 2025', skills:['React','Data Analysis','Operations'], verified:1, hire:'Maybe' },
+];
+
+// ══════════════════════════════════════════
+//  NAVIGATION
+// ══════════════════════════════════════════
+function showView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  document.getElementById('nav-links').innerHTML = '';
+  if (v === 'student-app') buildStudentNav();
+  if (v === 'company-app') buildCompanyNav();
+  window.scrollTo(0,0);
+}
+
+function buildStudentNav() {
+  const nr = document.getElementById('nav-right');
+  nr.innerHTML = `<div class="avatar avatar-sm" style="background:var(--purple-pale);color:var(--purple);font-size:12px;">${state.studentName.split(' ').map(w=>w[0]).join('')||'ME'}</div><span style="font-size:13px;font-weight:600;margin-left:6px;">${state.studentName||'Student'}</span>`;
+}
+function buildCompanyNav() {
+  const nr = document.getElementById('nav-right');
+  nr.innerHTML = `<span style="font-size:13px;font-weight:600;">${state.companyName||'Your Company'}</span><span class="tag tag-status-done" style="margin-left:8px;">Verified</span>`;
+}
+
+// ══════════════════════════════════════════
+//  ONBOARDING
+// ══════════════════════════════════════════
+function startOnboard(type) {
+  state.userType = type;
+  showView(type === 'student' ? 'student-onboard' : 'company-onboard');
+}
+
+function studentStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('student-step-'+i).classList.toggle('hidden', i!==n);
+    const dot = document.getElementById('sdot-'+i);
+    if (dot) dot.classList.toggle('done', i<=n);
+  });
+  if (n===3) {
+    const fn = document.getElementById('s-fname').value || 'Your';
+    const ln = document.getElementById('s-lname').value || 'Name';
+    state.studentName = fn + ' ' + ln;
+    const uni = document.getElementById('s-uni').value || 'University';
+    const major = document.getElementById('s-major').value || 'Major';
+    const grad = document.getElementById('s-grad').value || '20XX';
+    document.getElementById('s-avatar-preview').textContent = (fn[0]||'?')+(ln[0]||'');
+    document.getElementById('s-name-preview').textContent = state.studentName;
+    document.getElementById('s-meta-preview').textContent = `${uni} · ${major} · ${grad}`;
+  }
+}
+
+function companyStep(n) {
+  document.getElementById('company-step-1').classList.toggle('hidden', n!==1);
+  document.getElementById('company-step-2').classList.toggle('hidden', n!==2);
+  document.getElementById('cdot-2').classList.toggle('done', n===2);
+  if (n===2) {
+    state.companyName = document.getElementById('c-name').value || 'Your Organization';
+    showToast('Organization verified ✓', '🔐');
+  }
+}
+
+function enterApp(type) {
+  if (type === 'student') {
+    state.projectTitle = '';
+    showView('student-app');
+    renderProjects();
+    renderJobMatches();
+    renderEngagementLog();
+    const fn = document.getElementById('s-fname')?.value || 'Your';
+    const ln = document.getElementById('s-lname')?.value || 'Name';
+    const uni = document.getElementById('s-uni')?.value || 'University';
+    const major = document.getElementById('s-major')?.value || 'Major';
+    const grad = document.getElementById('s-grad')?.value || '20XX';
+    state.studentName = fn + ' ' + ln;
+    document.getElementById('ph-name').textContent = state.studentName;
+    document.getElementById('ph-meta').textContent = `${uni} · ${major} · Class of ${grad}`;
+    buildStudentNav();
+  } else {
+    state.projectTitle = document.getElementById('p-title')?.value || 'Your Project';
+    state.companyName = document.getElementById('c-name')?.value || 'Your Organization';
+    showView('company-app');
+    document.getElementById('co-org-name').textContent = state.companyName;
+    document.getElementById('co-project-preview').textContent = state.projectTitle;
+    document.getElementById('co-proj-title-2').textContent = state.projectTitle;
+    document.getElementById('co-proj-desc-2').textContent = document.getElementById('p-desc')?.value || '';
+    renderApplicants();
+    renderTalent();
+    buildCompanyNav();
+  }
+}
+
+// ══════════════════════════════════════════
+//  STUDENT TABS
+// ══════════════════════════════════════════
+function studentTab(tab) {
+  ['browse','applied','active','matches','profile'].forEach(t => {
+    document.getElementById('st-'+t).classList.toggle('hidden', t!==tab);
+    const btn = document.getElementById('sb-'+t);
+    if (btn) btn.classList.toggle('active', t===tab);
+  });
+}
+
+// ══════════════════════════════════════════
+//  COMPANY TABS
+// ══════════════════════════════════════════
+function companyTab(tab) {
+  ['dashboard','projects','applicants','attest','talent'].forEach(t => {
+    document.getElementById('co-'+t).classList.toggle('hidden', t!==tab);
+    const btn = document.getElementById('cb-'+t);
+    if (btn) btn.classList.toggle('active', t===tab);
+  });
+}
+
+// ══════════════════════════════════════════
+//  PROJECTS
+// ══════════════════════════════════════════
+function renderProjects(filter='all') {
+  const list = document.getElementById('project-list');
+  const filtered = filter==='all' ? PROJECTS : PROJECTS.filter(p=>p.type===filter);
+  list.innerHTML = filtered.map(p => `
+    <div class="project-card" onclick="openApplyModal(${p.id})">
+      <div class="project-header">
+        <div>
+          <div class="project-title">${p.title}</div>
+          <div class="project-org">${p.org}</div>
+        </div>
+        <span class="tag ${p.paid?'tag-paid':'tag-unpaid'}">${p.comp}</span>
+      </div>
+      <div class="project-body">${p.desc}</div>
+      <div class="project-footer">
+        ${p.skills.map(s=>`<span class="tag tag-skill">${s}</span>`).join('')}
+        <span class="duration">${p.duration}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterProjects(f, btn) {
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderProjects(f);
+}
+
+// ══════════════════════════════════════════
+//  APPLY MODAL
+// ══════════════════════════════════════════
+function openApplyModal(id) {
+  const p = PROJECTS.find(x=>x.id===id);
+  if (!p) return;
+  state.currentProject = p;
+  document.getElementById('apply-modal-title').textContent = p.title;
+  document.getElementById('apply-modal-meta').innerHTML = `
+    <strong>${p.org}</strong> · ${p.duration} · ${p.comp}<br>
+    <span style="color:var(--ink-3);font-size:12px;">Skills: ${p.skills.join(', ')}</span>
+  `;
+  document.getElementById('apply-modal').classList.remove('hidden');
+}
+function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+function submitApplication() {
+  if (!document.getElementById('apply-check').checked) {
+    showToast('Please confirm your commitment first','⚠️'); return;
+  }
+  closeModal('apply-modal');
+  showToast('Application submitted! ✓','🎉');
+  studentTab('applied');
+}
+
+// ══════════════════════════════════════════
+//  JOB MATCHES
+// ══════════════════════════════════════════
+function renderJobMatches() {
+  const list = document.getElementById('job-matches-list');
+  list.innerHTML = JOB_MATCHES.map(j => `
+    <div class="match-card">
+      <div class="match-score-ring ${j.score>=90?'match-high':'match-mid'}">${j.score}%</div>
+      <div class="match-info">
+        <div class="match-title">${j.title}</div>
+        <div class="match-company">${j.company}</div>
+        <div class="match-why">${j.why}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showToast('Employer contact feature coming soon!','💼')">View →</button>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════
+//  ENGAGEMENT LOG
+// ══════════════════════════════════════════
+function renderEngagementLog() {
+  const log = document.getElementById('engagement-log');
+  log.innerHTML = state.engagementLog.map(e => `
+    <div class="log-entry">
+      <div class="log-dot"></div>
+      <div style="flex:1;">
+        <div style="display:flex;gap:8px;align-items:baseline;margin-bottom:2px;">
+          <span class="log-actor">${e.actor}</span>
+          <span class="log-time">${e.time}</span>
+        </div>
+        <div class="log-text">${e.text}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function addLogEntry() {
+  const msg = document.getElementById('log-msg').value.trim();
+  if (!msg) return;
+  const now = new Date();
+  state.engagementLog.push({
+    actor: state.studentName || 'You',
+    text: msg,
+    time: now.toLocaleDateString('en-US',{month:'short',day:'numeric'})+', '+now.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})
+  });
+  document.getElementById('log-msg').value = '';
+  renderEngagementLog();
+  showToast('Message sent','💬');
+}
+
+// ══════════════════════════════════════════
+//  APPLICANTS
+// ══════════════════════════════════════════
+function renderApplicants() {
+  const list = document.getElementById('applicant-list');
+  list.innerHTML = APPLICANTS.map((a,i) => `
+    <div class="applicant-card" id="app-card-${i}">
+      <div class="applicant-header">
+        <div class="avatar">${a.name.split(' ').map(w=>w[0]).join('')}</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;">${a.name}</div>
+          <div style="font-size:12px;color:var(--ink-3);">${a.uni}</div>
+        </div>
+        ${a.verified>0 ? `<div class="verified-badge">${a.verified} verified</div>` : `<span class="tag" style="background:var(--surface-2);color:var(--ink-4);">0 verified</span>`}
+      </div>
+      <div class="applicant-body">"${a.pitch}"</div>
+      <div style="margin-bottom:12px;">
+        ${a.skills.map(s=>`<span class="skill-tag verified" style="margin-right:4px;">${s}</span>`).join('')}
+      </div>
+      <div class="applicant-actions" id="app-actions-${i}">
+        <button class="btn btn-purple btn-sm" onclick="acceptApplicant(${i},'${a.name}')">Accept →</button>
+        <button class="btn btn-ghost btn-sm" onclick="declineApplicant(${i})">Decline</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function acceptApplicant(i, name) {
+  document.getElementById('app-actions-'+i).innerHTML = `<span class="tag tag-status-active">Engagement started ✓</span>`;
+  showToast(`Engagement started with ${name}!`, '🤝');
+}
+function declineApplicant(i) {
+  document.getElementById('app-card-'+i).style.opacity = '0.4';
+  document.getElementById('app-actions-'+i).innerHTML = `<span class="tag" style="background:var(--surface-2);color:var(--ink-4);">Declined</span>`;
+}
+
+// ══════════════════════════════════════════
+//  TALENT
+// ══════════════════════════════════════════
+function renderTalent() {
+  const list = document.getElementById('talent-list');
+  list.innerHTML = TALENT.map(t => `
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+        <div class="avatar">${t.name.split(' ').map(w=>w[0]).join('')}</div>
+        <div style="flex:1;">
+          <div style="font-weight:700;">${t.name}</div>
+          <div style="font-size:12px;color:var(--ink-3);">${t.uni}</div>
+        </div>
+        <div class="verified-badge">${t.verified} verified</div>
+      </div>
+      <div class="skills-grid">
+        ${t.skills.map(s=>`<span class="skill-tag verified">${s}</span>`).join('')}
+      </div>
+      <div style="margin-top:12px;display:flex;align-items:center;gap:10px;">
+        <span class="hire-signal ${t.hire==='Yes'?'hire-yes':'hire-maybe'}">Would hire · ${t.hire}</span>
+        <button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="showToast('Direct contact feature coming in v2!','💬')">Contact →</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════
+//  ATTESTATION
+// ══════════════════════════════════════════
+function selectOpt(el, group) {
+  el.closest('.rubric-opts').querySelectorAll('.rubric-opt').forEach(o=>{
+    o.classList.remove('selected');
+  });
+  el.classList.add('selected');
+}
+function toggleAttest(el) { el.classList.toggle('checked'); }
+
+function submitAttestation() {
+  if (!document.getElementById('legal-check').checked) {
+    showToast('Please confirm the legal acknowledgment','⚠️'); return;
+  }
+  const checked = document.querySelectorAll('.skill-attest-chip.checked');
+  if (checked.length === 0) {
+    showToast('Please attest at least one skill','⚠️'); return;
+  }
+  document.getElementById('attestation-form').innerHTML = `
+    <div style="text-align:center;padding:40px 20px;">
+      <div style="font-size:48px;margin-bottom:16px;">✓</div>
+      <div style="font-size:22px;font-weight:800;color:var(--teal);margin-bottom:8px;">Attestation submitted</div>
+      <div style="font-size:14px;color:var(--ink-3);max-width:320px;margin:0 auto;line-height:1.6;">
+        Aisha's verified work record has been updated. Her skill badges are now employer-attested and will appear in job matching.
+      </div>
+      <div style="margin-top:24px;background:var(--teal-pale);border-radius:var(--radius-lg);padding:16px;text-align:left;">
+        <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:8px;">ATTESTATION RECORD #WM-2025-0047</div>
+        <div style="font-size:12px;color:var(--teal);">Skills attested: React · Data Analysis · SQL</div>
+        <div style="font-size:12px;color:var(--teal);margin-top:4px;">Hire signal recorded · Timestamp locked</div>
+        <div style="font-size:11px;color:var(--teal-light);margin-top:6px;font-family:'DM Mono',monospace;">SHA: wm_att_8f3a2d9e1b...</div>
+      </div>
+      <button class="btn btn-purple" style="margin-top:20px;" onclick="companyTab('talent')">Browse verified talent →</button>
+    </div>
+  `;
+  showToast('Attestation submitted and locked ✓', '🔐');
+}
+
+// ══════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════
+function toggleChip(el) { el.classList.toggle('selected'); }
+
+let toastTimer;
+function showToast(msg, icon='✓') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent = msg;
+  document.getElementById('toast-icon').textContent = icon;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
