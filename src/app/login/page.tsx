@@ -4,14 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { useToast } from '@/components/Toast'
 
 type Mode = 'signin' | 'signup'
 type Role = 'student' | 'company'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { toast } = useToast()
 
   const [mode, setMode] = useState<Mode>('signin')
   const [role, setRole] = useState<Role>('student')
@@ -19,9 +17,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Set to the submitted email after a successful sign-up to show the
+  // "check your inbox" screen.
+  const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null)
 
-  function validateEdu(email: string): boolean {
-    return email.toLowerCase().endsWith('.edu')
+  function validateEdu(addr: string): boolean {
+    return addr.toLowerCase().endsWith('.edu')
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -43,16 +44,13 @@ export default function LoginPage() {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: {
-            data: { role },
-          },
+          options: { data: { role } },
         })
 
         if (signUpError) throw signUpError
 
-        toast('Account created! Complete your profile to get started.', 'success')
-        router.push('/onboarding')
-        router.refresh()
+        // Don't redirect yet — user must confirm their email first.
+        setPendingConfirmEmail(email)
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
@@ -60,8 +58,16 @@ export default function LoginPage() {
         })
 
         if (signInError) {
-          if (signInError.message.toLowerCase().includes('invalid')) {
+          if (
+            signInError.message.toLowerCase().includes('invalid') ||
+            signInError.message.toLowerCase().includes('credentials')
+          ) {
             throw new Error('Invalid email or password. Please try again.')
+          }
+          if (signInError.message.toLowerCase().includes('email not confirmed')) {
+            throw new Error(
+              'Please confirm your email address before signing in. Check your inbox for the confirmation link.'
+            )
           }
           throw signInError
         }
@@ -109,9 +115,61 @@ export default function LoginPage() {
     }
   }
 
+  // ── Post sign-up: waiting for email confirmation ──────────────────────────
+  if (pendingConfirmEmail) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <Link href="/" className="mb-8">
+          <span className="text-2xl font-bold tracking-tight text-gray-900">
+            Work<span className="text-brand-600">mark</span>
+          </span>
+        </Link>
+
+        <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
+          {/* Envelope illustration */}
+          <div className="w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-4">
+            <svg className="w-7 h-7 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+
+          <h1 className="text-lg font-bold text-gray-900 mb-2">
+            Check your inbox
+          </h1>
+          <p className="text-sm text-gray-500 mb-1">
+            We sent a confirmation link to
+          </p>
+          <p className="text-sm font-semibold text-gray-800 mb-4 break-all">
+            {pendingConfirmEmail}
+          </p>
+          <p className="text-sm text-gray-500 mb-6">
+            Click the link in that email to activate your account, then come
+            back here and sign in.
+          </p>
+
+          <button
+            onClick={() => {
+              setPendingConfirmEmail(null)
+              setMode('signin')
+              setPassword('')
+            }}
+            className="w-full py-2.5 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition-colors"
+          >
+            Go to sign in
+          </button>
+
+          <p className="text-xs text-gray-400 mt-4">
+            Can&apos;t find the email? Check your spam folder.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Normal sign in / sign up form ─────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      {/* Logo */}
       <Link href="/" className="mb-8">
         <span className="text-2xl font-bold tracking-tight text-gray-900">
           Work<span className="text-brand-600">mark</span>
@@ -119,17 +177,13 @@ export default function LoginPage() {
       </Link>
 
       <div className="w-full max-w-sm">
-        {/* Card */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
           {/* Mode tabs */}
           <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
             {(['signin', 'signup'] as Mode[]).map((m) => (
               <button
                 key={m}
-                onClick={() => {
-                  setMode(m)
-                  setError(null)
-                }}
+                onClick={() => { setMode(m); setError(null) }}
                 className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
                   mode === m
                     ? 'bg-white text-gray-900 shadow-sm'
@@ -153,11 +207,7 @@ export default function LoginPage() {
                     <button
                       key={r}
                       type="button"
-                      onClick={() => {
-                        setRole(r)
-                        setError(null)
-                        setEmail('')
-                      }}
+                      onClick={() => { setRole(r); setError(null); setEmail('') }}
                       className={`flex-1 py-2.5 text-sm font-medium rounded-xl border transition-colors capitalize ${
                         role === r
                           ? 'border-brand-500 bg-brand-50 text-brand-700'
@@ -178,31 +228,20 @@ export default function LoginPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Email
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <input
                 type="email"
                 required
                 value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value)
-                  setError(null)
-                }}
-                placeholder={
-                  mode === 'signup' && role === 'student'
-                    ? 'you@university.edu'
-                    : 'you@example.com'
-                }
+                onChange={(e) => { setEmail(e.target.value); setError(null) }}
+                placeholder={mode === 'signup' && role === 'student' ? 'you@university.edu' : 'you@example.com'}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
               <input
                 type="password"
                 required
@@ -232,21 +271,13 @@ export default function LoginPage() {
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   {mode === 'signin' ? 'Signing in…' : 'Creating account…'}
                 </span>
-              ) : mode === 'signin' ? (
-                'Sign in'
-              ) : (
-                'Create account'
-              )}
+              ) : mode === 'signin' ? 'Sign in' : 'Create account'}
             </button>
           </form>
         </div>
 
-        {/* Browse without account */}
         <p className="text-center text-sm text-gray-400 mt-4">
-          <Link
-            href="/projects"
-            className="hover:text-brand-600 transition-colors"
-          >
+          <Link href="/projects" className="hover:text-brand-600 transition-colors">
             Browse open projects →
           </Link>
         </p>
