@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import CompanyDashboardClient from './CompanyDashboardClient'
+import type { Application } from '@/lib/types'
 
 export default async function CompanyDashboardPage() {
   const supabase = await createClient()
@@ -29,14 +30,14 @@ export default async function CompanyDashboardPage() {
   // Fetch all applications for those projects (with student info)
   const projectIds = (projects ?? []).map((p) => p.id)
 
-  let applications: unknown[] = []
+  let applications: Application[] = []
   if (projectIds.length > 0) {
     const { data } = await supabase
       .from('applications')
       .select('*, students(full_name, university, gpa, skills, resume_url)')
       .in('project_id', projectIds)
       .order('created_at', { ascending: false })
-    applications = data ?? []
+    applications = (data ?? []) as Application[]
   }
 
   return (

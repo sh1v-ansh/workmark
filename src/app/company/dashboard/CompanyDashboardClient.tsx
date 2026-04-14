@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
-import type { Company, Project, Application, Student } from '@/lib/types'
+import type { Company, Project, Application } from '@/lib/types'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -242,7 +242,7 @@ function ApplicationRow({
   onAccept,
   onReject,
 }: {
-  app: Application & { students?: Pick<Student, 'full_name' | 'university' | 'gpa' | 'skills' | 'resume_url'> }
+  app: Application
   onAccept: (appId: string) => void
   onReject: (appId: string) => void
 }) {
@@ -321,8 +321,7 @@ function ApplicationRow({
 interface Props {
   company: Company
   initialProjects: Project[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  initialApplications: any[]
+  initialApplications: Application[]
 }
 
 export default function CompanyDashboardClient({
@@ -332,7 +331,7 @@ export default function CompanyDashboardClient({
 }: Props) {
   const { toast } = useToast()
   const [projects, setProjects] = useState<Project[]>(initialProjects)
-  const [applications, setApplications] = useState<(Application & { students?: Pick<Student, 'full_name' | 'university' | 'gpa' | 'skills' | 'resume_url'> })[]>(initialApplications)
+  const [applications, setApplications] = useState<Application[]>(initialApplications)
   const [showNewForm, setShowNewForm] = useState(false)
   const [expandedProject, setExpandedProject] = useState<string | null>(null)
 
