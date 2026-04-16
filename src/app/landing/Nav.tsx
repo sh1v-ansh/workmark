@@ -12,7 +12,7 @@ const links: [string, string][] = [
   ['how-it-works', 'How it works'],
   ['verification', 'Verification'],
   ['for-you', 'For you'],
-  ['waitlist', 'Join waitlist'],
+  ['waitlist', 'Get started'],
 ]
 
 export function Nav() {
