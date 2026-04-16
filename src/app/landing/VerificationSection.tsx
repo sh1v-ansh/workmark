@@ -56,12 +56,11 @@ function InteractiveAttestation() {
 
       <div style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: 12, marginBottom: 20 }}>
         <div style={{ fontSize: 13, color: C.textSub, fontWeight: 500 }}>Aisha Syed</div>
-        <div style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono, marginTop: 2 }}>Nonprofit Data Dashboard · 8 wks</div>
+        <div style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono, marginTop: 2 }}>Nonprofit Data Dashboard · 8 wks · React, TypeScript, SQL</div>
       </div>
 
-      {/* Delivered? */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>Did the student deliver on the project brief?</div>
+        <div style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>Did the student complete the engagement?</div>
         <div style={{ display: 'flex', gap: 8 }}>
           {(['yes', 'no'] as const).map(v => (
             <button key={v} onClick={() => setDelivered(v)} style={{ flex: 1, padding: '8px 0', fontFamily: F.mono, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', ...toggleBtn(delivered === v) }}>
@@ -71,7 +70,6 @@ function InteractiveAttestation() {
         </div>
       </div>
 
-      {/* Stack */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>
           Stack used <span style={{ fontSize: 11, color: C.textFaint }}>(uncheck any not used)</span>
@@ -85,7 +83,6 @@ function InteractiveAttestation() {
         </div>
       </div>
 
-      {/* Work again? */}
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>Would you work with them again?</div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -97,11 +94,10 @@ function InteractiveAttestation() {
         </div>
       </div>
 
-      {/* Legal */}
       <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 20, cursor: 'pointer' }}>
         <input type="checkbox" checked={legalChecked} onChange={e => setLegalChecked(e.target.checked)} style={{ marginTop: 2, accentColor: C.accent, width: 14, height: 14, cursor: 'pointer', flexShrink: 0 }} />
         <span style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.5 }}>
-          I confirm this attestation is accurate. I understand it will be permanently associated with this student&apos;s record. No code or files are reviewed — this is my word only.
+          I confirm this engagement occurred and the stack listed was used. I understand this record is permanent. No code or files are involved — this is my confirmation only.
         </span>
       </label>
 
@@ -117,10 +113,10 @@ function InteractiveAttestation() {
 }
 
 const flowSteps = [
-  ['01', 'Stack locked at posting', 'The technologies are declared before work begins — no retroactive changes.'],
-  ['02', 'Activity trail auto-captured', 'Work activity is logged internally. No code or files are ever shared or reviewed.'],
-  ['03', 'Project closes', 'The engagement window ends. Both parties receive a confirmation request.'],
-  ['04', 'Employer taps confirm', 'One confirmation. Record is locked forever — immutable and employer-signed.'],
+  ['01', 'Stack locked at posting', 'The required technologies are declared before work begins and cannot be changed. What gets posted is what gets attested.'],
+  ['02', 'Weekly check-ins prove duration', 'Think of it like a timesheet, not a messaging platform. Each week: the student taps "active." The employer gets a ping: "Still ongoing?" — a single tap. If either side stops confirming, the engagement flags as inactive. Timestamps only. No messages, no files, no content stored.'],
+  ['03', 'Project closes — one button', 'The employer taps confirm. They can add an optional note or recommendation. That\'s it.'],
+  ['04', 'Record locked forever', 'Org name, duration, tech stack attested, employer confirmation — permanent and immutable. Verification is identity + duration + employer confirmation. Nothing more.'],
 ]
 
 export function VerificationSection() {
@@ -129,22 +125,27 @@ export function VerificationSection() {
       <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
         <div className="reveal-item">
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Verification</div>
-          <h2 style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 700, lineHeight: 1.15, color: C.text, marginBottom: 24 }}>
+          <h2 style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 700, lineHeight: 1.15, color: C.text, marginBottom: 16 }}>
             One button.<br />Permanent record.
           </h2>
-          <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.7, marginBottom: 32 }}>
-            No code review. No file uploads. No disputes. The employer confirms four things — that&apos;s it.
+          <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.7, marginBottom: 28 }}>
+            Verification is intentionally minimal. There is no deliverable upload, no repo link, no code submission. The employer&apos;s confirmation combined with the platform&apos;s activity trail is the attestation. Internal work stays internal.
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
             {flowSteps.map(([n, title, body]) => (
               <div key={n} style={{ display: 'flex', gap: 16 }}>
                 <div style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, marginTop: 2, flexShrink: 0 }}>{n}</div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 500, color: C.textSub, marginBottom: 4 }}>{title}</div>
-                  <div style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.6 }}>{body}</div>
+                  <div style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.65 }}>{body}</div>
                 </div>
               </div>
             ))}
+          </div>
+          <div style={{ marginTop: 28, padding: '16px 20px', background: C.surface, border: `1px solid ${C.border}` }}>
+            <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, lineHeight: 1.7 }}>
+              No code, files, or communications are ever stored by Workmark. Identity + duration + employer confirmation. That&apos;s it.
+            </div>
           </div>
         </div>
 

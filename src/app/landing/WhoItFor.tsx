@@ -3,18 +3,18 @@ import { C, F } from './tokens'
 
 const studentPoints = [
   'Always free — no paywalls, ever',
-  'Works for F-1 students and international students',
-  'Verified skills outweigh unverified ones in matching',
-  'Records are yours forever — portable and permanent',
-  'No connections required. Non-target schools welcome.',
+  'Built for first-gen students, F-1 international students, and students at non-target schools',
+  'Verified records outweigh unverified claims in every match',
+  'Records are yours forever — portable and permanent, regardless of where you end up',
+  'No connections required. The work speaks for itself.',
 ]
 
 const orgPoints = [
-  'Post projects or semester internships',
-  'Every applicant has a verified track record',
-  'EIN-verified organizations only — no bad actors',
-  'Free to start — 3 postings on the free tier',
-  'SMBs, nonprofits, and startups welcome',
+  'Post internships or contract projects, 4–16 weeks, paid or unpaid',
+  'Every applicant has a verified, employer-confirmed track record',
+  'Organization identity verified at signup — work email domain matched',
+  'Free to start — 3 postings on the free tier, no credit card required',
+  'Built for SMBs, nonprofits, and startups who can\'t afford a recruiter',
 ]
 
 const orgPlans = [
@@ -24,7 +24,7 @@ const orgPlans = [
 ]
 
 function Arrow() {
-  return <span style={{ color: C.accent, flexShrink: 0, fontFamily: F.mono, fontSize: 12, marginTop: 1 }}>→</span>
+  return <span style={{ color: C.accent, flexShrink: 0, fontFamily: F.mono, fontSize: 12, marginTop: 2 }}>→</span>
 }
 
 export function WhoItFor() {
@@ -42,7 +42,7 @@ export function WhoItFor() {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
             {studentPoints.map(p => (
-              <div key={p} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: C.textMuted, lineHeight: 1.5 }}>
+              <div key={p} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: C.textMuted, lineHeight: 1.55 }}>
                 <Arrow />
                 {p}
               </div>
@@ -61,7 +61,7 @@ export function WhoItFor() {
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
             {orgPoints.map(p => (
-              <div key={p} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: C.textMuted, lineHeight: 1.5 }}>
+              <div key={p} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, color: C.textMuted, lineHeight: 1.55 }}>
                 <Arrow />
                 {p}
               </div>

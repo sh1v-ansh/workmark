@@ -3,14 +3,16 @@
 import { useReveal } from './landing/useReveal'
 import { Nav } from './landing/Nav'
 import { Hero } from './landing/Hero'
+import { TheProblem } from './landing/TheProblem'
 import { HowItWorks } from './landing/HowItWorks'
 import { VerificationSection } from './landing/VerificationSection'
+import { JobMatching } from './landing/JobMatching'
 import { EngagementTypes } from './landing/EngagementTypes'
 import { TheStat } from './landing/TheStat'
 import { WhoItFor } from './landing/WhoItFor'
-import { WaitlistSection } from './landing/WaitlistSection'
+import { JoinSection } from './landing/WaitlistSection'
 import { Footer } from './landing/Footer'
-import { C } from './landing/tokens'
+import { C, F } from './landing/tokens'
 
 export default function LandingPage() {
   useReveal()
@@ -34,24 +36,29 @@ export default function LandingPage() {
       <main>
         <Hero />
 
+        {/* Key insight — large type */}
         <section style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
-          <div className="reveal-item" style={{ maxWidth: 680 }}>
-            <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: '#6b6760', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>The key insight</div>
-            <p style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 36, lineHeight: 1.35, color: C.text, fontWeight: 500, marginBottom: 20 }}>
+          <div className="reveal-item" style={{ maxWidth: 800 }}>
+            <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
+              The key insight
+            </div>
+            <p style={{ fontFamily: F.serif, fontSize: 44, lineHeight: 1.2, color: C.text, fontWeight: 700, marginBottom: 20 }}>
               Workmark makes experience grindable.
             </p>
-            <p style={{ fontSize: 17, lineHeight: 1.7, color: '#9e9a8e', maxWidth: 560 }}>
+            <p style={{ fontSize: 18, lineHeight: 1.7, color: C.textMuted, maxWidth: 580 }}>
               Do the work, build the record, unlock better opportunities. It replaces the self-reported résumé with verified proof.
             </p>
           </div>
         </section>
 
+        <TheProblem />
         <HowItWorks />
         <VerificationSection />
+        <JobMatching />
         <EngagementTypes />
         <TheStat />
         <WhoItFor />
-        <WaitlistSection />
+        <JoinSection />
         <Footer />
       </main>
     </div>
