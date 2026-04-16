@@ -29,8 +29,9 @@ export function Nav() {
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         transition: 'background 0.3s, border-color 0.3s',
-        background: scrolled ? 'rgba(13,13,11,0.88)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(12px)' : 'none',
+        background: scrolled ? 'rgba(13,13,11,0.72)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(16px)' : 'none',
+        WebkitBackdropFilter: scrolled ? 'blur(16px)' : 'none',
         borderBottom: `1px solid ${scrolled ? C.border : 'transparent'}`,
       }}
     >
