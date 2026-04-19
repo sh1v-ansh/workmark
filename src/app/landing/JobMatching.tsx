@@ -16,7 +16,7 @@ export function JobMatching() {
         <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
           Job matching
         </div>
-        <h2 style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 700, lineHeight: 1.15, color: C.text, marginBottom: 48, maxWidth: 500 }}>
+        <h2 style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 48, maxWidth: 500 }}>
           Your record is<br />your application.
         </h2>
       </div>

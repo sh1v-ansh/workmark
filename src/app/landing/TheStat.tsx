@@ -13,7 +13,7 @@ export function TheStat() {
         <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
           The problem in one number
         </div>
-        <div style={{ fontFamily: F.serif, fontSize: 96, fontWeight: 900, lineHeight: 1, color: C.text, marginBottom: 16 }}>
+        <div style={{ fontFamily: F.serif, fontSize: 96, fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1, color: C.text, marginBottom: 16 }}>
           75–88%
         </div>
         <div style={{ fontFamily: F.mono, fontSize: 15, color: C.textMuted, marginBottom: 24 }}>

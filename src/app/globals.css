@@ -2,16 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,500;0,700;0,900;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @layer base {
+  /* Dark background bleeds into overscroll/rubber-band areas */
+  html {
+    background-color: #0d0d0b;
+    color: #f0ece3;
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-gray-200;
   }
+
   body {
-    @apply bg-white text-gray-900 antialiased;
+    background-color: #0d0d0b;
+    color: #f0ece3;
     font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
+
+  /* Keyboard focus indicator — meets WCAG 2.4.7 */
+  :focus-visible {
+    outline: 2px solid #c87533;
+    outline-offset: 3px;
+  }
+
 }
 
 @layer utilities {

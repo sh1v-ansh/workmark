@@ -106,7 +106,7 @@ export function Hero() {
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
             Verified CS internship &amp; project board
           </div>
-          <h1 style={{ fontFamily: F.serif, fontSize: 62, fontWeight: 700, lineHeight: 1.05, color: C.text, marginBottom: 24, letterSpacing: '-0.02em', margin: '0 0 24px' }}>
+          <h1 style={{ fontFamily: F.serif, fontSize: 62, fontWeight: 800, lineHeight: 1.05, color: C.text, marginBottom: 24, letterSpacing: '-0.03em', margin: '0 0 24px' }}>
             Work that speaks<br />for itself.
           </h1>
           <p style={{ fontSize: 17, lineHeight: 1.65, color: C.textMuted, marginBottom: 36, maxWidth: 440 }}>

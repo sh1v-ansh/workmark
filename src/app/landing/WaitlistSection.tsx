@@ -10,7 +10,7 @@ export function JoinSection() {
         <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
           Now open
         </div>
-        <h2 style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 700, color: C.text, lineHeight: 1.1, marginBottom: 16 }}>
+        <h2 style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, lineHeight: 1.1, marginBottom: 16 }}>
           Start building<br />your record.
         </h2>
         <p style={{ fontSize: 16, color: C.textMuted, lineHeight: 1.7, marginBottom: 40 }}>

@@ -12,7 +12,7 @@ export default function AboutPage() {
         <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
           About
         </div>
-        <h1 style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 700, color: C.text, lineHeight: 1.1, maxWidth: 560 }}>
+        <h1 style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, lineHeight: 1.1, maxWidth: 560 }}>
           One person trying to fix a broken system.
         </h1>
       </section>

@@ -19,7 +19,7 @@ export default function LandingPage() {
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
             The key insight
           </div>
-          <p style={{ fontFamily: F.serif, fontSize: 44, lineHeight: 1.2, color: C.text, fontWeight: 700, marginBottom: 20 }}>
+          <p style={{ fontFamily: F.serif, fontSize: 44, lineHeight: 1.2, color: C.text, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 20 }}>
             Workmark makes experience grindable.
           </p>
           <p style={{ fontSize: 18, lineHeight: 1.7, color: C.textMuted, maxWidth: 580 }}>

@@ -18,7 +18,7 @@ export function TeamSection() {
           <div style={{ fontFamily: F.mono, fontSize: 10, color: C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
             Founder
           </div>
-          <h2 style={{ fontFamily: F.serif, fontSize: 32, fontWeight: 700, color: C.text, lineHeight: 1.2, marginBottom: 6 }}>
+          <h2 style={{ fontFamily: F.serif, fontSize: 32, fontWeight: 800, letterSpacing: '-0.02em', color: C.text, lineHeight: 1.2, marginBottom: 6 }}>
             Shiv Ansh
           </h2>
           <div style={{ fontFamily: F.mono, fontSize: 12, color: C.textMuted, marginBottom: 24 }}>
@@ -42,7 +42,8 @@ export function TeamSection() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {/* Pull quote */}
           <div className="reveal-item" style={{ transitionDelay: '0.15s', background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`, padding: 28 }}>
-            <p style={{ fontFamily: F.serif, fontSize: 20, color: C.text, lineHeight: 1.55, fontStyle: 'italic', margin: 0 }}>
+            <div style={{ fontFamily: F.mono, fontSize: 10, color: C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>On hiring</div>
+            <p style={{ fontFamily: F.serif, fontSize: 19, fontWeight: 500, color: C.text, lineHeight: 1.6, margin: 0 }}>
               &ldquo;The résumé is self-reported noise. The only thing that should matter is whether you can actually ship.&rdquo;
             </p>
           </div>
