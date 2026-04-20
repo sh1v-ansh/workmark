@@ -1,20 +1,15 @@
 import Link from 'next/link'
 import type { Project } from '@/lib/types'
+import { C, F } from '@/app/landing/tokens'
 
 interface ProjectCardProps {
   project: Project
 }
 
-const typeColors: Record<string, string> = {
-  internship: 'bg-blue-50 text-blue-700',
-  project: 'bg-purple-50 text-purple-700',
-  'part-time': 'bg-orange-50 text-orange-700',
-}
-
-const workModeColors: Record<string, string> = {
-  remote: 'bg-green-50 text-green-700',
-  onsite: 'bg-yellow-50 text-yellow-700',
-  hybrid: 'bg-teal-50 text-teal-700',
+const typeLabel: Record<string, string> = {
+  internship: 'Internship',
+  project: 'Project',
+  'part-time': 'Part-time',
 }
 
 export default function ProjectCard({ project }: ProjectCardProps) {
@@ -25,98 +20,70 @@ export default function ProjectCard({ project }: ProjectCardProps) {
   return (
     <Link
       href={`/projects/${project.id}`}
-      className="group block rounded-2xl border border-gray-200 bg-white p-5 hover:border-brand-300 hover:shadow-md transition-all"
+      style={{
+        display: 'block', background: C.surface, border: `1px solid ${C.border}`,
+        padding: 20, textDecoration: 'none', transition: 'border-color 0.15s',
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.borderColor = C.accent)}
+      onMouseLeave={(e) => (e.currentTarget.style.borderColor = C.border)}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <h3 className="font-semibold text-gray-900 group-hover:text-brand-700 transition-colors leading-snug">
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 500, color: C.textSub, marginBottom: 3, lineHeight: 1.4 }}>
             {project.title ?? 'Untitled Project'}
           </h3>
-          <p className="text-sm text-gray-500 mt-0.5">
-            {project.companies?.company_name ?? 'Company'} ·{' '}
-            {project.companies?.hq_location ?? 'Location unknown'}
+          <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
+            {project.companies?.company_name ?? 'Company'} · {project.companies?.hq_location ?? 'Remote'}
           </p>
         </div>
-
-        {/* Paid badge */}
-        {project.is_paid ? (
-          <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
-            Paid
-          </span>
-        ) : (
-          <span className="shrink-0 text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
-            Unpaid
-          </span>
-        )}
+        <span style={{
+          flexShrink: 0, fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em',
+          color: project.is_paid ? C.accent : C.textFaint,
+          background: project.is_paid ? C.accentHover : C.surfaceAlt,
+          border: `1px solid ${project.is_paid ? C.accentBorder : C.border}`,
+        }}>
+          {project.is_paid ? 'Paid' : 'Unpaid'}
+        </span>
       </div>
 
-      {/* Badges row */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
+      {/* Type / mode badges */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
         {project.type && (
-          <span
-            className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
-              typeColors[project.type] ?? 'bg-gray-100 text-gray-600'
-            }`}
-          >
-            {project.type}
+          <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.textMuted, background: C.surfaceAlt, border: `1px solid ${C.border}` }}>
+            {typeLabel[project.type] ?? project.type}
           </span>
         )}
         {project.work_mode && (
-          <span
-            className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
-              workModeColors[project.work_mode] ?? 'bg-gray-100 text-gray-600'
-            }`}
-          >
+          <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.textMuted, background: C.surfaceAlt, border: `1px solid ${C.border}` }}>
             {project.work_mode}
           </span>
         )}
         {project.work_auth_required && (
-          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-50 text-red-600">
-            US Auth Required
+          <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)' }}>
+            US Auth
           </span>
         )}
       </div>
 
       {/* Meta */}
-      <div className="flex flex-wrap gap-3 text-xs text-gray-500 mb-3">
-        {project.duration && (
-          <span className="flex items-center gap-1">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            {project.duration}
-          </span>
-        )}
-        {project.hours_per_week && (
-          <span className="flex items-center gap-1">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {project.hours_per_week}h/week
-          </span>
-        )}
-        {project.compensation && (
-          <span className="flex items-center gap-1 font-medium text-gray-700">
-            {project.compensation}
-          </span>
-        )}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, fontSize: 11, color: C.textFaint, fontFamily: F.mono, marginBottom: displaySkills.length > 0 ? 10 : 0 }}>
+        {project.duration && <span>{project.duration}</span>}
+        {project.hours_per_week && <span>{project.hours_per_week}h/week</span>}
+        {project.compensation && <span style={{ color: C.textMuted }}>{project.compensation}</span>}
       </div>
 
       {/* Skills */}
       {displaySkills.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
           {displaySkills.map((skill) => (
-            <span
-              key={skill}
-              className="text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600"
-            >
+            <span key={skill} style={{ fontSize: 10, padding: '2px 7px', background: C.bg, border: `1px solid ${C.border}`, color: C.textFaint, fontFamily: F.mono }}>
               {skill}
             </span>
           ))}
           {extra > 0 && (
-            <span className="text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-400">
-              +{extra} more
+            <span style={{ fontSize: 10, padding: '2px 7px', background: C.bg, border: `1px solid ${C.border}`, color: C.textFaint, fontFamily: F.mono }}>
+              +{extra}
             </span>
           )}
         </div>

@@ -3,16 +3,16 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ProjectCard from '@/components/ProjectCard'
+import Navbar from '@/components/Navbar'
+import { C, F } from '@/app/landing/tokens'
 import type { Project } from '@/lib/types'
 import Link from 'next/link'
-
-// ─── filter types ──────────────────────────────────────────────────────────────
 
 interface Filters {
   type: string
   workMode: string
-  paid: string       // 'all' | 'paid' | 'unpaid'
-  workAuth: string   // 'all' | 'required' | 'not-required'
+  paid: string
+  workAuth: string
   skill: string
 }
 
@@ -24,28 +24,40 @@ const DEFAULT_FILTERS: Filters = {
   skill: '',
 }
 
-// ─── page ──────────────────────────────────────────────────────────────────────
-
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS)
+  const [userRole, setUserRole] = useState<'student' | 'company' | null>(null)
+  const [userName, setUserName] = useState<string | undefined>(undefined)
 
   useEffect(() => {
-    async function fetchProjects() {
+    async function init() {
       const supabase = createClient()
+
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const role = user.user_metadata?.role as 'student' | 'company' | undefined
+        setUserRole(role ?? null)
+        if (role === 'student') {
+          const { data } = await supabase.from('students').select('full_name').eq('id', user.id).single()
+          setUserName(data?.full_name ?? undefined)
+        } else if (role === 'company') {
+          const { data } = await supabase.from('companies').select('company_name').eq('id', user.id).single()
+          setUserName(data?.company_name ?? undefined)
+        }
+      }
+
       const { data, error } = await supabase
         .from('projects')
         .select('*, companies(company_name, industry, hq_location)')
         .eq('is_open', true)
         .order('created_at', { ascending: false })
 
-      if (!error && data) {
-        setProjects(data as Project[])
-      }
+      if (!error && data) setProjects(data as Project[])
       setLoading(false)
     }
-    fetchProjects()
+    init()
   }, [])
 
   const filtered = useMemo(() => {
@@ -58,10 +70,7 @@ export default function ProjectsPage() {
       if (filters.workAuth === 'not-required' && p.work_auth_required) return false
       if (filters.skill) {
         const skillLower = filters.skill.toLowerCase()
-        const allSkills = [
-          ...(p.required_skills ?? []),
-          ...(p.preferred_skills ?? []),
-        ].map((s) => s.toLowerCase())
+        const allSkills = [...(p.required_skills ?? []), ...(p.preferred_skills ?? [])].map((s) => s.toLowerCase())
         if (!allSkills.some((s) => s.includes(skillLower))) return false
       }
       return true
@@ -76,195 +85,110 @@ export default function ProjectsPage() {
     setFilters(DEFAULT_FILTERS)
   }
 
-  const hasActiveFilters = Object.entries(filters).some(([k, v]) =>
-    k === 'skill' ? !!v : v !== 'all'
-  )
+  const hasActiveFilters = Object.entries(filters).some(([k, v]) => k === 'skill' ? !!v : v !== 'all')
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top bar */}
-      <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="font-bold text-lg tracking-tight text-gray-900">
-            Work<span className="text-brand-600">mark</span>
-          </Link>
-          <div className="flex items-center gap-3">
-            <Link
-              href="/login"
-              className="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
-            >
-              Sign in
+    <div style={{ minHeight: '100vh', background: C.bg }}>
+      {userRole ? (
+        <Navbar role={userRole} userName={userName} />
+      ) : (
+        <header style={{ borderBottom: `1px solid ${C.border}`, background: 'rgba(13,13,11,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 40 }}>
+          <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: F.serif, fontSize: 18, fontWeight: 700, color: C.text, letterSpacing: '-0.01em' }}>W</span>
+              <span style={{ fontFamily: F.mono, fontSize: 13, color: C.textMuted, letterSpacing: '0.05em' }}>workmark</span>
             </Link>
-            <Link
-              href="/login"
-              className="text-sm font-medium text-white bg-brand-600 px-3.5 py-1.5 rounded-lg hover:bg-brand-700 transition-colors"
-            >
-              Sign up
-            </Link>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <Link href="/login" style={{ fontFamily: F.mono, fontSize: 12, color: C.textMuted, textDecoration: 'none', letterSpacing: '0.04em' }}>
+                Sign in
+              </Link>
+              <Link href="/login" style={{ fontFamily: F.mono, fontSize: 12, color: C.bg, background: C.accent, padding: '6px 14px', textDecoration: 'none', letterSpacing: '0.04em' }}>
+                Sign up
+              </Link>
+            </div>
           </div>
-        </div>
-      </header>
+        </header>
+      )}
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-        {/* Hero */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontFamily: F.serif, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 6 }}>
             Open Projects &amp; Internships
           </h1>
-          <p className="text-gray-500">
-            {loading
-              ? 'Loading…'
-              : `${filtered.length} of ${projects.length} positions`}
+          <p style={{ fontFamily: F.mono, fontSize: 12, color: C.textFaint }}>
+            {loading ? 'Loading…' : `${filtered.length} of ${projects.length} positions`}
           </p>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* ── Filters sidebar ── */}
-          <aside className="w-full lg:w-56 shrink-0">
-            <div className="bg-white rounded-2xl border border-gray-200 p-4 space-y-5 sticky top-20">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-gray-900">Filters</span>
+        <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
+          {/* Filter sidebar */}
+          <aside style={{ width: 200, flexShrink: 0, position: 'sticky', top: 72 }}>
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                <span style={{ fontFamily: F.mono, fontSize: 11, color: C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Filters</span>
                 {hasActiveFilters && (
-                  <button
-                    onClick={clearFilters}
-                    className="text-xs text-brand-600 hover:underline"
-                  >
-                    Clear all
+                  <button onClick={clearFilters} style={{ fontFamily: F.mono, fontSize: 10, color: C.accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.04em' }}>
+                    Clear
                   </button>
                 )}
               </div>
 
-              {/* Type */}
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                  Type
-                </p>
+              <FilterGroup label="Type">
                 {['all', 'internship', 'project', 'part-time'].map((t) => (
-                  <label key={t} className="flex items-center gap-2 py-1 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="type"
-                      value={t}
-                      checked={filters.type === t}
-                      onChange={() => update('type', t)}
-                      className="accent-brand-600"
-                    />
-                    <span className="text-sm text-gray-700 capitalize">
-                      {t === 'all' ? 'All types' : t}
-                    </span>
-                  </label>
+                  <RadioItem key={t} name="type" value={t} checked={filters.type === t} onChange={() => update('type', t)}
+                    label={t === 'all' ? 'All types' : t.charAt(0).toUpperCase() + t.slice(1)} />
                 ))}
-              </div>
+              </FilterGroup>
 
-              {/* Work mode */}
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                  Work mode
-                </p>
+              <FilterGroup label="Work mode">
                 {['all', 'remote', 'hybrid', 'onsite'].map((m) => (
-                  <label key={m} className="flex items-center gap-2 py-1 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="workMode"
-                      value={m}
-                      checked={filters.workMode === m}
-                      onChange={() => update('workMode', m)}
-                      className="accent-brand-600"
-                    />
-                    <span className="text-sm text-gray-700 capitalize">
-                      {m === 'all' ? 'All modes' : m}
-                    </span>
-                  </label>
+                  <RadioItem key={m} name="workMode" value={m} checked={filters.workMode === m} onChange={() => update('workMode', m)}
+                    label={m === 'all' ? 'All modes' : m.charAt(0).toUpperCase() + m.slice(1)} />
                 ))}
-              </div>
+              </FilterGroup>
 
-              {/* Paid */}
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                  Compensation
-                </p>
-                {[
-                  { value: 'all', label: 'All' },
-                  { value: 'paid', label: 'Paid only' },
-                  { value: 'unpaid', label: 'Unpaid only' },
-                ].map(({ value, label }) => (
-                  <label key={value} className="flex items-center gap-2 py-1 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="paid"
-                      value={value}
-                      checked={filters.paid === value}
-                      onChange={() => update('paid', value)}
-                      className="accent-brand-600"
-                    />
-                    <span className="text-sm text-gray-700">{label}</span>
-                  </label>
+              <FilterGroup label="Compensation">
+                {[{ value: 'all', label: 'All' }, { value: 'paid', label: 'Paid only' }, { value: 'unpaid', label: 'Unpaid only' }].map(({ value, label }) => (
+                  <RadioItem key={value} name="paid" value={value} checked={filters.paid === value} onChange={() => update('paid', value)} label={label} />
                 ))}
-              </div>
+              </FilterGroup>
 
-              {/* Work auth */}
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                  Work auth
-                </p>
-                {[
-                  { value: 'all', label: 'All' },
-                  { value: 'not-required', label: 'Open to all' },
-                  { value: 'required', label: 'US auth only' },
-                ].map(({ value, label }) => (
-                  <label key={value} className="flex items-center gap-2 py-1 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="workAuth"
-                      value={value}
-                      checked={filters.workAuth === value}
-                      onChange={() => update('workAuth', value)}
-                      className="accent-brand-600"
-                    />
-                    <span className="text-sm text-gray-700">{label}</span>
-                  </label>
+              <FilterGroup label="Work auth">
+                {[{ value: 'all', label: 'All' }, { value: 'not-required', label: 'Open to all' }, { value: 'required', label: 'US auth only' }].map(({ value, label }) => (
+                  <RadioItem key={value} name="workAuth" value={value} checked={filters.workAuth === value} onChange={() => update('workAuth', value)} label={label} />
                 ))}
-              </div>
+              </FilterGroup>
 
-              {/* Skill search */}
-              <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
-                  Skill
-                </p>
+              <FilterGroup label="Skill" last>
                 <input
                   type="text"
                   value={filters.skill}
                   onChange={(e) => update('skill', e.target.value)}
                   placeholder="e.g. Python, React"
-                  className="w-full px-3 py-2 rounded-xl border border-gray-300 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+                  className="dk-input"
+                  style={{ fontSize: 12 }}
                 />
-              </div>
+              </FilterGroup>
             </div>
           </aside>
 
-          {/* ── Project grid ── */}
-          <div className="flex-1">
+          {/* Project grid */}
+          <div style={{ flex: 1, minWidth: 0 }}>
             {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {[...Array(6)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="h-52 rounded-2xl bg-gray-100 animate-pulse"
-                  />
+                  <div key={i} style={{ height: 200, background: C.surface, border: `1px solid ${C.border}`, opacity: 0.5 }} />
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <div className="text-center py-16 text-gray-400">
-                <p className="text-lg mb-1">No projects match your filters</p>
-                <button
-                  onClick={clearFilters}
-                  className="text-sm text-brand-600 hover:underline"
-                >
+              <div style={{ textAlign: 'center', padding: '64px 0', color: C.textFaint }}>
+                <p style={{ fontSize: 14, marginBottom: 12 }}>No projects match your filters</p>
+                <button onClick={clearFilters} style={{ fontFamily: F.mono, fontSize: 12, color: C.accent, background: 'none', border: 'none', cursor: 'pointer' }}>
                   Clear filters
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {filtered.map((project) => (
                   <ProjectCard key={project.id} project={project} />
                 ))}
@@ -274,5 +198,23 @@ export default function ProjectsPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+function FilterGroup({ label, children, last }: { label: string; children: React.ReactNode; last?: boolean }) {
+  return (
+    <div style={{ marginBottom: last ? 0 : 18 }}>
+      <p style={{ fontFamily: F.mono, fontSize: 9, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>{label}</p>
+      {children}
+    </div>
+  )
+}
+
+function RadioItem({ name, value, checked, onChange, label }: { name: string; value: string; checked: boolean; onChange: () => void; label: string }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0', cursor: 'pointer' }}>
+      <input type="radio" name={name} value={value} checked={checked} onChange={onChange} style={{ accentColor: C.accent, width: 12, height: 12 }} />
+      <span style={{ fontFamily: F.mono, fontSize: 11, color: checked ? C.textSub : C.textFaint }}>{label}</span>
+    </label>
   )
 }

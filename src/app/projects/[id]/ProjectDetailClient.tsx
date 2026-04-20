@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import ApplyModal from '@/components/ApplyModal'
+import Navbar from '@/components/Navbar'
+import { C, F } from '@/app/landing/tokens'
 import type { Project, Student } from '@/lib/types'
 
 interface Props {
@@ -18,16 +20,6 @@ interface Props {
   alreadyApplied: boolean
 }
 
-function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <span
-      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-medium ${className ?? 'bg-gray-100 text-gray-600'}`}
-    >
-      {children}
-    </span>
-  )
-}
-
 export default function ProjectDetailClient({ project, student, alreadyApplied }: Props) {
   const [showModal, setShowModal] = useState(false)
   const [applied, setApplied] = useState(alreadyApplied)
@@ -35,83 +27,78 @@ export default function ProjectDetailClient({ project, student, alreadyApplied }
   const company = project.companies
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar */}
-      <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
-          <Link href="/" className="font-bold text-lg tracking-tight text-gray-900">
-            Work<span className="text-brand-600">mark</span>
-          </Link>
-          <Link
-            href="/projects"
-            className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
-          >
+    <div style={{ minHeight: '100vh', background: C.bg }}>
+      {student ? (
+        <Navbar role="student" />
+      ) : (
+        <header style={{ borderBottom: `1px solid ${C.border}`, background: 'rgba(13,13,11,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 40 }}>
+          <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontFamily: F.serif, fontSize: 18, fontWeight: 700, color: C.text }}>W</span>
+              <span style={{ fontFamily: F.mono, fontSize: 13, color: C.textMuted, letterSpacing: '0.05em' }}>workmark</span>
+            </Link>
+            <Link href="/projects" style={{ fontFamily: F.mono, fontSize: 12, color: C.textMuted, textDecoration: 'none', letterSpacing: '0.04em' }}>
+              ← All projects
+            </Link>
+          </div>
+        </header>
+      )}
+
+      <main style={{ maxWidth: 900, margin: '0 auto', padding: '40px 24px' }}>
+        {student && (
+          <Link href="/projects" style={{ fontFamily: F.mono, fontSize: 12, color: C.textMuted, textDecoration: 'none', display: 'inline-block', marginBottom: 24 }}>
             ← All projects
           </Link>
-        </div>
-      </header>
+        )}
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* ── Main content ── */}
-          <div className="lg:col-span-2 space-y-6">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: 20, alignItems: 'flex-start' }}>
+          {/* Main content */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Title block */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6">
-              <div className="flex flex-wrap gap-2 mb-3">
-                {project.type && (
-                  <Badge className="bg-blue-50 text-blue-700 capitalize">{project.type}</Badge>
-                )}
-                {project.work_mode && (
-                  <Badge className="bg-green-50 text-green-700 capitalize">
-                    {project.work_mode}
-                  </Badge>
-                )}
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 28 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                {project.type && <Chip>{project.type.charAt(0).toUpperCase() + project.type.slice(1)}</Chip>}
+                {project.work_mode && <Chip>{project.work_mode.charAt(0).toUpperCase() + project.work_mode.slice(1)}</Chip>}
                 {project.is_paid ? (
-                  <Badge className="bg-emerald-50 text-emerald-700">Paid</Badge>
+                  <Chip accent>Paid</Chip>
                 ) : (
-                  <Badge className="bg-gray-100 text-gray-500">Unpaid</Badge>
+                  <Chip>Unpaid</Chip>
                 )}
-                {project.work_auth_required && (
-                  <Badge className="bg-red-50 text-red-600">US Auth Required</Badge>
-                )}
+                {project.work_auth_required && <Chip red>US Auth Required</Chip>}
               </div>
 
-              <h1 className="text-2xl font-bold text-gray-900 mb-1">
+              <h1 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6, lineHeight: 1.3 }}>
                 {project.title ?? 'Untitled Project'}
               </h1>
-              <p className="text-gray-500">
+              <p style={{ fontFamily: F.mono, fontSize: 12, color: C.textFaint }}>
                 {company?.company_name}{company?.hq_location ? ` · ${company.hq_location}` : ''}
               </p>
             </div>
 
             {/* Description */}
             {project.description && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-3">
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 28 }}>
+                <h2 style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>
                   About this project
                 </h2>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
                   {project.description}
                 </p>
               </div>
             )}
 
             {/* Skills */}
-            {((project.required_skills?.length ?? 0) > 0 ||
-              (project.preferred_skills?.length ?? 0) > 0) && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-6">
-                <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">
+            {((project.required_skills?.length ?? 0) > 0 || (project.preferred_skills?.length ?? 0) > 0) && (
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 28 }}>
+                <h2 style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
                   Skills
                 </h2>
                 {(project.required_skills?.length ?? 0) > 0 && (
-                  <div className="mb-4">
-                    <p className="text-xs font-medium text-gray-500 mb-2">Required</p>
-                    <div className="flex flex-wrap gap-1.5">
+                  <div style={{ marginBottom: 16 }}>
+                    <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, marginBottom: 8 }}>Required</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {project.required_skills!.map((s) => (
-                        <span
-                          key={s}
-                          className="text-xs px-2.5 py-1 rounded-lg bg-brand-50 text-brand-700 font-medium"
-                        >
+                        <span key={s} style={{ fontSize: 11, padding: '3px 9px', background: C.accentHover, border: `1px solid ${C.accentBorder}`, color: C.accent, fontFamily: F.mono }}>
                           {s}
                         </span>
                       ))}
@@ -120,13 +107,10 @@ export default function ProjectDetailClient({ project, student, alreadyApplied }
                 )}
                 {(project.preferred_skills?.length ?? 0) > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-gray-500 mb-2">Nice to have</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, marginBottom: 8 }}>Nice to have</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {project.preferred_skills!.map((s) => (
-                        <span
-                          key={s}
-                          className="text-xs px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600"
-                        >
+                        <span key={s} style={{ fontSize: 11, padding: '3px 9px', background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono }}>
                           {s}
                         </span>
                       ))}
@@ -137,109 +121,87 @@ export default function ProjectDetailClient({ project, student, alreadyApplied }
             )}
           </div>
 
-          {/* ── Sidebar ── */}
-          <div className="space-y-4">
+          {/* Sidebar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Apply card */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5">
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 20 }}>
               {applied ? (
-                <div className="text-center py-2">
-                  <div className="text-green-600 text-2xl mb-1">✓</div>
-                  <p className="text-sm font-semibold text-green-700">Application submitted</p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    Track it in your dashboard
-                  </p>
-                  <Link
-                    href="/student/dashboard"
-                    className="mt-3 block text-center text-xs text-brand-600 hover:underline"
-                  >
+                <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                  <p style={{ fontFamily: F.mono, fontSize: 12, color: C.accent, marginBottom: 6, letterSpacing: '0.04em' }}>✓ Application submitted</p>
+                  <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, marginBottom: 12 }}>Track it in your dashboard</p>
+                  <Link href="/student/dashboard" style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, textDecoration: 'none' }}>
                     View dashboard →
                   </Link>
                 </div>
               ) : student ? (
                 <button
                   onClick={() => setShowModal(true)}
-                  className="w-full py-3 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition-colors"
+                  style={{ width: '100%', padding: '12px 0', background: C.accent, border: 'none', color: C.bg, fontFamily: F.mono, fontSize: 12, fontWeight: 500, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'opacity 0.15s' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
                 >
                   Apply now
                 </button>
               ) : (
-                <div className="text-center space-y-2">
-                  <Link
-                    href="/login"
-                    className="block w-full py-3 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition-colors text-center"
-                  >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'center' }}>
+                  <Link href="/login" style={{ display: 'block', padding: '12px 0', background: C.accent, color: C.bg, fontFamily: F.mono, fontSize: 12, fontWeight: 500, textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                     Sign in to apply
                   </Link>
-                  <p className="text-xs text-gray-400">
+                  <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint }}>
                     New?{' '}
-                    <Link href="/login" className="text-brand-600 hover:underline">
-                      Create an account
-                    </Link>
+                    <Link href="/login" style={{ color: C.accent, textDecoration: 'none' }}>Create an account</Link>
                   </p>
                 </div>
               )}
             </div>
 
             {/* Details card */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
-              <h3 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 20 }}>
+              <h3 style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 14 }}>
                 Details
               </h3>
-
-              <Detail label="Duration" value={project.duration} />
-              <Detail
-                label="Hours / week"
-                value={project.hours_per_week ? `${project.hours_per_week}h` : undefined}
-              />
-              <Detail label="Compensation" value={project.compensation} />
-              <Detail label="Location" value={project.location} />
-              <Detail
-                label="Degree"
-                value={project.degree_level
-                  ? project.degree_level === 'both'
-                    ? 'Undergrad & Grad'
-                    : project.degree_level === 'undergrad'
-                    ? 'Undergrad'
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Detail label="Duration" value={project.duration} />
+                <Detail label="Hours / week" value={project.hours_per_week ? `${project.hours_per_week}h` : undefined} />
+                <Detail label="Compensation" value={project.compensation} />
+                <Detail label="Location" value={project.location} />
+                <Detail label="Degree" value={
+                  project.degree_level
+                    ? project.degree_level === 'both' ? 'Undergrad & Grad'
+                    : project.degree_level === 'undergrad' ? 'Undergrad'
                     : 'Graduate'
-                  : undefined}
-              />
-              <Detail
-                label="Min. GPA"
-                value={project.min_gpa ? `${project.min_gpa}` : undefined}
-              />
-              {project.preferred_majors && project.preferred_majors.length > 0 && (
-                <div>
-                  <p className="text-xs text-gray-400 mb-1">Preferred majors</p>
-                  <div className="flex flex-wrap gap-1">
-                    {project.preferred_majors.map((m) => (
-                      <span key={m} className="text-xs px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">
-                        {m}
-                      </span>
-                    ))}
+                    : undefined
+                } />
+                <Detail label="Min. GPA" value={project.min_gpa ? `${project.min_gpa}` : undefined} />
+                {project.preferred_majors && project.preferred_majors.length > 0 && (
+                  <div>
+                    <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, marginBottom: 6 }}>Preferred majors</p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                      {project.preferred_majors.map((m) => (
+                        <span key={m} style={{ fontSize: 10, padding: '2px 7px', background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono }}>
+                          {m}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
             {/* Company card */}
             {company && (
-              <div className="bg-white rounded-2xl border border-gray-200 p-5 space-y-1">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 20 }}>
+                <h3 style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 500, color: C.textSub, marginBottom: 8 }}>
                   {company.company_name ?? 'Company'}
                 </h3>
                 {company.industry && (
-                  <p className="text-xs text-gray-500">{company.industry}</p>
+                  <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, marginBottom: 4 }}>{company.industry}</p>
                 )}
                 {company.hq_location && (
-                  <p className="text-xs text-gray-500">{company.hq_location}</p>
+                  <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, marginBottom: 4 }}>{company.hq_location}</p>
                 )}
                 {company.website && (
-                  <a
-                    href={company.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-brand-600 hover:underline block mt-1"
-                  >
+                  <a href={company.website} target="_blank" rel="noopener noreferrer" style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, textDecoration: 'none' }}>
                     Visit website ↗
                   </a>
                 )}
@@ -265,12 +227,23 @@ export default function ProjectDetailClient({ project, student, alreadyApplied }
   )
 }
 
+function Chip({ children, accent, red }: { children: React.ReactNode; accent?: boolean; red?: boolean }) {
+  const color = red ? '#f87171' : accent ? C.accent : C.textMuted
+  const bg = red ? 'rgba(248,113,113,0.08)' : accent ? C.accentHover : C.surfaceAlt
+  const border = red ? 'rgba(248,113,113,0.25)' : accent ? C.accentBorder : C.border
+  return (
+    <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '0.08em', color, background: bg, border: `1px solid ${border}` }}>
+      {children}
+    </span>
+  )
+}
+
 function Detail({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
   return (
     <div>
-      <p className="text-xs text-gray-400">{label}</p>
-      <p className="text-sm text-gray-800 font-medium">{value}</p>
+      <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, marginBottom: 2 }}>{label}</p>
+      <p style={{ fontSize: 13, color: C.textSub, fontWeight: 500 }}>{value}</p>
     </div>
   )
 }
