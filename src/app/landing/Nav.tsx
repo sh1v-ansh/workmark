@@ -9,6 +9,7 @@ import { LogoMark } from './LogoMark'
 const links: [string, string][] = [
   ['/', 'Home'],
   ['/how-it-works', 'How it works'],
+  ['/pricing', 'Pricing'],
   ['/about', 'About'],
 ]
 
