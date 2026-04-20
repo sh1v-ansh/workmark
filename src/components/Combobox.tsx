@@ -18,9 +18,9 @@ export function Combobox({ id, value, onChange, options, placeholder, required }
   const [highlighted, setHighlighted] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const filtered = options
-    .filter((o) => o.toLowerCase().includes(query.toLowerCase()))
-    .slice(0, 8)
+  const filtered = query.length > 0
+    ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase())).slice(0, 8)
+    : []
 
   useEffect(() => { setQuery(value) }, [value])
 

@@ -9,7 +9,7 @@ import { C, F } from '@/app/landing/tokens'
 import { LogoMark } from '@/app/landing/LogoMark'
 
 interface NavbarProps {
-  role: 'student' | 'company'
+  role: 'student' | 'company' | 'faculty'
   userName?: string
 }
 
@@ -28,7 +28,7 @@ export default function Navbar({ role, userName }: NavbarProps) {
     router.refresh()
   }
 
-  const dashboardHref = role === 'student' ? '/student/dashboard' : '/company/dashboard'
+  const dashboardHref = role === 'student' ? '/student/dashboard' : role === 'faculty' ? '/faculty/dashboard' : '/company/dashboard'
 
   const linkStyle = (href: string): React.CSSProperties => ({
     fontSize: 13,
@@ -55,16 +55,9 @@ export default function Navbar({ role, userName }: NavbarProps) {
           <Link href="/projects" aria-current={pathname === '/projects' ? 'page' : undefined} style={linkStyle('/projects')}>
             Browse
           </Link>
-          {role === 'student' && (
-            <Link href="/student/dashboard" aria-current={pathname === '/student/dashboard' ? 'page' : undefined} style={linkStyle('/student/dashboard')}>
-              Dashboard
-            </Link>
-          )}
-          {role === 'company' && (
-            <Link href="/company/dashboard" aria-current={pathname === '/company/dashboard' ? 'page' : undefined} style={linkStyle('/company/dashboard')}>
-              Dashboard
-            </Link>
-          )}
+          <Link href={dashboardHref} aria-current={pathname === dashboardHref ? 'page' : undefined} style={linkStyle(dashboardHref)}>
+            Dashboard
+          </Link>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 16, borderLeft: `1px solid ${C.border}` }}>
             {userName && (
