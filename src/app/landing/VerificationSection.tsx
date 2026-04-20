@@ -26,7 +26,7 @@ function InteractiveAttestation() {
     return (
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 28, textAlign: 'center' }}>
         <div style={{ width: 48, height: 48, background: C.accentHover, border: `1px solid ${C.accentBorder}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
             <path d="M4 10l4 4 8-8" stroke={C.accent} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
@@ -60,10 +60,10 @@ function InteractiveAttestation() {
       </div>
 
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>Did the student complete the engagement?</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div id="delivered-label" style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>Did the student complete the engagement?</div>
+        <div role="group" aria-labelledby="delivered-label" style={{ display: 'flex', gap: 8 }}>
           {(['yes', 'no'] as const).map(v => (
-            <button key={v} onClick={() => setDelivered(v)} style={{ flex: 1, padding: '8px 0', fontFamily: F.mono, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', ...toggleBtn(delivered === v) }}>
+            <button key={v} onClick={() => setDelivered(v)} aria-pressed={delivered === v} style={{ flex: 1, padding: '8px 0', fontFamily: F.mono, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', ...toggleBtn(delivered === v) }}>
               {v}
             </button>
           ))}
@@ -71,12 +71,12 @@ function InteractiveAttestation() {
       </div>
 
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>
+        <div id="stack-label" style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>
           Stack used <span style={{ fontSize: 11, color: C.textFaint }}>(uncheck any not used)</span>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div role="group" aria-labelledby="stack-label" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {(Object.keys(stack) as Array<keyof typeof stack>).map(s => (
-            <button key={s} onClick={() => setStack(p => ({ ...p, [s]: !p[s] }))} style={{ padding: '5px 12px', fontFamily: F.mono, fontSize: 12, ...toggleBtn(stack[s]) }}>
+            <button key={s} onClick={() => setStack(p => ({ ...p, [s]: !p[s] }))} aria-pressed={stack[s]} style={{ padding: '5px 12px', fontFamily: F.mono, fontSize: 12, ...toggleBtn(stack[s]) }}>
               {stack[s] ? '✓ ' : ''}{s}
             </button>
           ))}
@@ -84,10 +84,10 @@ function InteractiveAttestation() {
       </div>
 
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>Would you work with them again?</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div id="work-again-label" style={{ fontSize: 13, color: C.textSub, marginBottom: 10 }}>Would you work with them again?</div>
+        <div role="group" aria-labelledby="work-again-label" style={{ display: 'flex', gap: 8 }}>
           {(['yes', 'maybe', 'no'] as const).map(v => (
-            <button key={v} onClick={() => setWorkAgain(v)} style={{ flex: 1, padding: '8px 0', fontFamily: F.mono, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', ...toggleBtn(workAgain === v) }}>
+            <button key={v} onClick={() => setWorkAgain(v)} aria-pressed={workAgain === v} style={{ flex: 1, padding: '8px 0', fontFamily: F.mono, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.05em', ...toggleBtn(workAgain === v) }}>
               {v}
             </button>
           ))}
@@ -125,7 +125,7 @@ export function VerificationSection() {
       <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
         <div className="reveal-item">
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Verification</div>
-          <h2 style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 700, lineHeight: 1.15, color: C.text, marginBottom: 16 }}>
+          <h2 style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 16 }}>
             One button.<br />Permanent record.
           </h2>
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.7, marginBottom: 28 }}>

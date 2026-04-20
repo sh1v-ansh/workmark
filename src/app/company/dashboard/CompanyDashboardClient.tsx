@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
+import { C, F } from '@/app/landing/tokens'
 import type { Company, Project, Application } from '@/lib/types'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -15,8 +16,7 @@ function parseDurationDays(duration: string | null): number {
   if (weekMatch) return parseInt(weekMatch[1]) * 7
   const monthMatch = lower.match(/(\d+)\s*month/)
   if (monthMatch) return parseInt(monthMatch[1]) * 30
-  const semMatch = lower.match(/semester/)
-  if (semMatch) return 120
+  if (lower.match(/semester/)) return 120
   return 90
 }
 
@@ -30,18 +30,20 @@ function fmtDate(s: string) {
   return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+// ─── Label ────────────────────────────────────────────────────────────────────
+
+function Label({ children, htmlFor }: { children: React.ReactNode; htmlFor?: string }) {
+  return (
+    <label htmlFor={htmlFor} style={{ display: 'block', fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>
+      {children}
+    </label>
+  )
+}
+
 // ─── Tag input ────────────────────────────────────────────────────────────────
 
-function TagInput({
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string
-  value: string[]
-  onChange: (v: string[]) => void
-  placeholder?: string
+function TagInput({ label, inputId, value, onChange, placeholder }: {
+  label: string; inputId: string; value: string[]; onChange: (v: string[]) => void; placeholder?: string
 }) {
   const [input, setInput] = useState('')
   function add() {
@@ -51,23 +53,29 @@ function TagInput({
   }
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-      <div className="flex gap-2 mb-2">
+      <Label htmlFor={inputId}>{label}</Label>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <input
+          id={inputId}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add() } }}
           placeholder={placeholder ?? 'Add and press Enter'}
-          className="flex-1 px-3 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+          className="dk-input"
+          style={{ flex: 1 }}
         />
-        <button type="button" onClick={add} className="px-3 py-2 text-sm font-medium text-brand-700 bg-brand-50 rounded-xl hover:bg-brand-100">Add</button>
+        <button type="button" onClick={add} style={{ padding: '0 14px', background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono, fontSize: 11, cursor: 'pointer' }}>
+          Add
+        </button>
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {value.map((t) => (
-          <span key={t} className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gray-100 text-sm text-gray-700">
+          <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: C.surfaceAlt, border: `1px solid ${C.border}`, fontSize: 11, color: C.textSub, fontFamily: F.mono }}>
             {t}
-            <button type="button" onClick={() => onChange(value.filter((x) => x !== t))} className="text-gray-400 hover:text-red-500">×</button>
+            <button type="button" onClick={() => onChange(value.filter((x) => x !== t))} aria-label={`Remove ${t}`} style={{ background: 'none', border: 'none', color: C.textFaint, cursor: 'pointer', padding: 0, lineHeight: 1 }}>
+              <span aria-hidden="true">×</span>
+            </button>
           </span>
         ))}
       </div>
@@ -77,14 +85,8 @@ function TagInput({
 
 // ─── New project form ─────────────────────────────────────────────────────────
 
-function NewProjectForm({
-  companyId,
-  onCreated,
-  onCancel,
-}: {
-  companyId: string
-  onCreated: (p: Project) => void
-  onCancel: () => void
+function NewProjectForm({ companyId, onCreated, onCancel }: {
+  companyId: string; onCreated: (p: Project) => void; onCancel: () => void
 }) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -112,27 +114,17 @@ function NewProjectForm({
       const { data, error } = await supabase
         .from('projects')
         .insert({
-          company_id: companyId,
-          title,
-          description: description || null,
-          type,
+          company_id: companyId, title, description: description || null, type,
           required_skills: reqSkills.length > 0 ? reqSkills : null,
           preferred_skills: prefSkills.length > 0 ? prefSkills : null,
-          work_mode: workMode,
-          location: location || null,
-          duration: duration || null,
+          work_mode: workMode, location: location || null, duration: duration || null,
           hours_per_week: hoursPerWeek ? parseInt(hoursPerWeek) : null,
-          is_paid: isPaid,
-          compensation: compensation || null,
+          is_paid: isPaid, compensation: compensation || null,
           work_auth_required: workAuthRequired,
-          min_gpa: minGpa ? parseFloat(minGpa) : null,
-          degree_level: degreeLevel,
-          preferred_majors: prefMajors.length > 0 ? prefMajors : null,
-          is_open: true,
+          min_gpa: minGpa ? parseFloat(minGpa) : null, degree_level: degreeLevel,
+          preferred_majors: prefMajors.length > 0 ? prefMajors : null, is_open: true,
         })
-        .select()
-        .single()
-
+        .select().single()
       if (error) throw error
       toast('Project posted!', 'success')
       onCreated(data as Project)
@@ -143,92 +135,91 @@ function NewProjectForm({
     }
   }
 
+  const fieldGap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Title <span className="text-red-500">*</span></label>
-        <input required value={title} onChange={(e) => setTitle(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent" placeholder="ML Research Intern" />
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div style={fieldGap}>
+        <Label htmlFor="proj-title">Title <span aria-hidden="true" style={{ color: C.accent }}>*</span></Label>
+        <input id="proj-title" required value={title} onChange={(e) => setTitle(e.target.value)} className="dk-input" placeholder="ML Research Intern" />
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent" placeholder="Describe the project, goals, and what students will learn…" />
+      <div style={fieldGap}>
+        <Label htmlFor="proj-desc">Description</Label>
+        <textarea id="proj-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="dk-textarea" placeholder="Describe the project, goals, and what students will learn…" />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Type</label>
-          <select value={type} onChange={(e) => setType(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={fieldGap}>
+          <Label htmlFor="proj-type">Type</Label>
+          <select id="proj-type" value={type} onChange={(e) => setType(e.target.value)} className="dk-select">
             <option value="project">Project</option>
             <option value="internship">Internship</option>
             <option value="part-time">Part-time</option>
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Work mode</label>
-          <select value={workMode} onChange={(e) => setWorkMode(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+        <div style={fieldGap}>
+          <Label htmlFor="proj-work-mode">Work mode</Label>
+          <select id="proj-work-mode" value={workMode} onChange={(e) => setWorkMode(e.target.value)} className="dk-select">
             <option value="remote">Remote</option>
             <option value="hybrid">Hybrid</option>
             <option value="onsite">Onsite</option>
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Location</label>
-          <input value={location} onChange={(e) => setLocation(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent" placeholder="San Francisco, CA" />
+        <div style={fieldGap}>
+          <Label htmlFor="proj-location">Location</Label>
+          <input id="proj-location" value={location} onChange={(e) => setLocation(e.target.value)} className="dk-input" placeholder="San Francisco, CA" />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Duration</label>
-          <input value={duration} onChange={(e) => setDuration(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent" placeholder="8 weeks, 1 semester…" />
+        <div style={fieldGap}>
+          <Label htmlFor="proj-duration">Duration</Label>
+          <input id="proj-duration" value={duration} onChange={(e) => setDuration(e.target.value)} className="dk-input" placeholder="8 weeks, 1 semester…" />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Hours / week</label>
-          <input type="number" min={1} max={60} value={hoursPerWeek} onChange={(e) => setHoursPerWeek(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent" placeholder="20" />
+        <div style={fieldGap}>
+          <Label htmlFor="proj-hours">Hours / week</Label>
+          <input id="proj-hours" type="number" min={1} max={60} value={hoursPerWeek} onChange={(e) => setHoursPerWeek(e.target.value)} className="dk-input" placeholder="20" />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Degree level</label>
-          <select value={degreeLevel} onChange={(e) => setDegreeLevel(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent">
+        <div style={fieldGap}>
+          <Label htmlFor="proj-degree">Degree level</Label>
+          <select id="proj-degree" value={degreeLevel} onChange={(e) => setDegreeLevel(e.target.value)} className="dk-select">
             <option value="both">All levels</option>
             <option value="undergrad">Undergrad only</option>
             <option value="grad">Graduate only</option>
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Min. GPA</label>
-          <input type="number" min={0} max={4} step={0.01} value={minGpa} onChange={(e) => setMinGpa(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent" placeholder="3.0" />
+        <div style={fieldGap}>
+          <Label htmlFor="proj-gpa">Min. GPA</Label>
+          <input id="proj-gpa" type="number" min={0} max={4} step={0.01} value={minGpa} onChange={(e) => setMinGpa(e.target.value)} className="dk-input" placeholder="3.0" />
         </div>
       </div>
 
       {/* Compensation */}
-      <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" checked={isPaid} onChange={(e) => setIsPaid(e.target.checked)} className="w-4 h-4 accent-brand-600 rounded" />
-          <span className="text-sm font-medium text-gray-700">This is a paid position</span>
+      <div style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <input type="checkbox" checked={isPaid} onChange={(e) => setIsPaid(e.target.checked)} className="dk-checkbox" />
+          <span style={{ fontSize: 13, color: C.textMuted }}>This is a paid position</span>
         </label>
         {isPaid && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Compensation details</label>
-            <input value={compensation} onChange={(e) => setCompensation(e.target.value)} className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent" placeholder="$20/hr, $2000 stipend…" />
+          <div style={fieldGap}>
+            <Label htmlFor="proj-comp">Compensation details</Label>
+            <input id="proj-comp" value={compensation} onChange={(e) => setCompensation(e.target.value)} className="dk-input" placeholder="$20/hr, $2000 stipend…" />
           </div>
         )}
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input type="checkbox" checked={workAuthRequired} onChange={(e) => setWorkAuthRequired(e.target.checked)} className="w-4 h-4 accent-brand-600 rounded" />
-          <span className="text-sm font-medium text-gray-700">US work authorization required</span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <input type="checkbox" checked={workAuthRequired} onChange={(e) => setWorkAuthRequired(e.target.checked)} className="dk-checkbox" />
+          <span style={{ fontSize: 13, color: C.textMuted }}>US work authorization required</span>
         </label>
       </div>
 
-      <TagInput label="Required skills" value={reqSkills} onChange={setReqSkills} placeholder="Python, React…" />
-      <TagInput label="Preferred skills (optional)" value={prefSkills} onChange={setPrefSkills} placeholder="Docker, Kubernetes…" />
-      <TagInput label="Preferred majors (optional)" value={prefMajors} onChange={setPrefMajors} placeholder="CS, ECE…" />
+      <TagInput label="Required skills" inputId="proj-req-skills" value={reqSkills} onChange={setReqSkills} placeholder="Python, React…" />
+      <TagInput label="Preferred skills (optional)" inputId="proj-pref-skills" value={prefSkills} onChange={setPrefSkills} placeholder="Docker, Kubernetes…" />
+      <TagInput label="Preferred majors (optional)" inputId="proj-majors" value={prefMajors} onChange={setPrefMajors} placeholder="CS, ECE…" />
 
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onCancel} className="flex-1 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
-        <button type="submit" disabled={loading} className="flex-1 py-2.5 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 disabled:opacity-60 transition-colors">
-          {loading ? (
-            <span className="flex items-center justify-center gap-2">
-              <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              Posting…
-            </span>
-          ) : 'Post project'}
+      <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
+        <button type="button" onClick={onCancel} style={{ flex: 1, padding: '11px 0', background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono, fontSize: 12, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Cancel
+        </button>
+        <button type="submit" disabled={loading} style={{ flex: 1, padding: '11px 0', background: loading ? C.surfaceAlt : C.accent, border: 'none', color: loading ? C.textMuted : C.bg, fontFamily: F.mono, fontSize: 12, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
+          {loading ? 'Posting…' : 'Post project →'}
         </button>
       </div>
     </form>
@@ -237,77 +228,56 @@ function NewProjectForm({
 
 // ─── Application row ──────────────────────────────────────────────────────────
 
-function ApplicationRow({
-  app,
-  onAccept,
-  onReject,
-}: {
-  app: Application
-  onAccept: (appId: string) => void
-  onReject: (appId: string) => void
+function ApplicationRow({ app, onAccept, onReject }: {
+  app: Application; onAccept: (id: string) => void; onReject: (id: string) => void
 }) {
   const student = app.students
   const [acting, setActing] = useState(false)
 
-  async function handleAccept() {
-    setActing(true)
-    await onAccept(app.id)
-    setActing(false)
-  }
-
-  async function handleReject() {
-    setActing(true)
-    await onReject(app.id)
-    setActing(false)
-  }
+  async function handleAccept() { setActing(true); await onAccept(app.id); setActing(false) }
+  async function handleReject() { setActing(true); await onReject(app.id); setActing(false) }
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-gray-50 rounded-xl">
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900">{student?.full_name ?? 'Student'}</p>
-        <p className="text-xs text-gray-400 mt-0.5">
-          {student?.university ?? ''}
-          {student?.gpa ? ` · GPA ${student.gpa}` : ''}
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', background: C.surfaceAlt, border: `1px solid ${C.border}` }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p style={{ fontSize: 13, fontWeight: 500, color: C.textSub, marginBottom: 3 }}>{student?.full_name ?? 'Student'}</p>
+        <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
+          {student?.university ?? ''}{student?.gpa ? ` · GPA ${student.gpa}` : ''}
         </p>
         {student?.skills && student.skills.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-2">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
             {student.skills.slice(0, 5).map((s) => (
-              <span key={s} className="text-xs px-2 py-0.5 rounded-md bg-white border border-gray-200 text-gray-600">{s}</span>
+              <span key={s} style={{ fontSize: 10, padding: '2px 6px', background: C.surface, border: `1px solid ${C.border}`, color: C.textFaint, fontFamily: F.mono }}>{s}</span>
             ))}
           </div>
         )}
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         {app.resume_url && (
-          <a
-            href={`/api/resume?path=${encodeURIComponent(app.resume_url)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs font-medium text-brand-600 border border-brand-200 px-2.5 py-1.5 rounded-lg hover:bg-brand-50 transition-colors"
-          >
+          <a href={`/api/resume?path=${encodeURIComponent(app.resume_url)}`} target="_blank" rel="noopener noreferrer"
+            style={{ fontSize: 11, fontFamily: F.mono, color: C.accent, padding: '5px 10px', border: `1px solid ${C.accentBorder}`, textDecoration: 'none' }}>
             Resume ↗
           </a>
         )}
         {app.status === 'applied' ? (
           <>
-            <button
-              onClick={handleReject}
-              disabled={acting}
-              className="text-xs font-medium text-red-600 border border-red-200 px-2.5 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-50 transition-colors"
-            >
+            <button onClick={handleReject} disabled={acting}
+              style={{ fontSize: 11, fontFamily: F.mono, color: '#f87171', padding: '5px 10px', border: '1px solid rgba(248,113,113,0.3)', background: 'transparent', cursor: acting ? 'not-allowed' : 'pointer', opacity: acting ? 0.5 : 1 }}>
               Reject
             </button>
-            <button
-              onClick={handleAccept}
-              disabled={acting}
-              className="text-xs font-medium text-white bg-green-600 px-2.5 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
-            >
+            <button onClick={handleAccept} disabled={acting}
+              style={{ fontSize: 11, fontFamily: F.mono, color: C.bg, background: C.accent, padding: '5px 12px', border: 'none', cursor: acting ? 'not-allowed' : 'pointer', fontWeight: 500, opacity: acting ? 0.5 : 1 }}>
               {acting ? '…' : 'Accept'}
             </button>
           </>
         ) : (
-          <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full capitalize ${app.status === 'accepted' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+          <span style={{
+            fontSize: 10, fontFamily: F.mono, padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '0.06em',
+            color: app.status === 'accepted' ? C.accent : '#f87171',
+            background: app.status === 'accepted' ? C.accentHover : 'rgba(248,113,113,0.1)',
+            border: `1px solid ${app.status === 'accepted' ? C.accentBorder : 'rgba(248,113,113,0.3)'}`,
+          }}>
             {app.status}
           </span>
         )}
@@ -324,11 +294,7 @@ interface Props {
   initialApplications: Application[]
 }
 
-export default function CompanyDashboardClient({
-  company,
-  initialProjects,
-  initialApplications,
-}: Props) {
+export default function CompanyDashboardClient({ company, initialProjects, initialApplications }: Props) {
   const { toast } = useToast()
   const [projects, setProjects] = useState<Project[]>(initialProjects)
   const [applications, setApplications] = useState<Application[]>(initialApplications)
@@ -343,38 +309,22 @@ export default function CompanyDashboardClient({
     const supabase = createClient()
     const app = applications.find((a) => a.id === appId)
     if (!app) return
-
     try {
-      // 1. Update application status
-      const { error: updateErr } = await supabase
-        .from('applications')
-        .update({ status: 'accepted' })
-        .eq('id', appId)
+      const { error: updateErr } = await supabase.from('applications').update({ status: 'accepted' }).eq('id', appId)
       if (updateErr) throw updateErr
-
-      // 2. Auto-create experience record
       const project = projects.find((p) => p.id === app.project_id)
       const startDate = new Date()
-      const durationDays = parseDurationDays(project?.duration ?? null)
-      const endDate = addDays(startDate, durationDays)
-
+      const endDate = addDays(startDate, parseDurationDays(project?.duration ?? null))
       const { error: expErr } = await supabase.from('experience_records').insert({
-        application_id: appId,
-        student_id: app.student_id,
-        company_id: company.id,
-        project_id: app.project_id,
-        project_title: project?.title ?? null,
-        company_name: company.company_name,
-        skills_used: project?.required_skills ?? null,
+        application_id: appId, student_id: app.student_id, company_id: company.id,
+        project_id: app.project_id, project_title: project?.title ?? null,
+        company_name: company.company_name, skills_used: project?.required_skills ?? null,
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
         verification_status: 'in_progress',
       })
       if (expErr) throw expErr
-
-      setApplications((prev) =>
-        prev.map((a) => (a.id === appId ? { ...a, status: 'accepted' } : a))
-      )
+      setApplications((prev) => prev.map((a) => (a.id === appId ? { ...a, status: 'accepted' } : a)))
       toast('Application accepted and experience record created.', 'success')
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Action failed.', 'error')
@@ -384,14 +334,9 @@ export default function CompanyDashboardClient({
   async function handleReject(appId: string) {
     const supabase = createClient()
     try {
-      const { error } = await supabase
-        .from('applications')
-        .update({ status: 'rejected' })
-        .eq('id', appId)
+      const { error } = await supabase.from('applications').update({ status: 'rejected' }).eq('id', appId)
       if (error) throw error
-      setApplications((prev) =>
-        prev.map((a) => (a.id === appId ? { ...a, status: 'rejected' } : a))
-      )
+      setApplications((prev) => prev.map((a) => (a.id === appId ? { ...a, status: 'rejected' } : a)))
       toast('Application rejected.', 'info')
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Action failed.', 'error')
@@ -401,14 +346,9 @@ export default function CompanyDashboardClient({
   async function handleToggleOpen(project: Project) {
     const supabase = createClient()
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ is_open: !project.is_open })
-        .eq('id', project.id)
+      const { error } = await supabase.from('projects').update({ is_open: !project.is_open }).eq('id', project.id)
       if (error) throw error
-      setProjects((prev) =>
-        prev.map((p) => (p.id === project.id ? { ...p, is_open: !p.is_open } : p))
-      )
+      setProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, is_open: !p.is_open } : p)))
       toast(project.is_open ? 'Project closed.' : 'Project re-opened.', 'success')
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Failed to update project.', 'error')
@@ -416,38 +356,36 @@ export default function CompanyDashboardClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: C.bg }}>
       <Navbar role="company" userName={company.company_name ?? undefined} />
 
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 space-y-8">
+      <main style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 32 }}>
+
         {/* ── Header ── */}
-        <div className="flex items-start justify-between">
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 4 }}>
               {company.company_name ?? 'Company Dashboard'}
             </h1>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p style={{ fontSize: 13, color: C.textMuted, fontFamily: F.mono }}>
               {company.industry}{company.hq_location ? ` · ${company.hq_location}` : ''}
             </p>
           </div>
           <button
             onClick={() => setShowNewForm(true)}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 transition-colors"
+            style={{ padding: '10px 20px', background: C.accent, color: C.bg, fontFamily: F.mono, fontSize: 12, fontWeight: 500, border: 'none', cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}
           >
-            <span className="text-lg leading-none">+</span> Post project
+            + Post project
           </button>
         </div>
 
         {/* ── New project form ── */}
         {showNewForm && (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 animate-slide-up">
-            <h2 className="text-base font-bold text-gray-900 mb-5">New project</h2>
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 28 }}>
+            <h2 style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 24 }}>New project</h2>
             <NewProjectForm
               companyId={company.id}
-              onCreated={(p) => {
-                setProjects((prev) => [p, ...prev])
-                setShowNewForm(false)
-              }}
+              onCreated={(p) => { setProjects((prev) => [p, ...prev]); setShowNewForm(false) }}
               onCancel={() => setShowNewForm(false)}
             />
           </div>
@@ -455,86 +393,76 @@ export default function CompanyDashboardClient({
 
         {/* ── Projects list ── */}
         <section>
-          <h2 className="text-base font-bold text-gray-900 mb-3">
+          <h2 style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
             Your Projects ({projects.length})
           </h2>
 
           {projects.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-gray-400">
-              <p className="text-base mb-1">No projects yet</p>
-              <p className="text-sm">Click &ldquo;Post project&rdquo; to get started.</p>
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center' }}>
+              <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 6 }}>No projects yet</p>
+              <p style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>Click &ldquo;Post project&rdquo; to get started.</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {projects.map((project) => {
                 const apps = getAppsForProject(project.id)
                 const expanded = expandedProject === project.id
                 const pendingCount = apps.filter((a) => a.status === 'applied').length
 
                 return (
-                  <div key={project.id} className="bg-white rounded-2xl border border-gray-200">
-                    {/* Project header */}
-                    <div className="p-5">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="font-semibold text-gray-900">
-                              {project.title ?? 'Untitled'}
-                            </h3>
-                            {project.is_open ? (
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-50 text-green-700">Open</span>
-                            ) : (
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Closed</span>
-                            )}
+                  <div key={project.id} style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+                    <div style={{ padding: '18px 20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 500, color: C.textSub }}>{project.title ?? 'Untitled'}</h3>
+                            <span style={{
+                              fontSize: 9, fontFamily: F.mono, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '0.08em',
+                              color: project.is_open ? C.accent : C.textFaint,
+                              border: `1px solid ${project.is_open ? C.accentBorder : C.border}`,
+                              background: project.is_open ? C.accentHover : C.surfaceAlt,
+                            }}>
+                              {project.is_open ? 'Open' : 'Closed'}
+                            </span>
                             {project.type && (
-                              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 capitalize">{project.type}</span>
+                              <span style={{ fontSize: 9, fontFamily: F.mono, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.textFaint, border: `1px solid ${C.border}`, background: C.surfaceAlt }}>
+                                {project.type}
+                              </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-400 mt-0.5">
+                          <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
                             Posted {fmtDate(project.created_at)}
                             {project.duration ? ` · ${project.duration}` : ''}
                             {project.compensation ? ` · ${project.compensation}` : ''}
                           </p>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleToggleOpen(project)}
-                            className="text-xs font-medium text-gray-500 border border-gray-200 px-2.5 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
-                          >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                          <button onClick={() => handleToggleOpen(project)}
+                            style={{ fontSize: 11, fontFamily: F.mono, color: C.textMuted, padding: '5px 10px', border: `1px solid ${C.border}`, background: 'transparent', cursor: 'pointer' }}>
                             {project.is_open ? 'Close' : 'Re-open'}
                           </button>
-                          <button
-                            onClick={() => setExpandedProject(expanded ? null : project.id)}
-                            className="flex items-center gap-1 text-xs font-medium text-brand-600 border border-brand-200 px-2.5 py-1.5 rounded-lg hover:bg-brand-50 transition-colors"
-                          >
+                          <button onClick={() => setExpandedProject(expanded ? null : project.id)}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontFamily: F.mono, color: C.accent, padding: '5px 10px', border: `1px solid ${C.accentBorder}`, background: C.accentHover, cursor: 'pointer' }}>
                             {apps.length} applicant{apps.length !== 1 ? 's' : ''}
                             {pendingCount > 0 && (
-                              <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center font-bold">
+                              <span style={{ width: 16, height: 16, background: C.accent, color: C.bg, borderRadius: '50%', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }} aria-label={`${pendingCount} pending`}>
                                 {pendingCount}
                               </span>
                             )}
-                            <span className="ml-0.5">{expanded ? '▲' : '▼'}</span>
+                            <span aria-hidden="true">{expanded ? '▲' : '▼'}</span>
                           </button>
                         </div>
                       </div>
                     </div>
 
-                    {/* Applications panel */}
                     {expanded && (
-                      <div className="border-t border-gray-100 p-4 space-y-3">
+                      <div style={{ borderTop: `1px solid ${C.border}`, padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {apps.length === 0 ? (
-                          <p className="text-sm text-center text-gray-400 py-3">
-                            No applications yet
-                          </p>
+                          <p style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono, textAlign: 'center', padding: '12px 0' }}>No applications yet</p>
                         ) : (
                           apps.map((app) => (
-                            <ApplicationRow
-                              key={app.id}
-                              app={app}
-                              onAccept={handleAccept}
-                              onReject={handleReject}
-                            />
+                            <ApplicationRow key={app.id} app={app} onAccept={handleAccept} onReject={handleReject} />
                           ))
                         )}
                       </div>
@@ -545,6 +473,7 @@ export default function CompanyDashboardClient({
             </div>
           )}
         </section>
+
       </main>
     </div>
   )

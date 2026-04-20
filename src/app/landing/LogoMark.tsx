@@ -2,7 +2,7 @@ import { C } from './tokens'
 
 export function LogoMark({ size = 20 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden>
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
       <line x1="2" y1="5" x2="13" y2="5" stroke={C.text} strokeWidth="1.5" strokeLinecap="round" />
       <line x1="2" y1="10" x2="11" y2="10" stroke={C.text} strokeWidth="1.5" strokeLinecap="round" />
       <line x1="2" y1="15" x2="8" y2="15" stroke={C.text} strokeWidth="1.5" strokeLinecap="round" />

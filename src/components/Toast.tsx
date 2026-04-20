@@ -36,24 +36,38 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
+      {/* Polite region for success/info toasts */}
       <div
         aria-live="polite"
+        aria-atomic="false"
         className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 w-full max-w-sm"
       >
-        {toasts.map((t) => (
+        {toasts.filter(t => t.type !== 'error').map((t) => (
           <div
             key={t.id}
             className={`animate-fade-in flex items-start gap-3 rounded-xl px-4 py-3 shadow-lg text-sm font-medium text-white ${
-              t.type === 'success'
-                ? 'bg-green-600'
-                : t.type === 'error'
-                ? 'bg-red-600'
-                : 'bg-gray-800'
+              t.type === 'success' ? 'bg-green-600' : 'bg-gray-800'
             }`}
           >
-            <span className="mt-0.5 shrink-0 text-base leading-none">
-              {t.type === 'success' ? '✓' : t.type === 'error' ? '✕' : 'ℹ'}
+            <span className="mt-0.5 shrink-0 text-base leading-none" aria-hidden="true">
+              {t.type === 'success' ? '✓' : 'ℹ'}
             </span>
+            <span className="leading-snug">{t.message}</span>
+          </div>
+        ))}
+      </div>
+      {/* Assertive region for error toasts — announced immediately */}
+      <div
+        aria-live="assertive"
+        aria-atomic="false"
+        className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 w-full max-w-sm pointer-events-none"
+      >
+        {toasts.filter(t => t.type === 'error').map((t) => (
+          <div
+            key={t.id}
+            className="animate-fade-in flex items-start gap-3 rounded-xl px-4 py-3 shadow-lg text-sm font-medium text-white bg-red-600 pointer-events-auto"
+          >
+            <span className="mt-0.5 shrink-0 text-base leading-none" aria-hidden="true">✕</span>
             <span className="leading-snug">{t.message}</span>
           </div>
         ))}

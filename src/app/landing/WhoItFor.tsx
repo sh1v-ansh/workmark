@@ -24,15 +24,15 @@ const orgPlans = [
 ]
 
 function Arrow() {
-  return <span style={{ color: C.accent, flexShrink: 0, fontFamily: F.mono, fontSize: 12, marginTop: 2 }}>→</span>
+  return <span aria-hidden="true" style={{ color: C.accent, flexShrink: 0, fontFamily: F.mono, fontSize: 12, marginTop: 2 }}>→</span>
 }
 
 export function WhoItFor() {
   return (
-    <section id="for-you" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
+    <section id="for-you" aria-labelledby="who-its-for-heading" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
+      <h2 id="who-its-for-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
         Who it&apos;s for
-      </div>
+      </h2>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
         {/* Students */}
         <div className="reveal-item" style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 36 }}>

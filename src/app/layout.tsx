@@ -16,6 +16,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        {/* Skip-to-content — WCAG 2.4.1 bypass block */}
+        <a href="#main-content" className="skip-to-content">
+          Skip to main content
+        </a>
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

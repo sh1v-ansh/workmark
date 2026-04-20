@@ -14,15 +14,15 @@ const employerProblems = [
 ]
 
 function Dot() {
-  return <div style={{ width: 5, height: 5, background: C.accent, borderRadius: '50%', flexShrink: 0, marginTop: 7 }} />
+  return <div aria-hidden="true" style={{ width: 5, height: 5, background: C.accent, borderRadius: '50%', flexShrink: 0, marginTop: 7 }} />
 }
 
 export function TheProblem() {
   return (
-    <section style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
+    <section aria-labelledby="the-problem-heading" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
+      <h2 id="the-problem-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
         The problem
-      </div>
+      </h2>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64 }}>
         <div className="reveal-item">
           <h3 style={{ fontFamily: F.serif, fontSize: 24, fontWeight: 600, color: C.text, marginBottom: 24, lineHeight: 1.2 }}>For students</h3>

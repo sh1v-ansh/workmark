@@ -8,6 +8,11 @@ function AishaCard() {
   const [step, setStep] = useState(0)
 
   useEffect(() => {
+    // Skip animation for users who prefer reduced motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setStep(3)
+      return
+    }
     const t1 = setTimeout(() => setStep(1), 800)
     const t2 = setTimeout(() => setStep(2), 1500)
     const t3 = setTimeout(() => setStep(3), 2200)
@@ -21,12 +26,13 @@ function AishaCard() {
   })
 
   return (
-    <div style={{ position: 'relative', flexShrink: 0 }}>
-      {/* Floating chips */}
-      <div style={{ position: 'absolute', top: -18, right: -10, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.accent, fontFamily: F.mono, animation: 'float 3s ease-in-out infinite', whiteSpace: 'nowrap' }}>
+    // role="img" with label makes the whole card a single accessible object
+    <div style={{ position: 'relative', flexShrink: 0 }} role="img" aria-label="Example verified student profile showing two attested work records and a 94% job match">
+      {/* Floating chips — decorative, not read by screen readers */}
+      <div aria-hidden="true" style={{ position: 'absolute', top: -18, right: -10, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.accent, fontFamily: F.mono, animation: 'float 3s ease-in-out infinite', whiteSpace: 'nowrap' }}>
         ✓ Attestation received
       </div>
-      <div style={{ position: 'absolute', bottom: 64, left: -20, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.textMuted, fontFamily: F.mono, animation: 'float 3.5s ease-in-out infinite 0.7s', whiteSpace: 'nowrap' }}>
+      <div aria-hidden="true" style={{ position: 'absolute', bottom: 64, left: -20, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.textMuted, fontFamily: F.mono, animation: 'float 3.5s ease-in-out infinite 0.7s', whiteSpace: 'nowrap' }}>
         ↑ Skills verified by employer
       </div>
 
@@ -36,7 +42,10 @@ function AishaCard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <div style={{ fontFamily: F.serif, fontSize: 18, fontWeight: 700, color: C.text, marginBottom: 3 }}>Aisha Syed</div>
-            <div style={{ fontSize: 12, color: C.textMuted, fontFamily: F.mono }}>UMass · CS 2026</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontSize: 12, color: C.textMuted, fontFamily: F.mono }}>UMass · CS 2026</div>
+              <div style={{ fontSize: 9, color: C.textFaint, fontFamily: F.mono, background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: '1px 5px', letterSpacing: '0.06em' }}>SAMPLE</div>
+            </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: C.accentHover, padding: '4px 8px', border: `1px solid ${C.accentBorder}` }}>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -64,7 +73,7 @@ function AishaCard() {
           <div style={{ ...anim(step >= 1), background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: '10px 12px', marginBottom: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: 12, color: C.textSub, fontWeight: 500, marginBottom: 2 }}>Human Service Forum</div>
+                <div style={{ fontSize: 12, color: C.textSub, fontWeight: 500, marginBottom: 2 }}>Company 1</div>
                 <div style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>8 wks · React, SQL</div>
               </div>
               <div style={{ fontSize: 10, color: C.accent, fontFamily: F.mono, fontWeight: 500 }}>✓ ATTESTED</div>
@@ -74,7 +83,7 @@ function AishaCard() {
           <div style={{ ...anim(step >= 2), background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: 12, color: C.textSub, fontWeight: 500, marginBottom: 2 }}>Pioneer Valley Co-op</div>
+                <div style={{ fontSize: 12, color: C.textSub, fontWeight: 500, marginBottom: 2 }}>Company 2</div>
                 <div style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>6 wks · Python, Data Analysis</div>
               </div>
               <div style={{ fontSize: 10, color: C.accent, fontFamily: F.mono, fontWeight: 500 }}>✓ ATTESTED</div>
@@ -106,7 +115,7 @@ export function Hero() {
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
             Verified CS internship &amp; project board
           </div>
-          <h1 style={{ fontFamily: F.serif, fontSize: 62, fontWeight: 700, lineHeight: 1.05, color: C.text, marginBottom: 24, letterSpacing: '-0.02em', margin: '0 0 24px' }}>
+          <h1 style={{ fontFamily: F.serif, fontSize: 62, fontWeight: 800, lineHeight: 1.05, color: C.text, marginBottom: 24, letterSpacing: '-0.03em', margin: '0 0 24px' }}>
             Work that speaks<br />for itself.
           </h1>
           <p style={{ fontSize: 17, lineHeight: 1.65, color: C.textMuted, marginBottom: 36, maxWidth: 440 }}>
@@ -121,7 +130,7 @@ export function Hero() {
             </Link>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, borderTop: `1px solid ${C.border}`, paddingTop: 28 }}>
-            {[['200+', 'orgs in pipeline'], ['4K+', 'CS students'], ['$0', 'for students']].map(([num, label]) => (
+            {[['Free', 'always for students'], ['Verified', 'work records'], ['Permanent', 'employer-attested']].map(([num, label]) => (
               <div key={num}>
                 <div style={{ fontFamily: F.mono, fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 4 }}>{num}</div>
                 <div style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>{label}</div>

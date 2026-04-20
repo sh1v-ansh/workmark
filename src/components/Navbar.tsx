@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
+import { C, F } from '@/app/landing/tokens'
+import { LogoMark } from '@/app/landing/LogoMark'
 
 interface NavbarProps {
   role: 'student' | 'company'
@@ -13,6 +15,7 @@ interface NavbarProps {
 
 export default function Navbar({ role, userName }: NavbarProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const { toast } = useToast()
   const [signing, setSigning] = useState(false)
 
@@ -25,55 +28,59 @@ export default function Navbar({ role, userName }: NavbarProps) {
     router.refresh()
   }
 
+  const dashboardHref = role === 'student' ? '/student/dashboard' : '/company/dashboard'
+
+  const linkStyle = (href: string): React.CSSProperties => ({
+    fontSize: 13,
+    fontFamily: F.mono,
+    textDecoration: 'none',
+    color: pathname === href ? C.text : C.textMuted,
+    borderBottom: `1px solid ${pathname === href ? C.accent : 'transparent'}`,
+    paddingBottom: 2,
+    transition: 'color 0.15s',
+    letterSpacing: '-0.01em',
+  })
+
   return (
-    <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
-      <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+    <header style={{ background: 'rgba(13,13,11,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 40 }}>
+      <nav aria-label="Main navigation" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Logo */}
-        <Link
-          href={role === 'student' ? '/student/dashboard' : '/company/dashboard'}
-          className="flex items-center gap-2"
-        >
-          <span className="font-bold text-lg tracking-tight text-gray-900">
-            Work<span className="text-brand-600">mark</span>
-          </span>
+        <Link href={dashboardHref} aria-label="Workmark dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <LogoMark size={18} />
+          <span style={{ fontFamily: F.mono, fontSize: 14, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
         </Link>
 
         {/* Nav links */}
-        <div className="flex items-center gap-1 sm:gap-2">
-          <Link
-            href="/projects"
-            className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
-          >
-            Browse Projects
+        <div style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
+          <Link href="/projects" aria-current={pathname === '/projects' ? 'page' : undefined} style={linkStyle('/projects')}>
+            Browse
           </Link>
           {role === 'student' && (
-            <Link
-              href="/student/dashboard"
-              className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
-            >
+            <Link href="/student/dashboard" aria-current={pathname === '/student/dashboard' ? 'page' : undefined} style={linkStyle('/student/dashboard')}>
               Dashboard
             </Link>
           )}
           {role === 'company' && (
-            <Link
-              href="/company/dashboard"
-              className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
-            >
+            <Link href="/company/dashboard" aria-current={pathname === '/company/dashboard' ? 'page' : undefined} style={linkStyle('/company/dashboard')}>
               Dashboard
             </Link>
           )}
 
-          {/* User + sign out */}
-          <div className="flex items-center gap-2 ml-2 pl-2 border-l border-gray-200">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 16, borderLeft: `1px solid ${C.border}` }}>
             {userName && (
-              <span className="hidden sm:block text-sm text-gray-500 truncate max-w-[140px]">
+              <span style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {userName}
               </span>
             )}
             <button
               onClick={handleSignOut}
               disabled={signing}
-              className="px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+              style={{
+                padding: '6px 14px', fontFamily: F.mono, fontSize: 12,
+                border: `1px solid ${C.border}`, color: C.textMuted,
+                background: 'transparent', cursor: signing ? 'not-allowed' : 'pointer',
+                transition: 'all 0.15s', opacity: signing ? 0.5 : 1,
+              }}
             >
               {signing ? 'Signing out…' : 'Sign out'}
             </button>
