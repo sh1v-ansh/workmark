@@ -83,4 +83,15 @@ export type ExperienceRecord = {
   created_at: string
 }
 
-export type UserRole = 'student' | 'company' | null
+export type Faculty = {
+  id: string
+  full_name: string | null
+  institution: string | null
+  department: string | null
+  title: string | null
+  email: string | null
+  is_approved: boolean
+  created_at: string
+}
+
+export type UserRole = 'student' | 'company' | 'faculty' | null

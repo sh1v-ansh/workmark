@@ -7,8 +7,12 @@ import { useToast } from '@/components/Toast'
 import Link from 'next/link'
 import { C, F } from '@/app/landing/tokens'
 import { LogoMark } from '@/app/landing/LogoMark'
+import { Combobox } from '@/components/Combobox'
+import { UNIVERSITIES } from '@/lib/data/universities'
+import { MAJORS } from '@/lib/data/majors'
+import { INDUSTRIES } from '@/lib/data/industries'
 
-type Role = 'student' | 'company'
+type Role = 'student' | 'company' | 'faculty'
 type Step = 1 | 2
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -105,11 +109,11 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
         </div>
         <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-university">University <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
-          <input id="student-university" required value={university} onChange={(e) => setUniversity(e.target.value)} className="dk-input" placeholder="MIT" />
+          <Combobox id="student-university" value={university} onChange={setUniversity} options={UNIVERSITIES} placeholder="Search universities…" required />
         </div>
         <div style={gap}>
           <FieldLabel htmlFor="student-major">Major</FieldLabel>
-          <input id="student-major" value={major} onChange={(e) => setMajor(e.target.value)} className="dk-input" placeholder="Computer Science" />
+          <Combobox id="student-major" value={major} onChange={setMajor} options={MAJORS} placeholder="Search majors…" />
         </div>
         <div style={gap}>
           <FieldLabel htmlFor="student-degree">Degree</FieldLabel>
@@ -225,7 +229,7 @@ function CompanyForm({ onSubmit, loading }: {
         </div>
         <div style={gap}>
           <FieldLabel htmlFor="company-industry">Industry</FieldLabel>
-          <input id="company-industry" value={industry} onChange={(e) => setIndustry(e.target.value)} className="dk-input" placeholder="Software, Fintech…" />
+          <Combobox id="company-industry" value={industry} onChange={setIndustry} options={INDUSTRIES} placeholder="Search industries…" />
         </div>
         <div style={gap}>
           <FieldLabel htmlFor="company-size">Company size</FieldLabel>
@@ -258,6 +262,64 @@ function CompanyForm({ onSubmit, loading }: {
 
       <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px 0', background: loading ? C.surfaceAlt : C.accent, color: loading ? C.textMuted : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
         {loading ? 'Saving…' : 'Complete profile →'}
+      </button>
+    </form>
+  )
+}
+
+// ─── faculty form ─────────────────────────────────────────────────────────────
+
+function FacultyForm({ onSubmit, loading, email }: {
+  onSubmit: (data: Record<string, unknown>) => void; loading: boolean; email: string
+}) {
+  const [fullName, setFullName] = useState('')
+  const [institution, setInstitution] = useState('')
+  const [department, setDepartment] = useState('')
+  const [title, setTitle] = useState('Professor')
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    onSubmit({ full_name: fullName, institution, department: department || null, title, email })
+  }
+
+  const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={gap}>
+        <FieldLabel htmlFor="faculty-name">Full name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
+        <input id="faculty-name" required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="dk-input" placeholder="Dr. Jane Smith" />
+      </div>
+      <div style={gap}>
+        <FieldLabel htmlFor="faculty-institution">Institution <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
+        <Combobox id="faculty-institution" value={institution} onChange={setInstitution} options={UNIVERSITIES} placeholder="Search universities…" required />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={gap}>
+          <FieldLabel htmlFor="faculty-dept">Department</FieldLabel>
+          <input id="faculty-dept" value={department} onChange={(e) => setDepartment(e.target.value)} className="dk-input" placeholder="Computer Science" />
+        </div>
+        <div style={gap}>
+          <FieldLabel htmlFor="faculty-title">Title</FieldLabel>
+          <select id="faculty-title" value={title} onChange={(e) => setTitle(e.target.value)} className="dk-select">
+            <option value="Professor">Professor</option>
+            <option value="Associate Professor">Associate Professor</option>
+            <option value="Assistant Professor">Assistant Professor</option>
+            <option value="Postdoctoral Researcher">Postdoctoral Researcher</option>
+            <option value="Research Scientist">Research Scientist</option>
+            <option value="Lecturer">Lecturer</option>
+            <option value="Instructor">Instructor</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+      <div style={gap}>
+        <FieldLabel htmlFor="faculty-email">Institutional email</FieldLabel>
+        <input id="faculty-email" type="email" readOnly value={email} className="dk-input" style={{ opacity: 0.6, cursor: 'default' }} />
+        <p style={{ fontSize: 11, fontFamily: F.mono, color: C.textFaint, marginTop: 4 }}>Used to verify your institutional affiliation</p>
+      </div>
+      <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px 0', background: loading ? C.surfaceAlt : C.accent, color: loading ? C.textMuted : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
+        {loading ? 'Saving profile…' : 'Complete profile →'}
       </button>
     </form>
   )
@@ -320,6 +382,22 @@ export default function OnboardingPage() {
     }
   }
 
+  async function handleFacultySubmit(data: Record<string, unknown>) {
+    if (!userId) return
+    setLoading(true)
+    const supabase = createClient()
+    try {
+      const { error } = await supabase.from('faculty').insert({ id: userId, ...data })
+      if (error) throw error
+      toast('Faculty profile saved! Welcome to Workmark.', 'success')
+      router.push('/faculty/dashboard'); router.refresh()
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Failed to save profile.', 'error')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const emailDomain = userEmail ? `@${userEmail.split('@')[1]}` : ''
 
   return (
@@ -348,29 +426,39 @@ export default function OnboardingPage() {
               <h1 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Welcome to Workmark</h1>
               <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.6 }}>Tell us who you are to get started.</p>
 
-              <div role="group" aria-label="Account type" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-                {(['student', 'company'] as Role[]).map((r) => (
+              <div role="group" aria-label="Account type" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+                {([
+                  { r: 'student', icon: '🎓', desc: 'Apply to projects, earn verified records' },
+                  { r: 'company', icon: '🏢', desc: 'Post projects, find CS talent' },
+                  { r: 'faculty', icon: '🔬', desc: 'Post research projects for students' },
+                ] as { r: Role; icon: string; desc: string }[]).map(({ r, icon, desc }) => (
                   <button key={r} type="button" onClick={() => setRole(r)} aria-pressed={role === r}
-                    style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: `1px solid ${role === r ? C.accent : C.border}`, background: role === r ? C.accentHover : C.surfaceAlt, cursor: 'pointer', transition: 'all 0.15s' }}>
-                    <span aria-hidden="true" style={{ fontSize: 28 }}>{r === 'student' ? '🎓' : '🏢'}</span>
-                    <span style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 500, color: role === r ? C.accent : C.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{r}</span>
-                    <span style={{ fontSize: 11, color: C.textFaint, textAlign: 'center', lineHeight: 1.4 }}>
-                      {r === 'student' ? 'Apply to projects, earn verified records' : 'Post projects, find CS talent'}
+                    style={{ padding: '20px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: `1px solid ${role === r ? C.accent : C.border}`, background: role === r ? C.accentHover : C.surfaceAlt, cursor: 'pointer', transition: 'all 0.15s' }}>
+                    <span aria-hidden="true" style={{ fontSize: 24 }}>{icon}</span>
+                    <span style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 500, color: role === r ? C.accent : C.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      {r === 'faculty' ? 'Faculty' : r}
                     </span>
+                    <span style={{ fontSize: 10, color: C.textFaint, textAlign: 'center', lineHeight: 1.4 }}>{desc}</span>
                   </button>
                 ))}
               </div>
 
-              {role === 'student' && !validateEdu(userEmail) && userEmail && (
+              {(role === 'student' || role === 'faculty') && !validateEdu(userEmail) && userEmail && (
                 <div role="alert" style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', padding: '10px 14px', fontSize: 13, color: '#fbbf24', marginBottom: 16, lineHeight: 1.5 }}>
-                  Your email <strong>{userEmail}</strong> is not a .edu address. Student accounts require a university email.
+                  Your email <strong>{userEmail}</strong> is not a .edu address. {role === 'faculty' ? 'Faculty' : 'Student'} accounts require a university email.
                 </div>
               )}
 
-              <button type="button" disabled={!role || (role === 'student' && !validateEdu(userEmail) && !!userEmail)} onClick={() => setStep(2)}
-                style={{ width: '100%', padding: '12px 0', background: (!role || (role === 'student' && !validateEdu(userEmail) && !!userEmail)) ? C.surfaceAlt : C.accent, color: (!role || (role === 'student' && !validateEdu(userEmail) && !!userEmail)) ? C.textFaint : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: (!role || (role === 'student' && !validateEdu(userEmail) && !!userEmail)) ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
-                Continue →
-              </button>
+              {(() => {
+                const eduRequired = (role === 'student' || role === 'faculty') && !!userEmail && !validateEdu(userEmail)
+                const disabled = !role || eduRequired
+                return (
+                  <button type="button" disabled={disabled} onClick={() => setStep(2)}
+                    style={{ width: '100%', padding: '12px 0', background: disabled ? C.surfaceAlt : C.accent, color: disabled ? C.textFaint : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
+                    Continue →
+                  </button>
+                )
+              })()}
             </>
           )}
 
@@ -381,12 +469,14 @@ export default function OnboardingPage() {
                   ← Back
                 </button>
                 <h2 style={{ fontFamily: F.serif, fontSize: 20, fontWeight: 700, color: C.text }}>
-                  {role === 'student' ? 'Your profile' : 'Company profile'}
+                  {role === 'student' ? 'Your profile' : role === 'faculty' ? 'Faculty profile' : 'Company profile'}
                 </h2>
               </div>
 
               {role === 'student' ? (
                 <StudentForm onSubmit={handleStudentSubmit} loading={loading} emailDomain={emailDomain} />
+              ) : role === 'faculty' ? (
+                <FacultyForm onSubmit={handleFacultySubmit} loading={loading} email={userEmail} />
               ) : (
                 <CompanyForm onSubmit={handleCompanySubmit} loading={loading} />
               )}

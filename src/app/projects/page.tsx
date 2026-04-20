@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import ProjectCard from '@/components/ProjectCard'
 import Navbar from '@/components/Navbar'
 import { C, F } from '@/app/landing/tokens'
+import { LogoMark } from '@/app/landing/LogoMark'
 import type { Project } from '@/lib/types'
 import Link from 'next/link'
 
@@ -94,9 +95,9 @@ export default function ProjectsPage() {
       ) : (
         <header style={{ borderBottom: `1px solid ${C.border}`, background: 'rgba(13,13,11,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 40 }}>
           <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontFamily: F.serif, fontSize: 18, fontWeight: 700, color: C.text, letterSpacing: '-0.01em' }}>W</span>
-              <span style={{ fontFamily: F.mono, fontSize: 13, color: C.textMuted, letterSpacing: '0.05em' }}>workmark</span>
+            <Link href="/" aria-label="Workmark home" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <LogoMark size={18} />
+              <span style={{ fontFamily: F.mono, fontSize: 14, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }}>workmark</span>
             </Link>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <Link href="/login" style={{ fontFamily: F.mono, fontSize: 12, color: C.textMuted, textDecoration: 'none', letterSpacing: '0.04em' }}>
