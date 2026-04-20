@@ -7,6 +7,10 @@ import { useToast } from '@/components/Toast'
 import Link from 'next/link'
 import { C, F } from '@/app/landing/tokens'
 import { LogoMark } from '@/app/landing/LogoMark'
+import { Combobox } from '@/components/Combobox'
+import { UNIVERSITIES } from '@/lib/data/universities'
+import { MAJORS } from '@/lib/data/majors'
+import { INDUSTRIES } from '@/lib/data/industries'
 
 type Role = 'student' | 'company'
 type Step = 1 | 2
@@ -105,11 +109,11 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
         </div>
         <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-university">University <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
-          <input id="student-university" required value={university} onChange={(e) => setUniversity(e.target.value)} className="dk-input" placeholder="MIT" />
+          <Combobox id="student-university" value={university} onChange={setUniversity} options={UNIVERSITIES} placeholder="Search universities…" required />
         </div>
         <div style={gap}>
           <FieldLabel htmlFor="student-major">Major</FieldLabel>
-          <input id="student-major" value={major} onChange={(e) => setMajor(e.target.value)} className="dk-input" placeholder="Computer Science" />
+          <Combobox id="student-major" value={major} onChange={setMajor} options={MAJORS} placeholder="Search majors…" />
         </div>
         <div style={gap}>
           <FieldLabel htmlFor="student-degree">Degree</FieldLabel>
@@ -225,7 +229,7 @@ function CompanyForm({ onSubmit, loading }: {
         </div>
         <div style={gap}>
           <FieldLabel htmlFor="company-industry">Industry</FieldLabel>
-          <input id="company-industry" value={industry} onChange={(e) => setIndustry(e.target.value)} className="dk-input" placeholder="Software, Fintech…" />
+          <Combobox id="company-industry" value={industry} onChange={setIndustry} options={INDUSTRIES} placeholder="Search industries…" />
         </div>
         <div style={gap}>
           <FieldLabel htmlFor="company-size">Company size</FieldLabel>
