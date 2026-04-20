@@ -8,7 +8,7 @@ import { C, F } from '@/app/landing/tokens'
 import { LogoMark } from '@/app/landing/LogoMark'
 
 type Mode = 'signin' | 'signup'
-type Role = 'student' | 'company'
+type Role = 'student' | 'company' | 'faculty'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -33,8 +33,8 @@ export default function LoginPage() {
 
     try {
       if (mode === 'signup') {
-        if (role === 'student' && !validateEdu(email)) {
-          setError('Workmark is for students only — please sign up with your university (.edu) email.')
+        if ((role === 'student' || role === 'faculty') && !validateEdu(email)) {
+          setError(`${role === 'faculty' ? 'Faculty' : 'Student'} accounts require a university (.edu) email address.`)
           return
         }
         const { error: signUpError } = await supabase.auth.signUp({
@@ -64,6 +64,8 @@ export default function LoginPage() {
         if (student) { router.push('/student/dashboard'); router.refresh(); return }
         const { data: company } = await supabase.from('companies').select('id').eq('id', user.id).maybeSingle()
         if (company) { router.push('/company/dashboard'); router.refresh(); return }
+        const { data: faculty } = await supabase.from('faculty').select('id').eq('id', user.id).maybeSingle()
+        if (faculty) { router.push('/faculty/dashboard'); router.refresh(); return }
         router.push('/onboarding'); router.refresh()
       }
     } catch (err: unknown) {
@@ -154,7 +156,11 @@ export default function LoginPage() {
               <div>
                 <p id="role-label" style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>I am a</p>
                 <div role="group" aria-labelledby="role-label" style={{ display: 'flex', gap: 8 }}>
-                  {(['student', 'company'] as Role[]).map((r) => (
+                  {([
+                    { r: 'student', label: 'Student' },
+                    { r: 'company', label: 'Company' },
+                    { r: 'faculty', label: 'Faculty' },
+                  ] as { r: Role; label: string }[]).map(({ r, label }) => (
                     <button
                       key={r}
                       type="button"
@@ -167,11 +173,11 @@ export default function LoginPage() {
                         cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.15s',
                       }}
                     >
-                      {r === 'student' ? 'Student' : 'Company'}
+                      {label}
                     </button>
                   ))}
                 </div>
-                {role === 'student' && (
+                {(role === 'student' || role === 'faculty') && (
                   <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono, marginTop: 8 }}>
                     Requires a university <strong style={{ color: C.textMuted }}>.edu</strong> email address.
                   </p>
@@ -188,7 +194,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(null) }}
-                placeholder={mode === 'signup' && role === 'student' ? 'you@university.edu' : 'you@example.com'}
+                placeholder={mode === 'signup' && (role === 'student' || role === 'faculty') ? 'you@university.edu' : 'you@example.com'}
                 className="dk-input"
               />
             </div>
