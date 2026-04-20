@@ -1,3 +1,5 @@
+'use client'
+
 import { C, F } from './tokens'
 
 export function TeamSection() {
