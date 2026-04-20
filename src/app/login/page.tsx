@@ -42,7 +42,7 @@ export default function LoginPage() {
           password,
           options: {
             data: { role },
-            emailRedirectTo: `${window.location.origin}/login`,
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/auth/confirmed`,
           },
         })
         if (signUpError) throw signUpError
