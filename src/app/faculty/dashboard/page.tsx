@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import FacultyDashboardClient from './FacultyDashboardClient'
+import FacultyPendingScreen from './FacultyPendingScreen'
 import type { Application } from '@/lib/types'
 
 export default async function FacultyDashboardPage() {
@@ -16,6 +17,8 @@ export default async function FacultyDashboardPage() {
     .maybeSingle()
 
   if (!faculty) redirect('/onboarding')
+
+  if (!faculty.is_approved) return <FacultyPendingScreen faculty={faculty} />
 
   const { data: projects } = await supabase
     .from('projects')

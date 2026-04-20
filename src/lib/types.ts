@@ -90,6 +90,7 @@ export type Faculty = {
   department: string | null
   title: string | null
   email: string | null
+  is_approved: boolean
   created_at: string
 }
 
