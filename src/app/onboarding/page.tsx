@@ -5,75 +5,52 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import Link from 'next/link'
+import { C, F } from '@/app/landing/tokens'
+import { LogoMark } from '@/app/landing/LogoMark'
 
 type Role = 'student' | 'company'
 type Step = 1 | 2
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-function TagInput({
-  label,
-  inputId,
-  value,
-  onChange,
-  placeholder,
-}: {
-  label: string
-  inputId: string
-  value: string[]
-  onChange: (v: string[]) => void
-  placeholder?: string
+function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
+  return (
+    <label htmlFor={htmlFor} style={{ display: 'block', fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>
+      {children}
+    </label>
+  )
+}
+
+function TagInput({ label, inputId, value, onChange, placeholder }: {
+  label: string; inputId: string; value: string[]; onChange: (v: string[]) => void; placeholder?: string
 }) {
   const [input, setInput] = useState('')
-
   function add() {
     const trimmed = input.trim()
-    if (trimmed && !value.includes(trimmed)) {
-      onChange([...value, trimmed])
-    }
+    if (trimmed && !value.includes(trimmed)) onChange([...value, trimmed])
     setInput('')
   }
-
   return (
     <div>
-      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
-      <div className="flex gap-2 mb-2">
+      <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         <input
-          id={inputId}
-          type="text"
-          value={input}
+          id={inputId} type="text" value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ',') {
-              e.preventDefault()
-              add()
-            }
-          }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add() } }}
           placeholder={placeholder ?? 'Add and press Enter'}
-          className="flex-1 px-3.5 py-2 rounded-xl border border-gray-300 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
+          className="dk-input" style={{ flex: 1 }}
         />
-        <button
-          type="button"
-          onClick={add}
-          className="px-3 py-2 text-sm font-medium text-brand-700 bg-brand-50 rounded-xl hover:bg-brand-100 transition-colors"
-        >
+        <button type="button" onClick={add} style={{ padding: '0 14px', background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono, fontSize: 11, cursor: 'pointer' }}>
           Add
         </button>
       </div>
       {value.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {value.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-gray-100 text-sm text-gray-700"
-            >
+            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: C.surfaceAlt, border: `1px solid ${C.border}`, fontSize: 11, color: C.textSub, fontFamily: F.mono }}>
               {tag}
-              <button
-                type="button"
-                onClick={() => onChange(value.filter((t) => t !== tag))}
-                aria-label={`Remove ${tag}`}
-                className="text-gray-400 hover:text-red-500"
-              >
+              <button type="button" onClick={() => onChange(value.filter((t) => t !== tag))} aria-label={`Remove ${tag}`} style={{ background: 'none', border: 'none', color: C.textFaint, cursor: 'pointer', padding: 0, lineHeight: 1 }}>
                 <span aria-hidden="true">×</span>
               </button>
             </span>
@@ -86,14 +63,8 @@ function TagInput({
 
 // ─── student form ─────────────────────────────────────────────────────────────
 
-function StudentForm({
-  onSubmit,
-  loading,
-  emailDomain,
-}: {
-  onSubmit: (data: Record<string, unknown>) => void
-  loading: boolean
-  emailDomain: string
+function StudentForm({ onSubmit, loading, emailDomain }: {
+  onSubmit: (data: Record<string, unknown>) => void; loading: boolean; emailDomain: string
 }) {
   const [fullName, setFullName] = useState('')
   const [university, setUniversity] = useState('')
@@ -113,76 +84,36 @@ function StudentForm({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSubmit({
-      full_name: fullName,
-      university,
-      major,
-      degree_type: degreeType,
+      full_name: fullName, university, major, degree_type: degreeType,
       graduation_year: graduationYear ? parseInt(graduationYear) : null,
       gpa: gpa ? parseFloat(gpa) : null,
-      is_international: isInternational,
-      visa_type: isInternational ? visaType : null,
-      skills,
-      github_url: githubUrl || null,
-      linkedin_url: linkedinUrl || null,
-      availability,
-      hours_per_week: hoursPerWeek ? parseInt(hoursPerWeek) : null,
+      is_international: isInternational, visa_type: isInternational ? visaType : null,
+      skills, github_url: githubUrl || null, linkedin_url: linkedinUrl || null,
+      availability, hours_per_week: hoursPerWeek ? parseInt(hoursPerWeek) : null,
       available_from: availableFrom || null,
     })
   }
 
+  const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="sm:col-span-2">
-          <label htmlFor="student-full-name" className="block text-sm font-medium text-gray-700 mb-1.5">
-            Full name <span className="text-red-500" aria-hidden="true">*</span>
-            <span className="sr-only">(required)</span>
-          </label>
-          <input
-            id="student-full-name"
-            required
-            autoComplete="name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="Jane Smith"
-          />
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={{ ...gap, gridColumn: '1 / -1' }}>
+          <FieldLabel htmlFor="student-full-name">Full name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
+          <input id="student-full-name" required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="dk-input" placeholder="Jane Smith" />
         </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor="student-university" className="block text-sm font-medium text-gray-700 mb-1.5">
-            University <span className="text-red-500" aria-hidden="true">*</span>
-            <span className="sr-only">(required)</span>
-          </label>
-          <input
-            id="student-university"
-            required
-            value={university}
-            onChange={(e) => setUniversity(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="MIT"
-          />
+        <div style={{ ...gap, gridColumn: '1 / -1' }}>
+          <FieldLabel htmlFor="student-university">University <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
+          <input id="student-university" required value={university} onChange={(e) => setUniversity(e.target.value)} className="dk-input" placeholder="MIT" />
         </div>
-
-        <div>
-          <label htmlFor="student-major" className="block text-sm font-medium text-gray-700 mb-1.5">Major</label>
-          <input
-            id="student-major"
-            value={major}
-            onChange={(e) => setMajor(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="Computer Science"
-          />
+        <div style={gap}>
+          <FieldLabel htmlFor="student-major">Major</FieldLabel>
+          <input id="student-major" value={major} onChange={(e) => setMajor(e.target.value)} className="dk-input" placeholder="Computer Science" />
         </div>
-
-        <div>
-          <label htmlFor="student-degree" className="block text-sm font-medium text-gray-700 mb-1.5">Degree</label>
-          <select
-            id="student-degree"
-            value={degreeType}
-            onChange={(e) => setDegreeType(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-          >
+        <div style={gap}>
+          <FieldLabel htmlFor="student-degree">Degree</FieldLabel>
+          <select id="student-degree" value={degreeType} onChange={(e) => setDegreeType(e.target.value)} className="dk-select">
             <option value="BS">BS</option>
             <option value="MS">MS</option>
             <option value="PhD">PhD</option>
@@ -190,135 +121,53 @@ function StudentForm({
             <option value="Other">Other</option>
           </select>
         </div>
-
-        <div>
-          <label htmlFor="student-grad-year" className="block text-sm font-medium text-gray-700 mb-1.5">Graduation year</label>
-          <input
-            id="student-grad-year"
-            type="number"
-            min={2024}
-            max={2035}
-            value={graduationYear}
-            onChange={(e) => setGraduationYear(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="2026"
-          />
+        <div style={gap}>
+          <FieldLabel htmlFor="student-grad-year">Graduation year</FieldLabel>
+          <input id="student-grad-year" type="number" min={2024} max={2035} value={graduationYear} onChange={(e) => setGraduationYear(e.target.value)} className="dk-input" placeholder="2026" />
         </div>
-
-        <div>
-          <label htmlFor="student-gpa" className="block text-sm font-medium text-gray-700 mb-1.5">GPA</label>
-          <input
-            id="student-gpa"
-            type="number"
-            min={0}
-            max={4}
-            step={0.01}
-            value={gpa}
-            onChange={(e) => setGpa(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="3.80"
-          />
+        <div style={gap}>
+          <FieldLabel htmlFor="student-gpa">GPA</FieldLabel>
+          <input id="student-gpa" type="number" min={0} max={4} step={0.01} value={gpa} onChange={(e) => setGpa(e.target.value)} className="dk-input" placeholder="3.80" />
         </div>
       </div>
 
-      <TagInput
-        label="Skills (press Enter to add)"
-        inputId="student-skills"
-        value={skills}
-        onChange={setSkills}
-        placeholder="e.g. Python, React, SQL"
-      />
+      <TagInput label="Skills (press Enter to add)" inputId="student-skills" value={skills} onChange={setSkills} placeholder="e.g. Python, React, SQL" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="student-github" className="block text-sm font-medium text-gray-700 mb-1.5">GitHub URL</label>
-          <input
-            id="student-github"
-            type="url"
-            autoComplete="url"
-            value={githubUrl}
-            onChange={(e) => setGithubUrl(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="https://github.com/you"
-          />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={gap}>
+          <FieldLabel htmlFor="student-github">GitHub URL</FieldLabel>
+          <input id="student-github" type="url" autoComplete="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} className="dk-input" placeholder="https://github.com/you" />
         </div>
-        <div>
-          <label htmlFor="student-linkedin" className="block text-sm font-medium text-gray-700 mb-1.5">LinkedIn URL</label>
-          <input
-            id="student-linkedin"
-            type="url"
-            autoComplete="url"
-            value={linkedinUrl}
-            onChange={(e) => setLinkedinUrl(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="https://linkedin.com/in/you"
-          />
+        <div style={gap}>
+          <FieldLabel htmlFor="student-linkedin">LinkedIn URL</FieldLabel>
+          <input id="student-linkedin" type="url" autoComplete="url" value={linkedinUrl} onChange={(e) => setLinkedinUrl(e.target.value)} className="dk-input" placeholder="https://linkedin.com/in/you" />
         </div>
-
-        <div>
-          <label htmlFor="student-availability" className="block text-sm font-medium text-gray-700 mb-1.5">Availability</label>
-          <select
-            id="student-availability"
-            value={availability}
-            onChange={(e) => setAvailability(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-          >
+        <div style={gap}>
+          <FieldLabel htmlFor="student-availability">Availability</FieldLabel>
+          <select id="student-availability" value={availability} onChange={(e) => setAvailability(e.target.value)} className="dk-select">
             <option value="full-time">Full-time</option>
             <option value="part-time">Part-time</option>
           </select>
         </div>
-
-        <div>
-          <label htmlFor="student-hours" className="block text-sm font-medium text-gray-700 mb-1.5">Hours per week</label>
-          <input
-            id="student-hours"
-            type="number"
-            min={1}
-            max={60}
-            value={hoursPerWeek}
-            onChange={(e) => setHoursPerWeek(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="20"
-          />
+        <div style={gap}>
+          <FieldLabel htmlFor="student-hours">Hours per week</FieldLabel>
+          <input id="student-hours" type="number" min={1} max={60} value={hoursPerWeek} onChange={(e) => setHoursPerWeek(e.target.value)} className="dk-input" placeholder="20" />
         </div>
-
-        <div>
-          <label htmlFor="student-available-from" className="block text-sm font-medium text-gray-700 mb-1.5">Available from</label>
-          <input
-            id="student-available-from"
-            type="date"
-            value={availableFrom}
-            onChange={(e) => setAvailableFrom(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-          />
+        <div style={gap}>
+          <FieldLabel htmlFor="student-available-from">Available from</FieldLabel>
+          <input id="student-available-from" type="date" value={availableFrom} onChange={(e) => setAvailableFrom(e.target.value)} className="dk-input" />
         </div>
       </div>
 
-      {/* International student */}
-      <div className="rounded-xl border border-gray-200 p-4 space-y-3">
-        <label className="flex items-center gap-3 cursor-pointer">
-          <input
-            id="student-international"
-            type="checkbox"
-            checked={isInternational}
-            onChange={(e) => setIsInternational(e.target.checked)}
-            className="w-4 h-4 accent-brand-600 rounded"
-          />
-          <span className="text-sm font-medium text-gray-700">
-            I am an international student
-          </span>
+      <div style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+          <input id="student-international" type="checkbox" checked={isInternational} onChange={(e) => setIsInternational(e.target.checked)} className="dk-checkbox" />
+          <span style={{ fontSize: 13, color: C.textMuted }}>I am an international student</span>
         </label>
         {isInternational && (
-          <div>
-            <label htmlFor="student-visa" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Visa / work auth type
-            </label>
-            <select
-              id="student-visa"
-              value={visaType}
-              onChange={(e) => setVisaType(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            >
+          <div style={gap}>
+            <FieldLabel htmlFor="student-visa">Visa / work auth type</FieldLabel>
+            <select id="student-visa" value={visaType} onChange={(e) => setVisaType(e.target.value)} className="dk-select">
               <option value="">Select…</option>
               <option value="F-1">F-1 (CPT/OPT eligible)</option>
               <option value="J-1">J-1</option>
@@ -331,26 +180,12 @@ function StudentForm({
         )}
       </div>
 
-      {/* Email note */}
       {emailDomain && (
-        <p className="text-xs text-gray-400">
-          Signing up with <strong>{emailDomain}</strong>
-        </p>
+        <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>Signing up with <strong style={{ color: C.textMuted }}>{emailDomain}</strong></p>
       )}
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-3 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-      >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Saving profile…
-          </span>
-        ) : (
-          'Complete profile'
-        )}
+      <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px 0', background: loading ? C.surfaceAlt : C.accent, color: loading ? C.textMuted : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
+        {loading ? 'Saving profile…' : 'Complete profile →'}
       </button>
     </form>
   )
@@ -358,12 +193,8 @@ function StudentForm({
 
 // ─── company form ─────────────────────────────────────────────────────────────
 
-function CompanyForm({
-  onSubmit,
-  loading,
-}: {
-  onSubmit: (data: Record<string, unknown>) => void
-  loading: boolean
+function CompanyForm({ onSubmit, loading }: {
+  onSubmit: (data: Record<string, unknown>) => void; loading: boolean
 }) {
   const [companyName, setCompanyName] = useState('')
   const [website, setWebsite] = useState('')
@@ -375,137 +206,58 @@ function CompanyForm({
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    onSubmit({
-      company_name: companyName,
-      website: website || null,
-      industry: industry || null,
-      company_size: companySize,
-      hq_location: hqLocation || null,
-      contact_name: contactName,
-      contact_email: contactEmail,
-    })
+    onSubmit({ company_name: companyName, website: website || null, industry: industry || null, company_size: companySize, hq_location: hqLocation || null, contact_name: contactName, contact_email: contactEmail })
   }
 
+  const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="company-name" className="block text-sm font-medium text-gray-700 mb-1.5">
-          Company name <span className="text-red-500" aria-hidden="true">*</span>
-          <span className="sr-only">(required)</span>
-        </label>
-        <input
-          id="company-name"
-          required
-          value={companyName}
-          onChange={(e) => setCompanyName(e.target.value)}
-          className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-          placeholder="Acme Inc."
-        />
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div style={gap}>
+        <FieldLabel htmlFor="company-name">Company name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
+        <input id="company-name" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="dk-input" placeholder="Acme Inc." />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="company-website" className="block text-sm font-medium text-gray-700 mb-1.5">Website</label>
-          <input
-            id="company-website"
-            type="url"
-            autoComplete="url"
-            value={website}
-            onChange={(e) => setWebsite(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="https://acme.com"
-          />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={gap}>
+          <FieldLabel htmlFor="company-website">Website</FieldLabel>
+          <input id="company-website" type="url" autoComplete="url" value={website} onChange={(e) => setWebsite(e.target.value)} className="dk-input" placeholder="https://acme.com" />
         </div>
-        <div>
-          <label htmlFor="company-industry" className="block text-sm font-medium text-gray-700 mb-1.5">Industry</label>
-          <input
-            id="company-industry"
-            value={industry}
-            onChange={(e) => setIndustry(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="Software, Fintech, Healthcare…"
-          />
+        <div style={gap}>
+          <FieldLabel htmlFor="company-industry">Industry</FieldLabel>
+          <input id="company-industry" value={industry} onChange={(e) => setIndustry(e.target.value)} className="dk-input" placeholder="Software, Fintech…" />
         </div>
-
-        <div>
-          <label htmlFor="company-size" className="block text-sm font-medium text-gray-700 mb-1.5">Company size</label>
-          <select
-            id="company-size"
-            value={companySize}
-            onChange={(e) => setCompanySize(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-          >
+        <div style={gap}>
+          <FieldLabel htmlFor="company-size">Company size</FieldLabel>
+          <select id="company-size" value={companySize} onChange={(e) => setCompanySize(e.target.value)} className="dk-select">
             <option value="1-10">1–10</option>
             <option value="11-50">11–50</option>
             <option value="51-200">51–200</option>
             <option value="200+">200+</option>
           </select>
         </div>
-
-        <div>
-          <label htmlFor="company-hq" className="block text-sm font-medium text-gray-700 mb-1.5">HQ location</label>
-          <input
-            id="company-hq"
-            value={hqLocation}
-            onChange={(e) => setHqLocation(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-            placeholder="San Francisco, CA"
-          />
+        <div style={gap}>
+          <FieldLabel htmlFor="company-hq">HQ location</FieldLabel>
+          <input id="company-hq" value={hqLocation} onChange={(e) => setHqLocation(e.target.value)} className="dk-input" placeholder="San Francisco, CA" />
         </div>
       </div>
 
-      <div className="border-t border-gray-100 pt-4">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">
-          Primary contact
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="company-contact-name" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Contact name <span className="text-red-500" aria-hidden="true">*</span>
-              <span className="sr-only">(required)</span>
-            </label>
-            <input
-              id="company-contact-name"
-              required
-              autoComplete="name"
-              value={contactName}
-              onChange={(e) => setContactName(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-              placeholder="Jane Smith"
-            />
+      <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Primary contact</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={gap}>
+            <FieldLabel htmlFor="company-contact-name">Contact name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
+            <input id="company-contact-name" required autoComplete="name" value={contactName} onChange={(e) => setContactName(e.target.value)} className="dk-input" placeholder="Jane Smith" />
           </div>
-          <div>
-            <label htmlFor="company-contact-email" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Contact email <span className="text-red-500" aria-hidden="true">*</span>
-              <span className="sr-only">(required)</span>
-            </label>
-            <input
-              id="company-contact-email"
-              required
-              type="email"
-              autoComplete="email"
-              value={contactEmail}
-              onChange={(e) => setContactEmail(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
-              placeholder="jane@acme.com"
-            />
+          <div style={gap}>
+            <FieldLabel htmlFor="company-contact-email">Contact email <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
+            <input id="company-contact-email" required type="email" autoComplete="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="dk-input" placeholder="jane@acme.com" />
           </div>
         </div>
       </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="w-full py-3 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors mt-2"
-      >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            Saving…
-          </span>
-        ) : (
-          'Complete profile'
-        )}
+      <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px 0', background: loading ? C.surfaceAlt : C.accent, color: loading ? C.textMuted : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
+        {loading ? 'Saving…' : 'Complete profile →'}
       </button>
     </form>
   )
@@ -526,24 +278,12 @@ export default function OnboardingPage() {
   useEffect(() => {
     async function loadUser() {
       const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        router.push('/login')
-        return
-      }
-
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
       setUserId(user.id)
       setUserEmail(user.email ?? '')
-
-      // Pre-select role from metadata if set during sign-up
       const metaRole = user.user_metadata?.role as Role | undefined
-      if (metaRole) {
-        setRole(metaRole)
-        setStep(2)
-      }
+      if (metaRole) { setRole(metaRole); setStep(2) }
     }
     loadUser()
   }, [router])
@@ -552,21 +292,13 @@ export default function OnboardingPage() {
     if (!userId) return
     setLoading(true)
     const supabase = createClient()
-
     try {
-      const { error } = await supabase.from('students').insert({
-        id: userId,
-        ...data,
-      })
-
+      const { error } = await supabase.from('students').insert({ id: userId, ...data })
       if (error) throw error
-
       toast('Profile saved! Welcome to Workmark.', 'success')
-      router.push('/student/dashboard')
-      router.refresh()
+      router.push('/student/dashboard'); router.refresh()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to save profile.'
-      toast(msg, 'error')
+      toast(err instanceof Error ? err.message : 'Failed to save profile.', 'error')
     } finally {
       setLoading(false)
     }
@@ -576,21 +308,13 @@ export default function OnboardingPage() {
     if (!userId) return
     setLoading(true)
     const supabase = createClient()
-
     try {
-      const { error } = await supabase.from('companies').insert({
-        id: userId,
-        ...data,
-      })
-
+      const { error } = await supabase.from('companies').insert({ id: userId, ...data })
       if (error) throw error
-
       toast('Company profile saved! Welcome to Workmark.', 'success')
-      router.push('/company/dashboard')
-      router.refresh()
+      router.push('/company/dashboard'); router.refresh()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to save profile.'
-      toast(msg, 'error')
+      toast(err instanceof Error ? err.message : 'Failed to save profile.', 'error')
     } finally {
       setLoading(false)
     }
@@ -599,110 +323,52 @@ export default function OnboardingPage() {
   const emailDomain = userEmail ? `@${userEmail.split('@')[1]}` : ''
 
   return (
-    <main className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
-      {/* Logo */}
-      <Link href="/" aria-label="Workmark home" className="mb-8">
-        <span className="text-2xl font-bold tracking-tight text-gray-900" aria-hidden="true">
-          Work<span className="text-brand-600">mark</span>
-        </span>
+    <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px' }}>
+      <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
+        <LogoMark size={22} />
+        <span style={{ fontFamily: F.mono, fontSize: 16, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
       </Link>
 
-      <div className="w-full max-w-xl">
-        {/* Progress indicator */}
-        <div
-          role="progressbar"
-          aria-valuenow={step}
-          aria-valuemin={1}
-          aria-valuemax={2}
-          aria-label={`Step ${step} of 2`}
-          className="flex items-center gap-2 mb-6"
-        >
-          <div
-            aria-hidden="true"
-            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-              step >= 1
-                ? 'bg-brand-600 text-white'
-                : 'bg-gray-200 text-gray-500'
-            }`}
-          >
-            1
-          </div>
-          <div
-            aria-hidden="true"
-            className={`flex-1 h-0.5 transition-colors ${
-              step >= 2 ? 'bg-brand-600' : 'bg-gray-200'
-            }`}
-          />
-          <div
-            aria-hidden="true"
-            className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
-              step >= 2
-                ? 'bg-brand-600 text-white'
-                : 'bg-gray-200 text-gray-500'
-            }`}
-          >
-            2
-          </div>
+      <div style={{ width: '100%', maxWidth: 540 }}>
+        {/* Progress */}
+        <div role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={2} aria-label={`Step ${step} of 2`} style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 24 }}>
+          {[1, 2].map((n, i) => (
+            <div key={n} style={{ display: 'flex', alignItems: 'center', flex: n === 1 ? 'none' : 1 }}>
+              <div aria-hidden="true" style={{ width: 28, height: 28, background: step >= n ? C.accent : C.surfaceAlt, border: `1px solid ${step >= n ? C.accent : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: step >= n ? C.bg : C.textFaint, flexShrink: 0 }}>
+                {n}
+              </div>
+              {i === 0 && <div aria-hidden="true" style={{ flex: 1, height: 1, background: step >= 2 ? C.accent : C.border, margin: '0 8px' }} />}
+            </div>
+          ))}
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 32 }}>
           {step === 1 && (
             <>
-              <h1 className="text-xl font-bold text-gray-900 mb-1">
-                Welcome to Workmark
-              </h1>
-              <p className="text-sm text-gray-500 mb-6">
-                Tell us who you are to get started.
-              </p>
+              <h1 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Welcome to Workmark</h1>
+              <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.6 }}>Tell us who you are to get started.</p>
 
-              <div className="grid grid-cols-2 gap-3" role="group" aria-label="Account type">
+              <div role="group" aria-label="Account type" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
                 {(['student', 'company'] as Role[]).map((r) => (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => setRole(r)}
-                    aria-pressed={role === r}
-                    className={`flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all ${
-                      role === r
-                        ? 'border-brand-500 bg-brand-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <span className="text-3xl" aria-hidden="true">
-                      {r === 'student' ? '🎓' : '🏢'}
-                    </span>
-                    <span
-                      className={`text-sm font-semibold capitalize ${
-                        role === r ? 'text-brand-700' : 'text-gray-700'
-                      }`}
-                    >
-                      {r}
-                    </span>
-                    <span className="text-xs text-gray-400 text-center">
-                      {r === 'student'
-                        ? 'Apply to projects, earn verified records'
-                        : 'Post projects, find CS talent'}
+                  <button key={r} type="button" onClick={() => setRole(r)} aria-pressed={role === r}
+                    style={{ padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: `1px solid ${role === r ? C.accent : C.border}`, background: role === r ? C.accentHover : C.surfaceAlt, cursor: 'pointer', transition: 'all 0.15s' }}>
+                    <span aria-hidden="true" style={{ fontSize: 28 }}>{r === 'student' ? '🎓' : '🏢'}</span>
+                    <span style={{ fontFamily: F.mono, fontSize: 12, fontWeight: 500, color: role === r ? C.accent : C.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{r}</span>
+                    <span style={{ fontSize: 11, color: C.textFaint, textAlign: 'center', lineHeight: 1.4 }}>
+                      {r === 'student' ? 'Apply to projects, earn verified records' : 'Post projects, find CS talent'}
                     </span>
                   </button>
                 ))}
               </div>
 
               {role === 'student' && !validateEdu(userEmail) && userEmail && (
-                <div role="alert" className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
-                  Your email <strong>{userEmail}</strong> is not a .edu address.
-                  Student accounts require a university email.
+                <div role="alert" style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', padding: '10px 14px', fontSize: 13, color: '#fbbf24', marginBottom: 16, lineHeight: 1.5 }}>
+                  Your email <strong>{userEmail}</strong> is not a .edu address. Student accounts require a university email.
                 </div>
               )}
 
-              <button
-                type="button"
-                disabled={
-                  !role ||
-                  (role === 'student' && !validateEdu(userEmail) && !!userEmail)
-                }
-                onClick={() => setStep(2)}
-                className="mt-6 w-full py-3 text-sm font-semibold text-white bg-brand-600 rounded-xl hover:bg-brand-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
+              <button type="button" disabled={!role || (role === 'student' && !validateEdu(userEmail) && !!userEmail)} onClick={() => setStep(2)}
+                style={{ width: '100%', padding: '12px 0', background: (!role || (role === 'student' && !validateEdu(userEmail) && !!userEmail)) ? C.surfaceAlt : C.accent, color: (!role || (role === 'student' && !validateEdu(userEmail) && !!userEmail)) ? C.textFaint : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: (!role || (role === 'student' && !validateEdu(userEmail) && !!userEmail)) ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
                 Continue →
               </button>
             </>
@@ -710,25 +376,17 @@ export default function OnboardingPage() {
 
           {step === 2 && role && (
             <>
-              <div className="flex items-center gap-2 mb-5">
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
-                >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+                <button type="button" onClick={() => setStep(1)} style={{ fontSize: 12, fontFamily: F.mono, color: C.textFaint, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                   ← Back
                 </button>
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 style={{ fontFamily: F.serif, fontSize: 20, fontWeight: 700, color: C.text }}>
                   {role === 'student' ? 'Your profile' : 'Company profile'}
                 </h2>
               </div>
 
               {role === 'student' ? (
-                <StudentForm
-                  onSubmit={handleStudentSubmit}
-                  loading={loading}
-                  emailDomain={emailDomain}
-                />
+                <StudentForm onSubmit={handleStudentSubmit} loading={loading} emailDomain={emailDomain} />
               ) : (
                 <CompanyForm onSubmit={handleCompanySubmit} loading={loading} />
               )}

@@ -74,6 +74,49 @@
   transform: translateY(0);
 }
 
+/* Dark-theme form utilities — used by app pages (login, onboarding, dashboards) */
+.dk-input,
+.dk-select,
+.dk-textarea {
+  background: #1a1a17;
+  border: 1px solid #2a2a24;
+  color: #f0ece3;
+  font-size: 14px;
+  padding: 10px 14px;
+  outline: none;
+  width: 100%;
+  font-family: 'Inter', system-ui, sans-serif;
+  transition: border-color 0.15s;
+  border-radius: 0;
+}
+.dk-input:focus,
+.dk-select:focus,
+.dk-textarea:focus {
+  border-color: #c87533;
+}
+.dk-input::placeholder,
+.dk-textarea::placeholder {
+  color: #87837c;
+}
+.dk-select {
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2387837c' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+.dk-textarea {
+  resize: vertical;
+}
+.dk-checkbox {
+  accent-color: #c87533;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* Respect user's motion preference — WCAG 2.3.3 */
 @media (prefers-reduced-motion: reduce) {
   html {
