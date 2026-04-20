@@ -24,6 +24,7 @@ export function Nav() {
 
   return (
     <nav
+      aria-label="Main navigation"
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50,
         transition: 'background 0.3s, border-color 0.3s',
@@ -34,19 +35,26 @@ export function Nav() {
       }}
     >
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+        <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <LogoMark />
-          <span style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }}>workmark</span>
+          <span style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }} role="list">
           {links.map(([href, label]) => {
             const active = pathname === href
             return (
               <Link
                 key={href}
                 href={href}
-                style={{ fontSize: 14, fontFamily: F.sans, textDecoration: 'none', color: active ? C.text : C.textMuted, borderBottom: active ? `1px solid ${C.accent}` : '1px solid transparent', paddingBottom: 2, transition: 'color 0.2s' }}
+                role="listitem"
+                aria-current={active ? 'page' : undefined}
+                style={{
+                  fontSize: 14, fontFamily: F.sans, textDecoration: 'none',
+                  color: active ? C.text : C.textMuted,
+                  borderBottom: active ? `1px solid ${C.accent}` : '1px solid transparent',
+                  paddingBottom: 2, transition: 'color 0.2s',
+                }}
               >
                 {label}
               </Link>
@@ -56,9 +64,11 @@ export function Nav() {
 
         <Link
           href="/login"
-          style={{ padding: '8px 18px', fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: `1px solid ${C.border}`, color: C.textMuted, textDecoration: 'none', transition: 'all 0.2s' }}
-          onMouseEnter={e => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = C.textMuted }}
-          onMouseLeave={e => { e.currentTarget.style.color = C.textMuted; e.currentTarget.style.borderColor = C.border }}
+          style={{
+            padding: '8px 18px', fontFamily: F.mono, fontSize: 13, fontWeight: 500,
+            border: `1px solid ${C.border}`, color: C.textMuted, textDecoration: 'none',
+            transition: 'all 0.2s',
+          }}
         >
           Sign in
         </Link>

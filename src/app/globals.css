@@ -5,7 +5,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 @layer base {
-  /* Dark background bleeds into overscroll/rubber-band areas */
   html {
     background-color: #0d0d0b;
     color: #f0ece3;
@@ -24,12 +23,31 @@
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Keyboard focus indicator — meets WCAG 2.4.7 */
+  /* Keyboard focus — meets WCAG 2.4.7 */
   :focus-visible {
     outline: 2px solid #c87533;
     outline-offset: 3px;
+    border-radius: 2px;
   }
+}
 
+/* Skip-to-content link — WCAG 2.4.1 */
+.skip-to-content {
+  position: absolute;
+  top: -100%;
+  left: 0;
+  z-index: 10000;
+  padding: 10px 20px;
+  background: #c87533;
+  color: #0d0d0b;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  border-radius: 0 0 4px 0;
+  transition: top 0.1s;
+}
+.skip-to-content:focus {
+  top: 0;
 }
 
 @layer utilities {
@@ -54,4 +72,26 @@
 .reveal-item.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Respect user's motion preference — WCAG 2.3.3 */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal-item {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

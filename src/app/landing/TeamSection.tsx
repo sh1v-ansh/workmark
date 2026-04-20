@@ -2,16 +2,16 @@ import { C, F } from './tokens'
 
 export function TeamSection() {
   return (
-    <section style={{ padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
+    <section aria-labelledby="team-heading" style={{ padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
+      <h2 id="team-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
         The team
-      </div>
+      </h2>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'start' }}>
         {/* Left: founder */}
         <div className="reveal-item">
           {/* Avatar */}
-          <div style={{ width: 64, height: 64, background: C.surface, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+          <div aria-hidden="true" style={{ width: 64, height: 64, background: C.surface, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
             <span style={{ fontFamily: F.mono, fontSize: 22, fontWeight: 700, color: C.accent }}>S</span>
           </div>
 
@@ -43,9 +43,9 @@ export function TeamSection() {
           {/* Pull quote */}
           <div className="reveal-item" style={{ transitionDelay: '0.15s', background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`, padding: 28 }}>
             <div style={{ fontFamily: F.mono, fontSize: 10, color: C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>On hiring</div>
-            <p style={{ fontFamily: F.serif, fontSize: 19, fontWeight: 500, color: C.text, lineHeight: 1.6, margin: 0 }}>
-              &ldquo;The résumé is self-reported noise. The only thing that should matter is whether you can actually ship.&rdquo;
-            </p>
+            <blockquote cite="https://workmark.org" style={{ fontFamily: F.serif, fontSize: 19, fontWeight: 500, color: C.text, lineHeight: 1.6, margin: 0 }}>
+              The résumé is self-reported noise. The only thing that should matter is whether you can actually ship.
+            </blockquote>
           </div>
 
           {/* Contact */}
@@ -63,7 +63,7 @@ export function TeamSection() {
               onMouseEnter={e => (e.currentTarget.style.borderColor = C.accent)}
               onMouseLeave={e => (e.currentTarget.style.borderColor = C.border)}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" focusable="false">
                 <rect x="1" y="2.5" width="12" height="9" rx="0.5" stroke={C.accent} strokeWidth="1"/>
                 <path d="M1 3.5l6 4 6-4" stroke={C.accent} strokeWidth="1" strokeLinecap="round"/>
               </svg>

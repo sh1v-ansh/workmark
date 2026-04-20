@@ -121,17 +121,16 @@ export default function LoginPage() {
   // ── Post sign-up: waiting for email confirmation ──────────────────────────
   if (pendingConfirmEmail) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-        <Link href="/" className="mb-8">
-          <span className="text-2xl font-bold tracking-tight text-gray-900">
+      <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <Link href="/" aria-label="Workmark home" className="mb-8">
+          <span className="text-2xl font-bold tracking-tight text-gray-900" aria-hidden="true">
             Work<span className="text-brand-600">mark</span>
           </span>
         </Link>
 
         <div className="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
-          {/* Envelope illustration */}
-          <div className="w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-7 h-7 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="w-14 h-14 rounded-full bg-brand-50 flex items-center justify-center mx-auto mb-4" aria-hidden="true">
+            <svg className="w-7 h-7 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
                 d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
@@ -166,15 +165,15 @@ export default function LoginPage() {
             Can&apos;t find the email? Check your spam folder.
           </p>
         </div>
-      </div>
+      </main>
     )
   }
 
   // ── Normal sign in / sign up form ─────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-      <Link href="/" className="mb-8">
-        <span className="text-2xl font-bold tracking-tight text-gray-900">
+    <main className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+      <Link href="/" aria-label="Workmark home" className="mb-8">
+        <span className="text-2xl font-bold tracking-tight text-gray-900" aria-hidden="true">
           Work<span className="text-brand-600">mark</span>
         </span>
       </Link>
@@ -182,11 +181,13 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8">
           {/* Mode tabs */}
-          <div className="flex rounded-xl bg-gray-100 p-1 mb-6">
+          <div className="flex rounded-xl bg-gray-100 p-1 mb-6" role="group" aria-label="Sign in or sign up">
             {(['signin', 'signup'] as Mode[]).map((m) => (
               <button
                 key={m}
+                type="button"
                 onClick={() => { setMode(m); setError(null) }}
+                aria-pressed={mode === m}
                 className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
                   mode === m
                     ? 'bg-white text-gray-900 shadow-sm'
@@ -202,15 +203,16 @@ export default function LoginPage() {
             {/* Role selector (sign-up only) */}
             {mode === 'signup' && (
               <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+                <p id="role-label" className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
                   I am a
-                </label>
-                <div className="flex gap-2">
+                </p>
+                <div className="flex gap-2" role="group" aria-labelledby="role-label">
                   {(['student', 'company'] as Role[]).map((r) => (
                     <button
                       key={r}
                       type="button"
                       onClick={() => { setRole(r); setError(null); setEmail('') }}
+                      aria-pressed={role === r}
                       className={`flex-1 py-2.5 text-sm font-medium rounded-xl border transition-colors capitalize ${
                         role === r
                           ? 'border-brand-500 bg-brand-50 text-brand-700'
@@ -231,10 +233,12 @@ export default function LoginPage() {
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
+              <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <input
+                id="login-email"
                 type="email"
                 required
+                autoComplete="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(null) }}
                 placeholder={mode === 'signup' && role === 'student' ? 'you@university.edu' : 'you@example.com'}
@@ -244,11 +248,13 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
+              <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
               <input
+                id="login-password"
                 type="password"
                 required
                 minLength={8}
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder={mode === 'signup' ? 'Min. 8 characters' : '••••••••'}
@@ -258,7 +264,7 @@ export default function LoginPage() {
 
             {/* Error */}
             {error && (
-              <div className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-700 animate-fade-in">
+              <div role="alert" className="rounded-xl bg-red-50 border border-red-200 p-3 text-sm text-red-700 animate-fade-in">
                 {error}
               </div>
             )}
@@ -271,8 +277,8 @@ export default function LoginPage() {
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  {mode === 'signin' ? 'Signing in…' : 'Creating account…'}
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
+                  <span>{mode === 'signin' ? 'Signing in…' : 'Creating account…'}</span>
                 </span>
               ) : mode === 'signin' ? 'Sign in' : 'Create account'}
             </button>
@@ -285,6 +291,6 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
-    </div>
+    </main>
   )
 }

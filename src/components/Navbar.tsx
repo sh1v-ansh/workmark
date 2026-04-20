@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 
@@ -13,6 +13,7 @@ interface NavbarProps {
 
 export default function Navbar({ role, userName }: NavbarProps) {
   const router = useRouter()
+  const pathname = usePathname()
   const { toast } = useToast()
   const [signing, setSigning] = useState(false)
 
@@ -25,15 +26,18 @@ export default function Navbar({ role, userName }: NavbarProps) {
     router.refresh()
   }
 
+  const dashboardHref = role === 'student' ? '/student/dashboard' : '/company/dashboard'
+
   return (
     <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
-      <nav className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
+      <nav aria-label="Main navigation" className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between">
         {/* Logo */}
         <Link
-          href={role === 'student' ? '/student/dashboard' : '/company/dashboard'}
+          href={dashboardHref}
+          aria-label="Workmark dashboard"
           className="flex items-center gap-2"
         >
-          <span className="font-bold text-lg tracking-tight text-gray-900">
+          <span className="font-bold text-lg tracking-tight text-gray-900" aria-hidden="true">
             Work<span className="text-brand-600">mark</span>
           </span>
         </Link>
@@ -42,6 +46,7 @@ export default function Navbar({ role, userName }: NavbarProps) {
         <div className="flex items-center gap-1 sm:gap-2">
           <Link
             href="/projects"
+            aria-current={pathname === '/projects' ? 'page' : undefined}
             className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
           >
             Browse Projects
@@ -49,6 +54,7 @@ export default function Navbar({ role, userName }: NavbarProps) {
           {role === 'student' && (
             <Link
               href="/student/dashboard"
+              aria-current={pathname === '/student/dashboard' ? 'page' : undefined}
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
             >
               Dashboard
@@ -57,6 +63,7 @@ export default function Navbar({ role, userName }: NavbarProps) {
           {role === 'company' && (
             <Link
               href="/company/dashboard"
+              aria-current={pathname === '/company/dashboard' ? 'page' : undefined}
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
             >
               Dashboard

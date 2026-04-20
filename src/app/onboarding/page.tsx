@@ -13,11 +13,13 @@ type Step = 1 | 2
 
 function TagInput({
   label,
+  inputId,
   value,
   onChange,
   placeholder,
 }: {
   label: string
+  inputId: string
   value: string[]
   onChange: (v: string[]) => void
   placeholder?: string
@@ -34,9 +36,10 @@ function TagInput({
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
+      <label htmlFor={inputId} className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>
       <div className="flex gap-2 mb-2">
         <input
+          id={inputId}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -68,9 +71,10 @@ function TagInput({
               <button
                 type="button"
                 onClick={() => onChange(value.filter((t) => t !== tag))}
+                aria-label={`Remove ${tag}`}
                 className="text-gray-400 hover:text-red-500"
               >
-                ×
+                <span aria-hidden="true">×</span>
               </button>
             </span>
           ))}
@@ -130,11 +134,14 @@ function StudentForm({
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Full name <span className="text-red-500">*</span>
+          <label htmlFor="student-full-name" className="block text-sm font-medium text-gray-700 mb-1.5">
+            Full name <span className="text-red-500" aria-hidden="true">*</span>
+            <span className="sr-only">(required)</span>
           </label>
           <input
+            id="student-full-name"
             required
+            autoComplete="name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -143,10 +150,12 @@ function StudentForm({
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            University <span className="text-red-500">*</span>
+          <label htmlFor="student-university" className="block text-sm font-medium text-gray-700 mb-1.5">
+            University <span className="text-red-500" aria-hidden="true">*</span>
+            <span className="sr-only">(required)</span>
           </label>
           <input
+            id="student-university"
             required
             value={university}
             onChange={(e) => setUniversity(e.target.value)}
@@ -156,8 +165,9 @@ function StudentForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Major</label>
+          <label htmlFor="student-major" className="block text-sm font-medium text-gray-700 mb-1.5">Major</label>
           <input
+            id="student-major"
             value={major}
             onChange={(e) => setMajor(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -166,8 +176,9 @@ function StudentForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Degree</label>
+          <label htmlFor="student-degree" className="block text-sm font-medium text-gray-700 mb-1.5">Degree</label>
           <select
+            id="student-degree"
             value={degreeType}
             onChange={(e) => setDegreeType(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -181,8 +192,9 @@ function StudentForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Graduation year</label>
+          <label htmlFor="student-grad-year" className="block text-sm font-medium text-gray-700 mb-1.5">Graduation year</label>
           <input
+            id="student-grad-year"
             type="number"
             min={2024}
             max={2035}
@@ -194,8 +206,9 @@ function StudentForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">GPA</label>
+          <label htmlFor="student-gpa" className="block text-sm font-medium text-gray-700 mb-1.5">GPA</label>
           <input
+            id="student-gpa"
             type="number"
             min={0}
             max={4}
@@ -210,6 +223,7 @@ function StudentForm({
 
       <TagInput
         label="Skills (press Enter to add)"
+        inputId="student-skills"
         value={skills}
         onChange={setSkills}
         placeholder="e.g. Python, React, SQL"
@@ -217,9 +231,11 @@ function StudentForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">GitHub URL</label>
+          <label htmlFor="student-github" className="block text-sm font-medium text-gray-700 mb-1.5">GitHub URL</label>
           <input
+            id="student-github"
             type="url"
+            autoComplete="url"
             value={githubUrl}
             onChange={(e) => setGithubUrl(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -227,9 +243,11 @@ function StudentForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">LinkedIn URL</label>
+          <label htmlFor="student-linkedin" className="block text-sm font-medium text-gray-700 mb-1.5">LinkedIn URL</label>
           <input
+            id="student-linkedin"
             type="url"
+            autoComplete="url"
             value={linkedinUrl}
             onChange={(e) => setLinkedinUrl(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -238,8 +256,9 @@ function StudentForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Availability</label>
+          <label htmlFor="student-availability" className="block text-sm font-medium text-gray-700 mb-1.5">Availability</label>
           <select
+            id="student-availability"
             value={availability}
             onChange={(e) => setAvailability(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -250,8 +269,9 @@ function StudentForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Hours per week</label>
+          <label htmlFor="student-hours" className="block text-sm font-medium text-gray-700 mb-1.5">Hours per week</label>
           <input
+            id="student-hours"
             type="number"
             min={1}
             max={60}
@@ -263,8 +283,9 @@ function StudentForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Available from</label>
+          <label htmlFor="student-available-from" className="block text-sm font-medium text-gray-700 mb-1.5">Available from</label>
           <input
+            id="student-available-from"
             type="date"
             value={availableFrom}
             onChange={(e) => setAvailableFrom(e.target.value)}
@@ -277,6 +298,7 @@ function StudentForm({
       <div className="rounded-xl border border-gray-200 p-4 space-y-3">
         <label className="flex items-center gap-3 cursor-pointer">
           <input
+            id="student-international"
             type="checkbox"
             checked={isInternational}
             onChange={(e) => setIsInternational(e.target.checked)}
@@ -288,10 +310,11 @@ function StudentForm({
         </label>
         {isInternational && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label htmlFor="student-visa" className="block text-sm font-medium text-gray-700 mb-1.5">
               Visa / work auth type
             </label>
             <select
+              id="student-visa"
               value={visaType}
               onChange={(e) => setVisaType(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -366,10 +389,12 @@ function CompanyForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          Company name <span className="text-red-500">*</span>
+        <label htmlFor="company-name" className="block text-sm font-medium text-gray-700 mb-1.5">
+          Company name <span className="text-red-500" aria-hidden="true">*</span>
+          <span className="sr-only">(required)</span>
         </label>
         <input
+          id="company-name"
           required
           value={companyName}
           onChange={(e) => setCompanyName(e.target.value)}
@@ -380,9 +405,11 @@ function CompanyForm({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Website</label>
+          <label htmlFor="company-website" className="block text-sm font-medium text-gray-700 mb-1.5">Website</label>
           <input
+            id="company-website"
             type="url"
+            autoComplete="url"
             value={website}
             onChange={(e) => setWebsite(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -390,8 +417,9 @@ function CompanyForm({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Industry</label>
+          <label htmlFor="company-industry" className="block text-sm font-medium text-gray-700 mb-1.5">Industry</label>
           <input
+            id="company-industry"
             value={industry}
             onChange={(e) => setIndustry(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -400,8 +428,9 @@ function CompanyForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Company size</label>
+          <label htmlFor="company-size" className="block text-sm font-medium text-gray-700 mb-1.5">Company size</label>
           <select
+            id="company-size"
             value={companySize}
             onChange={(e) => setCompanySize(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -414,8 +443,9 @@ function CompanyForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">HQ location</label>
+          <label htmlFor="company-hq" className="block text-sm font-medium text-gray-700 mb-1.5">HQ location</label>
           <input
+            id="company-hq"
             value={hqLocation}
             onChange={(e) => setHqLocation(e.target.value)}
             className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -430,11 +460,14 @@ function CompanyForm({
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Contact name <span className="text-red-500">*</span>
+            <label htmlFor="company-contact-name" className="block text-sm font-medium text-gray-700 mb-1.5">
+              Contact name <span className="text-red-500" aria-hidden="true">*</span>
+              <span className="sr-only">(required)</span>
             </label>
             <input
+              id="company-contact-name"
               required
+              autoComplete="name"
               value={contactName}
               onChange={(e) => setContactName(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -442,12 +475,15 @@ function CompanyForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Contact email <span className="text-red-500">*</span>
+            <label htmlFor="company-contact-email" className="block text-sm font-medium text-gray-700 mb-1.5">
+              Contact email <span className="text-red-500" aria-hidden="true">*</span>
+              <span className="sr-only">(required)</span>
             </label>
             <input
+              id="company-contact-email"
               required
               type="email"
+              autoComplete="email"
               value={contactEmail}
               onChange={(e) => setContactEmail(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent"
@@ -563,18 +599,26 @@ export default function OnboardingPage() {
   const emailDomain = userEmail ? `@${userEmail.split('@')[1]}` : ''
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
+    <main className="min-h-screen bg-gray-50 flex flex-col items-center py-12 px-4">
       {/* Logo */}
-      <Link href="/" className="mb-8">
-        <span className="text-2xl font-bold tracking-tight text-gray-900">
+      <Link href="/" aria-label="Workmark home" className="mb-8">
+        <span className="text-2xl font-bold tracking-tight text-gray-900" aria-hidden="true">
           Work<span className="text-brand-600">mark</span>
         </span>
       </Link>
 
       <div className="w-full max-w-xl">
         {/* Progress indicator */}
-        <div className="flex items-center gap-2 mb-6">
+        <div
+          role="progressbar"
+          aria-valuenow={step}
+          aria-valuemin={1}
+          aria-valuemax={2}
+          aria-label={`Step ${step} of 2`}
+          className="flex items-center gap-2 mb-6"
+        >
           <div
+            aria-hidden="true"
             className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
               step >= 1
                 ? 'bg-brand-600 text-white'
@@ -584,11 +628,13 @@ export default function OnboardingPage() {
             1
           </div>
           <div
+            aria-hidden="true"
             className={`flex-1 h-0.5 transition-colors ${
               step >= 2 ? 'bg-brand-600' : 'bg-gray-200'
             }`}
           />
           <div
+            aria-hidden="true"
             className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${
               step >= 2
                 ? 'bg-brand-600 text-white'
@@ -609,18 +655,20 @@ export default function OnboardingPage() {
                 Tell us who you are to get started.
               </p>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3" role="group" aria-label="Account type">
                 {(['student', 'company'] as Role[]).map((r) => (
                   <button
                     key={r}
+                    type="button"
                     onClick={() => setRole(r)}
+                    aria-pressed={role === r}
                     className={`flex flex-col items-center gap-2 p-5 rounded-2xl border-2 transition-all ${
                       role === r
                         ? 'border-brand-500 bg-brand-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-3xl">
+                    <span className="text-3xl" aria-hidden="true">
                       {r === 'student' ? '🎓' : '🏢'}
                     </span>
                     <span
@@ -640,13 +688,14 @@ export default function OnboardingPage() {
               </div>
 
               {role === 'student' && !validateEdu(userEmail) && userEmail && (
-                <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                <div role="alert" className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
                   Your email <strong>{userEmail}</strong> is not a .edu address.
                   Student accounts require a university email.
                 </div>
               )}
 
               <button
+                type="button"
                 disabled={
                   !role ||
                   (role === 'student' && !validateEdu(userEmail) && !!userEmail)
@@ -663,14 +712,15 @@ export default function OnboardingPage() {
             <>
               <div className="flex items-center gap-2 mb-5">
                 <button
+                  type="button"
                   onClick={() => setStep(1)}
                   className="text-sm text-gray-400 hover:text-gray-700 transition-colors"
                 >
                   ← Back
                 </button>
-                <h1 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold text-gray-900">
                   {role === 'student' ? 'Your profile' : 'Company profile'}
-                </h1>
+                </h2>
               </div>
 
               {role === 'student' ? (
@@ -686,7 +736,7 @@ export default function OnboardingPage() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   )
 }
 

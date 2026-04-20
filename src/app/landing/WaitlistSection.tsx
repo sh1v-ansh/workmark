@@ -4,7 +4,7 @@ import { C, F } from './tokens'
 export function JoinSection() {
   return (
     <section style={{ borderTop: `1px solid ${C.border}`, padding: '100px 24px', textAlign: 'center', background: C.bgDeep, position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 800, height: 500, background: 'radial-gradient(ellipse at center, rgba(200,117,51,0.07) 0%, transparent 65%)', pointerEvents: 'none', zIndex: 0 }} />
+      <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 800, height: 500, background: 'radial-gradient(ellipse at center, rgba(200,117,51,0.07) 0%, transparent 65%)', pointerEvents: 'none', zIndex: 0 }} />
 
       <div className="reveal-item" style={{ maxWidth: 520, margin: '0 auto', position: 'relative', zIndex: 1 }}>
         <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>

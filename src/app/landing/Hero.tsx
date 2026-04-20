@@ -8,6 +8,11 @@ function AishaCard() {
   const [step, setStep] = useState(0)
 
   useEffect(() => {
+    // Skip animation for users who prefer reduced motion
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setStep(3)
+      return
+    }
     const t1 = setTimeout(() => setStep(1), 800)
     const t2 = setTimeout(() => setStep(2), 1500)
     const t3 = setTimeout(() => setStep(3), 2200)
@@ -21,12 +26,13 @@ function AishaCard() {
   })
 
   return (
-    <div style={{ position: 'relative', flexShrink: 0 }}>
-      {/* Floating chips */}
-      <div style={{ position: 'absolute', top: -18, right: -10, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.accent, fontFamily: F.mono, animation: 'float 3s ease-in-out infinite', whiteSpace: 'nowrap' }}>
+    // role="img" with label makes the whole card a single accessible object
+    <div style={{ position: 'relative', flexShrink: 0 }} role="img" aria-label="Example verified student profile for Aisha Syed, UMass CS 2026, showing two attested work records and a 94% job match">
+      {/* Floating chips — decorative, not read by screen readers */}
+      <div aria-hidden="true" style={{ position: 'absolute', top: -18, right: -10, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.accent, fontFamily: F.mono, animation: 'float 3s ease-in-out infinite', whiteSpace: 'nowrap' }}>
         ✓ Attestation received
       </div>
-      <div style={{ position: 'absolute', bottom: 64, left: -20, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.textMuted, fontFamily: F.mono, animation: 'float 3.5s ease-in-out infinite 0.7s', whiteSpace: 'nowrap' }}>
+      <div aria-hidden="true" style={{ position: 'absolute', bottom: 64, left: -20, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.textMuted, fontFamily: F.mono, animation: 'float 3.5s ease-in-out infinite 0.7s', whiteSpace: 'nowrap' }}>
         ↑ Skills verified by employer
       </div>
 
