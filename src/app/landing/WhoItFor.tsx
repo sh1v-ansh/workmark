@@ -31,7 +31,7 @@ export function WhoItFor() {
   return (
     <section id="for-you" aria-labelledby="who-its-for-heading" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
       <h2 id="who-its-for-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
-        Who it&apos;s for
+        Who Workmark is for
       </h2>
       <div className="mob-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
         {/* Students */}

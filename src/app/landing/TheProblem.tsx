@@ -20,9 +20,12 @@ function Dot() {
 export function TheProblem() {
   return (
     <section aria-labelledby="the-problem-heading" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
-      <h2 id="the-problem-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
-        The problem
+      <h2 id="the-problem-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
+        The problem Workmark was built to solve
       </h2>
+      <p style={{ fontSize: 15, color: C.textMuted, maxWidth: 600, lineHeight: 1.65, marginBottom: 48 }}>
+        Hiring in CS is broken in a specific, structural way. Workmark exists to fix it.
+      </p>
       <div className="mob-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64 }}>
         <div className="reveal-item">
           <h3 style={{ fontFamily: F.serif, fontSize: 24, fontWeight: 600, color: C.text, marginBottom: 24, lineHeight: 1.2 }}>For students</h3>

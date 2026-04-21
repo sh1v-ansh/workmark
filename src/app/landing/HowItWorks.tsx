@@ -4,17 +4,17 @@ const steps = [
   {
     n: '01',
     title: 'Do real CS work',
-    body: 'Browse and apply to internships and contract projects at SMBs, startups, and nonprofits. 4–16 week engagements, paid or unpaid.',
+    body: 'Browse Workmark and apply to internships and contract projects at SMBs, startups, and nonprofits. 4–16 week engagements, paid or unpaid.',
   },
   {
     n: '02',
-    title: 'Build a verified record',
-    body: "At project close, the employer confirms the engagement — attesting to the stack used and quality of work. You don't submit anything. They just confirm.",
+    title: 'Earn your Workmark record',
+    body: "At project close, the employer confirms the engagement in Workmark — attesting to the stack used and quality of work. You don't submit anything. They just confirm.",
   },
   {
     n: '03',
-    title: 'Get matched, one tap',
-    body: 'Your verified records automatically match you to full-time roles. Only students with qualifying records can apply — so every application counts.',
+    title: 'Your record speaks for you',
+    body: 'Your Workmark record is permanent, portable, and yours forever — proof that replaces the self-reported résumé with something employers can actually trust.',
   },
 ]
 
@@ -22,7 +22,7 @@ export function HowItWorks() {
   return (
     <section id="how-it-works" aria-labelledby="how-it-works-heading" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
       <h1 id="how-it-works-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
-        How it works
+        How Workmark works
       </h1>
       <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40 }}>
         {steps.map((s, i) => (

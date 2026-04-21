@@ -11,10 +11,10 @@ export function JoinSection() {
           Now open
         </div>
         <h2 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, lineHeight: 1.1, marginBottom: 16 }}>
-          Start building<br />your record.
+          Start building your<br />Workmark record.
         </h2>
         <p style={{ fontSize: 16, color: C.textMuted, lineHeight: 1.7, marginBottom: 40 }}>
-          Students sign up free. Organizations post their first 3 projects at no cost, no commitment.
+          Workmark is free for students, always. Organizations post their first projects at no cost. No commitment, no credit card.
         </p>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24 }}>

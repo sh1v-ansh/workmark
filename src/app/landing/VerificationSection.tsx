@@ -124,12 +124,12 @@ export function VerificationSection() {
     <section id="verification" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px' }}>
       <div className="mob-col" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
         <div className="reveal-item">
-          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Verification</div>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>How Workmark verifies work</div>
           <h2 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 16 }}>
-            One button.<br />Permanent record.
+            One button.<br />Permanent Workmark record.
           </h2>
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.7, marginBottom: 28 }}>
-            Verification is intentionally minimal. There is no deliverable upload, no repo link, no code submission. The employer&apos;s confirmation combined with the platform&apos;s activity trail is the attestation. Internal work stays internal.
+            Workmark verification is intentionally minimal. There is no deliverable upload, no repo link, no code submission. The employer&apos;s confirmation combined with Workmark&apos;s activity trail is the attestation. Internal work stays internal.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
             {flowSteps.map(([n, title, body]) => (

@@ -13,12 +13,20 @@ export function JobMatching() {
   return (
     <section style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
       <div className="reveal-item">
-        <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
-          Job matching
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Workmark job matching
+          </div>
+          <span style={{ fontFamily: F.mono, fontSize: 9, color: C.textMuted, background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: '2px 8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Coming soon
+          </span>
         </div>
-        <h2 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 48, maxWidth: 500 }}>
-          Your record is<br />your application.
+        <h2 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 16, maxWidth: 500 }}>
+          Your Workmark record is<br />your application.
         </h2>
+        <p style={{ fontSize: 14, color: C.textFaint, fontFamily: F.mono, marginBottom: 48 }}>
+          Workmark job matching is in development. Once live, your verified records automatically match you to full-time roles — no form to fill out.
+        </p>
       </div>
 
       <div className="mob-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 72, alignItems: 'start' }}>
