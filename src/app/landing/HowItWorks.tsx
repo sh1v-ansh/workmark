@@ -3,18 +3,18 @@ import { C, F } from './tokens'
 const steps = [
   {
     n: '01',
-    title: 'Do real CS work',
-    body: 'Browse Workmark and apply to internships and contract projects at SMBs, startups, and nonprofits. 4–16 week engagements, paid or unpaid.',
+    title: 'Organizations post a project',
+    body: 'SMBs, startups, nonprofits, and research labs post real CS projects or internships on Workmark — setting the scope, duration, and skills needed. No agency. No recruiter. Free to start.',
   },
   {
     n: '02',
-    title: 'Earn your Workmark record',
-    body: "At project close, the employer confirms the engagement in Workmark — attesting to the stack used and quality of work. You don't submit anything. They just confirm.",
+    title: 'CS students apply and do real work',
+    body: 'Students browse Workmark and apply on merit. They tackle real CS problems for organizations that genuinely need the help. Real value is created on both sides of the engagement.',
   },
   {
     n: '03',
-    title: 'Your record speaks for you',
-    body: 'Your Workmark record is permanent, portable, and yours forever — proof that replaces the self-reported résumé with something employers can actually trust.',
+    title: 'Both sides win — permanently',
+    body: "At project close, the employer confirms the engagement on Workmark — one button. Duration and skills lock permanently to the student's Workmark record. The organization got the work done. The student has verified proof they built it.",
   },
 ]
 

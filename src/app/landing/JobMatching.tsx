@@ -1,10 +1,10 @@
 import { C, F } from './tokens'
 
 const steps = [
-  ['01', 'Orgs post full-time roles', 'They specify the required tech stack. Only verified records matching those exact technologies are eligible.'],
-  ['02', 'Matching runs automatically', "Workmark compares the role's stack against students' attested records. No résumé parsing. No guesswork. Self-reported skills carry zero weight."],
-  ['03', 'One-tap apply', 'Students get a notification: "You\'re a strong match for [Role] at [Company]." They tap apply. Their verified record is their application — no form to fill out.'],
-  ['04', 'Employers see 3–8 candidates', 'Not 250. Every candidate has a verified, employer-confirmed track record. No screening required.'],
+  ['01', 'Organizations post full-time roles', 'They specify the required tech stack and experience level. Workmark surfaces only students whose verified records match.'],
+  ['02', 'Matching runs on verified records only', "Workmark compares the role's requirements against students' attested Workmark records. Skills that were actually used and confirmed by employers — not self-reported."],
+  ['03', 'Students apply in one tap', 'Students get notified when they\'re a strong match. They tap apply. Their Workmark record is their application — no form to fill out, no cover letter needed.'],
+  ['04', 'Organizations see a small, qualified pool', 'A handful of candidates — each with a verified, employer-confirmed Workmark record. Less screening, more signal.'],
 ]
 
 const matchTags = ['React', 'TypeScript', 'SQL']

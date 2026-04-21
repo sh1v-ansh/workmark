@@ -26,10 +26,10 @@ function AishaCard() {
 
   return (
     <div style={{ position: 'relative', flexShrink: 0 }}>
-      <div role="img" aria-label="Example Workmark verified student profile showing two attested work records">
+      <div role="img" aria-label="Sample Workmark verified student profile showing two attested work records">
         {/* Floating chips */}
         <div aria-hidden="true" style={{ position: 'absolute', top: -18, right: -10, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.accent, fontFamily: F.mono, animation: 'float 3s ease-in-out infinite', whiteSpace: 'nowrap' }}>
-          ✓ Workmark attestation received
+          ✓ Workmark record locked
         </div>
         <div aria-hidden="true" style={{ position: 'absolute', bottom: 64, left: -20, zIndex: 10, background: C.surface, border: `1px solid ${C.border}`, padding: '6px 12px', fontSize: 12, color: C.textMuted, fontFamily: F.mono, animation: 'float 3.5s ease-in-out infinite 0.7s', whiteSpace: 'nowrap' }}>
           ↑ Skills verified by employer
@@ -66,13 +66,13 @@ function AishaCard() {
           </div>
 
           {/* Work record */}
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 8 }}>
             <div style={{ fontSize: 10, color: C.textFaint, fontFamily: F.mono, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Workmark record</div>
 
             <div style={{ ...anim(step >= 1), background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: '10px 12px', marginBottom: 8 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: 12, color: C.textSub, fontWeight: 500, marginBottom: 2 }}>Company 1</div>
+                  <div style={{ fontSize: 12, color: C.textSub, fontWeight: 500, marginBottom: 2 }}>Nonprofit · Dashboard project</div>
                   <div style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>8 wks · React, SQL</div>
                 </div>
                 <div style={{ fontSize: 10, color: C.accent, fontFamily: F.mono, fontWeight: 500 }}>✓ ATTESTED</div>
@@ -82,7 +82,7 @@ function AishaCard() {
             <div style={{ ...anim(step >= 2), background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: '10px 12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <div style={{ fontSize: 12, color: C.textSub, fontWeight: 500, marginBottom: 2 }}>Company 2</div>
+                  <div style={{ fontSize: 12, color: C.textSub, fontWeight: 500, marginBottom: 2 }}>Startup · Data pipeline</div>
                   <div style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>6 wks · Python, Data Analysis</div>
                 </div>
                 <div style={{ fontSize: 10, color: C.accent, fontFamily: F.mono, fontWeight: 500 }}>✓ ATTESTED</div>
@@ -91,7 +91,6 @@ function AishaCard() {
           </div>
         </div>
       </div>
-      {/* Asterisk note */}
       <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textGhost, marginTop: 10, textAlign: 'center' }}>* Sample Workmark profile — not a real student</p>
     </div>
   )
@@ -104,13 +103,13 @@ export function Hero() {
         {/* Left */}
         <div>
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
-            Workmark — built by a CS student, for CS students
+            Workmark — built by a CS student, for students and the organizations that want to work with them
           </div>
           <h1 className="mob-text-hero" style={{ fontFamily: F.serif, fontSize: 62, fontWeight: 800, lineHeight: 1.05, color: C.text, letterSpacing: '-0.03em', margin: '0 0 24px' }}>
-            The verified work record for CS students.
+            Make work experience grindable.
           </h1>
           <p style={{ fontSize: 17, lineHeight: 1.65, color: C.textMuted, marginBottom: 36, maxWidth: 480 }}>
-            Workmark connects CS students to real projects at startups, SMBs, and nonprofits. When the work is done, the employer verifies — and your Workmark record becomes permanent, portable proof. No résumé inflation. No gatekeeping. Fair hiring, by design.
+            Workmark is a platform where CS students work on real projects for SMBs, startups, and nonprofits. Students stack verified work records with every engagement. Organizations get affordable CS talent with no agency fees. Both sides grow — together.
           </p>
           <div style={{ display: 'flex', gap: 12, marginBottom: 48 }}>
             <Link href="/login" style={{ padding: '12px 24px', background: C.accent, color: C.bg, fontWeight: 600, fontSize: 15, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -122,7 +121,7 @@ export function Hero() {
           </div>
           <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 16 }}>On Workmark</div>
           <div className="mob-2col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, borderTop: `1px solid ${C.border}`, paddingTop: 28 }}>
-            {[['Free', 'always for students'], ['Verified', 'by real employers'], ['Permanent', 'yours forever']].map(([num, label]) => (
+            {[['Free', 'for students, always'], ['Verified', 'by real employers'], ['Permanent', 'yours forever']].map(([num, label]) => (
               <div key={num}>
                 <div style={{ fontFamily: F.mono, fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 4 }}>{num}</div>
                 <div style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>{label}</div>
@@ -131,7 +130,7 @@ export function Hero() {
           </div>
         </div>
 
-        {/* Right — hidden on mobile to keep hero clean */}
+        {/* Right — hidden on mobile */}
         <div className="mob-hide" style={{ display: 'flex', justifyContent: 'center', paddingRight: 32, flexDirection: 'column', alignItems: 'center' }}>
           <AishaCard />
         </div>

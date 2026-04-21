@@ -29,13 +29,13 @@ export function TeamSection() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.75 }}>
-              I built Workmark because I watched it happen firsthand — smart people with real skills getting filtered out before the first call. Not because they couldn&apos;t code. Because they didn&apos;t have the right name on their résumé, the right connection, or the first internship that unlocks every subsequent one.
+              I built Workmark because I saw two problems that were clearly solving each other — CS students who couldn&apos;t get work experience, and small organizations that needed CS help they couldn&apos;t afford through agencies. The infrastructure to connect them just didn&apos;t exist.
             </p>
             <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.75 }}>
-              Hiring is broken in a specific, structural way — and it&apos;s most broken for first-generation students, international students, and anyone who didn&apos;t go to a target school. Workmark exists to fix that. Not by gaming the system, but by replacing the broken part: the self-reported résumé. Demonstrated capability should be the currency — not credentials, not connections.
+              The goal with Workmark is simple: make work experience grindable. Every project a student completes adds a verified record — permanent, portable, and attested by the organization. Stack enough of them and you&apos;ve built something real. This should especially benefit first-gen students, international students, and anyone at a non-target school who&apos;s shut out of traditional recruiting.
             </p>
             <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.75 }}>
-              Workmark is a student-built platform, made by a student for students. One person trying to change the way hiring works, starting with CS. If it resonates, reach out.
+              Workmark is student-built — made by a CS student for the students and organizations it serves. One person, one mission: make it fair. If that resonates, reach out.
             </p>
           </div>
         </div>
@@ -52,9 +52,9 @@ export function TeamSection() {
 
           {/* Pull quote */}
           <div className="reveal-item" style={{ transitionDelay: '0.2s', background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.border}`, padding: 28 }}>
-            <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>On hiring</div>
+            <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>On the opportunity</div>
             <blockquote style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 500, color: C.textSub, lineHeight: 1.65, margin: 0 }}>
-              The résumé is self-reported noise. The only thing that should matter is whether you can actually ship. Workmark makes that verifiable.
+              CS students and SMBs both have something the other needs. Workmark is just the infrastructure to connect them — with a permanent record of the work that happened.
             </blockquote>
           </div>
 
