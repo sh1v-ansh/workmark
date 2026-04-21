@@ -33,7 +33,7 @@ export function WhoItFor() {
       <h2 id="who-its-for-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
         Who it&apos;s for
       </h2>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
+      <div className="mob-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
         {/* Students */}
         <div className="reveal-item" style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 36 }}>
           <div style={{ fontFamily: F.mono, fontSize: 10, color: C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>Students</div>

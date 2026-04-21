@@ -121,9 +121,9 @@ export default function ProjectsPage() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
+        <div className="mob-col" style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
           {/* Filter sidebar */}
-          <aside style={{ width: 200, flexShrink: 0, position: 'sticky', top: 72 }}>
+          <aside className="mob-static mob-w100" style={{ width: 200, flexShrink: 0, position: 'sticky', top: 72 }}>
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 20 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <span style={{ fontFamily: F.mono, fontSize: 11, color: C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Filters</span>
@@ -176,7 +176,7 @@ export default function ProjectsPage() {
           {/* Project grid */}
           <div style={{ flex: 1, minWidth: 0 }}>
             {loading ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+              <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {[...Array(6)].map((_, i) => (
                   <div key={i} style={{ height: 200, background: C.surface, border: `1px solid ${C.border}`, opacity: 0.5 }} />
                 ))}
@@ -189,7 +189,7 @@ export default function ProjectsPage() {
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+              <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
                 {filtered.map((project) => (
                   <ProjectCard key={project.id} project={project} />
                 ))}

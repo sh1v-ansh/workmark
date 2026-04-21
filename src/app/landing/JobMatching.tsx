@@ -16,12 +16,12 @@ export function JobMatching() {
         <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
           Job matching
         </div>
-        <h2 style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 48, maxWidth: 500 }}>
+        <h2 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 48, maxWidth: 500 }}>
           Your record is<br />your application.
         </h2>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 72, alignItems: 'start' }}>
+      <div className="mob-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 72, alignItems: 'start' }}>
         <div className="reveal-item" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {steps.map(([n, title, body]) => (
             <div key={n} style={{ display: 'flex', gap: 16 }}>

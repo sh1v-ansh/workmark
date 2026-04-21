@@ -52,7 +52,7 @@ export default function ProjectDetailClient({ project, student, alreadyApplied }
           </Link>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: 20, alignItems: 'flex-start' }}>
+        <div className="mob-col" style={{ display: 'grid', gridTemplateColumns: '1fr 240px', gap: 20, alignItems: 'flex-start' }}>
           {/* Main content */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Title block */}

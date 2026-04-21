@@ -143,4 +143,8 @@
   .mob-w100 { width: 100% !important; max-width: 100% !important; }
   .mob-gap8 { gap: 8px !important; }
   .mob-text-sm { font-size: 12px !important; }
+
+  /* Responsive heading sizes */
+  .mob-text-hero { font-size: 38px !important; line-height: 1.1 !important; }
+  .mob-text-h1   { font-size: 28px !important; }
 }

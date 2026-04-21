@@ -109,13 +109,13 @@ function AishaCard() {
 export function Hero() {
   return (
     <section style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', padding: '120px 24px 80px' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr auto', gap: 80, alignItems: 'center' }}>
+      <div className="mob-col" style={{ maxWidth: 1100, margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '1fr auto', gap: 80, alignItems: 'center' }}>
         {/* Left */}
         <div>
           <div style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
             Verified CS internship &amp; project board
           </div>
-          <h1 style={{ fontFamily: F.serif, fontSize: 62, fontWeight: 800, lineHeight: 1.05, color: C.text, marginBottom: 24, letterSpacing: '-0.03em', margin: '0 0 24px' }}>
+          <h1 className="mob-text-hero" style={{ fontFamily: F.serif, fontSize: 62, fontWeight: 800, lineHeight: 1.05, color: C.text, marginBottom: 24, letterSpacing: '-0.03em', margin: '0 0 24px' }}>
             Work that speaks<br />for itself.
           </h1>
           <p style={{ fontSize: 17, lineHeight: 1.65, color: C.textMuted, marginBottom: 36, maxWidth: 440 }}>
@@ -129,7 +129,7 @@ export function Hero() {
               Post a project
             </Link>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, borderTop: `1px solid ${C.border}`, paddingTop: 28 }}>
+          <div className="mob-2col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, borderTop: `1px solid ${C.border}`, paddingTop: 28 }}>
             {[['Free', 'always for students'], ['Verified', 'work records'], ['Permanent', 'employer-attested']].map(([num, label]) => (
               <div key={num}>
                 <div style={{ fontFamily: F.mono, fontSize: 24, fontWeight: 700, color: C.text, marginBottom: 4 }}>{num}</div>
@@ -139,8 +139,8 @@ export function Hero() {
           </div>
         </div>
 
-        {/* Right */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingRight: 32 }}>
+        {/* Right — hidden on mobile to keep hero clean */}
+        <div className="mob-hide" style={{ display: 'flex', justifyContent: 'center', paddingRight: 32 }}>
           <AishaCard />
         </div>
       </div>

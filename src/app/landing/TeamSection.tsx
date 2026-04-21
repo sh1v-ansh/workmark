@@ -9,7 +9,7 @@ export function TeamSection() {
         The team
       </h2>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'start' }}>
+      <div className="mob-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'start' }}>
         {/* Left: founder */}
         <div className="reveal-item">
           {/* Avatar */}

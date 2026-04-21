@@ -23,7 +23,7 @@ export function TheProblem() {
       <h2 id="the-problem-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
         The problem
       </h2>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64 }}>
+      <div className="mob-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64 }}>
         <div className="reveal-item">
           <h3 style={{ fontFamily: F.serif, fontSize: 24, fontWeight: 600, color: C.text, marginBottom: 24, lineHeight: 1.2 }}>For students</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
