@@ -32,7 +32,7 @@ function InteractiveAttestation() {
         </div>
         <div style={{ fontFamily: F.mono, fontSize: 12, color: C.accent, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Record locked</div>
         <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>
-          Aisha&apos;s engagement has been confirmed. Her record is now permanent and verified — no edits, no disputes.
+          The engagement has been confirmed. The student&apos;s Workmark record is now permanent — skills attested, duration locked. No edits, no disputes, ever.
         </p>
         <div style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: 12, marginBottom: 16 }}>
           <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Record hash</div>
@@ -122,14 +122,14 @@ const flowSteps = [
 export function VerificationSection() {
   return (
     <section id="verification" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
+      <div className="mob-col" style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 80, alignItems: 'start' }}>
         <div className="reveal-item">
-          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>Verification</div>
-          <h2 style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 16 }}>
-            One button.<br />Permanent record.
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>How Workmark verification works</div>
+          <h2 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 16 }}>
+            One button.<br />A record both sides trust forever.
           </h2>
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.7, marginBottom: 28 }}>
-            Verification is intentionally minimal. There is no deliverable upload, no repo link, no code submission. The employer&apos;s confirmation combined with the platform&apos;s activity trail is the attestation. Internal work stays internal.
+            Workmark verification is lightweight by design — no code submissions, no file uploads, no deliverables. The employer confirms the engagement happened and the skills were used. That&apos;s it. The student&apos;s Workmark record locks permanently. Neither side can edit it after. Both sides walk away with a trustworthy, immutable record of what was built.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
             {flowSteps.map(([n, title, body]) => (

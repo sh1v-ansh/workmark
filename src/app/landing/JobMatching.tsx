@@ -1,10 +1,10 @@
 import { C, F } from './tokens'
 
 const steps = [
-  ['01', 'Orgs post full-time roles', 'They specify the required tech stack. Only verified records matching those exact technologies are eligible.'],
-  ['02', 'Matching runs automatically', "Workmark compares the role's stack against students' attested records. No résumé parsing. No guesswork. Self-reported skills carry zero weight."],
-  ['03', 'One-tap apply', 'Students get a notification: "You\'re a strong match for [Role] at [Company]." They tap apply. Their verified record is their application — no form to fill out.'],
-  ['04', 'Employers see 3–8 candidates', 'Not 250. Every candidate has a verified, employer-confirmed track record. No screening required.'],
+  ['01', 'Organizations post full-time roles', 'They specify the required tech stack and experience level. Workmark surfaces only students whose verified records match.'],
+  ['02', 'Matching runs on verified records only', "Workmark compares the role's requirements against students' attested Workmark records. Skills that were actually used and confirmed by employers — not self-reported."],
+  ['03', 'Students apply in one tap', 'Students get notified when they\'re a strong match. They tap apply. Their Workmark record is their application — no form to fill out, no cover letter needed.'],
+  ['04', 'Organizations see a small, qualified pool', 'A handful of candidates — each with a verified, employer-confirmed Workmark record. Less screening, more signal.'],
 ]
 
 const matchTags = ['React', 'TypeScript', 'SQL']
@@ -13,15 +13,23 @@ export function JobMatching() {
   return (
     <section style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
       <div className="reveal-item">
-        <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
-          Job matching
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+          <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Workmark job matching
+          </div>
+          <span style={{ fontFamily: F.mono, fontSize: 9, color: C.textMuted, background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: '2px 8px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Coming soon
+          </span>
         </div>
-        <h2 style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 48, maxWidth: 500 }}>
-          Your record is<br />your application.
+        <h2 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 40, fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1, color: C.text, marginBottom: 16, maxWidth: 500 }}>
+          Your Workmark record is<br />your application.
         </h2>
+        <p style={{ fontSize: 14, color: C.textFaint, fontFamily: F.mono, marginBottom: 48 }}>
+          Workmark job matching is in development. Once live, your verified records automatically match you to full-time roles — no form to fill out.
+        </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 72, alignItems: 'start' }}>
+      <div className="mob-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 72, alignItems: 'start' }}>
         <div className="reveal-item" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           {steps.map(([n, title, body]) => (
             <div key={n} style={{ display: 'flex', gap: 16 }}>

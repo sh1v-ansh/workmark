@@ -35,8 +35,8 @@ export function Footer() {
         </div>
       </div>
       <div style={{ paddingTop: 20, borderTop: `1px solid ${C.borderFaint}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontSize: 12, color: C.textGhost, fontFamily: F.mono }}>© 2025 Workmark. All rights reserved.</div>
-        <div style={{ fontSize: 12, color: C.textGhost, fontFamily: F.mono }}>Built for the students who build things.</div>
+        <div style={{ fontSize: 12, color: C.textGhost, fontFamily: F.mono }}>© 2026 Workmark. All rights reserved.</div>
+        <div style={{ fontSize: 12, color: C.textGhost, fontFamily: F.mono }}>Built by a student, for students.</div>
       </div>
     </footer>
   )

@@ -3,18 +3,18 @@ import { C, F } from './tokens'
 const steps = [
   {
     n: '01',
-    title: 'Do real CS work',
-    body: 'Browse and apply to internships and contract projects at SMBs, startups, and nonprofits. 4–16 week engagements, paid or unpaid.',
+    title: 'Organizations post a project',
+    body: 'SMBs, startups, nonprofits, and research labs post real CS projects or internships on Workmark — setting the scope, duration, and skills needed. No agency. No recruiter. Free to start.',
   },
   {
     n: '02',
-    title: 'Build a verified record',
-    body: "At project close, the employer confirms the engagement — attesting to the stack used and quality of work. You don't submit anything. They just confirm.",
+    title: 'CS students apply and do real work',
+    body: 'Students browse Workmark and apply on merit. They tackle real CS problems for organizations that genuinely need the help. Real value is created on both sides of the engagement.',
   },
   {
     n: '03',
-    title: 'Get matched, one tap',
-    body: 'Your verified records automatically match you to full-time roles. Only students with qualifying records can apply — so every application counts.',
+    title: 'Both sides win — permanently',
+    body: "At project close, the employer confirms the engagement on Workmark — one button. Duration and skills lock permanently to the student's Workmark record. The organization got the work done. The student has verified proof they built it.",
   },
 ]
 
@@ -22,9 +22,9 @@ export function HowItWorks() {
   return (
     <section id="how-it-works" aria-labelledby="how-it-works-heading" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
       <h1 id="how-it-works-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 48 }}>
-        How it works
+        How Workmark works
       </h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40 }}>
+      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 40 }}>
         {steps.map((s, i) => (
           <div
             key={s.n}

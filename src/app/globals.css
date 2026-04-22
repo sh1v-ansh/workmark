@@ -119,22 +119,32 @@
 
 /* Respect user's motion preference — WCAG 2.3.3 */
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-
-  .reveal-item {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-
-  *,
-  *::before,
-  *::after {
+  html { scroll-behavior: auto; }
+  .reveal-item { opacity: 1; transform: none; transition: none; }
+  *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ── Responsive utilities ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .mob-hide { display: none !important; }
+  .mob-show { display: flex !important; }
+  .mob-col  { flex-direction: column !important; }
+  .mob-1col { grid-template-columns: 1fr !important; }
+  .mob-2col { grid-template-columns: repeat(2, 1fr) !important; }
+  .mob-wrap { flex-wrap: wrap !important; }
+  .mob-p16  { padding: 16px !important; }
+  .mob-p20  { padding: 20px !important; }
+  .mob-static { position: static !important; }
+  .mob-w100 { width: 100% !important; max-width: 100% !important; }
+  .mob-gap8 { gap: 8px !important; }
+  .mob-text-sm { font-size: 12px !important; }
+
+  /* Responsive heading sizes */
+  .mob-text-hero { font-size: 38px !important; line-height: 1.1 !important; }
+  .mob-text-h1   { font-size: 28px !important; }
 }

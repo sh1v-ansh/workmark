@@ -89,7 +89,7 @@ export default function StudentDashboardClient({ student, applications, experien
           </div>
 
           {/* Stats row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: student.skills && student.skills.length > 0 ? 20 : 0 }}>
+          <div className="mob-2col" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: student.skills && student.skills.length > 0 ? 20 : 0 }}>
             <StatCard label="Applications" value={applications.length} />
             <StatCard label="Accepted" value={applications.filter((a) => a.status === 'accepted').length} />
             <StatCard label="Records" value={experienceRecords.length} />

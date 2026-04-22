@@ -168,7 +168,7 @@ function NewProjectForm({ facultyId, institution, onCreated, onCancel }: {
         )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={fieldGap}>
           <Label htmlFor="proj-type">Type</Label>
           <select id="proj-type" value={type} onChange={(e) => setType(e.target.value)} className="dk-select">
@@ -390,7 +390,7 @@ export default function FacultyDashboardClient({ faculty, initialProjects, initi
       <main style={{ maxWidth: 1000, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 32 }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+        <div className="mob-col mob-gap8" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
           <div>
             <h1 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 4 }}>
               {faculty.full_name ?? 'Faculty Dashboard'}

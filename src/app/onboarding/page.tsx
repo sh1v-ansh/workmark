@@ -102,7 +102,7 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-full-name">Full name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
           <input id="student-full-name" required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="dk-input" placeholder="Jane Smith" />
@@ -137,7 +137,7 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
 
       <TagInput label="Skills (press Enter to add)" inputId="student-skills" value={skills} onChange={setSkills} placeholder="e.g. Python, React, SQL" />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={gap}>
           <FieldLabel htmlFor="student-github">GitHub URL</FieldLabel>
           <input id="student-github" type="url" autoComplete="url" value={githubUrl} onChange={(e) => setGithubUrl(e.target.value)} className="dk-input" placeholder="https://github.com/you" />
@@ -222,7 +222,7 @@ function CompanyForm({ onSubmit, loading }: {
         <input id="company-name" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="dk-input" placeholder="Acme Inc." />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={gap}>
           <FieldLabel htmlFor="company-website">Website</FieldLabel>
           <input id="company-website" type="url" autoComplete="url" value={website} onChange={(e) => setWebsite(e.target.value)} className="dk-input" placeholder="https://acme.com" />
@@ -248,7 +248,7 @@ function CompanyForm({ onSubmit, loading }: {
 
       <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 18 }}>
         <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Primary contact</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           <div style={gap}>
             <FieldLabel htmlFor="company-contact-name">Contact name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
             <input id="company-contact-name" required autoComplete="name" value={contactName} onChange={(e) => setContactName(e.target.value)} className="dk-input" placeholder="Jane Smith" />
@@ -294,7 +294,7 @@ function FacultyForm({ onSubmit, loading, email }: {
         <FieldLabel htmlFor="faculty-institution">Institution <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
         <Combobox id="faculty-institution" value={institution} onChange={setInstitution} options={UNIVERSITIES} placeholder="Search universities…" required />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={gap}>
           <FieldLabel htmlFor="faculty-dept">Department</FieldLabel>
           <input id="faculty-dept" value={department} onChange={(e) => setDepartment(e.target.value)} className="dk-input" placeholder="Computer Science" />
@@ -426,7 +426,7 @@ export default function OnboardingPage() {
               <h1 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Welcome to Workmark</h1>
               <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.6 }}>Tell us who you are to get started.</p>
 
-              <div role="group" aria-label="Account type" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
+              <div role="group" aria-label="Account type" className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
                 {([
                   { r: 'student', icon: '🎓', desc: 'Apply to projects, earn verified records' },
                   { r: 'company', icon: '🏢', desc: 'Post projects, find CS talent' },

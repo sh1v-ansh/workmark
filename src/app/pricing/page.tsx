@@ -16,7 +16,7 @@ export default function PricingPage() {
         <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
           Pricing
         </div>
-        <h1 style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, lineHeight: 1.1, maxWidth: 560, marginBottom: 20 }}>
+        <h1 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, lineHeight: 1.1, maxWidth: 560, marginBottom: 20 }}>
           Free, for now.
         </h1>
         <p style={{ fontSize: 16, color: C.textMuted, maxWidth: 480, lineHeight: 1.6 }}>
@@ -26,7 +26,7 @@ export default function PricingPage() {
 
       {/* Cards */}
       <section aria-label="Plans" style={{ maxWidth: 1100, margin: '0 auto', padding: '56px 24px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, maxWidth: 720 }}>
+        <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, maxWidth: 720 }}>
           {/* Students */}
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 36 }}>
             <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>Students</div>
