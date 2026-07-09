@@ -36,7 +36,7 @@ function AishaCard() {
         </div>
 
         {/* Card */}
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 28, width: 340, boxShadow: '0 32px 64px rgba(0,0,0,0.5)' }}>
+        <div style={{ background: '#FFFFFF', border: `1px solid ${C.border}`, padding: 28, width: 340, boxShadow: '0 24px 60px rgba(62,31,255,0.12), 0 4px 12px rgba(0,0,0,0.06)', borderRadius: 12 }}>
           {/* Header */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
             <div>

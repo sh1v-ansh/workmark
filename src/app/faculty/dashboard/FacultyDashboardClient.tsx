@@ -4,11 +4,11 @@ import { useState } from 'react'
 import Navbar from '@/components/Navbar'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
-import { C, F } from '@/app/landing/tokens'
+import { C, F } from '@/lib/theme/dark-tokens'
 import { Combobox } from '@/components/Combobox'
 import { UNIVERSITIES } from '@/lib/data/universities'
 import { MAJORS } from '@/lib/data/majors'
-import type { Faculty, Project, Application } from '@/lib/types'
+import type { Faculty, Project, Application, GithubEvidencedSkill } from '@/lib/types'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -77,8 +77,8 @@ function TagInput({ label, inputId, value, onChange, placeholder }: {
 
 // ─── New project form ─────────────────────────────────────────────────────────
 
-function NewProjectForm({ facultyId, institution, onCreated, onCancel }: {
-  facultyId: string; institution: string | null; onCreated: (p: Project) => void; onCancel: () => void
+function NewProjectForm({ facultyId, facultyDisplayName, institution, onCreated, onCancel }: {
+  facultyId: string; facultyDisplayName: string; institution: string | null; onCreated: (p: Project) => void; onCancel: () => void
 }) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
@@ -107,7 +107,9 @@ function NewProjectForm({ facultyId, institution, onCreated, onCancel }: {
       const { data, error } = await supabase
         .from('projects')
         .insert({
-          company_id: facultyId, title, description: description || null, type,
+          poster_id: facultyId, poster_type: 'faculty',
+          poster_display_name: facultyDisplayName,
+          title, description: description || null, type,
           required_skills: reqSkills.length > 0 ? reqSkills : null,
           preferred_skills: prefSkills.length > 0 ? prefSkills : null,
           work_mode: workMode, location: location || null, duration: duration || null,
@@ -258,27 +260,44 @@ function NewProjectForm({ facultyId, institution, onCreated, onCancel }: {
 
 // ─── Application row ──────────────────────────────────────────────────────────
 
-function ApplicationRow({ app, onAccept, onReject }: {
-  app: Application; onAccept: (id: string) => void; onReject: (id: string) => void
+function ApplicationRow({ app, githubSkills, onAccept, onReject }: {
+  app: Application; githubSkills: GithubEvidencedSkill[]; onAccept: (id: string) => void; onReject: (id: string) => void
 }) {
   const student = app.students
   const [acting, setActing] = useState(false)
+  const [showProposal, setShowProposal] = useState(false)
 
   async function handleAccept() { setActing(true); await onAccept(app.id); setActing(false) }
   async function handleReject() { setActing(true); await onReject(app.id); setActing(false) }
 
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 16px', background: C.surfaceAlt, border: `1px solid ${C.border}` }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 16px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         <p style={{ fontSize: 13, fontWeight: 500, color: C.textSub, marginBottom: 3 }}>{student?.full_name ?? 'Student'}</p>
         <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
           {student?.university ?? ''}{student?.gpa ? ` · GPA ${student.gpa}` : ''}
         </p>
         {student?.skills && student.skills.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
-            {student.skills.slice(0, 5).map((s) => (
-              <span key={s} style={{ fontSize: 10, padding: '2px 6px', background: C.surface, border: `1px solid ${C.border}`, color: C.textFaint, fontFamily: F.mono }}>{s}</span>
-            ))}
+          <div style={{ marginTop: 10 }}>
+            <p style={{ fontSize: 9, color: C.textFaint, fontFamily: F.mono, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Self-reported</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {student.skills.slice(0, 8).map((s) => (
+                <span key={s} style={{ fontSize: 10, padding: '2px 6px', background: C.surface, border: `1px solid ${C.border}`, color: C.textFaint, fontFamily: F.mono }}>{s}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {githubSkills.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <p style={{ fontSize: 9, color: C.accent, fontFamily: F.mono, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Tier 3 · GitHub-evidenced</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {githubSkills.slice(0, 8).map((s) => (
+                <span key={s.id} style={{ fontSize: 10, padding: '2px 6px', background: C.accentHover, border: `1px solid ${C.accentBorder}`, color: C.accent, fontFamily: F.mono }}>
+                  {s.skill} <span style={{ opacity: 0.7 }}>· {s.evidence_count}</span>
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -292,7 +311,7 @@ function ApplicationRow({ app, onAccept, onReject }: {
         {app.status === 'applied' ? (
           <>
             <button onClick={handleReject} disabled={acting}
-              style={{ fontSize: 11, fontFamily: F.mono, color: '#f87171', padding: '5px 10px', border: '1px solid rgba(248,113,113,0.3)', background: 'transparent', cursor: acting ? 'not-allowed' : 'pointer', opacity: acting ? 0.5 : 1 }}>
+              style={{ fontSize: 11, fontFamily: F.mono, color: '#DC2626', padding: '5px 10px', border: '1px solid rgba(248,113,113,0.3)', background: 'transparent', cursor: acting ? 'not-allowed' : 'pointer', opacity: acting ? 0.5 : 1 }}>
               Reject
             </button>
             <button onClick={handleAccept} disabled={acting}
@@ -303,12 +322,27 @@ function ApplicationRow({ app, onAccept, onReject }: {
         ) : (
           <span style={{
             fontSize: 10, fontFamily: F.mono, padding: '2px 8px', textTransform: 'uppercase', letterSpacing: '0.06em',
-            color: app.status === 'accepted' ? C.accent : '#f87171',
+            color: app.status === 'accepted' ? C.accent : '#DC2626',
             background: app.status === 'accepted' ? C.accentHover : 'rgba(248,113,113,0.1)',
             border: `1px solid ${app.status === 'accepted' ? C.accentBorder : 'rgba(248,113,113,0.3)'}`,
           }}>{app.status}</span>
         )}
       </div>
+      </div>
+
+      {app.proposal_text && (
+        <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
+          <button onClick={() => setShowProposal((v) => !v)}
+            style={{ fontSize: 11, fontFamily: F.mono, color: C.accent, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.04em' }}>
+            {showProposal ? '▲ Hide proposal' : '▼ Read proposal'}
+          </button>
+          {showProposal && (
+            <div style={{ marginTop: 10, background: C.bg, border: `1px solid ${C.border}`, padding: 14, borderRadius: 6 }}>
+              <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{app.proposal_text}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -319,9 +353,10 @@ interface Props {
   faculty: Faculty
   initialProjects: Project[]
   initialApplications: Application[]
+  githubSkillsByStudent: Record<string, GithubEvidencedSkill[]>
 }
 
-export default function FacultyDashboardClient({ faculty, initialProjects, initialApplications }: Props) {
+export default function FacultyDashboardClient({ faculty, initialProjects, initialApplications, githubSkillsByStudent }: Props) {
   const { toast } = useToast()
   const [projects, setProjects] = useState<Project[]>(initialProjects)
   const [applications, setApplications] = useState<Application[]>(initialApplications)
@@ -342,10 +377,11 @@ export default function FacultyDashboardClient({ faculty, initialProjects, initi
       const project = projects.find((p) => p.id === app.project_id)
       const startDate = new Date()
       const endDate = addDays(startDate, parseDurationDays(project?.duration ?? null))
-      const { error: expErr } = await supabase.from('experience_records').insert({
-        application_id: appId, student_id: app.student_id, company_id: faculty.id,
+      const { error: expErr } = await supabase.from('verified_work_records').insert({
+        application_id: appId, student_id: app.student_id,
+        poster_id: faculty.id, poster_type: 'faculty',
         project_id: app.project_id, project_title: project?.title ?? null,
-        company_name: `${faculty.full_name ?? 'Faculty'} · ${faculty.institution ?? ''}`,
+        poster_display_name: `${faculty.full_name ?? 'Faculty'} · ${faculty.institution ?? ''}`,
         skills_used: project?.required_skills ?? null,
         start_date: startDate.toISOString().split('T')[0],
         end_date: endDate.toISOString().split('T')[0],
@@ -411,6 +447,7 @@ export default function FacultyDashboardClient({ faculty, initialProjects, initi
             <h2 style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 24 }}>New research project</h2>
             <NewProjectForm
               facultyId={faculty.id}
+              facultyDisplayName={`${faculty.full_name ?? 'Faculty'} · ${faculty.institution ?? ''}`}
               institution={faculty.institution}
               onCreated={(p) => { setProjects((prev) => [p, ...prev]); setShowNewForm(false) }}
               onCancel={() => setShowNewForm(false)}
@@ -472,7 +509,7 @@ export default function FacultyDashboardClient({ faculty, initialProjects, initi
                           <p style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono, textAlign: 'center', padding: '12px 0' }}>No applications yet</p>
                         ) : (
                           apps.map((app) => (
-                            <ApplicationRow key={app.id} app={app} onAccept={handleAccept} onReject={handleReject} />
+                            <ApplicationRow key={app.id} app={app} githubSkills={githubSkillsByStudent[app.student_id] ?? []} onAccept={handleAccept} onReject={handleReject} />
                           ))
                         )}
                       </div>

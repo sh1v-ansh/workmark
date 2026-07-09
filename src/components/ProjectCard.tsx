@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { Project } from '@/lib/types'
-import { C, F } from '@/app/landing/tokens'
+import { C, F } from '@/lib/theme/dark-tokens'
 
 interface ProjectCardProps {
   project: Project
@@ -34,7 +34,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             {project.title ?? 'Untitled Project'}
           </h3>
           <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-            {project.companies?.company_name ?? 'Company'} · {project.companies?.hq_location ?? 'Remote'}
+            {project.poster_display_name ?? (project.poster_type === 'faculty' ? 'Faculty' : 'Company')}{project.location ? ` · ${project.location}` : project.work_mode === 'remote' ? ' · Remote' : ''}
           </p>
         </div>
         <span style={{
@@ -60,7 +60,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
           </span>
         )}
         {project.work_auth_required && (
-          <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)' }}>
+          <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#DC2626', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)' }}>
             US Auth
           </span>
         )}

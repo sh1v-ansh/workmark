@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { LogoMark } from '@/app/landing/LogoMark'
-import { C, F } from '@/app/landing/tokens'
+import { C, F } from '@/lib/theme/dark-tokens'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -12,7 +12,7 @@ export default function ConfirmedPage() {
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 48 }}>
         <LogoMark size={20} />
-        <span style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }}>workmark</span>
+        <span style={{ fontFamily: F.serif, fontSize: 19, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>workmark</span>
       </Link>
 
       <div style={{ width: '100%', maxWidth: 400, background: C.surface, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center' }}>

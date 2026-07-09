@@ -15,23 +15,13 @@ export default async function VerifyPage({ params }: Props) {
   )
 
   const { data: record, error } = await supabase
-    .from('experience_records')
-    .select('*, students(full_name), companies(contact_email)')
+    .from('verified_work_records')
+    .select('*, students(full_name)')
     .eq('verification_token', token)
     .maybeSingle()
 
   if (error || !record) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center max-w-sm">
-          <p className="text-6xl mb-4">🔍</p>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Link not found</h1>
-          <p className="text-sm text-gray-500">
-            This verification link is invalid or has expired.
-          </p>
-        </div>
-      </div>
-    )
+    return <VerifyClient record={null} token={token} />
   }
 
   return <VerifyClient record={record} token={token} />
