@@ -2,7 +2,7 @@
  * Workmark — send-verification-emails Edge Function
  *
  * Triggered daily by pg_cron (or manually).
- * Finds experience_records where:
+ * Finds verified_work_records where:
  *   - verification_status = 'in_progress'
  *   - end_date <= today
  *
@@ -25,23 +25,29 @@ const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const SITE_URL = Deno.env.get('SITE_URL') ?? 'https://workmark.vercel.app'
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
 
-interface ExperienceRecord {
+interface VerifiedWorkRecord {
   id: string
   project_title: string | null
-  company_name: string | null
+  poster_display_name: string | null
+  poster_id: string
+  poster_type: 'company' | 'faculty'
   verification_token: string
   start_date: string | null
   end_date: string | null
   students: { full_name: string | null } | null
-  companies: { contact_email: string | null; contact_name: string | null } | null
+  contactEmail?: string | null
+  contactName?: string | null
 }
 
-async function sendVerificationEmail(record: ExperienceRecord): Promise<boolean> {
+async function sendVerificationEmail(record: VerifiedWorkRecord): Promise<boolean> {
   const studentName = record.students?.full_name ?? 'A student'
   const projectTitle = record.project_title ?? 'a project'
-  const contactEmail = record.companies?.contact_email
-  const contactName = record.companies?.contact_name ?? 'Team'
-  const verifyUrl = `${SITE_URL}/verify/${record.verification_token}`
+  const contactEmail = record.contactEmail ?? null
+  const contactName = record.contactName ?? 'Team'
+  // Primary link is the full close-out flow (6-Q attestation + summary).
+  // Legacy /verify/[token] endpoint still works for the one-click yes/no path.
+  const attestUrl = `${SITE_URL}/records/${record.id}/attest`
+  const quickUrl = `${SITE_URL}/verify/${record.verification_token}`
 
   if (!contactEmail) {
     console.warn(`[workmark] No contact email for record ${record.id}, skipping.`)
@@ -58,13 +64,12 @@ async function sendVerificationEmail(record: ExperienceRecord): Promise<boolean>
   <style>
     body { font-family: -apple-system, system-ui, sans-serif; background: #f9fafb; margin: 0; padding: 40px 16px; }
     .card { background: white; border-radius: 16px; border: 1px solid #e5e7eb; padding: 32px; max-width: 480px; margin: 0 auto; }
-    .logo { font-size: 22px; font-weight: 700; color: #111827; margin-bottom: 24px; }
-    .logo span { color: #4f46e5; }
+    .logo { font-size: 24px; font-weight: 700; color: #0A0A0A; margin-bottom: 24px; font-family: 'Playfair Display', Georgia, serif; }
+    .logo span { color: #3E1FFF; }
     p { color: #374151; font-size: 15px; line-height: 1.6; margin: 0 0 16px; }
-    .detail { background: #f9fafb; border-radius: 10px; padding: 16px; margin: 16px 0; font-size: 14px; color: #6b7280; }
-    .detail strong { color: #111827; }
-    .btn { display: inline-block; padding: 14px 24px; background: #16a34a; color: white; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 15px; margin: 4px; }
-    .btn-deny { background: #e5e7eb; color: #374151; }
+    .detail { background: #F3F0FF; border-radius: 10px; padding: 16px; margin: 16px 0; font-size: 14px; color: #4B4B57; }
+    .detail strong { color: #0A0A0A; }
+    .btn { display: inline-block; padding: 14px 28px; background: #3E1FFF; color: #FFFFFF; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 15px; margin: 4px; }
     .footer { margin-top: 24px; font-size: 12px; color: #9ca3af; text-align: center; }
   </style>
 </head>
@@ -88,11 +93,13 @@ async function sendVerificationEmail(record: ExperienceRecord): Promise<boolean>
     </div>
 
     <p style="text-align:center; margin: 24px 0 8px;">
-      <a href="${verifyUrl}?action=verified" class="btn">Yes, completed ✓</a>
-      <a href="${verifyUrl}?action=incomplete" class="btn btn-deny">Did not complete</a>
+      <a href="${attestUrl}" class="btn">Complete attestation →</a>
     </p>
-    <p style="text-align:center; font-size: 13px; color: #9ca3af;">
-      Or visit: <a href="${verifyUrl}" style="color:#4f46e5;">${verifyUrl}</a>
+    <p style="text-align:center; font-size: 13px; color: #6b6b78;">
+      Six single-click questions, under two minutes.
+    </p>
+    <p style="text-align:center; font-size: 12px; color: #9ca3af; margin-top: 12px;">
+      Quick yes/no only: <a href="${quickUrl}" style="color:#3E1FFF;">confirm completion</a>
     </p>
 
     <div class="footer">
@@ -141,16 +148,17 @@ Deno.serve(async () => {
 
   // Find overdue in-progress records
   const { data: records, error } = await supabase
-    .from('experience_records')
+    .from('verified_work_records')
     .select(`
       id,
       project_title,
-      company_name,
+      poster_display_name,
+      poster_id,
+      poster_type,
       verification_token,
       start_date,
       end_date,
-      students ( full_name ),
-      companies ( contact_email, contact_name )
+      students ( full_name )
     `)
     .eq('verification_status', 'in_progress')
     .lte('end_date', today)
@@ -168,7 +176,18 @@ Deno.serve(async () => {
   let sent = 0
   let failed = 0
 
-  for (const record of records as ExperienceRecord[]) {
+  for (const record of records as VerifiedWorkRecord[]) {
+    // Look up the poster's contact info (polymorphic: company or faculty).
+    if (record.poster_type === 'company') {
+      const { data: c } = await supabase.from('companies').select('contact_email, contact_name').eq('id', record.poster_id).maybeSingle()
+      record.contactEmail = c?.contact_email ?? null
+      record.contactName = c?.contact_name ?? null
+    } else {
+      const { data: f } = await supabase.from('faculty').select('email, full_name').eq('id', record.poster_id).maybeSingle()
+      record.contactEmail = f?.email ?? null
+      record.contactName = f?.full_name ?? null
+    }
+
     const ok = await sendVerificationEmail(record)
     if (ok) sent++
     else failed++

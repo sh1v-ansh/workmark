@@ -19,25 +19,33 @@ export default async function StudentDashboardPage() {
 
   if (!student) redirect('/onboarding')
 
-  // Applications with project + company info
+  // Applications with project + poster info (poster_display_name denormalized on projects)
   const { data: applications } = await supabase
     .from('applications')
-    .select('*, projects(title, companies(company_name))')
+    .select('*, projects(title, poster_id, poster_type, poster_display_name)')
     .eq('student_id', user.id)
     .order('created_at', { ascending: false })
 
-  // Experience records
+  // Verified work records
   const { data: experienceRecords } = await supabase
-    .from('experience_records')
+    .from('verified_work_records')
     .select('*')
     .eq('student_id', user.id)
     .order('created_at', { ascending: false })
+
+  // GitHub-evidenced skills + per-repo structural profiles (Tier 3)
+  const [{ data: githubSkills }, { data: githubRepos }] = await Promise.all([
+    supabase.from('github_evidenced_skills').select('*').eq('student_id', user.id).order('evidence_count', { ascending: false }),
+    supabase.from('github_repo_profiles').select('*').eq('student_id', user.id).order('extracted_at', { ascending: false }),
+  ])
 
   return (
     <StudentDashboardClient
       student={student}
       applications={applications ?? []}
       experienceRecords={experienceRecords ?? []}
+      githubSkills={githubSkills ?? []}
+      githubRepos={githubRepos ?? []}
     />
   )
 }

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import Link from 'next/link'
-import { C, F } from '@/app/landing/tokens'
+import { C, F } from '@/lib/theme/dark-tokens'
 import { LogoMark } from '@/app/landing/LogoMark'
 import { Combobox } from '@/components/Combobox'
 import { UNIVERSITIES } from '@/lib/data/universities'
@@ -404,7 +404,7 @@ export default function OnboardingPage() {
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px' }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
         <LogoMark size={22} />
-        <span style={{ fontFamily: F.mono, fontSize: 16, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
+        <span style={{ fontFamily: F.serif, fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
       </Link>
 
       <div style={{ width: '100%', maxWidth: 540 }}>
@@ -444,7 +444,7 @@ export default function OnboardingPage() {
               </div>
 
               {(role === 'student' || role === 'faculty') && !validateEdu(userEmail) && userEmail && (
-                <div role="alert" style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', padding: '10px 14px', fontSize: 13, color: '#fbbf24', marginBottom: 16, lineHeight: 1.5 }}>
+                <div role="alert" style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', padding: '10px 14px', fontSize: 13, color: '#B45309', marginBottom: 16, lineHeight: 1.5 }}>
                   Your email <strong>{userEmail}</strong> is not a .edu address. {role === 'faculty' ? 'Faculty' : 'Student'} accounts require a university email.
                 </div>
               )}

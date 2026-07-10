@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
-import { C, F } from '@/app/landing/tokens'
+import { C, F } from '@/lib/theme/dark-tokens'
 import type { Student } from '@/lib/types'
 
 interface ApplyModalProps {
@@ -14,14 +14,22 @@ interface ApplyModalProps {
   onSuccess: () => void
 }
 
+const MIN_PROPOSAL_CHARS = 60
+
 export default function ApplyModal({ projectId, projectTitle, student, onClose, onSuccess }: ApplyModalProps) {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [useExisting, setUseExisting] = useState(!!student.resume_url)
   const [file, setFile] = useState<File | null>(null)
+  const [proposal, setProposal] = useState('')
+
+  const proposalOk = proposal.trim().length >= MIN_PROPOSAL_CHARS
+  const resumeOk = useExisting ? !!student.resume_url : !!file
+  const canSubmit = proposalOk && resumeOk && !uploading
 
   async function handleApply() {
+    if (!canSubmit) return
     setUploading(true)
     const supabase = createClient()
     try {
@@ -34,7 +42,13 @@ export default function ApplyModal({ projectId, projectTitle, student, onClose, 
         resumeUrl = path
       }
       if (!resumeUrl) { toast('Please attach a resume before applying.', 'error'); return }
-      const { error } = await supabase.from('applications').insert({ project_id: projectId, student_id: student.id, resume_url: resumeUrl, status: 'applied' })
+      const { error } = await supabase.from('applications').insert({
+        project_id: projectId,
+        student_id: student.id,
+        resume_url: resumeUrl,
+        proposal_text: proposal.trim(),
+        status: 'applied',
+      })
       if (error) {
         if (error.code === '23505') { toast('You have already applied to this project.', 'error') } else { throw error }
         return
@@ -50,20 +64,32 @@ export default function ApplyModal({ projectId, projectTitle, student, onClose, 
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      {/* Backdrop */}
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }} aria-hidden="true" />
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(10,10,10,0.55)', backdropFilter: 'blur(4px)' }} aria-hidden="true" />
 
-      {/* Panel */}
-      <div role="dialog" aria-modal="true" aria-labelledby="apply-modal-title" style={{ position: 'relative', width: '100%', maxWidth: 420, background: C.surface, border: `1px solid ${C.border}`, padding: 28, boxShadow: '0 32px 64px rgba(0,0,0,0.6)' }} className="animate-slide-up">
-        <h2 id="apply-modal-title" style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 500, color: C.text, marginBottom: 4, letterSpacing: '0.02em' }}>Apply to project</h2>
-        <p style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono, marginBottom: 24 }}>{projectTitle}</p>
+      <div role="dialog" aria-modal="true" aria-labelledby="apply-modal-title"
+        style={{ position: 'relative', width: '100%', maxWidth: 520, background: C.bg, border: `1px solid ${C.border}`, padding: 28, boxShadow: '0 20px 48px rgba(62,31,255,0.15), 0 4px 12px rgba(0,0,0,0.08)', borderRadius: 12, maxHeight: '90vh', overflowY: 'auto' }}
+        className="animate-slide-up">
+        <h2 id="apply-modal-title" style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 4, letterSpacing: '-0.01em' }}>Apply to project</h2>
+        <p style={{ fontSize: 13, color: C.textMuted, fontFamily: F.sans, marginBottom: 24 }}>{projectTitle}</p>
+
+        {/* Proposal */}
+        <div style={{ marginBottom: 22 }}>
+          <label htmlFor="proposal" style={{ display: 'block', fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+            Proposal <span aria-hidden="true" style={{ color: C.accent }}>*</span>
+          </label>
+          <textarea id="proposal" rows={6} value={proposal} onChange={(e) => setProposal(e.target.value)} className="dk-textarea"
+            placeholder={`Why are you a fit for this project? What's your approach? Any relevant prior work?\n\nBe specific — this is what the poster reads before deciding.`} />
+          <p style={{ fontFamily: F.mono, fontSize: 10, color: proposalOk ? C.accent : C.textFaint, marginTop: 6 }}>
+            {proposal.trim().length}/{MIN_PROPOSAL_CHARS}+ chars {proposalOk ? '✓' : '(minimum)'}
+          </p>
+        </div>
 
         {/* Resume selection */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-          <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Resume</p>
+          <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Resume <span aria-hidden="true" style={{ color: C.accent }}>*</span></p>
 
           {student.resume_url && (
-            <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: useExisting ? C.accentHover : C.surfaceAlt, border: `1px solid ${useExisting ? C.accentBorder : C.border}`, cursor: 'pointer', transition: 'all 0.15s' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: useExisting ? C.accentHover : C.surfaceAlt, border: `1px solid ${useExisting ? C.accentBorder : C.border}`, cursor: 'pointer', borderRadius: 8 }}>
               <input type="radio" name="resume" checked={useExisting} onChange={() => setUseExisting(true)} style={{ accentColor: C.accent }} />
               <div>
                 <p style={{ fontSize: 13, color: C.textSub, marginBottom: 2 }}>Use resume on file</p>
@@ -72,7 +98,7 @@ export default function ApplyModal({ projectId, projectTitle, student, onClose, 
             </label>
           )}
 
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: !useExisting ? C.accentHover : C.surfaceAlt, border: `1px solid ${!useExisting ? C.accentBorder : C.border}`, cursor: 'pointer', transition: 'all 0.15s' }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: !useExisting ? C.accentHover : C.surfaceAlt, border: `1px solid ${!useExisting ? C.accentBorder : C.border}`, cursor: 'pointer', borderRadius: 8 }}>
             <input type="radio" name="resume" checked={!useExisting} onChange={() => setUseExisting(false)} style={{ accentColor: C.accent }} />
             <div>
               <p style={{ fontSize: 13, color: C.textSub, marginBottom: 2 }}>Upload new resume</p>
@@ -84,20 +110,19 @@ export default function ApplyModal({ projectId, projectTitle, student, onClose, 
             <div style={{ marginLeft: 4 }}>
               <input ref={fileInputRef} type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
               <button type="button" onClick={() => fileInputRef.current?.click()}
-                style={{ width: '100%', padding: '14px', background: C.bg, border: `1px dashed ${file ? C.accent : C.border}`, color: file ? C.accent : C.textFaint, fontFamily: F.mono, fontSize: 12, cursor: 'pointer', transition: 'all 0.15s', textAlign: 'center' }}>
+                style={{ width: '100%', padding: '14px', background: C.bg, border: `1px dashed ${file ? C.accent : C.border}`, color: file ? C.accent : C.textFaint, fontFamily: F.mono, fontSize: 12, cursor: 'pointer', borderRadius: 8 }}>
                 {file ? file.name : 'Click to select PDF'}
               </button>
             </div>
           )}
         </div>
 
-        {/* Actions */}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onClose} style={{ flex: 1, padding: '10px 0', background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono, fontSize: 12, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '11px 0', background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono, fontSize: 12, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', borderRadius: 8 }}>
             Cancel
           </button>
-          <button onClick={handleApply} disabled={uploading || (!useExisting && !file)}
-            style={{ flex: 1, padding: '10px 0', background: (uploading || (!useExisting && !file)) ? C.surfaceAlt : C.accent, border: 'none', color: (uploading || (!useExisting && !file)) ? C.textFaint : C.bg, fontFamily: F.mono, fontSize: 12, fontWeight: 500, cursor: (uploading || (!useExisting && !file)) ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
+          <button onClick={handleApply} disabled={!canSubmit}
+            style={{ flex: 1, padding: '11px 0', background: canSubmit ? C.accent : C.surfaceAlt, border: 'none', color: canSubmit ? '#FFFFFF' : C.textFaint, fontFamily: F.mono, fontSize: 12, fontWeight: 500, cursor: canSubmit ? 'pointer' : 'not-allowed', textTransform: 'uppercase', letterSpacing: '0.06em', borderRadius: 8 }}>
             {uploading ? 'Submitting…' : 'Submit →'}
           </button>
         </div>

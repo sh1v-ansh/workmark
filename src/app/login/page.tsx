@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { C, F } from '@/app/landing/tokens'
+import { C, F } from '@/lib/theme/dark-tokens'
 import { LogoMark } from '@/app/landing/LogoMark'
 
 type Mode = 'signin' | 'signup'
@@ -42,7 +42,7 @@ export default function LoginPage() {
           password,
           options: {
             data: { role },
-            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL ?? window.location.origin}/auth/confirmed`,
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/confirmed`,
           },
         })
         if (signUpError) throw signUpError
@@ -92,7 +92,7 @@ export default function LoginPage() {
       <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
           <LogoMark size={22} />
-          <span style={{ fontFamily: F.mono, fontSize: 16, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
+          <span style={{ fontFamily: F.serif, fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
         </Link>
 
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 40, width: '100%', maxWidth: 380, textAlign: 'center' }}>
@@ -124,7 +124,7 @@ export default function LoginPage() {
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
         <LogoMark size={22} />
-        <span style={{ fontFamily: F.mono, fontSize: 16, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
+        <span style={{ fontFamily: F.serif, fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
       </Link>
 
       <div style={{ width: '100%', maxWidth: 380 }}>
@@ -215,7 +215,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div role="alert" style={{ background: 'rgba(180,40,40,0.12)', border: '1px solid rgba(180,40,40,0.35)', padding: '10px 14px', fontSize: 13, color: '#f87171', fontFamily: F.sans, lineHeight: 1.5 }}>
+              <div role="alert" style={{ background: 'rgba(180,40,40,0.12)', border: '1px solid rgba(180,40,40,0.35)', padding: '10px 14px', fontSize: 13, color: '#DC2626', fontFamily: F.sans, lineHeight: 1.5 }}>
                 {error}
               </div>
             )}

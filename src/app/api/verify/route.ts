@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
   // Look up the record by token
   const { data: record, error: lookupError } = await supabase
-    .from('experience_records')
+    .from('verified_work_records')
     .select('id, verification_status')
     .eq('verification_token', token)
     .maybeSingle()
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   }
 
   const { error: updateError } = await supabase
-    .from('experience_records')
+    .from('verified_work_records')
     .update(updatePayload)
     .eq('id', record.id)
 

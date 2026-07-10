@@ -9,15 +9,34 @@ from **Settings → API**.
 ### 1b. Run the schema
 In **Supabase → SQL Editor**, paste and run the full contents of `supabase/schema.sql`.
 
+> **Note (v2 migration):** `schema.sql` is destructive — it drops the legacy
+> `experience_records` table and installs the polymorphic poster model plus the
+> spec §11.1 staging tables (`verified_work_records`, `milestones`, `issue_flags`,
+> `github_evidenced_skills`, `employer_profiles`, and the `faculty` table). Since
+> MVP has not shipped with real user data, re-running it is safe. Future
+> incremental changes should be added as `supabase/migrations/000N_*.sql` files,
+> never by editing `schema.sql` in place.
+
 ### 1c. Configure Auth
-- **Settings → Auth → Email** — disable "Confirm email" if you want frictionless sign-ups,
-  or leave it on for production.
-- The .edu restriction is enforced in the sign-up UI and the onboarding form.
+- **Settings → Auth → URL Configuration → Redirect URLs** — add
+  `${NEXT_PUBLIC_SITE_URL}/auth/confirmed` to the allow-list so email
+  confirmation redirects work.
+- **Settings → Auth → Email** — enable "Confirm email" for production so
+  the `.edu` enforcement is meaningful.
+- The `.edu` restriction is enforced in the sign-up UI and the onboarding form.
 
 ### 1d. Storage
 The schema creates the `resumes` private bucket automatically via SQL.
 If it fails, create it manually:
 - **Storage → New bucket** → name: `resumes`, toggle **Public** to OFF.
+
+### 1e. GitHub OAuth (for Tier 3 skill extraction)
+- **Settings → Auth → Providers → GitHub** → toggle **Enable**.
+- Register an OAuth app at https://github.com/settings/developers with:
+  - **Homepage URL:** your `NEXT_PUBLIC_SITE_URL`
+  - **Authorization callback URL:** `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
+- Paste the client ID + secret into Supabase.
+- **Scopes:** `read:user public_repo` (the scanner never reads code — only manifest files).
 
 ---
 
@@ -30,6 +49,11 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...          # Settings → API → service_role (secret)
 NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
+
+# Stripe Connect escrow — stays off until legal review (spec §10.3)
+STRIPE_ENABLED=false
+# STRIPE_SECRET_KEY=sk_test_...
+# STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 > **Never** commit `.env.local`. The service role key has full DB access.

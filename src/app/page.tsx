@@ -23,6 +23,13 @@ export default async function Home() {
       .maybeSingle()
     if (company) redirect('/company/dashboard')
 
+    const { data: faculty } = await supabase
+      .from('faculty')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle()
+    if (faculty) redirect('/faculty/dashboard')
+
     redirect('/onboarding')
   }
 

@@ -9,21 +9,35 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['var(--font-serif)', 'Georgia', 'Times New Roman', 'serif'],
+        sans: ['var(--font-sans)', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'IBM Plex Mono', 'Menlo', 'monospace'],
       },
       colors: {
         brand: {
-          50: '#f0f4ff',
-          100: '#e0e9ff',
-          200: '#c7d7fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
+          50:  '#F3F0FF',
+          100: '#E5DEFF',
+          200: '#C7B8FF',
+          300: '#A48CFF',
+          400: '#7F5CFF',
+          500: '#3E1FFF',
+          600: '#2E0FE5',
+          700: '#2408BC',
+          800: '#1C0693',
+          900: '#150570',
         },
+        ink: {
+          DEFAULT: '#0A0A0A',
+          muted: '#4B4B57',
+          faint: '#6C6C78',
+        },
+      },
+      borderRadius: {
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+        xl: '16px',
+        '2xl': '20px',
       },
       keyframes: {
         'fade-in': {

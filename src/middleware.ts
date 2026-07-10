@@ -45,6 +45,7 @@ export async function middleware(request: NextRequest) {
   const requiresAuth =
     pathname.startsWith('/student/') ||
     pathname.startsWith('/company/') ||
+    pathname.startsWith('/faculty/') ||
     pathname.startsWith('/onboarding')
 
   if (!user && requiresAuth) {
@@ -75,6 +76,18 @@ export async function middleware(request: NextRequest) {
     if (company) {
       const url = request.nextUrl.clone()
       url.pathname = '/company/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    const { data: faculty } = await supabase
+      .from('faculty')
+      .select('id')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (faculty) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/faculty/dashboard'
       return NextResponse.redirect(url)
     }
 

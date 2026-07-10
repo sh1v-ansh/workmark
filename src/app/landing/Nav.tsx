@@ -24,7 +24,7 @@ export function Nav() {
     return () => window.removeEventListener('scroll', fn)
   }, [])
 
-  const navBg = scrolled || mobileOpen ? 'rgba(13,13,11,0.95)' : 'transparent'
+  const navBg = scrolled || mobileOpen ? 'rgba(255,255,255,0.9)' : 'transparent'
   const navBlur = scrolled || mobileOpen ? 'blur(16px)' : 'none'
   const navBorder = scrolled || mobileOpen ? C.border : 'transparent'
 
@@ -43,7 +43,7 @@ export function Nav() {
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <LogoMark />
-          <span style={{ fontFamily: F.mono, fontSize: 15, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
+          <span style={{ fontFamily: F.serif, fontSize: 19, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
         </Link>
 
         {/* Desktop links */}
@@ -107,7 +107,7 @@ export function Nav() {
 
       {/* Mobile dropdown */}
       {mobileOpen && (
-        <div style={{ borderTop: `1px solid ${C.border}`, background: 'rgba(13,13,11,0.98)', padding: '8px 24px 24px' }}>
+        <div style={{ borderTop: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.98)', padding: '8px 24px 24px' }}>
           {links.map(([href, label]) => (
             <Link
               key={href}

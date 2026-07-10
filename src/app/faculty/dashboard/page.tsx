@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import FacultyDashboardClient from './FacultyDashboardClient'
 import FacultyPendingScreen from './FacultyPendingScreen'
-import type { Application } from '@/lib/types'
+import type { Application, GithubEvidencedSkill } from '@/lib/types'
 
 export default async function FacultyDashboardPage() {
   const supabase = await createClient()
@@ -23,11 +23,13 @@ export default async function FacultyDashboardPage() {
   const { data: projects } = await supabase
     .from('projects')
     .select('*')
-    .eq('company_id', user.id)
+    .eq('poster_id', user.id)
+    .eq('poster_type', 'faculty')
     .order('created_at', { ascending: false })
 
   const projectIds = (projects ?? []).map((p) => p.id)
   let applications: Application[] = []
+  let githubSkillsByStudent: Record<string, GithubEvidencedSkill[]> = {}
   if (projectIds.length > 0) {
     const { data } = await supabase
       .from('applications')
@@ -35,6 +37,18 @@ export default async function FacultyDashboardPage() {
       .in('project_id', projectIds)
       .order('created_at', { ascending: false })
     applications = (data ?? []) as Application[]
+
+    const studentIds = Array.from(new Set(applications.map((a) => a.student_id)))
+    if (studentIds.length > 0) {
+      const { data: ghSkills } = await supabase
+        .from('github_evidenced_skills')
+        .select('*')
+        .in('student_id', studentIds)
+        .order('evidence_count', { ascending: false })
+      for (const s of (ghSkills ?? []) as GithubEvidencedSkill[]) {
+        (githubSkillsByStudent[s.student_id] ||= []).push(s)
+      }
+    }
   }
 
   return (
@@ -42,6 +56,7 @@ export default async function FacultyDashboardPage() {
       faculty={faculty}
       initialProjects={projects ?? []}
       initialApplications={applications}
+      githubSkillsByStudent={githubSkillsByStudent}
     />
   )
 }

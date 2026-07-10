@@ -4,39 +4,40 @@ import { useState } from 'react'
 import Link from 'next/link'
 import ApplyModal from '@/components/ApplyModal'
 import Navbar from '@/components/Navbar'
-import { C, F } from '@/app/landing/tokens'
+import { C, F } from '@/lib/theme/dark-tokens'
 import { LogoMark } from '@/app/landing/LogoMark'
 import type { Project, Student } from '@/lib/types'
 
+interface PosterMeta {
+  name: string | null
+  industry: string | null
+  location: string | null
+  website: string | null
+}
+
 interface Props {
-  project: Project & {
-    companies?: {
-      company_name: string | null
-      industry: string | null
-      hq_location: string | null
-      website: string | null
-    }
-  }
+  project: Project
+  posterMeta: PosterMeta | null
   student: Student | null
   alreadyApplied: boolean
 }
 
-export default function ProjectDetailClient({ project, student, alreadyApplied }: Props) {
+export default function ProjectDetailClient({ project, posterMeta, student, alreadyApplied }: Props) {
   const [showModal, setShowModal] = useState(false)
   const [applied, setApplied] = useState(alreadyApplied)
 
-  const company = project.companies
+  const poster = posterMeta ?? { name: project.poster_display_name, industry: null, location: null, website: null }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
       {student ? (
         <Navbar role="student" />
       ) : (
-        <header style={{ borderBottom: `1px solid ${C.border}`, background: 'rgba(13,13,11,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 40 }}>
+        <header style={{ borderBottom: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 40 }}>
           <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Link href="/" aria-label="Workmark home" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
               <LogoMark size={18} />
-              <span style={{ fontFamily: F.mono, fontSize: 14, fontWeight: 500, color: C.text, letterSpacing: '-0.02em' }}>workmark</span>
+              <span style={{ fontFamily: F.serif, fontSize: 18, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>workmark</span>
             </Link>
             <Link href="/projects" style={{ fontFamily: F.mono, fontSize: 12, color: C.textMuted, textDecoration: 'none', letterSpacing: '0.04em' }}>
               ← All projects
@@ -72,7 +73,7 @@ export default function ProjectDetailClient({ project, student, alreadyApplied }
                 {project.title ?? 'Untitled Project'}
               </h1>
               <p style={{ fontFamily: F.mono, fontSize: 12, color: C.textFaint }}>
-                {company?.company_name}{company?.hq_location ? ` · ${company.hq_location}` : ''}
+                {poster.name}{poster.location ? ` · ${poster.location}` : ''}
               </p>
             </div>
 
@@ -189,20 +190,20 @@ export default function ProjectDetailClient({ project, student, alreadyApplied }
               </div>
             </div>
 
-            {/* Company card */}
-            {company && (
+            {/* Poster card (company or faculty) */}
+            {poster.name && (
               <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 20 }}>
                 <h3 style={{ fontFamily: F.mono, fontSize: 13, fontWeight: 500, color: C.textSub, marginBottom: 8 }}>
-                  {company.company_name ?? 'Company'}
+                  {poster.name}
                 </h3>
-                {company.industry && (
-                  <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, marginBottom: 4 }}>{company.industry}</p>
+                {poster.industry && (
+                  <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, marginBottom: 4 }}>{poster.industry}</p>
                 )}
-                {company.hq_location && (
-                  <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, marginBottom: 4 }}>{company.hq_location}</p>
+                {poster.location && (
+                  <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, marginBottom: 4 }}>{poster.location}</p>
                 )}
-                {company.website && (
-                  <a href={company.website} target="_blank" rel="noopener noreferrer" style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, textDecoration: 'none' }}>
+                {poster.website && (
+                  <a href={poster.website} target="_blank" rel="noopener noreferrer" style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, textDecoration: 'none' }}>
                     Visit website ↗
                   </a>
                 )}
@@ -229,7 +230,7 @@ export default function ProjectDetailClient({ project, student, alreadyApplied }
 }
 
 function Chip({ children, accent, red }: { children: React.ReactNode; accent?: boolean; red?: boolean }) {
-  const color = red ? '#f87171' : accent ? C.accent : C.textMuted
+  const color = red ? '#DC2626' : accent ? C.accent : C.textMuted
   const bg = red ? 'rgba(248,113,113,0.08)' : accent ? C.accentHover : C.surfaceAlt
   const border = red ? 'rgba(248,113,113,0.25)' : accent ? C.accentBorder : C.border
   return (
