@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import Link from 'next/link'
 import { C, F } from '@/lib/theme/dark-tokens'
-import { LogoMark } from '@/app/landing/LogoMark'
+import { Wordmark } from '@/app/landing/Wordmark'
 import { Combobox } from '@/components/Combobox'
 import { UNIVERSITIES } from '@/lib/data/universities'
 import { MAJORS } from '@/lib/data/majors'
@@ -403,8 +403,7 @@ export default function OnboardingPage() {
   return (
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px' }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
-        <LogoMark size={22} />
-        <span style={{ fontFamily: F.serif, fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
+        <Wordmark height={22} />
       </Link>
 
       <div style={{ width: '100%', maxWidth: 540 }}>

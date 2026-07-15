@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { C, F } from '@/lib/theme/dark-tokens'
-import { LogoMark } from '@/app/landing/LogoMark'
+import { Wordmark } from '@/app/landing/Wordmark'
 
 interface Record {
   id: string
@@ -31,8 +31,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   return (
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
-        <LogoMark size={22} />
-        <span style={{ fontFamily: F.serif, fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>workmark</span>
+        <Wordmark height={22} />
       </Link>
       {children}
     </main>
