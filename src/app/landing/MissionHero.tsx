@@ -105,7 +105,7 @@ export function MissionHero() {
         <h1 className="mob-text-hero" style={{ fontFamily: F.serif, fontSize: 72, fontWeight: 800, lineHeight: 1.03, letterSpacing: '-0.035em', color: C.text, margin: '0 0 28px' }}>
           Building the largest database of{' '}
           <span style={{ color: C.accent }}>verified work records</span>{' '}
-          — to fix hiring.
+          to fix hiring.
         </h1>
 
         <p style={{ fontSize: 20, lineHeight: 1.6, color: C.textMuted, maxWidth: 680, margin: '0 auto 36px' }}>
@@ -140,7 +140,7 @@ export function MissionHero() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 1000, margin: '28px auto 0', display: 'flex', justifyContent: 'center', opacity: 0.5 }}>
-        <Wordmark height={18} />
+        <Wordmark height={27} />
       </div>
     </section>
   )
@@ -199,8 +199,8 @@ function RecordStrip() {
 
           <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18, marginBottom: 18 }}>
             <DetailField label="Poster" value={RECORDS[active].poster} sub={RECORDS[active].posterType} />
-            <DetailField label="Engagement" value={`${RECORDS[active].start} — ${RECORDS[active].end}`} sub={RECORDS[active].meta} />
-            <DetailField label="Confirmed" value={RECORDS[active].confirmedAt} sub="Locked — no edits possible after" />
+            <DetailField label="Engagement" value={`${RECORDS[active].start} to ${RECORDS[active].end}`} sub={RECORDS[active].meta} />
+            <DetailField label="Confirmed" value={RECORDS[active].confirmedAt} sub="Locked: no edits possible after" />
           </div>
 
           <div style={{ background: '#fff', border: `1px solid ${C.border}`, borderRadius: 8, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>

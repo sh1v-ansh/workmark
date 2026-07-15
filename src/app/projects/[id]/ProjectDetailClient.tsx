@@ -36,7 +36,7 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
         <header style={{ borderBottom: `1px solid ${C.border}`, background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', position: 'sticky', top: 0, zIndex: 40 }}>
           <div style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <Link href="/" aria-label="Workmark home" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Wordmark height={18} />
+              <Wordmark height={27} />
             </Link>
             <Link href="/projects" style={{ fontFamily: F.mono, fontSize: 12, color: C.textMuted, textDecoration: 'none', letterSpacing: '0.04em' }}>
               ← All projects

@@ -23,7 +23,7 @@ export default function MarketplacePage() {
             Where verified work records get earned.
           </h1>
           <p style={{ fontSize: 19, lineHeight: 1.65, color: C.textMuted, maxWidth: 640, marginBottom: 36 }}>
-            Students take on real projects and internships — for other student teams today, and
+            Students take on real projects and internships, for other student teams today, and
             for SMBs, startups, and nonprofits as we grow. Every engagement ends the same way:
             a permanent, poster-attested Workmark record.
           </p>

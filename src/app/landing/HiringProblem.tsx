@@ -15,7 +15,7 @@ const stats = [
   },
   {
     figure: '75%',
-    label: 'of résumés are never seen by a human — filtered by ATS keywords',
+    label: 'of résumés are never seen by a human, filtered by ATS keywords',
     source: 'ATS industry estimates',
   },
 ]
@@ -31,7 +31,7 @@ export function HiringProblem() {
           </h2>
           <p style={{ fontSize: 18, lineHeight: 1.7, color: C.textMuted }}>
             A résumé is a self-reported list of claims. Employers can&apos;t verify them, so they
-            fall back on brand-name schools, referrals, and keyword filters — and talented
+            fall back on brand-name schools, referrals, and keyword filters, and talented
             students without the right pedigree get filtered out before anyone sees their work.
           </p>
         </div>

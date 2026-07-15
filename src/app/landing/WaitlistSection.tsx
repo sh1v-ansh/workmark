@@ -14,7 +14,7 @@ export function JoinSection() {
           Start building your<br />Workmark record.
         </h2>
         <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 40 }}>
-          Students: start stacking real, verified work experience — free, forever. Organizations: post your first project and get real CS help without an agency in the middle.
+          Students: start stacking real, verified work experience, free, forever. Organizations: post your first project and get real CS help without an agency in the middle.
         </p>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap' }}>

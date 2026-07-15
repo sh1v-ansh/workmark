@@ -4,7 +4,7 @@ const steps = [
   {
     n: '01',
     title: 'Organizations post a project',
-    body: 'SMBs, startups, nonprofits, and research labs post real CS projects or internships on Workmark — setting the scope, duration, and skills needed. No agency. No recruiter. Free to start.',
+    body: 'SMBs, startups, nonprofits, and research labs post real CS projects or internships on Workmark, setting the scope, duration, and skills needed. No agency. No recruiter. Free to start.',
   },
   {
     n: '02',
@@ -13,8 +13,8 @@ const steps = [
   },
   {
     n: '03',
-    title: 'Both sides win — permanently',
-    body: "At project close, the employer confirms the engagement on Workmark — one button. Duration and skills lock permanently to the student's Workmark record. The organization got the work done. The student has verified proof they built it.",
+    title: 'Both sides win, permanently',
+    body: "At project close, the employer confirms the engagement on Workmark: one button. Duration and skills lock permanently to the student's Workmark record. The organization got the work done. The student has verified proof they built it.",
   },
 ]
 

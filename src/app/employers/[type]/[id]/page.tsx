@@ -35,7 +35,7 @@ export default async function EmployerProfilePage({ params }: Props) {
     <main style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
       <header style={{ borderBottom: `1px solid ${C.border}`, padding: '20px 24px' }}>
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <Wordmark height={20} />
+          <Wordmark height={30} />
         </Link>
       </header>
 

@@ -7,7 +7,7 @@ const phases = [
     tag: 'Now',
     active: true,
     title: 'Students ↔ students',
-    body: 'Students post projects and hire each other. The first verified records are earned peer-to-peer — building the dataset and proving the model with the people who need experience most.',
+    body: 'Students post projects and hire each other. The first verified records are earned peer-to-peer, building the dataset and proving the model with the people who need experience most.',
   },
   {
     tag: 'Next',
@@ -19,7 +19,7 @@ const phases = [
     tag: 'The vision',
     active: false,
     title: 'The hiring layer',
-    body: 'With millions of verified records, Workmark becomes the trusted signal employers hire on — matching, filtering, and verification all built on proof instead of pedigree.',
+    body: 'With millions of verified records, Workmark becomes the trusted signal employers hire on: matching, filtering, and verification all built on proof instead of pedigree.',
   },
 ]
 
@@ -33,8 +33,8 @@ export function Roadmap() {
             Start with students. Then the whole market.
           </h2>
           <p style={{ fontSize: 18, lineHeight: 1.7, color: C.textMuted }}>
-            The fastest way to build a trusted record database is to start where the need is
-            sharpest — students helping students — and expand outward from proven ground.
+            The fastest way to build a trusted record database is to start with students helping
+            students, where the need is sharpest, and expand outward from proven ground.
           </p>
         </div>
 

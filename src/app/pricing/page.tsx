@@ -4,7 +4,7 @@ import { C, F } from '../landing/tokens'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Pricing — Workmark',
+  title: 'Pricing | Workmark',
   description: 'Workmark is free for students, always. Free for organizations during early access.',
 }
 
@@ -20,7 +20,7 @@ export default function PricingPage() {
           Free, for now.
         </h1>
         <p style={{ fontSize: 16, color: C.textMuted, maxWidth: 480, lineHeight: 1.6 }}>
-          Workmark is in early access. Nothing costs anything yet — we want to build something useful before we talk about money.
+          Workmark is in early access. Nothing costs anything yet, we want to build something useful before we talk about money.
         </p>
       </section>
 
@@ -86,7 +86,7 @@ export default function PricingPage() {
         <div style={{ maxWidth: 720, marginTop: 40, padding: 24, background: C.surface, border: `1px solid ${C.border}` }}>
           <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 10 }}>Our commitment</p>
           <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.7 }}>
-            Students will always have free access to Workmark — that is non-negotiable. For organizations, we may introduce paid tiers in the future as we scale, but we will give plenty of notice and grandfather early adopters. No surprise pricing changes, ever.
+            Students will always have free access to Workmark: that is non-negotiable. For organizations, we may introduce paid tiers in the future as we scale, but we will give plenty of notice and grandfather early adopters. No surprise pricing changes, ever.
           </p>
         </div>
       </section>

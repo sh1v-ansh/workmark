@@ -3,10 +3,10 @@
 import { C, F } from './tokens'
 
 const flow = [
-  { n: '01', title: 'Do real work', body: 'A student completes a project, internship, or research task — for a company, a nonprofit, or another student team.' },
+  { n: '01', title: 'Do real work', body: 'A student completes a project, internship, or research task, for a company, a nonprofit, or another student team.' },
   { n: '02', title: 'Poster attests', body: 'The organization or student poster confirms the engagement happened and the skills were used. One click. No files, no code stored.' },
   { n: '03', title: 'Record locks', body: 'A permanent, tamper-proof Workmark record is created: who, what stack, how long, verified by whom.' },
-  { n: '04', title: 'The database grows', body: 'Every locked record joins the largest structured dataset of verified work — the signal hiring has always lacked.' },
+  { n: '04', title: 'The database grows', body: 'Every locked record joins the largest structured dataset of verified work: the signal hiring has always lacked.' },
 ]
 
 export function VerifiedRecords() {
@@ -20,7 +20,7 @@ export function VerifiedRecords() {
           </h2>
           <p style={{ fontSize: 18, lineHeight: 1.7, color: C.textMuted }}>
             Instead of asking employers to trust a claim, Workmark captures proof at the moment
-            work is done — and turns it into a portable credential the student owns forever.
+            work is done, and turns it into a portable credential the student owns forever.
           </p>
         </div>
 
@@ -44,7 +44,7 @@ export function VerifiedRecords() {
         {/* Payoff bar */}
         <div className="reveal-item" style={{ marginTop: 24, background: C.bgDeep, borderRadius: 16, padding: '36px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap' }}>
           <p style={{ fontFamily: F.serif, fontSize: 26, fontWeight: 700, lineHeight: 1.3, color: '#fff', margin: 0, maxWidth: 640 }}>
-            The result: a hiring signal that&apos;s earned, not claimed — and impossible to fake.
+            The result: a hiring signal that&apos;s earned, not claimed, and impossible to fake.
           </p>
           <div style={{ fontFamily: F.sans, fontSize: 13, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.04em' }}>
             IDENTITY · DURATION · POSTER CONFIRMATION

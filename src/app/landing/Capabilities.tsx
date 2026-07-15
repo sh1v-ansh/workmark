@@ -26,7 +26,7 @@ export function Capabilities() {
               Probability-based applications
             </h3>
             <p style={{ fontSize: 15, lineHeight: 1.6, color: C.textMuted, marginBottom: 24 }}>
-              We rank openings by how likely you are to actually land an interview — based on your
+              We rank openings by how likely you are to actually land an interview, based on your
               verified records, not keywords. Spend your effort where it converts.
             </p>
             <BrowserFrame url="app.workmark.org/matches">
@@ -41,8 +41,8 @@ export function Capabilities() {
               Proof, checked automatically
             </h3>
             <p style={{ fontSize: 15, lineHeight: 1.6, color: C.textMuted, marginBottom: 24 }}>
-              Agents corroborate each record — cross-checking poster confirmation, engagement
-              duration, and public work — and summarize a student&apos;s GitHub into the concrete
+              Agents corroborate each record, cross-checking poster confirmation, engagement
+              duration, and public work, and summarize a student&apos;s GitHub into the concrete
               skills they actually shipped.
             </p>
             <div style={{ marginTop: 'auto' }}>
@@ -62,17 +62,17 @@ export function Capabilities() {
           <SmallFeature
             label="Precision filters"
             title="Find the exact fit"
-            body="Filter people and projects by verified stack, real duration, availability, and work authorization — not fuzzy keyword guesses."
+            body="Filter people and projects by verified stack, real duration, availability, and work authorization, not fuzzy keyword guesses."
           />
           <SmallFeature
             label="Student ↔ student"
             title="Build together first"
-            body="Students hire and collaborate with other students on real projects — earning verified records before a single business is involved."
+            body="Students hire and collaborate with other students on real projects, earning verified records before a single business is involved."
           />
           <SmallFeature
             label="Portable & owned"
             title="Yours forever"
-            body="Every record belongs to the student — permanent, exportable, and trusted anywhere hiring happens."
+            body="Every record belongs to the student: permanent, exportable, and trusted anywhere hiring happens."
           />
         </div>
       </div>

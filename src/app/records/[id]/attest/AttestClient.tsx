@@ -73,7 +73,7 @@ export default function AttestClient({ record }: Props) {
   return (
     <main style={{ minHeight: '100vh', background: C.bg, padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <Link href={`/records/${record.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 32 }}>
-        <Wordmark height={22} />
+        <Wordmark height={33} />
       </Link>
 
       <div style={{ width: '100%', maxWidth: 620 }}>

@@ -403,7 +403,7 @@ export default function OnboardingPage() {
   return (
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px' }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
-        <Wordmark height={22} />
+        <Wordmark height={33} />
       </Link>
 
       <div style={{ width: '100%', maxWidth: 540 }}>

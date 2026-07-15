@@ -2,24 +2,24 @@ import { C, F } from './tokens'
 
 const types = [
   {
-    duration: '4–8 weeks',
+    duration: '4-8 weeks',
     label: 'Short Project',
-    body: 'A focused deliverable — a feature, a data pipeline, a prototype. SMBs get real CS output. Students earn their first Workmark record. Ideal for both sides trying the platform for the first time.',
+    body: 'A focused deliverable: a feature, a data pipeline, a prototype. SMBs get real CS output. Students earn their first Workmark record. Ideal for both sides trying the platform for the first time.',
   },
   {
-    duration: '12–16 weeks',
+    duration: '12-16 weeks',
     label: 'Semester Internship',
     body: 'A full-semester engagement aligned with the academic calendar. Organizations get sustained CS support over months. Students earn academic credit eligibility and a substantial Workmark record.',
   },
   {
-    duration: '10–12 weeks',
+    duration: '10-12 weeks',
     label: 'Summer Internship',
-    body: 'The traditional summer internship format — paid or unpaid — with Workmark verification built in. Real work, real experience, and a permanent record for both sides at the end.',
+    body: 'The traditional summer internship format, paid or unpaid, with Workmark verification built in. Real work, real experience, and a permanent record for both sides at the end.',
   },
   {
     duration: 'Ongoing',
     label: 'Part-time Role',
-    body: '5–15 hrs/week alongside coursework. A flexible way for organizations to get recurring CS support. Students grind their Workmark record over time — cumulative, permanent, and stackable.',
+    body: '5-15 hrs/week alongside coursework. A flexible way for organizations to get recurring CS support. Students grind their Workmark record over time: cumulative, permanent, and stackable.',
   },
 ]
 
@@ -30,7 +30,7 @@ export function EngagementTypes() {
         Workmark engagement types
       </h2>
       <p style={{ fontSize: 14, color: C.textFaint, fontFamily: F.mono, marginBottom: 48 }}>
-        Every format ends the same way — both sides get a verified, permanent Workmark record.
+        Every format ends the same way: both sides get a verified, permanent Workmark record.
       </p>
       <div className="mob-2col" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24 }}>
         {types.map((t, i) => (
