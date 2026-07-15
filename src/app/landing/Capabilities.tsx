@@ -29,7 +29,9 @@ export function Capabilities() {
               We rank openings by how likely you are to actually land an interview — based on your
               verified records, not keywords. Spend your effort where it converts.
             </p>
-            <MatchDiagram />
+            <BrowserFrame url="app.workmark.org/matches">
+              <MatchDiagram />
+            </BrowserFrame>
           </div>
 
           {/* AI verification */}
@@ -43,10 +45,14 @@ export function Capabilities() {
               duration, and public work — and summarize a student&apos;s GitHub into the concrete
               skills they actually shipped.
             </p>
-            <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <AgentRow label="GitHub summarization" value="12 repos → 8 skills" />
-              <AgentRow label="Poster attestation" value="Confirmed" />
-              <AgentRow label="Duration check" value="6 wks verified" />
+            <div style={{ marginTop: 'auto' }}>
+              <BrowserFrame url="app.workmark.org/verify/agent-run">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <AgentRow label="GitHub summarization" value="12 repos → 8 skills" done />
+                  <AgentRow label="Poster attestation" value="Confirmed" done />
+                  <AgentRow label="Duration check" value="6 wks verified" done />
+                </div>
+              </BrowserFrame>
             </div>
           </div>
         </div>
@@ -74,6 +80,29 @@ export function Capabilities() {
   )
 }
 
+/** Wraps a diagram in browser chrome so it reads as a real product view, not a floating mockup. */
+function BrowserFrame({ url, children }: { url: string; children: React.ReactNode }) {
+  return (
+    <div style={{ border: `1px solid ${C.border}`, borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: C.surfaceAlt, borderBottom: `1px solid ${C.border}` }}>
+        <div style={{ display: 'flex', gap: 5 }} aria-hidden="true">
+          <span style={{ width: 7, height: 7, borderRadius: 999, background: '#E5E4EF' }} />
+          <span style={{ width: 7, height: 7, borderRadius: 999, background: '#E5E4EF' }} />
+          <span style={{ width: 7, height: 7, borderRadius: 999, background: '#E5E4EF' }} />
+        </div>
+        <div style={{ flex: 1, background: '#fff', border: `1px solid ${C.border}`, borderRadius: 999, padding: '3px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg width="9" height="9" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+            <rect x="2.5" y="4.5" width="5" height="4" rx="0.5" stroke={C.textGhost} strokeWidth="0.9" />
+            <path d="M3.5 4.5V3a1.5 1.5 0 0 1 3 0v1.5" stroke={C.textGhost} strokeWidth="0.9" />
+          </svg>
+          <span style={{ fontFamily: F.sans, fontSize: 10.5, color: C.textFaint }}>{url}</span>
+        </div>
+      </div>
+      <div style={{ padding: 14 }}>{children}</div>
+    </div>
+  )
+}
+
 function FeatureLabel({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 600, color: C.accent, letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 14 }}>
@@ -82,11 +111,20 @@ function FeatureLabel({ children }: { children: React.ReactNode }) {
   )
 }
 
-function AgentRow({ label, value }: { label: string; value: string }) {
+function AgentRow({ label, value, done }: { label: string; value: string; done?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: C.surfaceAlt, borderRadius: 8, border: `1px solid ${C.border}` }}>
-      <span style={{ fontSize: 13, color: C.textSub }}>{label}</span>
-      <span style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 600, color: C.accent }}>✓ {value}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span aria-hidden="true" style={{ width: 14, height: 14, borderRadius: 999, background: done ? C.accent : C.border, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          {done && (
+            <svg width="7" height="7" viewBox="0 0 8 8" fill="none">
+              <path d="M1.5 4.2l1.8 1.8L6.5 2.2" stroke="#fff" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          )}
+        </span>
+        <span style={{ fontSize: 13, color: C.textSub }}>{label}</span>
+      </div>
+      <span style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 600, color: C.accent }}>{value}</span>
     </div>
   )
 }

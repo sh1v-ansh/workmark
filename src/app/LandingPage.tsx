@@ -6,6 +6,7 @@ import { HiringProblem } from './landing/HiringProblem'
 import { VerifiedRecords } from './landing/VerifiedRecords'
 import { Capabilities } from './landing/Capabilities'
 import { Roadmap } from './landing/Roadmap'
+import { FounderNote } from './landing/FounderNote'
 import { JoinSection } from './landing/WaitlistSection'
 
 export default function LandingPage() {
@@ -16,6 +17,7 @@ export default function LandingPage() {
       <VerifiedRecords />
       <Capabilities />
       <Roadmap />
+      <FounderNote />
       <JoinSection />
     </MarketingLayout>
   )
