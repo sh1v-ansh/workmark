@@ -2,19 +2,19 @@ import Link from 'next/link'
 import { C, F } from './tokens'
 
 const studentPoints = [
-  'Always free — every student gets full access to every opportunity on Workmark',
+  'Always free: every student gets full access to every opportunity on Workmark',
   'Grindable: stack verified Workmark records with every project, paid or unpaid, short or long',
-  'No connections required — apply on merit, get evaluated on real work',
-  'Your Workmark record is permanent and portable — yours forever, wherever you go next',
+  'No connections required: apply on merit, get evaluated on real work',
+  'Your Workmark record is permanent and portable, yours forever, wherever you go next',
   'Built especially for first-gen students, F-1 international students, and non-target school students who are shut out of traditional recruiting',
 ]
 
 const orgPoints = [
-  'No placement fee — ever. Post projects and work with students without an agency in the middle.',
-  'Flexible engagements — 4 to 16 weeks, paid or unpaid, remote or onsite',
+  'No placement fee, ever. Post projects and work with students without an agency in the middle.',
+  'Flexible engagements: 4 to 16 weeks, paid or unpaid, remote or onsite',
   'Students are motivated CS learners who want hands-on project experience',
-  'Workmark verifies the engagement at close — both sides get a permanent record of the work',
-  'Free to start — post your first projects at no cost, no credit card required',
+  'Workmark verifies the engagement at close, both sides get a permanent record of the work',
+  'Free to start: post your first projects at no cost, no credit card required',
   'Built for SMBs, nonprofits, research labs, and startups that need CS help but not a full-time hire',
 ]
 

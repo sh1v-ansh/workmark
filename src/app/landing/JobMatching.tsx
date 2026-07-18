@@ -2,9 +2,9 @@ import { C, F } from './tokens'
 
 const steps = [
   ['01', 'Organizations post full-time roles', 'They specify the required tech stack and experience level. Workmark surfaces only students whose verified records match.'],
-  ['02', 'Matching runs on verified records only', "Workmark compares the role's requirements against students' attested Workmark records. Skills that were actually used and confirmed by employers — not self-reported."],
-  ['03', 'Students apply in one tap', 'Students get notified when they\'re a strong match. They tap apply. Their Workmark record is their application — no form to fill out, no cover letter needed.'],
-  ['04', 'Organizations see a small, qualified pool', 'A handful of candidates — each with a verified, employer-confirmed Workmark record. Less screening, more signal.'],
+  ['02', 'Matching runs on verified records only', "Workmark compares the role's requirements against students' attested Workmark records. Skills that were actually used and confirmed by employers, not self-reported."],
+  ['03', 'Students apply in one tap', 'Students get notified when they\'re a strong match. They tap apply. Their Workmark record is their application: no form to fill out, no cover letter needed.'],
+  ['04', 'Organizations see a small, qualified pool', 'A handful of candidates: each with a verified, employer-confirmed Workmark record. Less screening, more signal.'],
 ]
 
 const matchTags = ['React', 'TypeScript', 'SQL']
@@ -25,7 +25,7 @@ export function JobMatching() {
           Your Workmark record is<br />your application.
         </h2>
         <p style={{ fontSize: 14, color: C.textFaint, fontFamily: F.mono, marginBottom: 48 }}>
-          Workmark job matching is in development. Once live, your verified records automatically match you to full-time roles — no form to fill out.
+          Workmark job matching is in development. Once live, your verified records automatically match you to full-time roles, no form to fill out.
         </p>
       </div>
 
@@ -76,7 +76,7 @@ export function JobMatching() {
               What the employer sees
             </div>
             <div style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.65 }}>
-              3–8 candidates. Every one verified. No résumé parsing, no keyword matching, no screening calls to filter the unqualified out.
+              3-8 candidates. Every one verified. No résumé parsing, no keyword matching, no screening calls to filter the unqualified out.
             </div>
           </div>
         </div>

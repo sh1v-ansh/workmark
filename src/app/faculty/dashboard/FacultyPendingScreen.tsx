@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LogoMark } from '@/app/landing/LogoMark'
+import { Wordmark } from '@/app/landing/Wordmark'
 import { C, F } from '@/lib/theme/dark-tokens'
 import type { Faculty } from '@/lib/types'
 
@@ -7,8 +7,7 @@ export default function FacultyPendingScreen({ faculty }: { faculty: Faculty }) 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 48 }}>
-        <LogoMark size={20} />
-        <span style={{ fontFamily: F.serif, fontSize: 19, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>workmark</span>
+        <Wordmark height={30} />
       </Link>
 
       <div style={{ width: '100%', maxWidth: 440, background: C.surface, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center' }}>

@@ -4,7 +4,7 @@ import { TeamSection } from '../landing/TeamSection'
 import { C, F } from '../landing/tokens'
 
 export const metadata: Metadata = {
-  title: 'About — Workmark',
+  title: 'About | Workmark',
   description: 'Workmark is built by a UMass CS student to fix the broken credential system for early-career developers.',
 }
 

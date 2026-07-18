@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import { C, F } from './tokens'
-import { LogoMark } from './LogoMark'
+import { Wordmark } from './Wordmark'
 
 const links: [string, string][] = [
-  ['/', 'Home'],
+  ['/', 'Mission'],
+  ['/marketplace', 'Marketplace'],
   ['/how-it-works', 'How it works'],
   ['/about', 'About'],
   ['/login', 'Sign in'],
@@ -15,8 +16,7 @@ export function Footer() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 6 }}>
-            <LogoMark />
-            <span style={{ fontFamily: F.mono, fontSize: 14, fontWeight: 500, color: C.text }}>workmark</span>
+            <Wordmark />
           </Link>
           <div style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>Verified work, not just claimed work.</div>
         </div>

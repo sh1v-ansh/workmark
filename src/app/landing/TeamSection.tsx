@@ -29,13 +29,13 @@ export function TeamSection() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.75 }}>
-              I built Workmark because I saw two problems that were clearly solving each other — CS students who couldn&apos;t get work experience, and small organizations that needed CS help they couldn&apos;t afford through agencies. The infrastructure to connect them just didn&apos;t exist.
+              I built Workmark because I saw two problems that were clearly solving each other: CS students who couldn&apos;t get work experience, and small organizations that needed CS help they couldn&apos;t afford through agencies. The infrastructure to connect them just didn&apos;t exist.
             </p>
             <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.75 }}>
-              The goal with Workmark is simple: make work experience grindable. Every project a student completes adds a verified record — permanent, portable, and attested by the organization. Stack enough of them and you&apos;ve built something real. This should especially benefit first-gen students, international students, and anyone at a non-target school who&apos;s shut out of traditional recruiting.
+              The goal with Workmark is simple: make work experience grindable. Every project a student completes adds a verified record: permanent, portable, and attested by the organization. Stack enough of them and you&apos;ve built something real. This should especially benefit first-gen students, international students, and anyone at a non-target school who&apos;s shut out of traditional recruiting.
             </p>
             <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.75 }}>
-              Workmark is student-built — made by a CS student for the students and organizations it serves. One person, one mission: make it fair. If that resonates, reach out.
+              Workmark is student-built, made by a CS student for the students and organizations it serves. One person, one mission: make it fair. If that resonates, reach out.
             </p>
           </div>
         </div>
@@ -46,7 +46,7 @@ export function TeamSection() {
           <div className="reveal-item" style={{ transitionDelay: '0.1s', background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.accent}`, padding: 28 }}>
             <div style={{ fontFamily: F.mono, fontSize: 10, color: C.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>Workmark&apos;s mission</div>
             <blockquote style={{ fontFamily: F.serif, fontSize: 19, fontWeight: 500, color: C.text, lineHeight: 1.6, margin: 0 }}>
-              Change the way hiring works — make it fair. Workmark replaces the self-reported résumé with something that actually means something: proof.
+              Change the way hiring works. Make it fair. Workmark replaces the self-reported résumé with something that actually means something: proof.
             </blockquote>
           </div>
 
@@ -54,7 +54,7 @@ export function TeamSection() {
           <div className="reveal-item" style={{ transitionDelay: '0.2s', background: C.surface, border: `1px solid ${C.border}`, borderLeft: `3px solid ${C.border}`, padding: 28 }}>
             <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>On the opportunity</div>
             <blockquote style={{ fontFamily: F.serif, fontSize: 17, fontWeight: 500, color: C.textSub, lineHeight: 1.65, margin: 0 }}>
-              CS students and SMBs both have something the other needs. Workmark is just the infrastructure to connect them — with a permanent record of the work that happened.
+              CS students and SMBs both have something the other needs. Workmark is just the infrastructure to connect them, with a permanent record of the work that happened.
             </blockquote>
           </div>
 
@@ -64,7 +64,7 @@ export function TeamSection() {
               Get in touch
             </div>
             <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.65, marginBottom: 20 }}>
-              Whether you&apos;re a student who wants to build their Workmark record, an organization interested in posting, or just curious about the mission — I&apos;d like to hear from you.
+              Whether you&apos;re a student who wants to build their Workmark record, an organization interested in posting, or just curious about the mission, I&apos;d like to hear from you.
             </p>
 
             <a

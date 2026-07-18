@@ -4,12 +4,12 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { C, F } from './tokens'
-import { LogoMark } from './LogoMark'
+import { Wordmark } from './Wordmark'
 
 const links: [string, string][] = [
-  ['/', 'Home'],
+  ['/', 'Mission'],
+  ['/marketplace', 'Marketplace'],
   ['/how-it-works', 'How it works'],
-  ['/pricing', 'Pricing'],
   ['/about', 'About'],
 ]
 
@@ -42,8 +42,7 @@ export function Nav() {
     >
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <LogoMark />
-          <span style={{ fontFamily: F.serif, fontSize: 19, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
+          <Wordmark />
         </Link>
 
         {/* Desktop links */}
@@ -70,16 +69,7 @@ export function Nav() {
         </div>
 
         {/* Desktop sign in */}
-        <Link
-          href="/login"
-          className="mob-hide"
-          style={{
-            display: 'inline-block',
-            padding: '8px 18px', fontFamily: F.mono, fontSize: 13, fontWeight: 500,
-            border: `1px solid ${C.border}`, color: C.textMuted, textDecoration: 'none',
-            transition: 'all 0.2s',
-          }}
-        >
+        <Link href="/login" className="mob-hide wm-btn wm-btn-secondary wm-btn-sm">
           Sign in
         </Link>
 
@@ -127,12 +117,8 @@ export function Nav() {
           <Link
             href="/login"
             onClick={() => setMobileOpen(false)}
-            style={{
-              display: 'block', marginTop: 16, padding: '11px 0', textAlign: 'center',
-              border: `1px solid ${C.border}`, color: C.textMuted,
-              fontFamily: F.mono, fontSize: 12, textDecoration: 'none',
-              textTransform: 'uppercase', letterSpacing: '0.06em',
-            }}
+            className="wm-btn wm-btn-secondary"
+            style={{ marginTop: 16, width: '100%' }}
           >
             Sign in
           </Link>

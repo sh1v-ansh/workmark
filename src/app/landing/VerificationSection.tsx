@@ -32,7 +32,7 @@ function InteractiveAttestation() {
         </div>
         <div style={{ fontFamily: F.mono, fontSize: 12, color: C.accent, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>Record locked</div>
         <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>
-          The engagement has been confirmed. The student&apos;s Workmark record is now permanent — skills attested, duration locked. No edits, no disputes, ever.
+          The engagement has been confirmed. The student&apos;s Workmark record is now permanent: skills attested, duration locked. No edits, no disputes, ever.
         </p>
         <div style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: 12, marginBottom: 16 }}>
           <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>Record hash</div>
@@ -51,7 +51,7 @@ function InteractiveAttestation() {
   return (
     <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 28 }}>
       <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 16 }}>
-        Employer attestation — project close
+        Employer attestation: project close
       </div>
 
       <div style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: 12, marginBottom: 20 }}>
@@ -97,7 +97,7 @@ function InteractiveAttestation() {
       <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 20, cursor: 'pointer' }}>
         <input type="checkbox" checked={legalChecked} onChange={e => setLegalChecked(e.target.checked)} style={{ marginTop: 2, accentColor: C.accent, width: 14, height: 14, cursor: 'pointer', flexShrink: 0 }} />
         <span style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.5 }}>
-          I confirm this engagement occurred and the stack listed was used. I understand this record is permanent. No code or files are involved — this is my confirmation only.
+          I confirm this engagement occurred and the stack listed was used. I understand this record is permanent. No code or files are involved. This is my confirmation only.
         </span>
       </label>
 
@@ -114,9 +114,9 @@ function InteractiveAttestation() {
 
 const flowSteps = [
   ['01', 'Stack locked at posting', 'The required technologies are declared before work begins and cannot be changed. What gets posted is what gets attested.'],
-  ['02', 'Weekly check-ins prove duration', 'Think of it like a timesheet, not a messaging platform. Each week: the student taps "active." The employer gets a ping: "Still ongoing?" — a single tap. If either side stops confirming, the engagement flags as inactive. Timestamps only. No messages, no files, no content stored.'],
-  ['03', 'Project closes — one button', 'The employer taps confirm. They can add an optional note or recommendation. That\'s it.'],
-  ['04', 'Record locked forever', 'Org name, duration, tech stack attested, employer confirmation — permanent and immutable. Verification is identity + duration + employer confirmation. Nothing more.'],
+  ['02', 'Weekly check-ins prove duration', 'Think of it like a timesheet, not a messaging platform. Each week: the student taps "active." The employer gets a ping: "Still ongoing?" A single tap answers it. If either side stops confirming, the engagement flags as inactive. Timestamps only. No messages, no files, no content stored.'],
+  ['03', 'Project closes, one button', 'The employer taps confirm. They can add an optional note or recommendation. That\'s it.'],
+  ['04', 'Record locked forever', 'Org name, duration, tech stack attested, employer confirmation: permanent and immutable. Verification is identity + duration + employer confirmation. Nothing more.'],
 ]
 
 export function VerificationSection() {
@@ -129,7 +129,7 @@ export function VerificationSection() {
             One button.<br />A record both sides trust forever.
           </h2>
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.7, marginBottom: 28 }}>
-            Workmark verification is lightweight by design — no code submissions, no file uploads, no deliverables. The employer confirms the engagement happened and the skills were used. That&apos;s it. The student&apos;s Workmark record locks permanently. Neither side can edit it after. Both sides walk away with a trustworthy, immutable record of what was built.
+            Workmark verification is lightweight by design: no code submissions, no file uploads, no deliverables. The employer confirms the engagement happened and the skills were used. That&apos;s it. The student&apos;s Workmark record locks permanently. Neither side can edit it after. Both sides walk away with a trustworthy, immutable record of what was built.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
             {flowSteps.map(([n, title, body]) => (

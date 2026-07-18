@@ -6,7 +6,7 @@ import { JobMatching } from '../landing/JobMatching'
 import { EngagementTypes } from '../landing/EngagementTypes'
 
 export const metadata: Metadata = {
-  title: 'How it works — Workmark',
+  title: 'How it works | Workmark',
   description: 'Learn how Workmark verifies CS student work through employer attestation, weekly check-ins, and permanent locked records.',
 }
 

@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { LogoMark } from '@/app/landing/LogoMark'
+import { Wordmark } from '@/app/landing/Wordmark'
 import { C, F } from '@/app/landing/tokens'
 
 interface Props {
@@ -35,8 +35,7 @@ export default async function EmployerProfilePage({ params }: Props) {
     <main style={{ minHeight: '100vh', background: C.bg, color: C.text }}>
       <header style={{ borderBottom: `1px solid ${C.border}`, padding: '20px 24px' }}>
         <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <LogoMark size={20} />
-          <span style={{ fontFamily: F.serif, fontSize: 19, fontWeight: 700, color: C.text }}>workmark</span>
+          <Wordmark height={30} />
         </Link>
       </header>
 

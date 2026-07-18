@@ -6,7 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import { C, F } from '@/lib/theme/dark-tokens'
-import { LogoMark } from '@/app/landing/LogoMark'
+import { Wordmark } from '@/app/landing/Wordmark'
 
 interface NavbarProps {
   role: 'student' | 'company' | 'faculty'
@@ -43,8 +43,7 @@ export default function Navbar({ role, userName }: NavbarProps) {
       <nav aria-label="Main navigation" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Logo */}
         <Link href={dashboardHref} aria-label="Workmark dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <LogoMark size={18} />
-          <span style={{ fontFamily: F.serif, fontSize: 18, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }} aria-hidden="true">workmark</span>
+          <Wordmark height={27} />
         </Link>
 
         {/* Desktop links */}

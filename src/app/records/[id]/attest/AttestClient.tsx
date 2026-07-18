@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { C, F } from '@/lib/theme/dark-tokens'
 import { useToast } from '@/components/Toast'
-import { LogoMark } from '@/app/landing/LogoMark'
+import { Wordmark } from '@/app/landing/Wordmark'
 import type { VerifiedWorkRecord } from '@/lib/types'
 
 interface Props {
@@ -73,8 +73,7 @@ export default function AttestClient({ record }: Props) {
   return (
     <main style={{ minHeight: '100vh', background: C.bg, padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <Link href={`/records/${record.id}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 32 }}>
-        <LogoMark size={22} />
-        <span style={{ fontFamily: F.serif, fontSize: 20, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>workmark</span>
+        <Wordmark height={33} />
       </Link>
 
       <div style={{ width: '100%', maxWidth: 620 }}>

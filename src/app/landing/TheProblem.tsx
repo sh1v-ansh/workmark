@@ -1,16 +1,16 @@
 import { C, F } from './tokens'
 
 const studentProblems = [
-  "CS students can't get their first internship without prior work experience — the classic entry-level catch-22.",
+  "CS students can't get their first internship without prior work experience: the classic entry-level catch-22.",
   "Opportunities go to students at target schools or with the right connections. First-gen and non-target students are locked out.",
   "Without a way to make experience grindable, skilled students stall before they even start.",
   "Real project experience is gated behind networking and prestige most students simply don't have access to.",
 ]
 
 const orgProblems = [
-  "99.9% of U.S. businesses are small businesses — but most are priced out of traditional recruiting agencies. (Source: SBA Office of Advocacy, 2023)",
-  "Staffing agencies typically charge 15–25% of first-year salary as placement fees — unaffordable for most small teams.",
-  "SMBs often need help with 1–2 CS projects per year, not a full-time hire they can't sustain.",
+  "99.9% of U.S. businesses are small businesses, but most are priced out of traditional recruiting agencies. (Source: SBA Office of Advocacy, 2023)",
+  "Staffing agencies typically charge 15-25% of first-year salary as placement fees, unaffordable for most small teams.",
+  "SMBs often need help with 1-2 CS projects per year, not a full-time hire they can't sustain.",
   "There's no affordable, reliable channel for small organizations to reach motivated CS students.",
 ]
 
@@ -21,7 +21,7 @@ function Dot() {
 export function TheProblem() {
   return (
     <section aria-labelledby="the-problem-heading" style={{ borderTop: `1px solid ${C.border}`, padding: '80px 24px', maxWidth: 1100, margin: '0 auto' }}>
-      <h2 id="the-problem-heading" style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
+      <h2 id="the-problem-heading" className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 46, fontWeight: 800, lineHeight: 1.12, letterSpacing: '-0.03em', color: C.text, marginBottom: 20 }}>
         Two problems. One solution.
       </h2>
       <p style={{ fontSize: 15, color: C.textMuted, maxWidth: 620, lineHeight: 1.65, marginBottom: 48 }}>
