@@ -48,7 +48,7 @@ const DEMO_STUDENTS = [
     skills: ['React', 'TypeScript', 'Node.js'],
     project: {
       title: "Textbook Swap needs a frontend that doesn't look like 2004",
-      description: "I built the backend for a peer-to-peer textbook exchange for UMass students, but the frontend is placeholder Bootstrap and it shows. Looking for someone who can turn it into something people actually want to open.",
+      description: "backend for my textbook swap thing is done and works great, frontend is still just default bootstrap and it shows lol. need someone who can actually make it look like a real app. shouldnt take too long, i just dont have the eye for design",
       type: 'project',
       required_skills: ['React', 'TypeScript', 'Tailwind CSS'],
       complexity_level: 'intermediate',
@@ -68,7 +68,7 @@ const DEMO_STUDENTS = [
     skills: ['Python', 'Pandas', 'Machine Learning'],
     project: {
       title: 'Can we actually predict when the dining hall gets slammed?',
-      description: "I've been logging wait times at the dining commons all semester and have a rough model, but it's held together with duct tape. Need someone who knows their way around a real ETL pipeline and can help me get this into Postgres properly.",
+      description: "so basically ive been sitting in the dining hall for like 3 months now tracking how long the lines get at different times (yes i am that person with a laptop open during lunch, no i dont care what you think about it) and ive got alot of data at this point. i threw together a rough prediction model but its honestly held together with tape, i dont really know what im doing with the ETL side of things and my postgres queries are probably an actual crime against databases. if you know how to do this properly and want to help me turn it into something that could actually be useful for freshmen trying to avoid the rush that would be amazing. not trying to make this some big startup thing, just want it to work well enough that people actually use it",
       type: 'project',
       required_skills: ['Python', 'Pandas', 'PostgreSQL'],
       complexity_level: 'advanced',
@@ -88,7 +88,7 @@ const DEMO_STUDENTS = [
     skills: ['C++', 'Arduino', 'Embedded Systems'],
     project: {
       title: 'Turning my dorm room into a (small) smart home',
-      description: "Got sensors for temperature, humidity, and my door reporting data over MQTT, and now I just need a dashboard to make sense of it all. Great first project if you've never touched Arduino before, I'll walk you through the hardware side.",
+      description: "got sensors hooked up in my room tracking temp, humidity, and my door opening/closing, all sending data over mqtt. now i just need something to actually display it in a way that makes sense instead of me squinting at raw numbers in a terminal. if youve never touched arduino before thats totally fine, ill show you the ropes, this is a pretty chill first project imo",
       type: 'project',
       required_skills: ['C++', 'Arduino', 'MQTT'],
       complexity_level: 'beginner',
@@ -108,7 +108,7 @@ const DEMO_STUDENTS = [
     skills: ['UI/UX Design', 'Figma', 'React Native'],
     project: {
       title: "Group chats are a bad way to organize a study group. Let's fix that.",
-      description: "Building an app that matches students in the same classes into study groups based on when they're free and how they like to study. The design and backend logic are mostly done. What I need is someone who can actually ship the React Native app.",
+      description: "tired of trying to organize study groups over a group chat that 40 people join and 2 people actually respond in. building an app that matches you with people in the same class based on when your free and how you like to study. design and backend logic is basically done, i just need someone who can build out the actual react native app with me. down to split revenue if this ever makes any money, no promises there though",
       type: 'part-time',
       required_skills: ['React Native', 'Firebase', 'UI/UX Design'],
       complexity_level: 'intermediate',
