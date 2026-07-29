@@ -5,8 +5,10 @@
 // auth.users is managed exclusively by Supabase Auth — you can't insert a row
 // there with regular SQL. This script uses the Admin API (service_role) to
 // create real auth users first, then inserts the matching profile + project
-// rows. Safe to re-run: it looks up existing users by email and reuses them
-// instead of erroring or duplicating projects.
+// rows. Safe to re-run: it looks up existing users by email and reuses them,
+// and it deletes+reinserts each demo account's project every run, so editing
+// the copy below and re-running always replaces what's live (nothing goes
+// stale, nothing duplicates).
 //
 // The last entry (Shivansh Soni) is a real account, not a demo persona — it's
 // seeded here too so it's ready to log into during the demo, but it doesn't
@@ -108,15 +110,15 @@ const DEMO_STUDENTS = [
     skills: ['UI/UX Design', 'Figma', 'React Native'],
     project: {
       title: "Group chats are a bad way to organize a study group. Let's fix that.",
-      description: "tired of trying to organize study groups over a group chat that 40 people join and 2 people actually respond in. building an app that matches you with people in the same class based on when your free and how you like to study. design and backend logic is basically done, i just need someone who can build out the actual react native app with me. down to split revenue if this ever makes any money, no promises there though",
+      description: "tired of trying to organize study groups over a group chat that 40 people join and 2 people actually respond in. building an app that matches you with people in the same class based on when your free and how you like to study. design and backend logic is basically done, i just need someone who can build out the actual react native app with me",
       type: 'part-time',
       required_skills: ['React Native', 'Firebase', 'UI/UX Design'],
       complexity_level: 'intermediate',
       work_mode: 'hybrid',
       duration: 'Ongoing',
       hours_per_week: 6,
-      is_paid: true,
-      compensation: 'Revenue share once we launch',
+      is_paid: false,
+      compensation: null,
     },
   },
   {
@@ -181,18 +183,15 @@ async function main() {
       continue
     }
 
-    // Only insert the project once per student (idempotent re-run guard).
-    const { data: existingProject } = await admin
+    // Replace any project(s) already posted by this demo account, so re-running
+    // the script after editing the copy above actually updates what's live
+    // instead of silently no-op'ing because "a project already exists."
+    const { error: deleteErr } = await admin
       .from('projects')
-      .select('id')
+      .delete()
       .eq('poster_id', user.id)
       .eq('poster_type', 'student')
-      .maybeSingle()
-
-    if (existingProject) {
-      console.log('  project already posted, skipping')
-      continue
-    }
+    if (deleteErr) throw deleteErr
 
     const { error: projectErr } = await admin.from('projects').insert({
       poster_id: user.id,
