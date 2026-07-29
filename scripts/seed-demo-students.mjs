@@ -1,4 +1,4 @@
-// Seeds 4 demo students (with real auth.users rows + .edu emails) and 4
+// Seeds demo students (with real auth.users rows + @umass.edu emails) and
 // student-posted projects, for demoing the peer-to-peer marketplace.
 //
 // Why this can't be plain SQL: students.id has a hard FK to auth.users, and
@@ -7,6 +7,10 @@
 // create real auth users first, then inserts the matching profile + project
 // rows. Safe to re-run: it looks up existing users by email and reuses them
 // instead of erroring or duplicating projects.
+//
+// The last entry (Shivansh Soni) is a real account, not a demo persona — it's
+// seeded here too so it's ready to log into during the demo, but it doesn't
+// get a fake posted project attached to it.
 //
 // Usage:
 //   node --env-file=.env.local scripts/seed-demo-students.mjs
@@ -43,8 +47,8 @@ const DEMO_STUDENTS = [
     graduation_year: 2027,
     skills: ['React', 'TypeScript', 'Node.js'],
     project: {
-      title: 'Campus Events Aggregator — need a frontend partner',
-      description: 'Building a single feed that pulls events from every club and department calendar on campus. Backend and scraping are done — need someone to help build a clean React frontend with filtering and a map view.',
+      title: "Textbook Swap needs a frontend that doesn't look like 2004",
+      description: "I built the backend for a peer-to-peer textbook exchange for UMass students, but the frontend is placeholder Bootstrap and it shows. Looking for someone who can turn it into something people actually want to open.",
       type: 'project',
       required_skills: ['React', 'TypeScript', 'Tailwind CSS'],
       complexity_level: 'intermediate',
@@ -55,16 +59,16 @@ const DEMO_STUDENTS = [
     },
   },
   {
-    email: 'jordan.patel@berkeley.edu',
+    email: 'jordan.patel@umass.edu',
     full_name: 'Jordan Patel',
-    university: 'UC Berkeley',
+    university: 'UMass Amherst',
     major: 'Data Science',
     degree_type: 'BA',
     graduation_year: 2026,
     skills: ['Python', 'Pandas', 'Machine Learning'],
     project: {
-      title: 'Predicting dining hall wait times — need a data engineer',
-      description: 'I have a semester of scraped wait-time data and a rough model. Looking for someone to help build a proper ETL pipeline into Postgres and improve the prediction accuracy.',
+      title: 'Can we actually predict when the dining hall gets slammed?',
+      description: "I've been logging wait times at the dining commons all semester and have a rough model, but it's held together with duct tape. Need someone who knows their way around a real ETL pipeline and can help me get this into Postgres properly.",
       type: 'project',
       required_skills: ['Python', 'Pandas', 'PostgreSQL'],
       complexity_level: 'advanced',
@@ -75,16 +79,16 @@ const DEMO_STUDENTS = [
     },
   },
   {
-    email: 'sam.rivera@gatech.edu',
+    email: 'sam.rivera@umass.edu',
     full_name: 'Sam Rivera',
-    university: 'Georgia Tech',
+    university: 'UMass Amherst',
     major: 'Computer Engineering',
     degree_type: 'BS',
     graduation_year: 2028,
     skills: ['C++', 'Arduino', 'Embedded Systems'],
     project: {
-      title: 'Dorm room IoT dashboard — looking for a firmware partner',
-      description: "Wiring up temperature, humidity, and door sensors in my dorm room and want to display it all on a simple dashboard. I've got the frontend mostly figured out — need help with the Arduino/MQTT side.",
+      title: 'Turning my dorm room into a (small) smart home',
+      description: "Got sensors for temperature, humidity, and my door reporting data over MQTT, and now I just need a dashboard to make sense of it all. Great first project if you've never touched Arduino before, I'll walk you through the hardware side.",
       type: 'project',
       required_skills: ['C++', 'Arduino', 'MQTT'],
       complexity_level: 'beginner',
@@ -95,16 +99,16 @@ const DEMO_STUDENTS = [
     },
   },
   {
-    email: 'priya.nair@umich.edu',
+    email: 'priya.nair@umass.edu',
     full_name: 'Priya Nair',
-    university: 'University of Michigan',
+    university: 'UMass Amherst',
     major: 'Information Science',
     degree_type: 'BS',
     graduation_year: 2027,
     skills: ['UI/UX Design', 'Figma', 'React Native'],
     project: {
-      title: 'Study group matcher — need a mobile developer',
-      description: "An app that matches students in the same classes into study groups based on availability and study style. Design and backend are ready — need a React Native developer to help ship the mobile app.",
+      title: "Group chats are a bad way to organize a study group. Let's fix that.",
+      description: "Building an app that matches students in the same classes into study groups based on when they're free and how they like to study. The design and backend logic are mostly done. What I need is someone who can actually ship the React Native app.",
       type: 'part-time',
       required_skills: ['React Native', 'Firebase', 'UI/UX Design'],
       complexity_level: 'intermediate',
@@ -112,8 +116,18 @@ const DEMO_STUDENTS = [
       duration: 'Ongoing',
       hours_per_week: 6,
       is_paid: true,
-      compensation: 'Revenue share once launched',
+      compensation: 'Revenue share once we launch',
     },
+  },
+  {
+    email: 'shivanshsoni@umass.edu',
+    full_name: 'Shivansh Soni',
+    university: 'UMass Amherst',
+    major: 'Computer Science',
+    degree_type: 'BS',
+    graduation_year: 2027,
+    skills: ['React', 'TypeScript', 'Next.js', 'Python'],
+    project: null, // real account — no fake project attached
   },
 ]
 
@@ -162,6 +176,11 @@ async function main() {
     if (studentErr) throw studentErr
     console.log('  student profile upserted')
 
+    if (!demo.project) {
+      console.log('  no project for this account, skipping')
+      continue
+    }
+
     // Only insert the project once per student (idempotent re-run guard).
     const { data: existingProject } = await admin
       .from('projects')
@@ -195,7 +214,8 @@ async function main() {
     console.log('  project posted:', demo.project.title)
   }
 
-  console.log(`\nDone. All demo accounts share the password: ${DEMO_PASSWORD}`)
+  console.log(`\nDone. All seeded demo accounts share the password: ${DEMO_PASSWORD}`)
+  console.log('(That includes shivanshsoni@umass.edu — change it after logging in if you want your own.)')
 }
 
 main().catch((err) => {
