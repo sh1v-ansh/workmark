@@ -1,5 +1,10 @@
 export type PosterType = 'company' | 'faculty'
 
+/** Projects can also be posted by a student (peer-to-peer marketplace).
+ *  verified_work_records stays scoped to `PosterType` (company/faculty) —
+ *  peer collaborations don't flow into that attestation pipeline. */
+export type ProjectPosterType = PosterType | 'student'
+
 export type Student = {
   id: string
   full_name: string | null
@@ -47,7 +52,7 @@ export type Faculty = {
 export type Project = {
   id: string
   poster_id: string
-  poster_type: PosterType
+  poster_type: ProjectPosterType
   poster_display_name: string | null
   title: string | null
   description: string | null
@@ -65,6 +70,7 @@ export type Project = {
   degree_level: string | null
   preferred_majors: string[] | null
   scoped_to_institution: string | null
+  complexity_level: 'beginner' | 'intermediate' | 'advanced' | null
   is_open: boolean
   created_at: string
 }
@@ -81,6 +87,19 @@ export type Application = {
     poster_display_name?: string | null
   }
   students?: Pick<Student, 'full_name' | 'university' | 'gpa' | 'skills' | 'resume_url'>
+}
+
+/** Created only via the service-role client in /api/collab/accept, once a
+ *  peer collaboration request is accepted — exchanges real contact emails
+ *  (pulled from auth.users, which RLS can't see) between the two students. */
+export type ContactShare = {
+  id: string
+  application_id: string
+  student_id: string
+  poster_id: string
+  student_email: string | null
+  poster_email: string | null
+  shared_at: string
 }
 
 export type VerifiedWorkRecord = {

@@ -6,7 +6,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { C, F } from '@/lib/theme/dark-tokens'
 import { useToast } from '@/components/Toast'
-import type { Student, Application, ExperienceRecord, GithubEvidencedSkill, GithubRepoProfile } from '@/lib/types'
+import MarketplaceSection from './MarketplaceSection'
+import type { Student, Application, ExperienceRecord, GithubEvidencedSkill, GithubRepoProfile, Project, ContactShare } from '@/lib/types'
 
 function AppStatusBadge({ status }: { status: string }) {
   const color = status === 'accepted' ? C.accent : status === 'rejected' ? '#DC2626' : C.textMuted
@@ -49,9 +50,12 @@ interface Props {
   experienceRecords: ExperienceRecord[]
   githubSkills: GithubEvidencedSkill[]
   githubRepos: GithubRepoProfile[]
+  postedProjects: Project[]
+  receivedRequests: Application[]
+  contactShares: ContactShare[]
 }
 
-export default function StudentDashboardClient({ student, applications, experienceRecords, githubSkills, githubRepos }: Props) {
+export default function StudentDashboardClient({ student, applications, experienceRecords, githubSkills, githubRepos, postedProjects, receivedRequests, contactShares }: Props) {
   const { toast } = useToast()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -289,22 +293,44 @@ export default function StudentDashboardClient({ student, applications, experien
             </div>
           ) : (
             <div style={{ background: C.surface, border: `1px solid ${C.border}` }}>
-              {applications.map((app, i) => (
-                <div key={app.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', gap: 16, borderTop: i > 0 ? `1px solid ${C.border}` : 'none' }}>
-                  <div>
-                    <p style={{ fontSize: 13, fontWeight: 500, color: C.textSub, marginBottom: 3 }}>
-                      {app.projects?.title ?? 'Project'}
-                    </p>
-                    <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                      {app.projects?.poster_display_name ?? ''} · {fmtDate(app.created_at)}
-                    </p>
+              {applications.map((app, i) => {
+                const share = contactShares.find((s) => s.application_id === app.id)
+                return (
+                  <div key={app.id} style={{ padding: '14px 20px', borderTop: i > 0 ? `1px solid ${C.border}` : 'none' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                      <div>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: C.textSub, marginBottom: 3 }}>
+                          {app.projects?.title ?? 'Project'}
+                        </p>
+                        <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
+                          {app.projects?.poster_display_name ?? ''} · {fmtDate(app.created_at)}
+                        </p>
+                      </div>
+                      <AppStatusBadge status={app.status} />
+                    </div>
+                    {app.status === 'accepted' && share?.poster_email && (
+                      <div style={{ marginTop: 10, padding: '10px 12px', background: C.accentHover, border: `1px solid ${C.accentBorder}` }}>
+                        <p style={{ fontSize: 10, fontFamily: F.mono, color: C.accent, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>✓ Contact shared</p>
+                        <a href={`mailto:${share.poster_email}`} style={{ fontSize: 13, color: C.text, fontFamily: F.mono, textDecoration: 'none' }}>
+                          {share.poster_email}
+                        </a>
+                      </div>
+                    )}
                   </div>
-                  <AppStatusBadge status={app.status} />
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </section>
+
+        {/* ── Peer marketplace: post projects, review collaboration requests ── */}
+        <MarketplaceSection
+          studentId={student.id}
+          studentName={student.full_name}
+          initialPostedProjects={postedProjects}
+          initialReceivedRequests={receivedRequests}
+          contactShares={contactShares}
+        />
 
       </main>
     </div>

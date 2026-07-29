@@ -10,6 +10,7 @@ import type { Project } from '@/lib/types'
 import Link from 'next/link'
 
 interface Filters {
+  posterType: string
   type: string
   workMode: string
   paid: string
@@ -18,6 +19,7 @@ interface Filters {
 }
 
 const DEFAULT_FILTERS: Filters = {
+  posterType: 'all',
   type: 'all',
   workMode: 'all',
   paid: 'all',
@@ -63,6 +65,7 @@ export default function ProjectsPage() {
 
   const filtered = useMemo(() => {
     return projects.filter((p) => {
+      if (filters.posterType !== 'all' && p.poster_type !== filters.posterType) return false
       if (filters.type !== 'all' && p.type !== filters.type) return false
       if (filters.workMode !== 'all' && p.work_mode !== filters.workMode) return false
       if (filters.paid === 'paid' && !p.is_paid) return false
@@ -132,6 +135,17 @@ export default function ProjectsPage() {
                   </button>
                 )}
               </div>
+
+              <FilterGroup label="Posted by">
+                {[
+                  { value: 'all', label: 'Everyone' },
+                  { value: 'student', label: 'Students' },
+                  { value: 'company', label: 'Companies' },
+                  { value: 'faculty', label: 'Faculty' },
+                ].map(({ value, label }) => (
+                  <RadioItem key={value} name="posterType" value={value} checked={filters.posterType === value} onChange={() => update('posterType', value)} label={label} />
+                ))}
+              </FilterGroup>
 
               <FilterGroup label="Type">
                 {['all', 'internship', 'project', 'part-time'].map((t) => (

@@ -10,13 +10,15 @@ interface ApplyModalProps {
   projectId: string
   projectTitle: string
   student: Student
+  heading?: string
+  submitLabel?: string
   onClose: () => void
   onSuccess: () => void
 }
 
 const MIN_PROPOSAL_CHARS = 60
 
-export default function ApplyModal({ projectId, projectTitle, student, onClose, onSuccess }: ApplyModalProps) {
+export default function ApplyModal({ projectId, projectTitle, student, heading = 'Apply to project', submitLabel = 'Submit →', onClose, onSuccess }: ApplyModalProps) {
   const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -69,7 +71,7 @@ export default function ApplyModal({ projectId, projectTitle, student, onClose, 
       <div role="dialog" aria-modal="true" aria-labelledby="apply-modal-title"
         style={{ position: 'relative', width: '100%', maxWidth: 520, background: C.bg, border: `1px solid ${C.border}`, padding: 28, boxShadow: '0 20px 48px rgba(62,31,255,0.15), 0 4px 12px rgba(0,0,0,0.08)', borderRadius: 12, maxHeight: '90vh', overflowY: 'auto' }}
         className="animate-slide-up">
-        <h2 id="apply-modal-title" style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 4, letterSpacing: '-0.01em' }}>Apply to project</h2>
+        <h2 id="apply-modal-title" style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 4, letterSpacing: '-0.01em' }}>{heading}</h2>
         <p style={{ fontSize: 13, color: C.textMuted, fontFamily: F.sans, marginBottom: 24 }}>{projectTitle}</p>
 
         {/* Proposal */}
@@ -123,7 +125,7 @@ export default function ApplyModal({ projectId, projectTitle, student, onClose, 
           </button>
           <button onClick={handleApply} disabled={!canSubmit}
             style={{ flex: 1, padding: '11px 0', background: canSubmit ? C.accent : C.surfaceAlt, border: 'none', color: canSubmit ? '#FFFFFF' : C.textFaint, fontFamily: F.mono, fontSize: 12, fontWeight: 500, cursor: canSubmit ? 'pointer' : 'not-allowed', textTransform: 'uppercase', letterSpacing: '0.06em', borderRadius: 8 }}>
-            {uploading ? 'Submitting…' : 'Submit →'}
+            {uploading ? 'Submitting…' : submitLabel}
           </button>
         </div>
       </div>

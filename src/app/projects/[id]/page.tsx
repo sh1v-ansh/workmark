@@ -35,6 +35,13 @@ export default async function ProjectDetailPage({ params }: Props) {
       .eq('id', project.poster_id)
       .maybeSingle()
     if (f) posterMeta = { name: f.full_name, industry: f.department, location: f.institution, website: null }
+  } else if (project.poster_type === 'student') {
+    const { data: s } = await supabase
+      .from('students')
+      .select('full_name, university, major')
+      .eq('id', project.poster_id)
+      .maybeSingle()
+    if (s) posterMeta = { name: s.full_name, industry: s.major, location: s.university, website: null }
   }
 
   // Check if current user is a student (so we can show apply button)

@@ -27,6 +27,8 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
   const [applied, setApplied] = useState(alreadyApplied)
 
   const poster = posterMeta ?? { name: project.poster_display_name, industry: null, location: null, website: null }
+  const isPeerProject = project.poster_type === 'student'
+  const ctaVerb = isPeerProject ? 'Request to collaborate' : 'Apply now'
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
@@ -128,12 +130,16 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
             <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 20 }}>
               {applied ? (
                 <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                  <p style={{ fontFamily: F.mono, fontSize: 12, color: C.accent, marginBottom: 6, letterSpacing: '0.04em' }}>✓ Application submitted</p>
+                  <p style={{ fontFamily: F.mono, fontSize: 12, color: C.accent, marginBottom: 6, letterSpacing: '0.04em' }}>✓ {isPeerProject ? 'Request sent' : 'Application submitted'}</p>
                   <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, marginBottom: 12 }}>Track it in your dashboard</p>
                   <Link href="/student/dashboard" style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, textDecoration: 'none' }}>
                     View dashboard →
                   </Link>
                 </div>
+              ) : student && student.id === project.poster_id ? (
+                <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, textAlign: 'center', padding: '8px 0' }}>
+                  This is your own project.
+                </p>
               ) : student ? (
                 <button
                   onClick={() => setShowModal(true)}
@@ -141,7 +147,7 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
                   onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.85')}
                   onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
                 >
-                  Apply now
+                  {ctaVerb}
                 </button>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, textAlign: 'center' }}>
@@ -162,6 +168,11 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
                 Details
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Detail label="Complexity" value={
+                  project.complexity_level
+                    ? project.complexity_level.charAt(0).toUpperCase() + project.complexity_level.slice(1)
+                    : undefined
+                } />
                 <Detail label="Duration" value={project.duration} />
                 <Detail label="Hours / week" value={project.hours_per_week ? `${project.hours_per_week}h` : undefined} />
                 <Detail label="Compensation" value={project.compensation} />
@@ -216,6 +227,8 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
         <ApplyModal
           projectId={project.id}
           projectTitle={project.title ?? 'Project'}
+          heading={isPeerProject ? 'Request to collaborate' : 'Apply to project'}
+          submitLabel={isPeerProject ? 'Send request →' : 'Submit →'}
           student={student}
           onClose={() => setShowModal(false)}
           onSuccess={() => {

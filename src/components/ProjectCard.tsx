@@ -12,6 +12,18 @@ const typeLabel: Record<string, string> = {
   'part-time': 'Part-time',
 }
 
+const complexityLabel: Record<string, string> = {
+  beginner: 'Beginner',
+  intermediate: 'Intermediate',
+  advanced: 'Advanced',
+}
+
+function posterFallbackLabel(posterType: string): string {
+  if (posterType === 'faculty') return 'Faculty'
+  if (posterType === 'student') return 'Student'
+  return 'Company'
+}
+
 export default function ProjectCard({ project }: ProjectCardProps) {
   const required = project.required_skills ?? []
   const displaySkills = required.slice(0, 4)
@@ -34,7 +46,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
             {project.title ?? 'Untitled Project'}
           </h3>
           <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-            {project.poster_display_name ?? (project.poster_type === 'faculty' ? 'Faculty' : 'Company')}{project.location ? ` · ${project.location}` : project.work_mode === 'remote' ? ' · Remote' : ''}
+            {project.poster_display_name ?? posterFallbackLabel(project.poster_type)}{project.location ? ` · ${project.location}` : project.work_mode === 'remote' ? ' · Remote' : ''}
           </p>
         </div>
         <span style={{
@@ -49,6 +61,11 @@ export default function ProjectCard({ project }: ProjectCardProps) {
 
       {/* Type / mode badges */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+        {project.poster_type === 'student' && (
+          <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.accent, background: C.accentHover, border: `1px solid ${C.accentBorder}` }}>
+            Student project
+          </span>
+        )}
         {project.type && (
           <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.textMuted, background: C.surfaceAlt, border: `1px solid ${C.border}` }}>
             {typeLabel[project.type] ?? project.type}
@@ -57,6 +74,11 @@ export default function ProjectCard({ project }: ProjectCardProps) {
         {project.work_mode && (
           <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em', color: C.textMuted, background: C.surfaceAlt, border: `1px solid ${C.border}` }}>
             {project.work_mode}
+          </span>
+        )}
+        {project.complexity_level && (
+          <span style={{ fontSize: 9, fontFamily: F.mono, padding: '2px 7px', textTransform: 'uppercase', letterSpacing: '0.08em', color: project.complexity_level === 'advanced' ? '#DC2626' : C.textMuted, background: project.complexity_level === 'advanced' ? 'rgba(248,113,113,0.08)' : C.surfaceAlt, border: `1px solid ${project.complexity_level === 'advanced' ? 'rgba(248,113,113,0.25)' : C.border}` }}>
+            {complexityLabel[project.complexity_level] ?? project.complexity_level}
           </span>
         )}
         {project.work_auth_required && (

@@ -34,6 +34,7 @@ drop table if exists github_evidenced_skills   cascade;
 drop table if exists github_repo_profiles      cascade;
 drop table if exists github_connections        cascade;
 drop table if exists employer_profiles         cascade;
+drop table if exists contact_shares            cascade;
 drop table if exists applications              cascade;
 drop table if exists projects                  cascade;
 drop table if exists faculty                   cascade;
@@ -95,12 +96,12 @@ create table if not exists faculty (
   created_at   timestamptz default now()
 );
 
--- ─── Projects (polymorphic poster: company or faculty) ────────────────────────
+-- ─── Projects (polymorphic poster: company, faculty, or student) ──────────────
 
 create table if not exists projects (
   id                     uuid default gen_random_uuid() primary key,
   poster_id              uuid not null,
-  poster_type            text not null check (poster_type in ('company','faculty')),
+  poster_type            text not null check (poster_type in ('company','faculty','student')),
   poster_display_name    text,
   title                  text,
   description            text,
@@ -118,6 +119,7 @@ create table if not exists projects (
   degree_level           text,
   preferred_majors       text[],
   scoped_to_institution  text,
+  complexity_level       text check (complexity_level in ('beginner','intermediate','advanced')),
   is_open                boolean default true,
   created_at             timestamptz default now()
 );
@@ -133,6 +135,23 @@ create table if not exists applications (
   status         text default 'applied',
   created_at     timestamptz default now(),
   unique (project_id, student_id)
+);
+
+-- ─── Contact shares ─────────────────────────────────────────────────────────────
+--  Peer-to-peer (student-posted) collaboration requests don't flow into the
+--  verified_work_records attestation pipeline — accepting one just exchanges
+--  contact info between the two students. Populated by the service-role
+--  client in /api/collab/accept (real emails come from auth.users, which
+--  isn't queryable under RLS), never inserted by authenticated users directly.
+
+create table if not exists contact_shares (
+  id             uuid default gen_random_uuid() primary key,
+  application_id uuid references applications(id) on delete cascade not null unique,
+  student_id     uuid references students(id) on delete cascade not null,
+  poster_id      uuid not null,
+  student_email  text,
+  poster_email   text,
+  shared_at      timestamptz default now()
 );
 
 -- ─── Verified work records (supersedes experience_records) ────────────────────
@@ -275,6 +294,8 @@ create index if not exists idx_projects_poster        on projects(poster_id, pos
 create index if not exists idx_projects_is_open       on projects(is_open);
 create index if not exists idx_applications_project   on applications(project_id);
 create index if not exists idx_applications_student   on applications(student_id);
+create index if not exists idx_contact_shares_student  on contact_shares(student_id);
+create index if not exists idx_contact_shares_poster   on contact_shares(poster_id);
 create index if not exists idx_vwr_student            on verified_work_records(student_id);
 create index if not exists idx_vwr_poster             on verified_work_records(poster_id, poster_type);
 create index if not exists idx_vwr_token              on verified_work_records(verification_token);
@@ -292,6 +313,7 @@ alter table companies               enable row level security;
 alter table faculty                 enable row level security;
 alter table projects                enable row level security;
 alter table applications            enable row level security;
+alter table contact_shares          enable row level security;
 alter table verified_work_records   enable row level security;
 alter table milestones              enable row level security;
 alter table issue_flags             enable row level security;
@@ -320,6 +342,20 @@ create policy "Posters: read student info via their applications"
       join projects p on p.id = a.project_id
       where a.student_id = students.id
         and p.poster_id = auth.uid()
+    )
+  );
+
+-- Mirrors "Anyone: read company/faculty info for open projects" below —
+-- a student who posts an open project is publicly visible the same way a
+-- posting company or faculty member is.
+create policy "Anyone: read student info for open projects"
+  on students for select
+  using (
+    exists (
+      select 1 from projects p
+      where p.poster_id = students.id
+        and p.poster_type = 'student'
+        and p.is_open = true
     )
   );
 
@@ -411,6 +447,14 @@ create policy "Posters: update application status for their projects"
         and p.poster_id = auth.uid()
     )
   );
+
+-- ── contact_shares ──
+-- Insert-only via the service-role client (bypasses RLS) — no insert policy
+-- needed for authenticated users.
+
+create policy "Contact shares: participants read"
+  on contact_shares for select
+  using (auth.uid() = student_id or auth.uid() = poster_id);
 
 -- ── verified_work_records ──
 
@@ -578,7 +622,7 @@ create policy "Students: update own resume"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
--- Faculty and companies can both read applicant resumes (they're posters).
+-- Companies, faculty, and students can all post projects and act as posters.
 create policy "Posters: read any resume in bucket"
   on storage.objects for select
   using (
@@ -586,6 +630,7 @@ create policy "Posters: read any resume in bucket"
     and (
       exists (select 1 from companies c where c.id = auth.uid())
       or exists (select 1 from faculty f where f.id = auth.uid())
+      or exists (select 1 from students s where s.id = auth.uid())
     )
   );
 

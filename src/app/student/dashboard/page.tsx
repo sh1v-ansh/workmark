@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StudentDashboardClient from './StudentDashboardClient'
+import type { Application } from '@/lib/types'
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
@@ -26,6 +27,33 @@ export default async function StudentDashboardPage() {
     .eq('student_id', user.id)
     .order('created_at', { ascending: false })
 
+  // ── Peer marketplace: projects this student has posted, and the
+  //    collaboration requests received on them ──
+  const { data: postedProjects } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('poster_id', user.id)
+    .eq('poster_type', 'student')
+    .order('created_at', { ascending: false })
+
+  const postedProjectIds = (postedProjects ?? []).map((p) => p.id)
+  let receivedRequests: Application[] = []
+  if (postedProjectIds.length > 0) {
+    const { data } = await supabase
+      .from('applications')
+      .select('*, students(full_name, university, gpa, skills, resume_url)')
+      .in('project_id', postedProjectIds)
+      .order('created_at', { ascending: false })
+    receivedRequests = (data ?? []) as Application[]
+  }
+
+  // Contact shares this student is a party to (either as the applicant on a
+  // peer project or as the poster who accepted someone).
+  const { data: contactShares } = await supabase
+    .from('contact_shares')
+    .select('*')
+    .or(`student_id.eq.${user.id},poster_id.eq.${user.id}`)
+
   // Verified work records
   const { data: experienceRecords } = await supabase
     .from('verified_work_records')
@@ -46,6 +74,9 @@ export default async function StudentDashboardPage() {
       experienceRecords={experienceRecords ?? []}
       githubSkills={githubSkills ?? []}
       githubRepos={githubRepos ?? []}
+      postedProjects={postedProjects ?? []}
+      receivedRequests={receivedRequests}
+      contactShares={contactShares ?? []}
     />
   )
 }
