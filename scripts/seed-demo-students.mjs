@@ -464,7 +464,16 @@ async function main() {
 
     let user = await findUserByEmail(demo.email)
     if (user) {
-      console.log('  auth user already exists, reusing')
+      // Re-assert the demo password + confirmed email on every run, so a
+      // rerun always leaves the account in a known-good login state (e.g. if
+      // the account was created some other way, or a previous run of this
+      // script died partway through before setting these).
+      const { error: updateErr } = await admin.auth.admin.updateUserById(user.id, {
+        password: DEMO_PASSWORD,
+        email_confirm: true,
+      })
+      if (updateErr) throw updateErr
+      console.log('  auth user already exists, reusing (password + confirmation re-asserted)')
     } else {
       const { data, error } = await admin.auth.admin.createUser({
         email: demo.email,
