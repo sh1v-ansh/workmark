@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import ProjectCard from '@/components/ProjectCard'
 import Navbar from '@/components/Navbar'
+import Card from '@/components/Card'
+import { Icon } from '@/components/Icon'
 import { C, F } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 import type { Project } from '@/lib/types'
@@ -113,20 +115,20 @@ export default function ProjectsPage() {
         </header>
       )}
 
-      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '40px 24px' }}>
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontFamily: F.serif, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 6 }}>
+          <h1 style={{ fontFamily: F.serif, fontSize: 30, fontWeight: 700, color: C.text, marginBottom: 6, letterSpacing: '-0.02em' }}>
             Open Projects &amp; Internships
           </h1>
-          <p style={{ fontFamily: F.mono, fontSize: 12, color: C.textFaint }}>
+          <p style={{ fontSize: 13, color: C.textFaint }}>
             {loading ? 'Loading…' : `${filtered.length} of ${projects.length} positions`}
           </p>
         </div>
 
         <div className="mob-col" style={{ display: 'flex', gap: 28, alignItems: 'flex-start' }}>
           {/* Filter sidebar */}
-          <aside className="mob-static mob-w100" style={{ width: 200, flexShrink: 0, position: 'sticky', top: 72 }}>
-            <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 20 }}>
+          <aside className="mob-static mob-w100" style={{ width: 220, flexShrink: 0, position: 'sticky', top: 72 }}>
+            <Card hoverable={false} padding={20}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
                 <span style={{ fontFamily: F.mono, fontSize: 11, color: C.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Filters</span>
                 {hasActiveFilters && (
@@ -174,35 +176,41 @@ export default function ProjectsPage() {
               </FilterGroup>
 
               <FilterGroup label="Skill" last>
-                <input
-                  type="text"
-                  value={filters.skill}
-                  onChange={(e) => update('skill', e.target.value)}
-                  placeholder="e.g. Python, React"
-                  className="dk-input"
-                  style={{ fontSize: 12 }}
-                />
+                <div style={{ position: 'relative' }}>
+                  <Icon name="search" size={14} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: C.textGhost, pointerEvents: 'none' }} />
+                  <input
+                    type="text"
+                    value={filters.skill}
+                    onChange={(e) => update('skill', e.target.value)}
+                    placeholder="e.g. Python, React"
+                    className="dk-input"
+                    style={{ fontSize: 12, paddingLeft: 34 }}
+                  />
+                </div>
               </FilterGroup>
-            </div>
+            </Card>
           </aside>
 
           {/* Project grid */}
           <div style={{ flex: 1, minWidth: 0 }}>
             {loading ? (
-              <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+              <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} style={{ height: 200, background: C.surface, border: `1px solid ${C.border}`, opacity: 0.5 }} />
+                  <div key={i} style={{ height: 200, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 14, opacity: 0.5 }} />
                 ))}
               </div>
             ) : filtered.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '64px 0', color: C.textFaint }}>
-                <p style={{ fontSize: 14, marginBottom: 12 }}>No projects match your filters</p>
-                <button onClick={clearFilters} style={{ fontFamily: F.mono, fontSize: 12, color: C.accent, background: 'none', border: 'none', cursor: 'pointer' }}>
+              <div style={{ textAlign: 'center', padding: '72px 24px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 14 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: '50%', background: C.accentHover, color: C.accent, marginBottom: 14 }}>
+                  <Icon name="search" size={20} />
+                </div>
+                <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 14 }}>No projects match your filters</p>
+                <button onClick={clearFilters} className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}>
                   Clear filters
                 </button>
               </div>
             ) : (
-              <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+              <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
                 {filtered.map((project) => (
                   <ProjectCard key={project.id} project={project} />
                 ))}
