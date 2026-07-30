@@ -35,6 +35,8 @@ drop table if exists github_repo_profiles      cascade;
 drop table if exists github_connections        cascade;
 drop table if exists employer_profiles         cascade;
 drop table if exists contact_shares            cascade;
+drop table if exists peer_records              cascade;
+drop table if exists application_messages      cascade;
 drop table if exists applications              cascade;
 drop table if exists projects                  cascade;
 drop table if exists faculty                   cascade;
@@ -70,6 +72,7 @@ create table if not exists students (
   availability     text,
   hours_per_week   int,
   available_from   date,
+  open_to_collab   boolean default false not null,  -- opt-in: show in the student directory
   created_at       timestamptz default now()
 );
 
@@ -120,6 +123,13 @@ create table if not exists projects (
   preferred_majors       text[],
   scoped_to_institution  text,
   complexity_level       text check (complexity_level in ('beginner','intermediate','advanced')),
+  status                 text default 'open' not null check (status in ('open','in_progress','filled','closed')),
+  team_size              int default 1,
+  view_count             int default 0 not null,
+  repo_url               text,
+  demo_url               text,
+  start_date             date,
+  renewed_at             timestamptz,
   is_open                boolean default true,
   created_at             timestamptz default now()
 );
@@ -132,9 +142,21 @@ create table if not exists applications (
   student_id     uuid references students(id) on delete cascade,
   resume_url     text,
   proposal_text  text,
-  status         text default 'applied',
+  status         text default 'applied',  -- 'applied' | 'accepted' | 'rejected' | 'withdrawn'
   created_at     timestamptz default now(),
   unique (project_id, student_id)
+);
+
+-- ─── Application messages ───────────────────────────────────────────────────────
+--  A small conversation thread on a pending application, so either side can
+--  ask a clarifying question before committing to accept/decline.
+
+create table if not exists application_messages (
+  id             uuid default gen_random_uuid() primary key,
+  application_id uuid references applications(id) on delete cascade not null,
+  sender_id      uuid not null,
+  body           text not null,
+  created_at     timestamptz default now()
 );
 
 -- ─── Contact shares ─────────────────────────────────────────────────────────────
@@ -152,6 +174,28 @@ create table if not exists contact_shares (
   student_email  text,
   poster_email   text,
   shared_at      timestamptz default now()
+);
+
+-- ─── Peer records ───────────────────────────────────────────────────────────────
+--  A much lighter version of verified_work_records for peer-to-peer
+--  collaborations: no 6-question co-write, no tiers, just "did this happen"
+--  confirmed by both sides. Created by /api/collab/accept the moment a
+--  request is accepted; locked once both confirm via
+--  /api/collab/confirm-completion.
+
+create table if not exists peer_records (
+  id                    uuid default gen_random_uuid() primary key,
+  application_id        uuid references applications(id) on delete cascade not null unique,
+  project_id            uuid references projects(id) on delete cascade not null,
+  poster_id             uuid not null,
+  student_id            uuid references students(id) on delete cascade not null,
+  project_title         text,
+  skills_used           text[],
+  summary               text,
+  poster_confirmed_at   timestamptz,
+  student_confirmed_at  timestamptz,
+  locked_at             timestamptz,
+  created_at            timestamptz default now()
 );
 
 -- ─── Verified work records (supersedes experience_records) ────────────────────
@@ -294,8 +338,11 @@ create index if not exists idx_projects_poster        on projects(poster_id, pos
 create index if not exists idx_projects_is_open       on projects(is_open);
 create index if not exists idx_applications_project   on applications(project_id);
 create index if not exists idx_applications_student   on applications(student_id);
+create index if not exists idx_application_messages_application on application_messages(application_id);
 create index if not exists idx_contact_shares_student  on contact_shares(student_id);
 create index if not exists idx_contact_shares_poster   on contact_shares(poster_id);
+create index if not exists idx_peer_records_student   on peer_records(student_id);
+create index if not exists idx_peer_records_poster    on peer_records(poster_id);
 create index if not exists idx_vwr_student            on verified_work_records(student_id);
 create index if not exists idx_vwr_poster             on verified_work_records(poster_id, poster_type);
 create index if not exists idx_vwr_token              on verified_work_records(verification_token);
@@ -313,7 +360,9 @@ alter table companies               enable row level security;
 alter table faculty                 enable row level security;
 alter table projects                enable row level security;
 alter table applications            enable row level security;
+alter table application_messages    enable row level security;
 alter table contact_shares          enable row level security;
+alter table peer_records            enable row level security;
 alter table verified_work_records   enable row level security;
 alter table milestones              enable row level security;
 alter table issue_flags             enable row level security;
@@ -358,6 +407,12 @@ create policy "Anyone: read student info for open projects"
         and p.is_open = true
     )
   );
+
+-- Opt-in student directory — only visible to other signed-in students, and
+-- only for students who've explicitly turned it on (default off).
+create policy "Anyone signed in: read opted-in student directory"
+  on students for select
+  using (open_to_collab = true and auth.uid() is not null);
 
 -- ── companies ──
 
@@ -448,12 +503,61 @@ create policy "Posters: update application status for their projects"
     )
   );
 
+-- A student can withdraw their own still-pending request. USING restricts
+-- which rows are eligible (must be theirs, must currently be "applied");
+-- WITH CHECK restricts what the row is allowed to become (must land on
+-- "withdrawn") — together they only permit this one transition.
+create policy "Students: withdraw own pending application"
+  on applications for update
+  using (auth.uid() = student_id and status = 'applied')
+  with check (auth.uid() = student_id and status = 'withdrawn');
+
+-- ── application_messages ──
+-- A small conversation thread on a pending application — either participant
+-- (the applicant, or the project's poster) can read and post to it.
+
+create policy "Application participants: read messages"
+  on application_messages for select
+  using (
+    exists (
+      select 1 from applications a
+      join projects p on p.id = a.project_id
+      where a.id = application_messages.application_id
+        and (a.student_id = auth.uid() or p.poster_id = auth.uid())
+    )
+  );
+
+create policy "Application participants: send messages"
+  on application_messages for insert
+  with check (
+    sender_id = auth.uid()
+    and exists (
+      select 1 from applications a
+      join projects p on p.id = a.project_id
+      where a.id = application_messages.application_id
+        and (a.student_id = auth.uid() or p.poster_id = auth.uid())
+    )
+  );
+
 -- ── contact_shares ──
 -- Insert-only via the service-role client (bypasses RLS) — no insert policy
 -- needed for authenticated users.
 
 create policy "Contact shares: participants read"
   on contact_shares for select
+  using (auth.uid() = student_id or auth.uid() = poster_id);
+
+-- ── peer_records ──
+-- Inserted via the service-role client in /api/collab/accept (same
+-- centralized-write reasoning as contact_shares). Confirming completion runs
+-- under the caller's own session, so it needs a real update policy.
+
+create policy "Peer records: participants read"
+  on peer_records for select
+  using (auth.uid() = student_id or auth.uid() = poster_id);
+
+create policy "Peer records: participants confirm completion"
+  on peer_records for update
   using (auth.uid() = student_id or auth.uid() = poster_id);
 
 -- ── verified_work_records ──

@@ -7,10 +7,11 @@ import Navbar from '@/components/Navbar'
 import { C, F } from '@/lib/theme/dark-tokens'
 import { useToast } from '@/components/Toast'
 import MarketplaceSection from './MarketplaceSection'
-import type { Student, Application, ExperienceRecord, GithubEvidencedSkill, GithubRepoProfile, Project, ContactShare } from '@/lib/types'
+import MessageThread from './MessageThread'
+import type { Student, Application, ExperienceRecord, GithubEvidencedSkill, GithubRepoProfile, Project, ContactShare, PeerRecord } from '@/lib/types'
 
 function AppStatusBadge({ status }: { status: string }) {
-  const color = status === 'accepted' ? C.accent : status === 'rejected' ? '#DC2626' : C.textMuted
+  const color = status === 'accepted' ? C.accent : status === 'rejected' ? '#DC2626' : status === 'withdrawn' ? C.textFaint : C.textMuted
   const bg = status === 'accepted' ? C.accentHover : status === 'rejected' ? 'rgba(248,113,113,0.1)' : C.surfaceAlt
   const border = status === 'accepted' ? C.accentBorder : status === 'rejected' ? 'rgba(248,113,113,0.3)' : C.border
   return (
@@ -53,11 +54,52 @@ interface Props {
   postedProjects: Project[]
   receivedRequests: Application[]
   contactShares: ContactShare[]
+  peerRecords: PeerRecord[]
+  githubSkillsByApplicant: Record<string, GithubEvidencedSkill[]>
 }
 
-export default function StudentDashboardClient({ student, applications, experienceRecords, githubSkills, githubRepos, postedProjects, receivedRequests, contactShares }: Props) {
+export default function StudentDashboardClient({ student, applications: initialApplications, experienceRecords, githubSkills, githubRepos, postedProjects, receivedRequests, contactShares, peerRecords: initialPeerRecords, githubSkillsByApplicant }: Props) {
   const { toast } = useToast()
   const router = useRouter()
+  const [peerRecords, setPeerRecords] = useState<PeerRecord[]>(initialPeerRecords)
+  const [applications, setApplications] = useState(initialApplications)
+
+  async function handleWithdraw(applicationId: string) {
+    if (!confirm('Withdraw this collaboration request?')) return
+    try {
+      const res = await fetch('/api/collab/withdraw', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Could not withdraw.')
+      setApplications((prev) => prev.map((a) => (a.id === applicationId ? { ...a, status: 'withdrawn' } : a)))
+      toast('Request withdrawn.', 'success')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not withdraw.', 'error')
+    }
+  }
+
+  async function handleConfirmCompletion(applicationId: string) {
+    try {
+      const res = await fetch('/api/collab/confirm-completion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Could not confirm.')
+      setPeerRecords((prev) => prev.map((r) => {
+        if (r.application_id !== applicationId) return r
+        const now = new Date().toISOString()
+        return { ...r, student_confirmed_at: now, locked_at: json.locked ? now : r.locked_at }
+      }))
+      toast(json.locked ? 'Confirmed! Both sides agree, this collaboration is locked in.' : 'Confirmed. Waiting on the other side.', 'success')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not confirm.', 'error')
+    }
+  }
   const searchParams = useSearchParams()
   const [scanning, setScanning] = useState(false)
 
@@ -295,6 +337,7 @@ export default function StudentDashboardClient({ student, applications, experien
             <div style={{ background: C.surface, border: `1px solid ${C.border}` }}>
               {applications.map((app, i) => {
                 const share = contactShares.find((s) => s.application_id === app.id)
+                const record = peerRecords.find((r) => r.application_id === app.id)
                 return (
                   <div key={app.id} style={{ padding: '14px 20px', borderTop: i > 0 ? `1px solid ${C.border}` : 'none' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
@@ -316,6 +359,37 @@ export default function StudentDashboardClient({ student, applications, experien
                         </a>
                       </div>
                     )}
+                    {record && (
+                      <div style={{ marginTop: 8 }}>
+                        {record.locked_at ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', fontSize: 10, fontFamily: F.mono, color: C.accent, background: C.accentHover, border: `1px solid ${C.accentBorder}`, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            ✓ Collaboration confirmed
+                          </span>
+                        ) : record.student_confirmed_at ? (
+                          <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>Waiting on the poster to confirm too</p>
+                        ) : (
+                          <button onClick={() => handleConfirmCompletion(app.id)}
+                            style={{ fontSize: 11, fontFamily: F.mono, color: C.accent, background: 'transparent', border: `1px solid ${C.accentBorder}`, padding: '5px 12px', cursor: 'pointer' }}>
+                            Mark this collaboration as complete
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {app.status === 'applied' && (
+                      <div style={{ marginTop: 8 }}>
+                        <button onClick={() => handleWithdraw(app.id)}
+                          style={{ fontSize: 11, fontFamily: F.mono, color: C.textFaint, background: 'transparent', border: `1px solid ${C.border}`, padding: '5px 12px', cursor: 'pointer' }}>
+                          Withdraw request
+                        </button>
+                      </div>
+                    )}
+                    {(app.status === 'applied' || app.status === 'accepted') && (
+                      <MessageThread
+                        applicationId={app.id}
+                        currentUserId={student.id}
+                        otherPartyLabel={app.projects?.poster_display_name ?? 'the poster'}
+                      />
+                    )}
                   </div>
                 )
               })}
@@ -330,6 +404,8 @@ export default function StudentDashboardClient({ student, applications, experien
           initialPostedProjects={postedProjects}
           initialReceivedRequests={receivedRequests}
           contactShares={contactShares}
+          initialPeerRecords={peerRecords}
+          githubSkillsByApplicant={githubSkillsByApplicant}
         />
 
       </main>

@@ -23,6 +23,8 @@ export type Student = {
   availability: string | null
   hours_per_week: number | null
   available_from: string | null
+  /** Opt-in: show up in the /students directory. Default off. */
+  open_to_collab: boolean
   created_at: string
 }
 
@@ -71,6 +73,13 @@ export type Project = {
   preferred_majors: string[] | null
   scoped_to_institution: string | null
   complexity_level: 'beginner' | 'intermediate' | 'advanced' | null
+  status: 'open' | 'in_progress' | 'filled' | 'closed'
+  team_size: number | null
+  view_count: number
+  repo_url: string | null
+  demo_url: string | null
+  start_date: string | null
+  renewed_at: string | null
   is_open: boolean
   created_at: string
 }
@@ -81,12 +90,22 @@ export type Application = {
   student_id: string
   resume_url: string | null
   proposal_text: string | null
+  /** 'applied' | 'accepted' | 'rejected' | 'withdrawn' */
   status: string
   created_at: string
   projects?: Pick<Project, 'title' | 'poster_id' | 'poster_type'> & {
     poster_display_name?: string | null
   }
   students?: Pick<Student, 'full_name' | 'university' | 'gpa' | 'skills' | 'resume_url'>
+}
+
+/** A message in the small pre-accept conversation thread on an application. */
+export type ApplicationMessage = {
+  id: string
+  application_id: string
+  sender_id: string
+  body: string
+  created_at: string
 }
 
 /** Created only via the service-role client in /api/collab/accept, once a
@@ -100,6 +119,25 @@ export type ContactShare = {
   student_email: string | null
   poster_email: string | null
   shared_at: string
+}
+
+/** A lightweight mutual "yes, this collaboration happened" attestation for
+ *  peer (student-posted) projects — separate from VerifiedWorkRecord, which
+ *  stays scoped to the fuller employer/faculty attestation pipeline. Created
+ *  by /api/collab/accept; locked once both sides confirm. */
+export type PeerRecord = {
+  id: string
+  application_id: string
+  project_id: string
+  poster_id: string
+  student_id: string
+  project_title: string | null
+  skills_used: string[] | null
+  summary: string | null
+  poster_confirmed_at: string | null
+  student_confirmed_at: string | null
+  locked_at: string | null
+  created_at: string
 }
 
 export type VerifiedWorkRecord = {

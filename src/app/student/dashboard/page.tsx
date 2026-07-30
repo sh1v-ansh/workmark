@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StudentDashboardClient from './StudentDashboardClient'
-import type { Application } from '@/lib/types'
+import type { Application, GithubEvidencedSkill } from '@/lib/types'
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
@@ -38,6 +38,7 @@ export default async function StudentDashboardPage() {
 
   const postedProjectIds = (postedProjects ?? []).map((p) => p.id)
   let receivedRequests: Application[] = []
+  let githubSkillsByApplicant: Record<string, GithubEvidencedSkill[]> = {}
   if (postedProjectIds.length > 0) {
     const { data } = await supabase
       .from('applications')
@@ -45,14 +46,29 @@ export default async function StudentDashboardPage() {
       .in('project_id', postedProjectIds)
       .order('created_at', { ascending: false })
     receivedRequests = (data ?? []) as Application[]
+
+    // GitHub-evidenced (Tier 3) skills for each applicant, same trust signal
+    // already shown on the company/faculty dashboards.
+    const applicantIds = Array.from(new Set(receivedRequests.map((a) => a.student_id)))
+    if (applicantIds.length > 0) {
+      const { data: ghSkills } = await supabase
+        .from('github_evidenced_skills')
+        .select('*')
+        .in('student_id', applicantIds)
+        .order('evidence_count', { ascending: false })
+      for (const s of (ghSkills ?? []) as GithubEvidencedSkill[]) {
+        (githubSkillsByApplicant[s.student_id] ||= []).push(s)
+      }
+    }
   }
 
-  // Contact shares this student is a party to (either as the applicant on a
-  // peer project or as the poster who accepted someone).
-  const { data: contactShares } = await supabase
-    .from('contact_shares')
-    .select('*')
-    .or(`student_id.eq.${user.id},poster_id.eq.${user.id}`)
+  // Contact shares and peer-record attestations this student is a party to
+  // (either as the applicant on a peer project or as the poster who accepted
+  // someone).
+  const [{ data: contactShares }, { data: peerRecords }] = await Promise.all([
+    supabase.from('contact_shares').select('*').or(`student_id.eq.${user.id},poster_id.eq.${user.id}`),
+    supabase.from('peer_records').select('*').or(`student_id.eq.${user.id},poster_id.eq.${user.id}`),
+  ])
 
   // Verified work records
   const { data: experienceRecords } = await supabase
@@ -77,6 +93,8 @@ export default async function StudentDashboardPage() {
       postedProjects={postedProjects ?? []}
       receivedRequests={receivedRequests}
       contactShares={contactShares ?? []}
+      peerRecords={peerRecords ?? []}
+      githubSkillsByApplicant={githubSkillsByApplicant}
     />
   )
 }

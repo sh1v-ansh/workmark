@@ -6,14 +6,17 @@ import { NextResponse } from 'next/server'
  * POST /api/collab/accept
  * body: { applicationId: string }
  *
- * Accepts a collaboration request on a student-posted project and exchanges
- * contact info between the two students. Peer collaborations don't flow into
- * verified_work_records (that pipeline stays scoped to employer/faculty
- * attestation) — accepting just unlocks each side's real email.
+ * Accepts a collaboration request on a student-posted project: exchanges
+ * contact info between the two students, and opens a peer_records row so the
+ * collaboration can later be mutually confirmed as completed. Peer
+ * collaborations don't flow into verified_work_records (that pipeline stays
+ * scoped to employer/faculty attestation).
  *
  * The status update runs under the caller's own session (RLS already only
- * lets a project's poster update its applications). Reading real emails
- * requires service_role since auth.users isn't queryable under RLS.
+ * lets a project's poster update its applications). Reading real emails, and
+ * writing contact_shares/peer_records, needs service_role — auth.users isn't
+ * queryable under RLS, and both tables are insert-only for authenticated
+ * users by design (centralizes the write path in this one reviewed route).
  */
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -36,11 +39,13 @@ export async function POST(request: Request) {
     .from('applications')
     .update({ status: 'accepted' })
     .eq('id', applicationId)
-    .select('id, student_id, project_id')
+    .select('id, student_id, project_id, projects(title, required_skills)')
     .maybeSingle()
 
   if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 })
   if (!updated) return NextResponse.json({ error: 'Application not found, or you are not the poster.' }, { status: 404 })
+
+  const project = (updated.projects as unknown) as { title: string | null; required_skills: string[] | null } | null
 
   // If contact info was already shared (e.g. a retry), just return it.
   const { data: existingShare } = await supabase
@@ -75,6 +80,17 @@ export async function POST(request: Request) {
   })
 
   if (shareErr) return NextResponse.json({ error: shareErr.message }, { status: 500 })
+
+  const { error: recordErr } = await admin.from('peer_records').insert({
+    application_id: updated.id,
+    project_id: updated.project_id,
+    poster_id: user.id,
+    student_id: updated.student_id,
+    project_title: project?.title ?? null,
+    skills_used: project?.required_skills ?? null,
+  })
+
+  if (recordErr) return NextResponse.json({ error: recordErr.message }, { status: 500 })
 
   return NextResponse.json({ ok: true, student_email: studentEmail, poster_email: posterEmail })
 }

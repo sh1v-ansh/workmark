@@ -49,6 +49,9 @@ export default function Navbar({ role, userName }: NavbarProps) {
         {/* Desktop links */}
         <div className="mob-hide" style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
           <Link href="/projects" aria-current={pathname === '/projects' ? 'page' : undefined} style={linkStyle('/projects')}>Browse</Link>
+          {role === 'student' && (
+            <Link href="/students" aria-current={pathname === '/students' ? 'page' : undefined} style={linkStyle('/students')}>Students</Link>
+          )}
           <Link href={dashboardHref} aria-current={pathname === dashboardHref ? 'page' : undefined} style={linkStyle(dashboardHref)}>Dashboard</Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 16, borderLeft: `1px solid ${C.border}` }}>
             {userName && (

@@ -4,12 +4,21 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import { C, F } from '@/lib/theme/dark-tokens'
-import type { Project, Application, ContactShare } from '@/lib/types'
+import MessageThread from './MessageThread'
+import type { Project, Application, ContactShare, PeerRecord, GithubEvidencedSkill } from '@/lib/types'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function fmtDate(s: string) {
   return new Date(s).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+const STALE_MS = 21 * 24 * 60 * 60 * 1000 // 3 weeks
+
+function isStale(project: Project): boolean {
+  if (!project.is_open || project.status !== 'open') return false
+  const anchor = project.renewed_at ?? project.created_at
+  return Date.now() - new Date(anchor).getTime() > STALE_MS
 }
 
 const COMPLEXITY_LABEL: Record<string, string> = {
@@ -26,6 +35,24 @@ function ComplexityBadge({ level }: { level: string | null }) {
   return (
     <span style={{ fontSize: 9, fontFamily: F.mono, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '0.08em', color, background: bg, border: `1px solid ${border}` }}>
       {COMPLEXITY_LABEL[level] ?? level}
+    </span>
+  )
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  open: 'Open',
+  in_progress: 'In progress',
+  filled: 'Filled',
+  closed: 'Closed',
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const color = status === 'open' ? C.accent : status === 'in_progress' ? '#D97706' : C.textFaint
+  const bg = status === 'open' ? C.accentHover : status === 'in_progress' ? 'rgba(217,119,6,0.08)' : C.surfaceAlt
+  const border = status === 'open' ? C.accentBorder : status === 'in_progress' ? 'rgba(217,119,6,0.3)' : C.border
+  return (
+    <span style={{ fontSize: 9, fontFamily: F.mono, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '0.08em', color, background: bg, border: `1px solid ${border}` }}>
+      {STATUS_LABEL[status] ?? status}
     </span>
   )
 }
@@ -76,48 +103,75 @@ function TagInput({ label, inputId, value, onChange, placeholder }: {
   )
 }
 
-// ─── New (peer) project form ───────────────────────────────────────────────────
+// ─── Peer project form — handles both create and edit ────────────────────────
 
-function NewPeerProjectForm({ studentId, studentName, onCreated, onCancel }: {
-  studentId: string; studentName: string | null; onCreated: (p: Project) => void; onCancel: () => void
+function PeerProjectForm({ studentId, studentName, initialProject, onSaved, onCancel }: {
+  studentId: string; studentName: string | null; initialProject?: Project
+  onSaved: (p: Project) => void; onCancel: () => void
 }) {
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [type, setType] = useState('project')
-  const [complexityLevel, setComplexityLevel] = useState('intermediate')
-  const [reqSkills, setReqSkills] = useState<string[]>([])
-  const [workMode, setWorkMode] = useState('remote')
-  const [duration, setDuration] = useState('')
-  const [hoursPerWeek, setHoursPerWeek] = useState('')
-  const [isPaid, setIsPaid] = useState(false)
-  const [compensation, setCompensation] = useState('')
+  const [title, setTitle] = useState(initialProject?.title ?? '')
+  const [description, setDescription] = useState(initialProject?.description ?? '')
+  const [type, setType] = useState(initialProject?.type ?? 'project')
+  const [complexityLevel, setComplexityLevel] = useState<'beginner' | 'intermediate' | 'advanced'>(initialProject?.complexity_level ?? 'intermediate')
+  const [reqSkills, setReqSkills] = useState<string[]>(initialProject?.required_skills ?? [])
+  const [prefSkills, setPrefSkills] = useState<string[]>(initialProject?.preferred_skills ?? [])
+  const [workMode, setWorkMode] = useState(initialProject?.work_mode ?? 'remote')
+  const [duration, setDuration] = useState(initialProject?.duration ?? '')
+  const [hoursPerWeek, setHoursPerWeek] = useState(initialProject?.hours_per_week?.toString() ?? '')
+  const [teamSize, setTeamSize] = useState(initialProject?.team_size?.toString() ?? '1')
+  const [startDate, setStartDate] = useState(initialProject?.start_date ?? '')
+  const [repoUrl, setRepoUrl] = useState(initialProject?.repo_url ?? '')
+  const [demoUrl, setDemoUrl] = useState(initialProject?.demo_url ?? '')
+  const [isPaid, setIsPaid] = useState(initialProject?.is_paid ?? false)
+  const [compensation, setCompensation] = useState(initialProject?.compensation ?? '')
+
+  const isEdit = !!initialProject
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     const supabase = createClient()
+    const payload = {
+      title, description: description || null, type,
+      complexity_level: complexityLevel,
+      required_skills: reqSkills.length > 0 ? reqSkills : null,
+      preferred_skills: prefSkills.length > 0 ? prefSkills : null,
+      work_mode: workMode, duration: duration || null,
+      hours_per_week: hoursPerWeek ? parseInt(hoursPerWeek) : null,
+      team_size: teamSize ? parseInt(teamSize) : null,
+      start_date: startDate || null,
+      repo_url: repoUrl || null,
+      demo_url: demoUrl || null,
+      is_paid: isPaid, compensation: isPaid ? (compensation || null) : null,
+    }
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          poster_id: studentId, poster_type: 'student',
-          poster_display_name: studentName,
-          title, description: description || null, type,
-          complexity_level: complexityLevel,
-          required_skills: reqSkills.length > 0 ? reqSkills : null,
-          work_mode: workMode, duration: duration || null,
-          hours_per_week: hoursPerWeek ? parseInt(hoursPerWeek) : null,
-          is_paid: isPaid, compensation: compensation || null,
-          is_open: true,
-        })
-        .select().single()
-      if (error) throw error
-      toast('Project posted!', 'success')
-      onCreated(data as Project)
+      if (isEdit) {
+        const { data, error } = await supabase
+          .from('projects')
+          .update(payload)
+          .eq('id', initialProject.id)
+          .select().single()
+        if (error) throw error
+        toast('Project updated.', 'success')
+        onSaved(data as Project)
+      } else {
+        const { data, error } = await supabase
+          .from('projects')
+          .insert({
+            poster_id: studentId, poster_type: 'student',
+            poster_display_name: studentName,
+            ...payload,
+            is_open: true, status: 'open',
+          })
+          .select().single()
+        if (error) throw error
+        toast('Project posted!', 'success')
+        onSaved(data as Project)
+      }
     } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Failed to create project.', 'error')
+      toast(err instanceof Error ? err.message : 'Failed to save project.', 'error')
     } finally {
       setLoading(false)
     }
@@ -147,7 +201,7 @@ function NewPeerProjectForm({ studentId, studentName, onCreated, onCancel }: {
         </div>
         <div style={fieldGap}>
           <Label htmlFor="peer-proj-complexity">Complexity level</Label>
-          <select id="peer-proj-complexity" value={complexityLevel} onChange={(e) => setComplexityLevel(e.target.value)} className="dk-select">
+          <select id="peer-proj-complexity" value={complexityLevel ?? 'intermediate'} onChange={(e) => setComplexityLevel(e.target.value as 'beginner' | 'intermediate' | 'advanced')} className="dk-select">
             <option value="beginner">Beginner</option>
             <option value="intermediate">Intermediate</option>
             <option value="advanced">Advanced</option>
@@ -155,7 +209,7 @@ function NewPeerProjectForm({ studentId, studentName, onCreated, onCancel }: {
         </div>
         <div style={fieldGap}>
           <Label htmlFor="peer-proj-work-mode">Work mode</Label>
-          <select id="peer-proj-work-mode" value={workMode} onChange={(e) => setWorkMode(e.target.value)} className="dk-select">
+          <select id="peer-proj-work-mode" value={workMode ?? 'remote'} onChange={(e) => setWorkMode(e.target.value)} className="dk-select">
             <option value="remote">Remote</option>
             <option value="hybrid">Hybrid</option>
             <option value="onsite">Onsite</option>
@@ -169,6 +223,25 @@ function NewPeerProjectForm({ studentId, studentName, onCreated, onCancel }: {
           <Label htmlFor="peer-proj-hours">Hours / week</Label>
           <input id="peer-proj-hours" type="number" min={1} max={40} value={hoursPerWeek} onChange={(e) => setHoursPerWeek(e.target.value)} className="dk-input" placeholder="10" />
         </div>
+        <div style={fieldGap}>
+          <Label htmlFor="peer-proj-team-size">Collaborators wanted</Label>
+          <input id="peer-proj-team-size" type="number" min={1} max={10} value={teamSize} onChange={(e) => setTeamSize(e.target.value)} className="dk-input" placeholder="1" />
+        </div>
+        <div style={fieldGap}>
+          <Label htmlFor="peer-proj-start">Start date (optional)</Label>
+          <input id="peer-proj-start" type="date" value={startDate ?? ''} onChange={(e) => setStartDate(e.target.value)} className="dk-input" />
+        </div>
+      </div>
+
+      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div style={fieldGap}>
+          <Label htmlFor="peer-proj-repo">Repo link (optional)</Label>
+          <input id="peer-proj-repo" type="url" value={repoUrl ?? ''} onChange={(e) => setRepoUrl(e.target.value)} className="dk-input" placeholder="https://github.com/you/project" />
+        </div>
+        <div style={fieldGap}>
+          <Label htmlFor="peer-proj-demo">Live demo link (optional)</Label>
+          <input id="peer-proj-demo" type="url" value={demoUrl ?? ''} onChange={(e) => setDemoUrl(e.target.value)} className="dk-input" placeholder="https://your-demo.vercel.app" />
+        </div>
       </div>
 
       <div style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -179,19 +252,20 @@ function NewPeerProjectForm({ studentId, studentName, onCreated, onCancel }: {
         {isPaid && (
           <div style={fieldGap}>
             <Label htmlFor="peer-proj-comp">Details</Label>
-            <input id="peer-proj-comp" value={compensation} onChange={(e) => setCompensation(e.target.value)} className="dk-input" placeholder="Revenue share, $15/hr, course credit…" />
+            <input id="peer-proj-comp" value={compensation ?? ''} onChange={(e) => setCompensation(e.target.value)} className="dk-input" placeholder="Revenue share, $15/hr, course credit…" />
           </div>
         )}
       </div>
 
       <TagInput label="Skills needed" inputId="peer-proj-skills" value={reqSkills} onChange={setReqSkills} placeholder="React, Figma, PostgreSQL…" />
+      <TagInput label="Nice-to-have skills (optional)" inputId="peer-proj-pref-skills" value={prefSkills} onChange={setPrefSkills} placeholder="Docker, GraphQL…" />
 
       <div style={{ display: 'flex', gap: 10, paddingTop: 8 }}>
         <button type="button" onClick={onCancel} style={{ flex: 1, padding: '11px 0', background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono, fontSize: 12, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
           Cancel
         </button>
         <button type="submit" disabled={loading} style={{ flex: 1, padding: '11px 0', background: loading ? C.surfaceAlt : C.accent, border: 'none', color: loading ? C.textMuted : '#FFFFFF', fontFamily: F.mono, fontSize: 12, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
-          {loading ? 'Posting…' : 'Post project →'}
+          {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Post project →'}
         </button>
       </div>
     </form>
@@ -200,8 +274,10 @@ function NewPeerProjectForm({ studentId, studentName, onCreated, onCancel }: {
 
 // ─── Incoming request row ──────────────────────────────────────────────────────
 
-function RequestRow({ app, contactShare, onAccept, onReject }: {
-  app: Application; contactShare?: ContactShare; onAccept: (id: string) => void; onReject: (id: string) => void
+function RequestRow({ app, contactShare, peerRecord, githubSkills, currentUserId, onAccept, onReject, onConfirmCompletion }: {
+  app: Application; contactShare?: ContactShare; peerRecord?: PeerRecord; githubSkills: GithubEvidencedSkill[]
+  currentUserId: string
+  onAccept: (id: string) => void; onReject: (id: string) => void; onConfirmCompletion: (id: string) => void
 }) {
   const applicant = app.students
   const [acting, setActing] = useState(false)
@@ -219,10 +295,25 @@ function RequestRow({ app, contactShare, onAccept, onReject }: {
             {applicant?.university ?? ''}
           </p>
           {applicant?.skills && applicant.skills.length > 0 && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
-              {applicant.skills.slice(0, 8).map((s) => (
-                <span key={s} style={{ fontSize: 10, padding: '2px 6px', background: C.surface, border: `1px solid ${C.border}`, color: C.textFaint, fontFamily: F.mono }}>{s}</span>
-              ))}
+            <div style={{ marginTop: 8 }}>
+              <p style={{ fontSize: 9, color: C.textFaint, fontFamily: F.mono, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Self-reported</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {applicant.skills.slice(0, 8).map((s) => (
+                  <span key={s} style={{ fontSize: 10, padding: '2px 6px', background: C.surface, border: `1px solid ${C.border}`, color: C.textFaint, fontFamily: F.mono }}>{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+          {githubSkills.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <p style={{ fontSize: 9, color: C.accent, fontFamily: F.mono, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>Tier 3 · GitHub-evidenced</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {githubSkills.slice(0, 8).map((s) => (
+                  <span key={s.id} style={{ fontSize: 10, padding: '2px 6px', background: C.accentHover, border: `1px solid ${C.accentBorder}`, color: C.accent, fontFamily: F.mono }}>
+                    {s.skill} <span style={{ opacity: 0.7 }}>· {s.evidence_count}</span>
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
@@ -273,12 +364,33 @@ function RequestRow({ app, contactShare, onAccept, onReject }: {
       )}
 
       {app.status === 'accepted' && contactShare?.student_email && (
-        <div style={{ borderTop: `1px solid ${C.accentBorder}`, background: C.accentHover, margin: '0 -16px -14px', padding: '10px 16px 14px' }}>
+        <div style={{ borderTop: `1px solid ${C.accentBorder}`, background: C.accentHover, margin: '0 -16px 0', padding: '10px 16px' }}>
           <p style={{ fontSize: 10, fontFamily: F.mono, color: C.accent, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>✓ Contact shared</p>
           <a href={`mailto:${contactShare.student_email}`} style={{ fontSize: 13, color: C.text, fontFamily: F.mono, textDecoration: 'none' }}>
             {contactShare.student_email}
           </a>
         </div>
+      )}
+
+      {app.status === 'accepted' && peerRecord && (
+        <div>
+          {peerRecord.locked_at ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '2px 8px', fontSize: 10, fontFamily: F.mono, color: C.accent, background: C.accentHover, border: `1px solid ${C.accentBorder}`, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              ✓ Collaboration confirmed
+            </span>
+          ) : peerRecord.poster_confirmed_at ? (
+            <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>Waiting on {applicant?.full_name ?? 'them'} to confirm too</p>
+          ) : (
+            <button onClick={() => onConfirmCompletion(app.id)}
+              style={{ fontSize: 11, fontFamily: F.mono, color: C.accent, background: 'transparent', border: `1px solid ${C.accentBorder}`, padding: '5px 12px', cursor: 'pointer' }}>
+              Mark this collaboration as complete
+            </button>
+          )}
+        </div>
+      )}
+
+      {(app.status === 'applied' || app.status === 'accepted') && (
+        <MessageThread applicationId={app.id} currentUserId={currentUserId} otherPartyLabel={applicant?.full_name ?? 'them'} />
       )}
     </div>
   )
@@ -292,15 +404,19 @@ interface Props {
   initialPostedProjects: Project[]
   initialReceivedRequests: Application[]
   contactShares: ContactShare[]
+  initialPeerRecords: PeerRecord[]
+  githubSkillsByApplicant: Record<string, GithubEvidencedSkill[]>
 }
 
-export default function MarketplaceSection({ studentId, studentName, initialPostedProjects, initialReceivedRequests, contactShares }: Props) {
+export default function MarketplaceSection({ studentId, studentName, initialPostedProjects, initialReceivedRequests, contactShares, initialPeerRecords, githubSkillsByApplicant }: Props) {
   const { toast } = useToast()
   const [postedProjects, setPostedProjects] = useState<Project[]>(initialPostedProjects)
   const [receivedRequests, setReceivedRequests] = useState<Application[]>(initialReceivedRequests)
   const [showNewForm, setShowNewForm] = useState(false)
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
   const [expandedProject, setExpandedProject] = useState<string | null>(null)
   const [shares, setShares] = useState<ContactShare[]>(contactShares)
+  const [peerRecords, setPeerRecords] = useState<PeerRecord[]>(initialPeerRecords)
 
   function getRequestsForProject(projectId: string) {
     return receivedRequests.filter((a) => a.project_id === projectId)
@@ -308,6 +424,10 @@ export default function MarketplaceSection({ studentId, studentName, initialPost
 
   function shareFor(applicationId: string) {
     return shares.find((s) => s.application_id === applicationId)
+  }
+
+  function recordFor(applicationId: string) {
+    return peerRecords.find((r) => r.application_id === applicationId)
   }
 
   async function handleAccept(appId: string) {
@@ -323,6 +443,12 @@ export default function MarketplaceSection({ studentId, studentName, initialPost
       setShares((prev) => [...prev.filter((s) => s.application_id !== appId), {
         id: 'temp', application_id: appId, student_id: '', poster_id: studentId,
         student_email: json.student_email ?? null, poster_email: json.poster_email ?? null, shared_at: new Date().toISOString(),
+      }])
+      const app = receivedRequests.find((a) => a.id === appId)
+      setPeerRecords((prev) => [...prev.filter((r) => r.application_id !== appId), {
+        id: 'temp', application_id: appId, project_id: app?.project_id ?? '', poster_id: studentId, student_id: app?.student_id ?? '',
+        project_title: null, skills_used: null, summary: null,
+        poster_confirmed_at: null, student_confirmed_at: null, locked_at: null, created_at: new Date().toISOString(),
       }])
       toast('Request accepted. Contact info shared.', 'success')
     } catch (err: unknown) {
@@ -346,15 +472,61 @@ export default function MarketplaceSection({ studentId, studentName, initialPost
     }
   }
 
+  async function handleConfirmCompletion(appId: string) {
+    try {
+      const res = await fetch('/api/collab/confirm-completion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId: appId }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Could not confirm.')
+      setPeerRecords((prev) => prev.map((r) => {
+        if (r.application_id !== appId) return r
+        const now = new Date().toISOString()
+        return { ...r, poster_confirmed_at: now, locked_at: json.locked ? now : r.locked_at }
+      }))
+      toast(json.locked ? 'Confirmed! Both sides agree, this collaboration is locked in.' : 'Confirmed. Waiting on the other side.', 'success')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not confirm.', 'error')
+    }
+  }
+
   async function handleToggleOpen(project: Project) {
     const supabase = createClient()
     try {
-      const { error } = await supabase.from('projects').update({ is_open: !project.is_open }).eq('id', project.id)
+      const nowOpen = !project.is_open
+      const { error } = await supabase.from('projects').update({ is_open: nowOpen, status: nowOpen ? 'open' : 'closed' }).eq('id', project.id)
       if (error) throw error
-      setPostedProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, is_open: !p.is_open } : p)))
+      setPostedProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, is_open: nowOpen, status: nowOpen ? 'open' : 'closed' } : p)))
       toast(project.is_open ? 'Project closed.' : 'Project re-opened.', 'success')
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Failed to update project.', 'error')
+    }
+  }
+
+  async function handleStatusChange(project: Project, status: string) {
+    const supabase = createClient()
+    try {
+      const isOpen = status === 'open' || status === 'in_progress'
+      const { error } = await supabase.from('projects').update({ status, is_open: isOpen }).eq('id', project.id)
+      if (error) throw error
+      setPostedProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, status: status as Project['status'], is_open: isOpen } : p)))
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Failed to update status.', 'error')
+    }
+  }
+
+  async function handleRenew(project: Project) {
+    const supabase = createClient()
+    try {
+      const now = new Date().toISOString()
+      const { error } = await supabase.from('projects').update({ renewed_at: now }).eq('id', project.id)
+      if (error) throw error
+      setPostedProjects((prev) => prev.map((p) => (p.id === project.id ? { ...p, renewed_at: now } : p)))
+      toast('Listing renewed — back to the top of "still looking."', 'success')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Failed to renew listing.', 'error')
     }
   }
 
@@ -373,10 +545,10 @@ export default function MarketplaceSection({ studentId, studentName, initialPost
       {showNewForm && (
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 28, marginBottom: 16 }}>
           <h3 style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 24 }}>New project</h3>
-          <NewPeerProjectForm
+          <PeerProjectForm
             studentId={studentId}
             studentName={studentName}
-            onCreated={(p) => { setPostedProjects((prev) => [p, ...prev]); setShowNewForm(false) }}
+            onSaved={(p) => { setPostedProjects((prev) => [p, ...prev]); setShowNewForm(false) }}
             onCancel={() => setShowNewForm(false)}
           />
         </div>
@@ -392,7 +564,25 @@ export default function MarketplaceSection({ studentId, studentName, initialPost
           {postedProjects.map((project) => {
             const requests = getRequestsForProject(project.id)
             const expanded = expandedProject === project.id
+            const editing = editingProjectId === project.id
             const pendingCount = requests.filter((a) => a.status === 'applied').length
+            const acceptedCount = requests.filter((a) => a.status === 'accepted').length
+            const stale = isStale(project)
+
+            if (editing) {
+              return (
+                <div key={project.id} style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 28 }}>
+                  <h3 style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 24 }}>Edit project</h3>
+                  <PeerProjectForm
+                    studentId={studentId}
+                    studentName={studentName}
+                    initialProject={project}
+                    onSaved={(p) => { setPostedProjects((prev) => prev.map((x) => (x.id === p.id ? p : x))); setEditingProjectId(null) }}
+                    onCancel={() => setEditingProjectId(null)}
+                  />
+                </div>
+              )
+            }
 
             return (
               <div key={project.id} style={{ background: C.surface, border: `1px solid ${C.border}` }}>
@@ -401,22 +591,38 @@ export default function MarketplaceSection({ studentId, studentName, initialPost
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
                         <h3 style={{ fontSize: 14, fontWeight: 500, color: C.textSub }}>{project.title ?? 'Untitled'}</h3>
-                        <span style={{
-                          fontSize: 9, fontFamily: F.mono, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '0.08em',
-                          color: project.is_open ? C.accent : C.textFaint,
-                          border: `1px solid ${project.is_open ? C.accentBorder : C.border}`,
-                          background: project.is_open ? C.accentHover : C.surfaceAlt,
-                        }}>
-                          {project.is_open ? 'Open' : 'Closed'}
-                        </span>
+                        <StatusBadge status={project.status} />
                         <ComplexityBadge level={project.complexity_level} />
+                        {stale && (
+                          <span style={{ fontSize: 9, fontFamily: F.mono, padding: '1px 6px', textTransform: 'uppercase', letterSpacing: '0.08em', color: '#D97706', background: 'rgba(217,119,6,0.08)', border: '1px solid rgba(217,119,6,0.3)' }}>
+                            Still looking?
+                          </span>
+                        )}
                       </div>
                       <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
                         Posted {fmtDate(project.created_at)}{project.duration ? ` · ${project.duration}` : ''}
+                        {project.team_size ? ` · ${acceptedCount}/${project.team_size} filled` : ''}
+                        {' · '}{project.view_count} view{project.view_count === 1 ? '' : 's'}
                       </p>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+                      {stale && (
+                        <button onClick={() => handleRenew(project)}
+                          style={{ fontSize: 11, fontFamily: F.mono, color: '#D97706', padding: '5px 10px', border: '1px solid rgba(217,119,6,0.3)', background: 'transparent', cursor: 'pointer' }}>
+                          Renew
+                        </button>
+                      )}
+                      <select value={project.status} onChange={(e) => handleStatusChange(project, e.target.value)} className="dk-select" style={{ fontSize: 11, padding: '5px 8px', width: 'auto' }}>
+                        <option value="open">Open</option>
+                        <option value="in_progress">In progress</option>
+                        <option value="filled">Filled</option>
+                        <option value="closed">Closed</option>
+                      </select>
+                      <button onClick={() => setEditingProjectId(project.id)}
+                        style={{ fontSize: 11, fontFamily: F.mono, color: C.textMuted, padding: '5px 10px', border: `1px solid ${C.border}`, background: 'transparent', cursor: 'pointer' }}>
+                        Edit
+                      </button>
                       <button onClick={() => handleToggleOpen(project)}
                         style={{ fontSize: 11, fontFamily: F.mono, color: C.textMuted, padding: '5px 10px', border: `1px solid ${C.border}`, background: 'transparent', cursor: 'pointer' }}>
                         {project.is_open ? 'Close' : 'Re-open'}
@@ -441,7 +647,17 @@ export default function MarketplaceSection({ studentId, studentName, initialPost
                       <p style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono, textAlign: 'center', padding: '12px 0' }}>No requests yet</p>
                     ) : (
                       requests.map((app) => (
-                        <RequestRow key={app.id} app={app} contactShare={shareFor(app.id)} onAccept={handleAccept} onReject={handleReject} />
+                        <RequestRow
+                          key={app.id}
+                          app={app}
+                          contactShare={shareFor(app.id)}
+                          peerRecord={recordFor(app.id)}
+                          githubSkills={githubSkillsByApplicant[app.student_id] ?? []}
+                          currentUserId={studentId}
+                          onAccept={handleAccept}
+                          onReject={handleReject}
+                          onConfirmCompletion={handleConfirmCompletion}
+                        />
                       ))
                     )}
                   </div>
