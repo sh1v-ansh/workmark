@@ -132,6 +132,8 @@ function PeerProjectForm({ studentId, studentName, initialProject, onSaved, onCa
   const [demoUrl, setDemoUrl] = useState(initialProject?.demo_url ?? '')
   const [isPaid, setIsPaid] = useState(initialProject?.is_paid ?? false)
   const [compensation, setCompensation] = useState(initialProject?.compensation ?? '')
+  const [applicationPrompt, setApplicationPrompt] = useState(initialProject?.application_prompt ?? '')
+  const [maxApplicants, setMaxApplicants] = useState(initialProject?.max_applicants?.toString() ?? '10')
 
   const isEdit = !!initialProject
 
@@ -151,6 +153,8 @@ function PeerProjectForm({ studentId, studentName, initialProject, onSaved, onCa
       repo_url: repoUrl || null,
       demo_url: demoUrl || null,
       is_paid: isPaid, compensation: isPaid ? (compensation || null) : null,
+      application_prompt: applicationPrompt.trim(),
+      max_applicants: maxApplicants ? parseInt(maxApplicants) : 10,
     }
     try {
       if (isEdit) {
@@ -197,6 +201,15 @@ function PeerProjectForm({ studentId, studentName, initialProject, onSaved, onCa
         <textarea id="peer-proj-desc" value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className="dk-textarea" placeholder="What are you building? What help do you need?" />
       </div>
 
+      <div style={fieldGap}>
+        <Label htmlFor="peer-proj-prompt">Application question <span aria-hidden="true" style={{ color: C.accent }}>*</span></Label>
+        <textarea id="peer-proj-prompt" required value={applicationPrompt} onChange={(e) => setApplicationPrompt(e.target.value)} rows={2} className="dk-textarea"
+          placeholder={`e.g. "What's your first instinct for approaching this?"`} />
+        <p style={{ fontSize: 11, color: C.textFaint }}>
+          Every applicant answers this in a few sentences instead of writing a generic proposal — it's what filters out spray-applying.
+        </p>
+      </div>
+
       <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={fieldGap}>
           <Label htmlFor="peer-proj-type">Type</Label>
@@ -232,6 +245,10 @@ function PeerProjectForm({ studentId, studentName, initialProject, onSaved, onCa
         <div style={fieldGap}>
           <Label htmlFor="peer-proj-team-size">Collaborators wanted</Label>
           <input id="peer-proj-team-size" type="number" min={1} max={10} value={teamSize} onChange={(e) => setTeamSize(e.target.value)} className="dk-input" placeholder="1" />
+        </div>
+        <div style={fieldGap}>
+          <Label htmlFor="peer-proj-max-applicants">Application slots</Label>
+          <input id="peer-proj-max-applicants" type="number" min={5} max={20} value={maxApplicants} onChange={(e) => setMaxApplicants(e.target.value)} className="dk-input" placeholder="10" />
         </div>
         <div style={fieldGap}>
           <Label htmlFor="peer-proj-start">Start date (optional)</Label>
@@ -280,8 +297,8 @@ function PeerProjectForm({ studentId, studentName, initialProject, onSaved, onCa
 
 // ─── Incoming request row ──────────────────────────────────────────────────────
 
-function RequestRow({ app, contactShare, peerRecord, githubSkills, currentUserId, onAccept, onReject, onConfirmCompletion }: {
-  app: Application; contactShare?: ContactShare; peerRecord?: PeerRecord; githubSkills: GithubEvidencedSkill[]
+function RequestRow({ app, contactShare, peerRecord, githubSkills, fitScore, currentUserId, onAccept, onReject, onConfirmCompletion }: {
+  app: Application; contactShare?: ContactShare; peerRecord?: PeerRecord; githubSkills: GithubEvidencedSkill[]; fitScore: number
   currentUserId: string
   onAccept: (id: string) => void; onReject: (id: string) => void; onConfirmCompletion: (id: string) => void
 }) {
@@ -296,7 +313,14 @@ function RequestRow({ app, contactShare, peerRecord, githubSkills, currentUserId
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '16px 18px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 12 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>{applicant?.full_name ?? 'Student'}</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 3 }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{applicant?.full_name ?? 'Student'}</p>
+            {fitScore > 0 && (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999, color: '#15803D', background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+                <Icon name="star" size={10} />Verified fit {fitScore}
+              </span>
+            )}
+          </div>
           <p style={{ fontSize: 12, color: C.textFaint }}>
             {applicant?.university ?? ''}
           </p>
@@ -360,7 +384,7 @@ function RequestRow({ app, contactShare, peerRecord, githubSkills, currentUserId
         <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
           <button onClick={() => setShowProposal((v) => !v)}
             style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 500, color: C.accent, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <Icon name={showProposal ? 'chevron-up' : 'chevron-down'} size={13} /> {showProposal ? 'Hide proposal' : 'Read proposal'}
+            <Icon name={showProposal ? 'chevron-up' : 'chevron-down'} size={13} /> {showProposal ? 'Hide answer' : 'Read answer'}
           </button>
           {showProposal && (
             <div style={{ marginTop: 10, background: C.bg, border: `1px solid ${C.border}`, padding: 14, borderRadius: 10 }}>
@@ -414,20 +438,37 @@ interface Props {
   contactShares: ContactShare[]
   initialPeerRecords: PeerRecord[]
   githubSkillsByApplicant: Record<string, GithubEvidencedSkill[]>
+  verifiedSkillsByApplicant: Record<string, string[]>
 }
 
-export default function MarketplaceSection({ studentId, studentName, initialPostedProjects, initialReceivedRequests, contactShares, initialPeerRecords, githubSkillsByApplicant }: Props) {
+const SHORTLIST_SIZE = 5
+
+// Verified-fit score: how many of the project's required_skills show up in
+// the applicant's VERIFIED (Tier 1/2/3) skill set — self-reported skills
+// don't count. Ties broken by earliest application (first-come).
+function fitScore(project: Project, verifiedSkills: string[]): number {
+  const required = (project.required_skills ?? []).map((s) => s.toLowerCase())
+  if (required.length === 0) return 0
+  const verified = new Set(verifiedSkills)
+  return required.filter((s) => verified.has(s)).length
+}
+
+export default function MarketplaceSection({ studentId, studentName, initialPostedProjects, initialReceivedRequests, contactShares, initialPeerRecords, githubSkillsByApplicant, verifiedSkillsByApplicant }: Props) {
   const { toast } = useToast()
   const [postedProjects, setPostedProjects] = useState<Project[]>(initialPostedProjects)
   const [receivedRequests, setReceivedRequests] = useState<Application[]>(initialReceivedRequests)
   const [showNewForm, setShowNewForm] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null)
   const [expandedProject, setExpandedProject] = useState<string | null>(null)
+  const [showAllApplicants, setShowAllApplicants] = useState<Record<string, boolean>>({})
   const [shares, setShares] = useState<ContactShare[]>(contactShares)
   const [peerRecords, setPeerRecords] = useState<PeerRecord[]>(initialPeerRecords)
 
-  function getRequestsForProject(projectId: string) {
-    return receivedRequests.filter((a) => a.project_id === projectId)
+  function getRequestsForProject(project: Project) {
+    return receivedRequests
+      .filter((a) => a.project_id === project.id)
+      .slice()
+      .sort((a, b) => fitScore(project, verifiedSkillsByApplicant[b.student_id] ?? []) - fitScore(project, verifiedSkillsByApplicant[a.student_id] ?? []))
   }
 
   function shareFor(applicationId: string) {
@@ -572,7 +613,7 @@ export default function MarketplaceSection({ studentId, studentName, initialPost
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {postedProjects.map((project) => {
-            const requests = getRequestsForProject(project.id)
+            const requests = getRequestsForProject(project)
             const expanded = expandedProject === project.id
             const editing = editingProjectId === project.id
             const pendingCount = requests.filter((a) => a.status === 'applied').length
@@ -653,19 +694,34 @@ export default function MarketplaceSection({ studentId, studentName, initialPost
                     {requests.length === 0 ? (
                       <p style={{ fontSize: 12, color: C.textFaint, textAlign: 'center', padding: '12px 0' }}>No requests yet</p>
                     ) : (
-                      requests.map((app) => (
-                        <RequestRow
-                          key={app.id}
-                          app={app}
-                          contactShare={shareFor(app.id)}
-                          peerRecord={recordFor(app.id)}
-                          githubSkills={githubSkillsByApplicant[app.student_id] ?? []}
-                          currentUserId={studentId}
-                          onAccept={handleAccept}
-                          onReject={handleReject}
-                          onConfirmCompletion={handleConfirmCompletion}
-                        />
-                      ))
+                      <>
+                        {requests.length > SHORTLIST_SIZE && (
+                          <p style={{ fontSize: 11, color: C.textFaint, marginBottom: -2 }}>
+                            Showing the {showAllApplicants[project.id] ? `all ${requests.length}` : `top ${SHORTLIST_SIZE}`} ranked by verified-skill fit against what you asked for.
+                          </p>
+                        )}
+                        {(showAllApplicants[project.id] ? requests : requests.slice(0, SHORTLIST_SIZE)).map((app) => (
+                          <RequestRow
+                            key={app.id}
+                            app={app}
+                            contactShare={shareFor(app.id)}
+                            peerRecord={recordFor(app.id)}
+                            githubSkills={githubSkillsByApplicant[app.student_id] ?? []}
+                            fitScore={fitScore(project, verifiedSkillsByApplicant[app.student_id] ?? [])}
+                            currentUserId={studentId}
+                            onAccept={handleAccept}
+                            onReject={handleReject}
+                            onConfirmCompletion={handleConfirmCompletion}
+                          />
+                        ))}
+                        {requests.length > SHORTLIST_SIZE && (
+                          <button
+                            onClick={() => setShowAllApplicants((prev) => ({ ...prev, [project.id]: !prev[project.id] }))}
+                            className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex', alignSelf: 'center' }}>
+                            {showAllApplicants[project.id] ? 'Show top 5 only' : `Show all ${requests.length}`}
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 )}

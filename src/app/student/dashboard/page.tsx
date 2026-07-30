@@ -39,6 +39,7 @@ export default async function StudentDashboardPage() {
   const postedProjectIds = (postedProjects ?? []).map((p) => p.id)
   let receivedRequests: Application[] = []
   let githubSkillsByApplicant: Record<string, GithubEvidencedSkill[]> = {}
+  let verifiedSkillsByApplicant: Record<string, string[]> = {}
   if (postedProjectIds.length > 0) {
     const { data } = await supabase
       .from('applications')
@@ -57,7 +58,24 @@ export default async function StudentDashboardPage() {
         .in('student_id', applicantIds)
         .order('evidence_count', { ascending: false })
       for (const s of (ghSkills ?? []) as GithubEvidencedSkill[]) {
-        (githubSkillsByApplicant[s.student_id] ||= []).push(s)
+        (githubSkillsByApplicant[s.student_id] ||= []).push(s);
+        (verifiedSkillsByApplicant[s.student_id] ||= []).push(s.skill.toLowerCase());
+      }
+
+      // Tier 1/2 (locked employer/faculty attestations) and locked peer
+      // collaborations also count as VERIFIED fit — combined with Tier 3
+      // above, this is what ranks the shortlist of applicants.
+      const [{ data: vwr }, { data: peers }] = await Promise.all([
+        supabase.from('verified_work_records').select('student_id, skills_used').in('student_id', applicantIds).not('locked_at', 'is', null),
+        supabase.from('peer_records').select('student_id, skills_used').in('student_id', applicantIds).not('locked_at', 'is', null),
+      ])
+      for (const row of [...(vwr ?? []), ...(peers ?? [])] as { student_id: string; skills_used: string[] | null }[]) {
+        for (const skill of row.skills_used ?? []) {
+          (verifiedSkillsByApplicant[row.student_id] ||= []).push(skill.toLowerCase())
+        }
+      }
+      for (const id of Object.keys(verifiedSkillsByApplicant)) {
+        verifiedSkillsByApplicant[id] = Array.from(new Set(verifiedSkillsByApplicant[id]))
       }
     }
   }
@@ -95,6 +113,7 @@ export default async function StudentDashboardPage() {
       contactShares={contactShares ?? []}
       peerRecords={peerRecords ?? []}
       githubSkillsByApplicant={githubSkillsByApplicant}
+      verifiedSkillsByApplicant={verifiedSkillsByApplicant}
     />
   )
 }

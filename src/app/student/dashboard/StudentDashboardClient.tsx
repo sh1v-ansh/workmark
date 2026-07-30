@@ -59,9 +59,10 @@ interface Props {
   contactShares: ContactShare[]
   peerRecords: PeerRecord[]
   githubSkillsByApplicant: Record<string, GithubEvidencedSkill[]>
+  verifiedSkillsByApplicant: Record<string, string[]>
 }
 
-export default function StudentDashboardClient({ student, applications: initialApplications, experienceRecords, githubSkills, githubRepos, postedProjects, receivedRequests, contactShares, peerRecords: initialPeerRecords, githubSkillsByApplicant }: Props) {
+export default function StudentDashboardClient({ student, applications: initialApplications, experienceRecords, githubSkills, githubRepos, postedProjects, receivedRequests, contactShares, peerRecords: initialPeerRecords, githubSkillsByApplicant, verifiedSkillsByApplicant }: Props) {
   const { toast } = useToast()
   const router = useRouter()
   const [peerRecords, setPeerRecords] = useState<PeerRecord[]>(initialPeerRecords)
@@ -389,6 +390,7 @@ export default function StudentDashboardClient({ student, applications: initialA
           contactShares={contactShares}
           initialPeerRecords={peerRecords}
           githubSkillsByApplicant={githubSkillsByApplicant}
+          verifiedSkillsByApplicant={verifiedSkillsByApplicant}
         />
 
       </main>

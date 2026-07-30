@@ -58,6 +58,7 @@ const DEMO_STUDENTS = [
       duration: '6 weeks',
       hours_per_week: 8,
       is_paid: false,
+      application_prompt: 'If you opened the current frontend right now, what would you fix first and why?',
     },
   },
   {
@@ -78,6 +79,7 @@ const DEMO_STUDENTS = [
       duration: '8 weeks',
       hours_per_week: 10,
       is_paid: false,
+      application_prompt: "What's your first instinct for turning three months of scraped timestamps into something queryable?",
     },
   },
   {
@@ -98,6 +100,7 @@ const DEMO_STUDENTS = [
       duration: '4 weeks',
       hours_per_week: 5,
       is_paid: false,
+      application_prompt: 'Ever wired up a sensor to anything, even a weekend hobby thing? Tell me about it.',
     },
   },
   {
@@ -119,6 +122,7 @@ const DEMO_STUDENTS = [
       hours_per_week: 6,
       is_paid: false,
       compensation: null,
+      application_prompt: 'The design and backend logic already exist — what would you want to see before committing to build the app itself?',
     },
   },
   // The rest of the roster: plain student accounts (no posted project) so
@@ -528,6 +532,7 @@ async function main() {
       hours_per_week: demo.project.hours_per_week,
       is_paid: demo.project.is_paid,
       compensation: demo.project.compensation ?? null,
+      application_prompt: demo.project.application_prompt ?? null,
       is_open: true,
     })
     if (projectErr) throw projectErr

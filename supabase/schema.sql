@@ -73,6 +73,7 @@ create table if not exists students (
   hours_per_week   int,
   available_from   date,
   open_to_collab   boolean default false not null,  -- opt-in: show in the student directory
+  active_application_count int default 0 not null,  -- maintained by sync_application_counters()
   created_at       timestamptz default now()
 );
 
@@ -130,6 +131,9 @@ create table if not exists projects (
   demo_url               text,
   start_date             date,
   renewed_at             timestamptz,
+  application_prompt     text,  -- poster-set short-answer question, peer projects only
+  max_applicants         int default 10 not null check (max_applicants between 3 and 25),
+  applicant_count        int default 0 not null,  -- maintained by sync_application_counters()
   is_open                boolean default true,
   created_at             timestamptz default now()
 );
@@ -353,6 +357,83 @@ create index if not exists idx_ges_student            on github_evidenced_skills
 create index if not exists idx_grp_student            on github_repo_profiles(student_id);
 create index if not exists idx_ghc_login              on github_connections(github_login);
 
+-- ─── Functions & triggers ──────────────────────────────────────────────────────
+
+-- Aggregates a student's VERIFIED (not self-reported) skills across all three
+-- attestation tiers. Used to gate visibility of peer projects behind their
+-- required_skills and to rank applicants by verified-fit. Runs as the caller
+-- (no security definer needed) — every source table already has a "read own
+-- rows" RLS policy, so this only ever reads what the caller could already
+-- read directly.
+create or replace function verified_skills_for(p_student_id uuid)
+returns text[]
+language sql
+stable
+as $$
+  select coalesce(array_agg(distinct lower(skill)), array[]::text[])
+  from (
+    select unnest(skills_used) as skill from verified_work_records
+      where student_id = p_student_id and locked_at is not null and skills_used is not null
+    union all
+    select skill from github_evidenced_skills
+      where student_id = p_student_id
+    union all
+    select unnest(skills_used) as skill from peer_records
+      where student_id = p_student_id and locked_at is not null and skills_used is not null
+  ) s
+$$;
+
+-- Keeps projects.applicant_count and students.active_application_count in
+-- sync with applications, regardless of insert path. security definer
+-- because a student inserting/withdrawing their own application has no
+-- UPDATE grant on `projects` or other students' rows otherwise — this is the
+-- standard Postgres pattern for a maintained counter.
+create or replace function sync_application_counters()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if TG_OP = 'INSERT' then
+    if NEW.status <> 'withdrawn' then
+      update projects set applicant_count = applicant_count + 1 where id = NEW.project_id;
+    end if;
+    if NEW.status = 'applied' then
+      update students set active_application_count = active_application_count + 1 where id = NEW.student_id;
+    end if;
+
+  elsif TG_OP = 'UPDATE' then
+    if OLD.status <> 'withdrawn' and NEW.status = 'withdrawn' then
+      update projects set applicant_count = greatest(applicant_count - 1, 0) where id = NEW.project_id;
+    elsif OLD.status = 'withdrawn' and NEW.status <> 'withdrawn' then
+      update projects set applicant_count = applicant_count + 1 where id = NEW.project_id;
+    end if;
+
+    if OLD.status = 'applied' and NEW.status <> 'applied' then
+      update students set active_application_count = greatest(active_application_count - 1, 0) where id = NEW.student_id;
+    elsif OLD.status <> 'applied' and NEW.status = 'applied' then
+      update students set active_application_count = active_application_count + 1 where id = NEW.student_id;
+    end if;
+
+  elsif TG_OP = 'DELETE' then
+    if OLD.status <> 'withdrawn' then
+      update projects set applicant_count = greatest(applicant_count - 1, 0) where id = OLD.project_id;
+    end if;
+    if OLD.status = 'applied' then
+      update students set active_application_count = greatest(active_application_count - 1, 0) where id = OLD.student_id;
+    end if;
+  end if;
+
+  return null;
+end;
+$$;
+
+drop trigger if exists trg_sync_application_counters on applications;
+create trigger trg_sync_application_counters
+  after insert or update of status or delete on applications
+  for each row execute function sync_application_counters();
+
 -- ─── Row Level Security ───────────────────────────────────────────────────────
 
 alter table students                enable row level security;
@@ -460,8 +541,18 @@ create policy "Anyone: read faculty info for open projects"
 
 -- ── projects ──
 
+-- Peer (student-posted) projects with required_skills are gated behind the
+-- viewer's VERIFIED skills — company/faculty projects are unaffected.
 create policy "Anyone: read open projects"
-  on projects for select using (is_open = true);
+  on projects for select
+  using (
+    is_open = true
+    and (
+      poster_type <> 'student'
+      or coalesce(array_length(required_skills, 1), 0) = 0
+      or array(select lower(x) from unnest(required_skills) x) <@ verified_skills_for(auth.uid())
+    )
+  );
 
 create policy "Posters: read all own projects"
   on projects for select using (auth.uid() = poster_id);
@@ -480,8 +571,31 @@ create policy "Posters: delete own projects"
 create policy "Students: read own applications"
   on applications for select using (auth.uid() = student_id);
 
+-- Active-application cap (all posters, throttles spray-applying at the
+-- source) plus, for peer projects only, the verified-skill gate and the
+-- per-project slot cap. Defense in depth — the UI already won't offer to
+-- apply once these are hit.
 create policy "Students: insert own applications"
-  on applications for insert with check (auth.uid() = student_id);
+  on applications for insert
+  with check (
+    auth.uid() = student_id
+    and coalesce((select active_application_count from students where id = auth.uid()), 0) < 5
+    and exists (
+      select 1 from projects p
+      where p.id = applications.project_id
+        and p.is_open = true
+        and (
+          p.poster_type <> 'student'
+          or (
+            (
+              coalesce(array_length(p.required_skills, 1), 0) = 0
+              or array(select lower(x) from unnest(p.required_skills) x) <@ verified_skills_for(auth.uid())
+            )
+            and p.applicant_count < p.max_applicants
+          )
+        )
+    )
+  );
 
 create policy "Posters: read applications for their projects"
   on applications for select

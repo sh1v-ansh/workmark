@@ -25,6 +25,10 @@ export type Student = {
   available_from: string | null
   /** Opt-in: show up in the /students directory. Default off. */
   open_to_collab: boolean
+  /** Count of this student's applications currently in 'applied' status,
+   *  maintained by the sync_application_counters() trigger. Capped at 5 by
+   *  RLS on insert — throttles spray-applying at the source. */
+  active_application_count: number
   created_at: string
 }
 
@@ -80,6 +84,13 @@ export type Project = {
   demo_url: string | null
   start_date: string | null
   renewed_at: string | null
+  /** Poster-set short-answer question for applicants — peer projects only. */
+  application_prompt: string | null
+  /** Hard cap on total non-withdrawn applications this project will accept. */
+  max_applicants: number
+  /** Live count of non-withdrawn applications, maintained by
+   *  sync_application_counters(). */
+  applicant_count: number
   is_open: boolean
   created_at: string
 }

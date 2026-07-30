@@ -32,6 +32,9 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
   const poster = posterMeta ?? { name: project.poster_display_name, industry: null, location: null, website: null }
   const isPeerProject = project.poster_type === 'student'
   const ctaVerb = isPeerProject ? 'Request to collaborate' : 'Apply now'
+  const remainingSlots = project.max_applicants - project.applicant_count
+  const projectFull = isPeerProject && remainingSlots <= 0
+  const atApplicationCap = !!student && student.active_application_count >= 5
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
@@ -68,6 +71,11 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
                 {project.work_mode && <Chip>{project.work_mode.charAt(0).toUpperCase() + project.work_mode.slice(1)}</Chip>}
                 {project.is_paid ? <Chip green>Paid</Chip> : <Chip>Unpaid</Chip>}
                 {project.work_auth_required && <Chip red>US Auth Required</Chip>}
+                {isPeerProject && (
+                  projectFull
+                    ? <Chip red>Applications full</Chip>
+                    : <Chip accent={remainingSlots <= 3}>{remainingSlots} of {project.max_applicants} spots left</Chip>
+                )}
               </div>
 
               <h1 style={{ fontFamily: F.serif, fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 8, lineHeight: 1.25, letterSpacing: '-0.01em' }}>
@@ -149,9 +157,16 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
                   This is your own project.
                 </p>
               ) : student ? (
-                <button onClick={() => setShowModal(true)} className="wm-btn wm-btn-primary" style={{ width: '100%', display: 'flex' }}>
-                  {ctaVerb}
-                </button>
+                <>
+                  <button onClick={() => setShowModal(true)} disabled={projectFull || atApplicationCap} className="wm-btn wm-btn-primary" style={{ width: '100%', display: 'flex', opacity: (projectFull || atApplicationCap) ? 0.5 : 1, cursor: (projectFull || atApplicationCap) ? 'not-allowed' : 'pointer' }}>
+                    {ctaVerb}
+                  </button>
+                  {projectFull ? (
+                    <p style={{ fontSize: 11, color: C.textFaint, textAlign: 'center', marginTop: 8 }}>This project&apos;s application slots are full.</p>
+                  ) : atApplicationCap ? (
+                    <p style={{ fontSize: 11, color: C.textFaint, textAlign: 'center', marginTop: 8 }}>You&apos;re at your cap of 5 active applications.</p>
+                  ) : null}
+                </>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, textAlign: 'center' }}>
                   <Link href="/login" className="wm-btn wm-btn-primary" style={{ width: '100%', display: 'flex' }}>
@@ -228,8 +243,7 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
 
       {showModal && student && (
         <ApplyModal
-          projectId={project.id}
-          projectTitle={project.title ?? 'Project'}
+          project={project}
           heading={isPeerProject ? 'Request to collaborate' : 'Apply to project'}
           submitLabel={isPeerProject ? 'Send request →' : 'Submit →'}
           student={student}

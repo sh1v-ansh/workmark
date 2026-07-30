@@ -63,9 +63,23 @@ export default function ProjectCard({ project }: ProjectCardProps) {
       {/* Type / mode badges */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
         {project.poster_type === 'student' && (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 999, color: C.accent, background: C.accentHover, border: `1px solid ${C.accentBorder}` }}>
-            <Icon name="users" size={11} /> Student project
-          </span>
+          <>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 999, color: C.accent, background: C.accentHover, border: `1px solid ${C.accentBorder}` }}>
+              <Icon name="users" size={11} /> Student project
+            </span>
+            {(() => {
+              const remaining = project.max_applicants - project.applicant_count
+              return remaining <= 0 ? (
+                <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 999, color: '#B91C1C', background: '#FEF2F2', border: '1px solid #FECACA' }}>
+                  Applications full
+                </span>
+              ) : (
+                <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 999, color: remaining <= 3 ? '#B45309' : C.textMuted, background: remaining <= 3 ? '#FFFBEB' : C.surfaceAlt, border: `1px solid ${remaining <= 3 ? '#FDE68A' : C.border}` }}>
+                  {remaining} of {project.max_applicants} spots left
+                </span>
+              )
+            })()}
+          </>
         )}
         {project.type && (
           <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 999, color: C.textMuted, background: C.surfaceAlt, border: `1px solid ${C.border}` }}>
