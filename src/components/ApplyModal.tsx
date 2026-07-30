@@ -29,9 +29,9 @@ export default function ApplyModal({ project, student, heading = 'Apply to proje
   const [proposal, setProposal] = useState('')
 
   const isPeerProject = project.poster_type === 'student'
-  const remainingSlots = project.max_applicants - project.applicant_count
+  const remainingSlots = Math.max(0, (project.max_applicants ?? 10) - (project.applicant_count ?? 0))
   const projectFull = isPeerProject && remainingSlots <= 0
-  const atApplicationCap = student.active_application_count >= MAX_ACTIVE_APPLICATIONS
+  const atApplicationCap = (student.active_application_count ?? 0) >= MAX_ACTIVE_APPLICATIONS
 
   const minChars = isPeerProject ? MIN_SHORT_ANSWER_CHARS : MIN_PROPOSAL_CHARS
   const proposalOk = proposal.trim().length >= minChars
