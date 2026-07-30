@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import ProjectDetailClient from './ProjectDetailClient'
 
 interface Props {
@@ -19,6 +20,21 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   if (error || !project) notFound()
 
+  // Check current user early so we know whether to count this as a view
+  // (the poster browsing their own listing shouldn't inflate its count).
+  const {
+    data: { user: viewer },
+  } = await supabase.auth.getUser()
+
+  if (!viewer || viewer.id !== project.poster_id) {
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    await admin.from('projects').update({ view_count: project.view_count + 1 }).eq('id', id)
+    project.view_count += 1
+  }
+
   // Load poster metadata separately (polymorphic FK).
   let posterMeta: { name: string | null; industry: string | null; location: string | null; website: string | null } | null = null
   if (project.poster_type === 'company') {
@@ -35,12 +51,17 @@ export default async function ProjectDetailPage({ params }: Props) {
       .eq('id', project.poster_id)
       .maybeSingle()
     if (f) posterMeta = { name: f.full_name, industry: f.department, location: f.institution, website: null }
+  } else if (project.poster_type === 'student') {
+    const { data: s } = await supabase
+      .from('students')
+      .select('full_name, university, major')
+      .eq('id', project.poster_id)
+      .maybeSingle()
+    if (s) posterMeta = { name: s.full_name, industry: s.major, location: s.university, website: null }
   }
 
-  // Check if current user is a student (so we can show apply button)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // (user already fetched above as `viewer`, to decide whether to count the view)
+  const user = viewer
 
   let student = null
   let alreadyApplied = false

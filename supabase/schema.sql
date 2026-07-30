@@ -34,6 +34,9 @@ drop table if exists github_evidenced_skills   cascade;
 drop table if exists github_repo_profiles      cascade;
 drop table if exists github_connections        cascade;
 drop table if exists employer_profiles         cascade;
+drop table if exists contact_shares            cascade;
+drop table if exists peer_records              cascade;
+drop table if exists application_messages      cascade;
 drop table if exists applications              cascade;
 drop table if exists projects                  cascade;
 drop table if exists faculty                   cascade;
@@ -69,6 +72,8 @@ create table if not exists students (
   availability     text,
   hours_per_week   int,
   available_from   date,
+  open_to_collab   boolean default false not null,  -- opt-in: show in the student directory
+  active_application_count int default 0 not null,  -- maintained by sync_application_counters()
   created_at       timestamptz default now()
 );
 
@@ -95,12 +100,12 @@ create table if not exists faculty (
   created_at   timestamptz default now()
 );
 
--- ─── Projects (polymorphic poster: company or faculty) ────────────────────────
+-- ─── Projects (polymorphic poster: company, faculty, or student) ──────────────
 
 create table if not exists projects (
   id                     uuid default gen_random_uuid() primary key,
   poster_id              uuid not null,
-  poster_type            text not null check (poster_type in ('company','faculty')),
+  poster_type            text not null check (poster_type in ('company','faculty','student')),
   poster_display_name    text,
   title                  text,
   description            text,
@@ -118,6 +123,17 @@ create table if not exists projects (
   degree_level           text,
   preferred_majors       text[],
   scoped_to_institution  text,
+  complexity_level       text check (complexity_level in ('beginner','intermediate','advanced')),
+  status                 text default 'open' not null check (status in ('open','in_progress','filled','closed')),
+  team_size              int default 1,
+  view_count             int default 0 not null,
+  repo_url               text,
+  demo_url               text,
+  start_date             date,
+  renewed_at             timestamptz,
+  application_prompt     text,  -- poster-set short-answer question, peer projects only
+  max_applicants         int default 10 not null check (max_applicants between 3 and 25),
+  applicant_count        int default 0 not null,  -- maintained by sync_application_counters()
   is_open                boolean default true,
   created_at             timestamptz default now()
 );
@@ -130,9 +146,60 @@ create table if not exists applications (
   student_id     uuid references students(id) on delete cascade,
   resume_url     text,
   proposal_text  text,
-  status         text default 'applied',
+  status         text default 'applied',  -- 'applied' | 'accepted' | 'rejected' | 'withdrawn'
   created_at     timestamptz default now(),
   unique (project_id, student_id)
+);
+
+-- ─── Application messages ───────────────────────────────────────────────────────
+--  A small conversation thread on a pending application, so either side can
+--  ask a clarifying question before committing to accept/decline.
+
+create table if not exists application_messages (
+  id             uuid default gen_random_uuid() primary key,
+  application_id uuid references applications(id) on delete cascade not null,
+  sender_id      uuid not null,
+  body           text not null,
+  created_at     timestamptz default now()
+);
+
+-- ─── Contact shares ─────────────────────────────────────────────────────────────
+--  Peer-to-peer (student-posted) collaboration requests don't flow into the
+--  verified_work_records attestation pipeline — accepting one just exchanges
+--  contact info between the two students. Populated by the service-role
+--  client in /api/collab/accept (real emails come from auth.users, which
+--  isn't queryable under RLS), never inserted by authenticated users directly.
+
+create table if not exists contact_shares (
+  id             uuid default gen_random_uuid() primary key,
+  application_id uuid references applications(id) on delete cascade not null unique,
+  student_id     uuid references students(id) on delete cascade not null,
+  poster_id      uuid not null,
+  student_email  text,
+  poster_email   text,
+  shared_at      timestamptz default now()
+);
+
+-- ─── Peer records ───────────────────────────────────────────────────────────────
+--  A much lighter version of verified_work_records for peer-to-peer
+--  collaborations: no 6-question co-write, no tiers, just "did this happen"
+--  confirmed by both sides. Created by /api/collab/accept the moment a
+--  request is accepted; locked once both confirm via
+--  /api/collab/confirm-completion.
+
+create table if not exists peer_records (
+  id                    uuid default gen_random_uuid() primary key,
+  application_id        uuid references applications(id) on delete cascade not null unique,
+  project_id            uuid references projects(id) on delete cascade not null,
+  poster_id             uuid not null,
+  student_id            uuid references students(id) on delete cascade not null,
+  project_title         text,
+  skills_used           text[],
+  summary               text,
+  poster_confirmed_at   timestamptz,
+  student_confirmed_at  timestamptz,
+  locked_at             timestamptz,
+  created_at            timestamptz default now()
 );
 
 -- ─── Verified work records (supersedes experience_records) ────────────────────
@@ -275,6 +342,11 @@ create index if not exists idx_projects_poster        on projects(poster_id, pos
 create index if not exists idx_projects_is_open       on projects(is_open);
 create index if not exists idx_applications_project   on applications(project_id);
 create index if not exists idx_applications_student   on applications(student_id);
+create index if not exists idx_application_messages_application on application_messages(application_id);
+create index if not exists idx_contact_shares_student  on contact_shares(student_id);
+create index if not exists idx_contact_shares_poster   on contact_shares(poster_id);
+create index if not exists idx_peer_records_student   on peer_records(student_id);
+create index if not exists idx_peer_records_poster    on peer_records(poster_id);
 create index if not exists idx_vwr_student            on verified_work_records(student_id);
 create index if not exists idx_vwr_poster             on verified_work_records(poster_id, poster_type);
 create index if not exists idx_vwr_token              on verified_work_records(verification_token);
@@ -285,6 +357,83 @@ create index if not exists idx_ges_student            on github_evidenced_skills
 create index if not exists idx_grp_student            on github_repo_profiles(student_id);
 create index if not exists idx_ghc_login              on github_connections(github_login);
 
+-- ─── Functions & triggers ──────────────────────────────────────────────────────
+
+-- Aggregates a student's VERIFIED (not self-reported) skills across all three
+-- attestation tiers. Used to gate visibility of peer projects behind their
+-- required_skills and to rank applicants by verified-fit. Runs as the caller
+-- (no security definer needed) — every source table already has a "read own
+-- rows" RLS policy, so this only ever reads what the caller could already
+-- read directly.
+create or replace function verified_skills_for(p_student_id uuid)
+returns text[]
+language sql
+stable
+as $$
+  select coalesce(array_agg(distinct lower(skill)), array[]::text[])
+  from (
+    select unnest(skills_used) as skill from verified_work_records
+      where student_id = p_student_id and locked_at is not null and skills_used is not null
+    union all
+    select skill from github_evidenced_skills
+      where student_id = p_student_id
+    union all
+    select unnest(skills_used) as skill from peer_records
+      where student_id = p_student_id and locked_at is not null and skills_used is not null
+  ) s
+$$;
+
+-- Keeps projects.applicant_count and students.active_application_count in
+-- sync with applications, regardless of insert path. security definer
+-- because a student inserting/withdrawing their own application has no
+-- UPDATE grant on `projects` or other students' rows otherwise — this is the
+-- standard Postgres pattern for a maintained counter.
+create or replace function sync_application_counters()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if TG_OP = 'INSERT' then
+    if NEW.status <> 'withdrawn' then
+      update projects set applicant_count = applicant_count + 1 where id = NEW.project_id;
+    end if;
+    if NEW.status = 'applied' then
+      update students set active_application_count = active_application_count + 1 where id = NEW.student_id;
+    end if;
+
+  elsif TG_OP = 'UPDATE' then
+    if OLD.status <> 'withdrawn' and NEW.status = 'withdrawn' then
+      update projects set applicant_count = greatest(applicant_count - 1, 0) where id = NEW.project_id;
+    elsif OLD.status = 'withdrawn' and NEW.status <> 'withdrawn' then
+      update projects set applicant_count = applicant_count + 1 where id = NEW.project_id;
+    end if;
+
+    if OLD.status = 'applied' and NEW.status <> 'applied' then
+      update students set active_application_count = greatest(active_application_count - 1, 0) where id = NEW.student_id;
+    elsif OLD.status <> 'applied' and NEW.status = 'applied' then
+      update students set active_application_count = active_application_count + 1 where id = NEW.student_id;
+    end if;
+
+  elsif TG_OP = 'DELETE' then
+    if OLD.status <> 'withdrawn' then
+      update projects set applicant_count = greatest(applicant_count - 1, 0) where id = OLD.project_id;
+    end if;
+    if OLD.status = 'applied' then
+      update students set active_application_count = greatest(active_application_count - 1, 0) where id = OLD.student_id;
+    end if;
+  end if;
+
+  return null;
+end;
+$$;
+
+drop trigger if exists trg_sync_application_counters on applications;
+create trigger trg_sync_application_counters
+  after insert or update of status or delete on applications
+  for each row execute function sync_application_counters();
+
 -- ─── Row Level Security ───────────────────────────────────────────────────────
 
 alter table students                enable row level security;
@@ -292,6 +441,9 @@ alter table companies               enable row level security;
 alter table faculty                 enable row level security;
 alter table projects                enable row level security;
 alter table applications            enable row level security;
+alter table application_messages    enable row level security;
+alter table contact_shares          enable row level security;
+alter table peer_records            enable row level security;
 alter table verified_work_records   enable row level security;
 alter table milestones              enable row level security;
 alter table issue_flags             enable row level security;
@@ -322,6 +474,26 @@ create policy "Posters: read student info via their applications"
         and p.poster_id = auth.uid()
     )
   );
+
+-- Mirrors "Anyone: read company/faculty info for open projects" below —
+-- a student who posts an open project is publicly visible the same way a
+-- posting company or faculty member is.
+create policy "Anyone: read student info for open projects"
+  on students for select
+  using (
+    exists (
+      select 1 from projects p
+      where p.poster_id = students.id
+        and p.poster_type = 'student'
+        and p.is_open = true
+    )
+  );
+
+-- Opt-in student directory — only visible to other signed-in students, and
+-- only for students who've explicitly turned it on (default off).
+create policy "Anyone signed in: read opted-in student directory"
+  on students for select
+  using (open_to_collab = true and auth.uid() is not null);
 
 -- ── companies ──
 
@@ -369,8 +541,18 @@ create policy "Anyone: read faculty info for open projects"
 
 -- ── projects ──
 
+-- Peer (student-posted) projects with required_skills are gated behind the
+-- viewer's VERIFIED skills — company/faculty projects are unaffected.
 create policy "Anyone: read open projects"
-  on projects for select using (is_open = true);
+  on projects for select
+  using (
+    is_open = true
+    and (
+      poster_type <> 'student'
+      or coalesce(array_length(required_skills, 1), 0) = 0
+      or array(select lower(x) from unnest(required_skills) x) <@ verified_skills_for(auth.uid())
+    )
+  );
 
 create policy "Posters: read all own projects"
   on projects for select using (auth.uid() = poster_id);
@@ -389,8 +571,31 @@ create policy "Posters: delete own projects"
 create policy "Students: read own applications"
   on applications for select using (auth.uid() = student_id);
 
+-- Active-application cap (all posters, throttles spray-applying at the
+-- source) plus, for peer projects only, the verified-skill gate and the
+-- per-project slot cap. Defense in depth — the UI already won't offer to
+-- apply once these are hit.
 create policy "Students: insert own applications"
-  on applications for insert with check (auth.uid() = student_id);
+  on applications for insert
+  with check (
+    auth.uid() = student_id
+    and coalesce((select active_application_count from students where id = auth.uid()), 0) < 5
+    and exists (
+      select 1 from projects p
+      where p.id = applications.project_id
+        and p.is_open = true
+        and (
+          p.poster_type <> 'student'
+          or (
+            (
+              coalesce(array_length(p.required_skills, 1), 0) = 0
+              or array(select lower(x) from unnest(p.required_skills) x) <@ verified_skills_for(auth.uid())
+            )
+            and p.applicant_count < p.max_applicants
+          )
+        )
+    )
+  );
 
 create policy "Posters: read applications for their projects"
   on applications for select
@@ -411,6 +616,63 @@ create policy "Posters: update application status for their projects"
         and p.poster_id = auth.uid()
     )
   );
+
+-- A student can withdraw their own still-pending request. USING restricts
+-- which rows are eligible (must be theirs, must currently be "applied");
+-- WITH CHECK restricts what the row is allowed to become (must land on
+-- "withdrawn") — together they only permit this one transition.
+create policy "Students: withdraw own pending application"
+  on applications for update
+  using (auth.uid() = student_id and status = 'applied')
+  with check (auth.uid() = student_id and status = 'withdrawn');
+
+-- ── application_messages ──
+-- A small conversation thread on a pending application — either participant
+-- (the applicant, or the project's poster) can read and post to it.
+
+create policy "Application participants: read messages"
+  on application_messages for select
+  using (
+    exists (
+      select 1 from applications a
+      join projects p on p.id = a.project_id
+      where a.id = application_messages.application_id
+        and (a.student_id = auth.uid() or p.poster_id = auth.uid())
+    )
+  );
+
+create policy "Application participants: send messages"
+  on application_messages for insert
+  with check (
+    sender_id = auth.uid()
+    and exists (
+      select 1 from applications a
+      join projects p on p.id = a.project_id
+      where a.id = application_messages.application_id
+        and (a.student_id = auth.uid() or p.poster_id = auth.uid())
+    )
+  );
+
+-- ── contact_shares ──
+-- Insert-only via the service-role client (bypasses RLS) — no insert policy
+-- needed for authenticated users.
+
+create policy "Contact shares: participants read"
+  on contact_shares for select
+  using (auth.uid() = student_id or auth.uid() = poster_id);
+
+-- ── peer_records ──
+-- Inserted via the service-role client in /api/collab/accept (same
+-- centralized-write reasoning as contact_shares). Confirming completion runs
+-- under the caller's own session, so it needs a real update policy.
+
+create policy "Peer records: participants read"
+  on peer_records for select
+  using (auth.uid() = student_id or auth.uid() = poster_id);
+
+create policy "Peer records: participants confirm completion"
+  on peer_records for update
+  using (auth.uid() = student_id or auth.uid() = poster_id);
 
 -- ── verified_work_records ──
 
@@ -578,7 +840,7 @@ create policy "Students: update own resume"
     and auth.uid()::text = (storage.foldername(name))[1]
   );
 
--- Faculty and companies can both read applicant resumes (they're posters).
+-- Companies, faculty, and students can all post projects and act as posters.
 create policy "Posters: read any resume in bucket"
   on storage.objects for select
   using (
@@ -586,6 +848,7 @@ create policy "Posters: read any resume in bucket"
     and (
       exists (select 1 from companies c where c.id = auth.uid())
       or exists (select 1 from faculty f where f.id = auth.uid())
+      or exists (select 1 from students s where s.id = auth.uid())
     )
   );
 

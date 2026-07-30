@@ -31,11 +31,17 @@ If it fails, create it manually:
 - **Storage → New bucket** → name: `resumes`, toggle **Public** to OFF.
 
 ### 1e. GitHub OAuth (for Tier 3 skill extraction)
-- **Settings → Auth → Providers → GitHub** → toggle **Enable**.
+This app runs its own OAuth flow (`/api/github/oauth-start` → GitHub →
+`/api/github/callback`) rather than Supabase's built-in provider linking, so
+this is **not** configured in the Supabase dashboard at all.
 - Register an OAuth app at https://github.com/settings/developers with:
   - **Homepage URL:** your `NEXT_PUBLIC_SITE_URL`
-  - **Authorization callback URL:** `https://<PROJECT_REF>.supabase.co/auth/v1/callback`
-- Paste the client ID + secret into Supabase.
+  - **Authorization callback URL:** `${NEXT_PUBLIC_SITE_URL}/api/github/callback`
+    (e.g. `https://www.workmark.org/api/github/callback`)
+- Copy the **Client ID**, and generate + copy a **Client secret**.
+- Set them as `GITHUB_OAUTH_CLIENT_ID` and `GITHUB_OAUTH_CLIENT_SECRET` in
+  your hosting platform's environment variables (Vercel → Project →
+  Settings → Environment Variables) — not in Supabase.
 - **Scopes:** `read:user public_repo` (the scanner never reads code — only manifest files).
 
 ---
@@ -49,6 +55,10 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...          # Settings → API → service_role (secret)
 NEXT_PUBLIC_SITE_URL=https://your-app.vercel.app
+
+# GitHub OAuth app (see 1e above) — required for Tier 3 skill extraction
+GITHUB_OAUTH_CLIENT_ID=your-github-oauth-app-client-id
+GITHUB_OAUTH_CLIENT_SECRET=your-github-oauth-app-client-secret
 
 # Stripe Connect escrow — stays off until legal review (spec §10.3)
 STRIPE_ENABLED=false

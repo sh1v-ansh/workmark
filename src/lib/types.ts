@@ -1,5 +1,10 @@
 export type PosterType = 'company' | 'faculty'
 
+/** Projects can also be posted by a student (peer-to-peer marketplace).
+ *  verified_work_records stays scoped to `PosterType` (company/faculty) —
+ *  peer collaborations don't flow into that attestation pipeline. */
+export type ProjectPosterType = PosterType | 'student'
+
 export type Student = {
   id: string
   full_name: string | null
@@ -18,6 +23,12 @@ export type Student = {
   availability: string | null
   hours_per_week: number | null
   available_from: string | null
+  /** Opt-in: show up in the /students directory. Default off. */
+  open_to_collab: boolean
+  /** Count of this student's applications currently in 'applied' status,
+   *  maintained by the sync_application_counters() trigger. Capped at 5 by
+   *  RLS on insert — throttles spray-applying at the source. */
+  active_application_count: number
   created_at: string
 }
 
@@ -47,7 +58,7 @@ export type Faculty = {
 export type Project = {
   id: string
   poster_id: string
-  poster_type: PosterType
+  poster_type: ProjectPosterType
   poster_display_name: string | null
   title: string | null
   description: string | null
@@ -65,6 +76,21 @@ export type Project = {
   degree_level: string | null
   preferred_majors: string[] | null
   scoped_to_institution: string | null
+  complexity_level: 'beginner' | 'intermediate' | 'advanced' | null
+  status: 'open' | 'in_progress' | 'filled' | 'closed'
+  team_size: number | null
+  view_count: number
+  repo_url: string | null
+  demo_url: string | null
+  start_date: string | null
+  renewed_at: string | null
+  /** Poster-set short-answer question for applicants — peer projects only. */
+  application_prompt: string | null
+  /** Hard cap on total non-withdrawn applications this project will accept. */
+  max_applicants: number
+  /** Live count of non-withdrawn applications, maintained by
+   *  sync_application_counters(). */
+  applicant_count: number
   is_open: boolean
   created_at: string
 }
@@ -75,12 +101,54 @@ export type Application = {
   student_id: string
   resume_url: string | null
   proposal_text: string | null
+  /** 'applied' | 'accepted' | 'rejected' | 'withdrawn' */
   status: string
   created_at: string
   projects?: Pick<Project, 'title' | 'poster_id' | 'poster_type'> & {
     poster_display_name?: string | null
   }
   students?: Pick<Student, 'full_name' | 'university' | 'gpa' | 'skills' | 'resume_url'>
+}
+
+/** A message in the small pre-accept conversation thread on an application. */
+export type ApplicationMessage = {
+  id: string
+  application_id: string
+  sender_id: string
+  body: string
+  created_at: string
+}
+
+/** Created only via the service-role client in /api/collab/accept, once a
+ *  peer collaboration request is accepted — exchanges real contact emails
+ *  (pulled from auth.users, which RLS can't see) between the two students. */
+export type ContactShare = {
+  id: string
+  application_id: string
+  student_id: string
+  poster_id: string
+  student_email: string | null
+  poster_email: string | null
+  shared_at: string
+}
+
+/** A lightweight mutual "yes, this collaboration happened" attestation for
+ *  peer (student-posted) projects — separate from VerifiedWorkRecord, which
+ *  stays scoped to the fuller employer/faculty attestation pipeline. Created
+ *  by /api/collab/accept; locked once both sides confirm. */
+export type PeerRecord = {
+  id: string
+  application_id: string
+  project_id: string
+  poster_id: string
+  student_id: string
+  project_title: string | null
+  skills_used: string[] | null
+  summary: string | null
+  poster_confirmed_at: string | null
+  student_confirmed_at: string | null
+  locked_at: string | null
+  created_at: string
 }
 
 export type VerifiedWorkRecord = {
