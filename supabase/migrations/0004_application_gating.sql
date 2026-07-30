@@ -19,7 +19,7 @@ alter table projects
   add column if not exists max_applicants int default 10 not null,
   add column if not exists applicant_count int default 0 not null;
 
-do $
+do $$
 begin
   if not exists (
     select 1 from pg_constraint
@@ -28,7 +28,7 @@ begin
     alter table projects
       add constraint projects_max_applicants_check check (max_applicants between 3 and 25);
   end if;
-end $;
+end $$;
 
 -- ─── students: live count of pending ("applied") applications ────────────────
 alter table students
