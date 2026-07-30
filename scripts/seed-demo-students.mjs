@@ -59,6 +59,7 @@ const DEMO_STUDENTS = [
       hours_per_week: 8,
       is_paid: false,
       application_prompt: 'If you opened the current frontend right now, what would you fix first and why?',
+      applicant_count: 2, // cosmetic — 8 of 10 spots left, so demo listings don't all look untouched
     },
   },
   {
@@ -80,6 +81,7 @@ const DEMO_STUDENTS = [
       hours_per_week: 10,
       is_paid: false,
       application_prompt: "What's your first instinct for turning three months of scraped timestamps into something queryable?",
+      applicant_count: 3, // cosmetic — 7 of 10 spots left
     },
   },
   {
@@ -101,6 +103,7 @@ const DEMO_STUDENTS = [
       hours_per_week: 5,
       is_paid: false,
       application_prompt: 'Ever wired up a sensor to anything, even a weekend hobby thing? Tell me about it.',
+      applicant_count: 5, // cosmetic — 5 of 10 spots left, closer to filling up
     },
   },
   {
@@ -123,6 +126,7 @@ const DEMO_STUDENTS = [
       is_paid: false,
       compensation: null,
       application_prompt: 'The design and backend logic already exist — what would you want to see before committing to build the app itself?',
+      applicant_count: 1, // cosmetic — 9 of 10 spots left, barely touched
     },
   },
   // The rest of the roster: plain student accounts (no posted project) so
@@ -533,6 +537,7 @@ async function main() {
       is_paid: demo.project.is_paid,
       compensation: demo.project.compensation ?? null,
       application_prompt: demo.project.application_prompt ?? null,
+      applicant_count: demo.project.applicant_count ?? 0,
       is_open: true,
     })
     if (projectErr) throw projectErr

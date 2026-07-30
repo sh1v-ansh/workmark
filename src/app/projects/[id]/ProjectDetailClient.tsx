@@ -32,7 +32,8 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
   const poster = posterMeta ?? { name: project.poster_display_name, industry: null, location: null, website: null }
   const isPeerProject = project.poster_type === 'student'
   const ctaVerb = isPeerProject ? 'Request to collaborate' : 'Apply now'
-  const remainingSlots = project.max_applicants - project.applicant_count
+  const maxApplicants = project.max_applicants ?? 10
+  const remainingSlots = Math.max(0, maxApplicants - (project.applicant_count ?? 0))
   const projectFull = isPeerProject && remainingSlots <= 0
   const atApplicationCap = !!student && student.active_application_count >= 5
 
@@ -74,7 +75,7 @@ export default function ProjectDetailClient({ project, posterMeta, student, alre
                 {isPeerProject && (
                   projectFull
                     ? <Chip red>Applications full</Chip>
-                    : <Chip accent={remainingSlots <= 3}>{remainingSlots} of {project.max_applicants} spots left</Chip>
+                    : <Chip accent={remainingSlots <= 3}>{remainingSlots} of {maxApplicants} spots left</Chip>
                 )}
               </div>
 
