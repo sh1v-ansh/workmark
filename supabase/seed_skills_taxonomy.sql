@@ -109,6 +109,7 @@ insert into skills (id, canonical_name, parent_id) values
   -- Design & Product category, where every sibling node had no code
   -- footprint at all. This one does.
   ('design-systems',   'Design Systems',           'frontend'),
+  ('vite',              'Vite',                     'frontend'), -- vite.config.js/.ts presence — strong signal. Missing from the original draft; surfaced by mapping the one real production listing.
 
   -- ── Backend & Frameworks ──────────────────────────────────────────────
   ('nodejs',        'Node.js',                'backend'),
