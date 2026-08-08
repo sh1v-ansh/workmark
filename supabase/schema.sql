@@ -326,11 +326,20 @@ create table artifacts (
   repo_full_name      text,
   access_grant_id     uuid references github_repo_grants(id),
   tier                text not null check (tier in ('tier_0', 'tier_0_5', 'listing_driven')),
-  verification_method text check (verification_method in ('deployment', 'package', 'ci', 'human_review')),
-  -- The specific URL/package that satisfied proof-it-runs. Needed to
-  -- re-verify later (deployments go down), to display "see it live" on
-  -- /p/[handle], and because "we verified something" without recording
-  -- what is not an auditable claim.
+  -- 'repo_link' is the baseline: student explicitly linked this repo via
+  -- the GitHub App grant, commits are attributed to them, complexity was
+  -- extracted (§5) — that alone is evidence. Deployment isn't required;
+  -- most CS work (CLIs, libraries, ML notebooks, systems code) has no live
+  -- URL to check. deployment/package/ci are strictly stronger than
+  -- repo_link, not an alternate gate — they feed a bonus into complexity
+  -- extraction as one more positive signal (§5's "tests and their ratio,
+  -- infra config present" list, extended with "has a live deployment"),
+  -- not a hard requirement to become evidence at all.
+  verification_method text not null default 'repo_link' check (verification_method in ('repo_link', 'deployment', 'package', 'ci', 'human_review')),
+  -- The specific URL/package that satisfied proof-it-runs, when present.
+  -- Needed to re-verify later (deployments go down), to show a "Live" badge
+  -- on /p/[handle], and because "we verified something" without recording
+  -- what is not an auditable claim. Null for repo_link-only artifacts.
   deployment_url      text,
   verified_at         timestamptz,
   created_at          timestamptz default now()
@@ -368,7 +377,11 @@ create table skill_evidence (
   paid                  numeric not null default 1.0,  -- DEFERRED: always 1.0 in MVP
   tier_weight           numeric generated always as (base * independence * paid) stored,
   difficulty_cleared    int not null check (difficulty_cleared between 1 and 5),
-  verification_method   text check (verification_method in ('deployment', 'package', 'ci', 'human_review', 'attested')),
+  -- Copied from artifacts.verification_method at the time this row was
+  -- written (denormalized — the artifact's method can later be upgraded,
+  -- e.g. a repo gets deployed after the fact, which writes a NEW evidence
+  -- row via corrects_evidence_id rather than mutating this one).
+  verification_method   text not null check (verification_method in ('repo_link', 'deployment', 'package', 'ci', 'human_review', 'attested')),
   source_agreement      int default 1 not null,  -- how many independent sources corroborated this row; max 2 in MVP
   comparative_anchor     text,  -- DEFERRED: null until a rater exists
   corrects_evidence_id  uuid references skill_evidence(id),
