@@ -1,7 +1,7 @@
 -- ============================================================
 --  WORKMARK — Canonical skill taxonomy seed (Phase 0, draft for review)
 --
---  16 category parents + 162 claimable leaf skills. Categories exist for
+--  17 category parents + 163 claimable leaf skills. Categories exist for
 --  canonicalization/UI grouping — students and posters almost always
 --  claim/require a leaf, not a category.
 --
@@ -55,8 +55,13 @@ insert into skills (id, canonical_name, parent_id) values
   ('web-apis',       'Web Fundamentals & APIs',   null),
   ('testing',        'Testing & Quality',         null),
   ('security',       'Security',                  null),
-  -- 'design' category removed — see note below Security in the leaf list
-  -- for why (every member but Design Systems had no code footprint).
+  -- Restored, narrowly: Product Management and User Research stay cut (no
+  -- plausible detection path even later), but Figma and UI/UX Design are
+  -- necessary skills for real student work regardless of whether the
+  -- scanner can currently see them. Detection mechanism is genuinely
+  -- unresolved — deferred by decision, not solved. See the leaf list below
+  -- Security for the explicit TBD note.
+  ('design',         'Design & Product',          null),
   ('game-dev',       'Game, Graphics & Robotics', null),
   ('blockchain',     'Blockchain & Web3',         null),
 
@@ -200,7 +205,6 @@ insert into skills (id, canonical_name, parent_id) values
   ('langchain',          'LangChain',                       'ai-tooling'), -- direct package import — strong signal
   ('rag',                'Retrieval-Augmented Generation (RAG)', 'ai-tooling'), -- vector-db client + retrieval-chain code pattern (langchain RAG chain, llama-index)
   ('claude-code',        'Claude Code',                     'ai-tooling'), -- CLAUDE.md file and/or .claude/ directory present in the repo — this is a real, checkable artifact
-  ('claude-design',      'Claude Design',                   'ai-tooling'), -- UNRESOLVED: I don't know what file/config signature this leaves. Confirm before Phase 1 or this node ships undetectable.
   ('github-copilot',     'GitHub Copilot',                  'ai-tooling'), -- weak: best available signal is .github/copilot-instructions.md presence; Copilot itself (IDE autocomplete) leaves no artifact
   ('cursor-ai',          'Cursor',                          'ai-tooling'), -- .cursor/rules or .cursorrules file present — real, checkable artifact
   ('vector-databases',   'Vector Databases & Embeddings',   'ai-tooling'), -- pinecone/weaviate/qdrant/chroma client import — strong signal
@@ -277,18 +281,19 @@ insert into skills (id, canonical_name, parent_id) values
   ('network-security',   'Network Security',     'security'),
   ('iam',                'Identity & Access Management', 'security'),
 
-  -- Design & Product category removed entirely: UI/UX Design, Figma,
-  -- Product Management, and User Research have no code footprint at
-  -- all — none of them leave a file, config, or dependency a scanner
-  -- could find. This is a real gap for MVP specifically: with no
-  -- attestation yet, GitHub scanning is the ONLY evidence source, so a
-  -- skill nobody can produce evidence for is a dead node in the matching
-  -- pipeline regardless of how real the skill is. These aren't gone
-  -- forever — once faculty/employer attestation exists (Phase Tier 1+), a
-  -- professor or manager can attest to product/design work with no repo
-  -- involved at all, and these belong back in the taxonomy then. Design
-  -- Systems was the one exception with a real artifact (Storybook config,
-  -- design tokens) — it moved to Frontend above instead of being cut.
+  -- ── Design & Product ──────────────────────────────────────────────────
+  -- Product Management and User Research stay cut — no plausible
+  -- detection path exists even in principle; they're pure process/role
+  -- skills with zero artifact. Figma and UI/UX Design are different: kept
+  -- because they're necessary for real student work (design collaborators
+  -- are a real part of this marketplace) even though NO detection
+  -- mechanism exists yet. This is a genuine gap, deferred by decision, not
+  -- solved — these will presumably need either a Figma-file-link field
+  -- captured outside the scanner entirely, or attestation once Tier 1+
+  -- exists. Don't build detection logic for these in Phase 1 without
+  -- revisiting this note first.
+  ('ui-ux-design', 'UI/UX Design', 'design'),  -- TBD: no detection mechanism yet
+  ('figma',        'Figma',        'design'),  -- TBD: no detection mechanism yet
 
   -- ── Game, Graphics & Robotics ─────────────────────────────────────────
   ('unity',                 'Unity',                        'game-dev'),
