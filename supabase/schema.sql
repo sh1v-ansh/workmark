@@ -1,176 +1,213 @@
 -- ============================================================
---  WORKMARK DATABASE SCHEMA — v2 (MVP + spec §11.1 staging)
+--  WORKMARK DATABASE SCHEMA — v0.5 (Product A to Z, MVP scope)
 --  Paste this entire file into Supabase → SQL Editor → Run.
 --
---  DESTRUCTIVE: this file drops every Workmark table and rebuilds
---  from scratch. Safe to re-run on a dev DB. Once real user data
---  exists, prefer supabase/migrations/*.sql for incremental changes.
+--  DESTRUCTIVE: drops every Workmark table and rebuilds from scratch.
+--  This is NOT an extension of the old schema — listings/engagements
+--  replace projects, applications are restructured, peer_records is gone
+--  entirely (Tier 0.5 is scan-derived now, students never attest), and a
+--  real skill taxonomy replaces free-text skill arrays.
 --
---  Auth users (auth.users) are NOT dropped — those are managed by
---  Supabase Auth. But profile rows in students/companies/faculty
---  get dropped, so any previously-signed-up users will need to
---  re-onboard after this runs.
+--  Before running this against production: the 4 real students and 1
+--  real listing must be exported first (scripts/export-production-data.mjs)
+--  and re-inserted afterward (scripts/reinsert-production-data.mjs, once
+--  written). auth.users is NOT touched by this file, so those 4 accounts
+--  stay valid — only their profile rows need re-inserting.
+--
+--  MVP scope: student-to-student only. Faculty, businesses, payments,
+--  and attestation are later phases — see inline notes marked DEFERRED.
 -- ============================================================
 
 create extension if not exists pgcrypto;
+create extension if not exists vector;
 
 -- ─── Destructive teardown ─────────────────────────────────────────────────────
--- Drop standalone functions. The trigger on verified_work_records doesn't need
--- an explicit drop — CASCADE on the table drop below cleans it up automatically
--- (and DROP TRIGGER ... ON <table> would fail if the table itself doesn't
--- exist yet, which is the state after a partial migration).
 
-drop function if exists trigger_recompute_employer_profile() cascade;
-drop function if exists recompute_employer_profile(uuid, text) cascade;
+drop table if exists agent_calls           cascade;
+drop table if exists project_briefs        cascade;
+drop table if exists evidence_audit        cascade;
+drop table if exists disclosure_log        cascade;
+drop table if exists consents              cascade;
+drop table if exists outcomes              cascade;
+drop table if exists platform_signals      cascade;
+drop table if exists skill_evidence        cascade;
+drop table if exists artifact_signals      cascade;
+drop table if exists artifacts             cascade;
+drop table if exists github_repo_grants    cascade;
+drop table if exists github_connections    cascade;
+drop table if exists engagements           cascade;
+drop table if exists contact_shares        cascade;
+drop table if exists application_messages  cascade;
+drop table if exists applications          cascade;
+drop table if exists listing_requirements  cascade;
+drop table if exists listings              cascade;
+drop table if exists skill_priors          cascade;
+drop table if exists skill_aliases         cascade;
+drop table if exists skills                cascade;
+drop table if exists students              cascade;
 
--- Drop tables in reverse-dependency order. CASCADE cleans up FKs / triggers /
--- policies that live on the dropped tables.
+-- Legacy tables from prior schema versions — dropped if present.
+drop table if exists peer_records          cascade;
+drop table if exists verified_work_records cascade;
+drop table if exists experience_records    cascade;
+drop table if exists github_evidenced_skills cascade;
+drop table if exists github_repo_profiles  cascade;
+drop table if exists employer_profiles     cascade;
+drop table if exists milestones            cascade;
+drop table if exists issue_flags           cascade;
+drop table if exists companies             cascade;
+drop table if exists faculty               cascade;
 
-drop table if exists issue_flags               cascade;
-drop table if exists milestones                cascade;
-drop table if exists verified_work_records     cascade;
-drop table if exists experience_records        cascade;  -- legacy v1
-drop table if exists github_evidenced_skills   cascade;
-drop table if exists github_repo_profiles      cascade;
-drop table if exists github_connections        cascade;
-drop table if exists employer_profiles         cascade;
-drop table if exists contact_shares            cascade;
-drop table if exists peer_records              cascade;
-drop table if exists application_messages      cascade;
-drop table if exists applications              cascade;
-drop table if exists projects                  cascade;
-drop table if exists faculty                   cascade;
-drop table if exists companies                 cascade;
-drop table if exists students                  cascade;
+drop function if exists sync_application_counters()   cascade;
+drop function if exists verified_skills_for(uuid)      cascade;
+drop function if exists prevent_evidence_audit_update() cascade;
+drop function if exists sync_repeat_hire()             cascade;
 
--- Storage policies live on storage.objects (system table); dropping our
--- tables doesn't cascade to them, so wipe them explicitly.
-
+-- resumes bucket is not used by this schema version — no application in
+-- MVP takes a resume upload (§8: claim + scoped response only). Drop its
+-- storage policies if they exist from a prior schema version.
 drop policy if exists "Students: upload own resume"          on storage.objects;
 drop policy if exists "Students: read own resume"            on storage.objects;
-drop policy if exists "Students: update own resume"          on storage.objects;
-drop policy if exists "Companies: read any resume in bucket" on storage.objects;
-drop policy if exists "Posters: read any resume in bucket"   on storage.objects;
+drop policy if exists "Students: update own resume"           on storage.objects;
+drop policy if exists "Companies: read any resume in bucket"  on storage.objects;
+drop policy if exists "Posters: read any resume in bucket"    on storage.objects;
 
--- ─── Profile tables ───────────────────────────────────────────────────────────
+-- ─── Students ──────────────────────────────────────────────────────────────
+-- The only account type in MVP. `poster` in every other table means
+-- "a student who posted a listing" — there is no separate identity.
 
-create table if not exists students (
-  id               uuid references auth.users on delete cascade primary key,
-  full_name        text,
-  university       text,
-  major            text,
-  degree_type      text,
-  graduation_year  int,
-  gpa              decimal(3,2),
-  is_international boolean default false,
-  visa_type        text,
-  skills           text[],
-  github_url       text,
-  github_username  text,
-  linkedin_url     text,
-  resume_url       text,
-  availability     text,
-  hours_per_week   int,
-  available_from   date,
-  open_to_collab   boolean default false not null,  -- opt-in: show in the student directory
-  active_application_count int default 0 not null,  -- maintained by sync_application_counters()
-  created_at       timestamptz default now()
+create table students (
+  id                        uuid references auth.users on delete cascade primary key,
+  full_name                 text,
+  university                text,
+  major                     text,
+  degree_type               text,
+  graduation_year           int,
+  gpa                       decimal(3,2),
+  is_international          boolean default false not null,
+  visa_type                 text,
+  skills                    text[],  -- self-reported, display only — never feeds tier_weight
+  github_url                text,
+  github_username           text,
+  linkedin_url               text,
+  availability               text,
+  hours_per_week            int,
+  available_from            date,
+  open_to_collab             boolean default false not null,  -- opt-in: /students directory
+  handle                     text unique,                      -- /p/[handle]
+  active_application_count  int default 0 not null,            -- maintained by sync_application_counters()
+  -- .edu verifies student status once, at signup, then is never required
+  -- again — .edu addresses expire at graduation, so the login email can
+  -- change freely afterward via Supabase's normal email-change flow. This
+  -- pair is the permanent record of how the account was verified.
+  edu_domain                 text,
+  edu_verified_at            timestamptz,
+  created_at                 timestamptz default now()
 );
 
-create table if not exists companies (
-  id              uuid references auth.users on delete cascade primary key,
-  company_name    text,
-  website         text,
-  industry        text,
-  company_size    text,
-  hq_location     text,
-  contact_name    text,
-  contact_email   text,
-  created_at      timestamptz default now()
+-- ─── Skill taxonomy ────────────────────────────────────────────────────────
+-- id is a stable text slug, not a uuid — see supabase/seed_skills_taxonomy.sql
+-- for why. This is a fixed, hand-authored vocabulary, not user-generated rows.
+
+create table skills (
+  id              text primary key,
+  canonical_name  text not null,
+  parent_id       text references skills(id),
+  embedding       vector(512)  -- voyage-3-lite; alter before backfilling if a different model is chosen
 );
 
-create table if not exists faculty (
-  id           uuid references auth.users on delete cascade primary key,
-  full_name    text,
-  institution  text,
-  department   text,
-  title        text,
-  email        text,
-  is_approved  boolean default true,
-  created_at   timestamptz default now()
+-- Free-text input → canonical skill, cached. "ReactJS" / "react 18" /
+-- "frontend React" all resolve here as a hash lookup after the first time
+-- any of them is embedded — canonicalization should almost never re-embed
+-- in steady state.
+create table skill_aliases (
+  raw_string   text primary key,
+  skill_id     text references skills(id) not null,
+  resolved_at  timestamptz default now()
 );
 
--- ─── Projects (polymorphic poster: company, faculty, or student) ──────────────
-
-create table if not exists projects (
-  id                     uuid default gen_random_uuid() primary key,
-  poster_id              uuid not null,
-  poster_type            text not null check (poster_type in ('company','faculty','student')),
-  poster_display_name    text,
-  title                  text,
-  description            text,
-  type                   text,
-  required_skills        text[],
-  preferred_skills       text[],
-  work_mode              text,
-  location               text,
-  duration               text,
-  hours_per_week         int,
-  is_paid                boolean default true,
-  compensation           text,
-  work_auth_required     boolean default false,
-  min_gpa                decimal(3,2),
-  degree_level           text,
-  preferred_majors       text[],
-  scoped_to_institution  text,
-  complexity_level       text check (complexity_level in ('beginner','intermediate','advanced')),
-  status                 text default 'open' not null check (status in ('open','in_progress','filled','closed')),
-  team_size              int default 1,
-  view_count             int default 0 not null,
-  repo_url               text,
-  demo_url               text,
-  start_date             date,
-  renewed_at             timestamptz,
-  application_prompt     text,  -- poster-set short-answer question, peer projects only
-  max_applicants         int default 10 not null check (max_applicants between 3 and 25),
-  applicant_count        int default 0 not null,  -- maintained by sync_application_counters()
-  is_open                boolean default true,
-  created_at             timestamptz default now()
+-- Raw GitHub scan results — a claim, not evidence. Never summed into
+-- tier_weight (§6). Promoted to skill_evidence only once proof-it-runs
+-- succeeds (§3).
+create table skill_priors (
+  id               uuid default gen_random_uuid() primary key,
+  student_id       uuid references students(id) on delete cascade not null,
+  skill_id         text references skills(id) not null,
+  raw_scan_score   numeric,
+  source           text not null,  -- e.g. 'github_manifest'
+  extracted_at     timestamptz default now(),
+  unique (student_id, skill_id)
 );
 
--- ─── Applications ─────────────────────────────────────────────────────────────
+-- ─── Listings ──────────────────────────────────────────────────────────────
+-- Replaces `projects`. poster_id has no FK (polymorphic — student today,
+-- company/faculty later, same pattern the old `projects` table used).
+-- poster_type and tier are narrowed to MVP's only real values via CHECK;
+-- widening later (ALTER ... DROP/ADD CONSTRAINT) is a cheap, non-destructive
+-- migration when Tier 1+ arrives.
 
-create table if not exists applications (
-  id             uuid default gen_random_uuid() primary key,
-  project_id     uuid references projects(id) on delete cascade,
-  student_id     uuid references students(id) on delete cascade,
-  resume_url     text,
-  proposal_text  text,
-  status         text default 'applied',  -- 'applied' | 'accepted' | 'rejected' | 'withdrawn'
-  created_at     timestamptz default now(),
-  unique (project_id, student_id)
+create table listings (
+  id                      uuid default gen_random_uuid() primary key,
+  poster_id               uuid not null,
+  poster_type             text not null default 'student' check (poster_type in ('student')),
+  poster_display_name     text,
+  title                   text,
+  brief                   text,
+  est_hours               int,
+  hours_per_week          int,
+  duration                text,
+  work_mode               text,
+  team_size               int,
+  declared_difficulty     int check (declared_difficulty between 1 and 10),
+  requires_prior_evidence boolean default false not null,
+  is_paid                 boolean default false not null check (is_paid = false), -- MVP: no payments infra exists yet
+  tier                    text not null default 'listing_driven' check (tier in ('listing_driven')),
+  status                  text not null default 'open' check (status in ('draft', 'open', 'filled', 'closed')),
+  view_count              int default 0 not null,
+  created_at              timestamptz default now()
 );
 
--- ─── Application messages ───────────────────────────────────────────────────────
---  A small conversation thread on a pending application, so either side can
---  ask a clarifying question before committing to accept/decline.
+create table listing_requirements (
+  listing_id     uuid references listings(id) on delete cascade not null,
+  skill_id       text references skills(id) not null,
+  required_level int not null check (required_level between 1 and 5),  -- importance weight, NOT a difficulty threshold — see §7
+  primary key (listing_id, skill_id)
+);
 
-create table if not exists application_messages (
+-- ─── Applications ──────────────────────────────────────────────────────────
+-- No resume anywhere in this flow (§8) — the applicant's verified profile
+-- is the resume. scored_response holds the {none|weak|moderate} per-skill
+-- prior Claude emits (§8) — a boundary-case agent output, logged to
+-- agent_calls, never itself a decision.
+
+create table applications (
+  id               uuid default gen_random_uuid() primary key,
+  listing_id       uuid references listings(id) on delete cascade not null,
+  student_id       uuid references students(id) on delete cascade not null,
+  claimed_skills   text[],
+  response_text    text,
+  scored_response  jsonb,
+  fit_tier_at_apply text check (fit_tier_at_apply in ('strong_fit', 'competitive', 'reach', 'not_yet')),
+  status           text default 'submitted' not null check (status in ('submitted', 'shortlisted', 'accepted', 'rejected', 'withdrawn')),
+  created_at       timestamptz default now(),
+  unique (listing_id, student_id)
+);
+
+-- Pre-accept Q&A. Capped so it can't become the overwhelm the product
+-- exists to eliminate — the char cap is enforced here; the "3 messages
+-- per side before acceptance" cap is enforced via RLS (see policies).
+create table application_messages (
   id             uuid default gen_random_uuid() primary key,
   application_id uuid references applications(id) on delete cascade not null,
   sender_id      uuid not null,
-  body           text not null,
+  body           text not null check (char_length(body) <= 500),
   created_at     timestamptz default now()
 );
 
--- ─── Contact shares ─────────────────────────────────────────────────────────────
---  Peer-to-peer (student-posted) collaboration requests don't flow into the
---  verified_work_records attestation pipeline — accepting one just exchanges
---  contact info between the two students. Populated by the service-role
---  client in /api/collab/accept (real emails come from auth.users, which
---  isn't queryable under RLS), never inserted by authenticated users directly.
-
-create table if not exists contact_shares (
+-- Real contact info exchanged directly on accept — kept exactly as before.
+-- Populated by a service-role API route (real emails come from auth.users,
+-- which RLS can't see), never inserted by authenticated users directly.
+create table contact_shares (
   id             uuid default gen_random_uuid() primary key,
   application_id uuid references applications(id) on delete cascade not null unique,
   student_id     uuid references students(id) on delete cascade not null,
@@ -180,214 +217,209 @@ create table if not exists contact_shares (
   shared_at      timestamptz default now()
 );
 
--- ─── Peer records ───────────────────────────────────────────────────────────────
---  A much lighter version of verified_work_records for peer-to-peer
---  collaborations: no 6-question co-write, no tiers, just "did this happen"
---  confirmed by both sides. Created by /api/collab/accept the moment a
---  request is accepted; locked once both confirm via
---  /api/collab/confirm-completion.
+-- ─── Engagements ───────────────────────────────────────────────────────────
+-- The listing/engagement split this schema makes: `listings.status`
+-- describes the state of the advertisement, `engagements.stage` describes
+-- the state of the work. One listing has at most one accepted application
+-- in MVP (team_size > 1 is descriptive only for now, not enforced).
 
-create table if not exists peer_records (
-  id                    uuid default gen_random_uuid() primary key,
-  application_id        uuid references applications(id) on delete cascade not null unique,
-  project_id            uuid references projects(id) on delete cascade not null,
-  poster_id             uuid not null,
-  student_id            uuid references students(id) on delete cascade not null,
-  project_title         text,
-  skills_used           text[],
-  summary               text,
-  poster_confirmed_at   timestamptz,
-  student_confirmed_at  timestamptz,
-  locked_at             timestamptz,
-  created_at            timestamptz default now()
+create table engagements (
+  id                                  uuid default gen_random_uuid() primary key,
+  application_id                      uuid references applications(id) on delete cascade not null unique,
+  listing_id                          uuid references listings(id) on delete cascade not null,
+  poster_id                           uuid not null,
+  student_id                          uuid references students(id) on delete cascade not null,
+  stage                               text default 'accepted' not null check (stage in ('accepted', 'in_progress', 'submitted', 'closed')),
+  opened_at                           timestamptz default now(),
+  submitted_at                        timestamptz,
+  closed_at                           timestamptz,
+  description                         text,
+  description_agreed_by_student_at    timestamptz,
+  description_agreed_by_poster_at     timestamptz,
+  -- full: shown normally. redacted: counts toward evidence/track record,
+  -- poster identity + brief suppressed, displays as "confidential
+  -- engagement". hidden: a threshold, not a highlight reel — total
+  -- engagement count is never displayed, so an employer/viewer has no way
+  -- to detect that anything was hidden. Comparative anchors (once
+  -- attestation exists) never display per engagement regardless of
+  -- visibility, for a different reason — see §5.
+  visibility                          text default 'full' not null check (visibility in ('full', 'redacted', 'hidden')),
+  escrow_intent_id                    text,  -- DEFERRED: populated once payments exist
+  created_at                          timestamptz default now()
 );
 
--- ─── Verified work records (supersedes experience_records) ────────────────────
---  Layer 1 structural facts, Layer 2 co-written summary + 6-Q attestation,
---  tier (1 employer / 2 faculty / 3 github-evidenced — records here are 1 or 2),
---  mutual approval, immutable lock.
+-- ─── GitHub App integration ────────────────────────────────────────────────
+-- A GitHub App, not the old OAuth app — installation-scoped, per-repo
+-- grants, revocable. Installation tokens are generated on demand from the
+-- App's private key; nothing long-lived is stored here.
 
-create table if not exists verified_work_records (
-  id                            uuid default gen_random_uuid() primary key,
-  application_id                uuid references applications(id) on delete cascade,
-  student_id                    uuid references students(id) on delete cascade,
-  poster_id                     uuid not null,
-  poster_type                   text not null check (poster_type in ('company','faculty')),
-  project_id                    uuid references projects(id) on delete cascade,
-
-  -- Layer 1 structural facts
-  project_title                 text,
-  poster_display_name           text,
-  skills_used                   text[],
-  start_date                    date,
-  end_date                      date,
-  hours_logged                  int,
-  outcome                       text,  -- 'completed' | 'partial' | 'terminated' | null while in progress
-
-  -- Layer 2 co-written summary + attestation
-  summary_draft                 text,
-  summary_final                 text,
-  technologies_used             text[],
-  deliverables_status           text,  -- 'yes' | 'partial' | 'no'
-  would_engage_again            boolean,
-  independence_level            text,  -- 'independent' | 'some_guidance' | 'frequent_checkins'
-  communication_level           text,  -- 'proactive' | 'responsive' | 'needed_followup'
-  problem_solving_level         text,  -- 'proposed_solutions' | 'described_problems' | 'got_stuck'
-
-  -- Tier + mutual lock
-  tier                          int check (tier in (1,2)),
-  student_approved_at           timestamptz,
-  poster_approved_at            timestamptz,
-  locked_at                     timestamptz,
-
-  -- Layer 3 (optional artifacts, employer-approved)
-  artifact_urls                 text[],
-
-  -- Complexity (deterministic, hidden — informs sort order in future)
-  complexity_score              int,
-
-  -- Verification email flow
-  verification_status           text default 'in_progress',  -- 'in_progress' | 'verified' | 'incomplete'
-  verification_token            uuid default gen_random_uuid() unique,
-  verified_at                   timestamptz,
-
-  created_at                    timestamptz default now()
+create table github_connections (
+  student_id      uuid references students(id) on delete cascade primary key,
+  installation_id text not null,
+  github_login    text,
+  connected_at    timestamptz default now()
 );
 
--- ─── Milestones (safety-net check-ins) ────────────────────────────────────────
-
-create table if not exists milestones (
-  id           uuid default gen_random_uuid() primary key,
-  record_id    uuid references verified_work_records(id) on delete cascade,
-  title        text,
-  due_date     date,
-  status       text default 'upcoming',  -- 'upcoming' | 'on_track' | 'issue_flagged' | 'completed'
-  notes        text,
-  created_at   timestamptz default now()
-);
-
--- ─── Issue flags (either party can flag privately) ────────────────────────────
-
-create table if not exists issue_flags (
-  id                uuid default gen_random_uuid() primary key,
-  record_id         uuid references verified_work_records(id) on delete cascade,
-  flagged_by_role   text check (flagged_by_role in ('student','poster')),
-  description       text,
-  resolved_at       timestamptz,
-  created_at        timestamptz default now()
-);
-
--- ─── GitHub-evidenced skills (Tier 3 populated by dependency parser) ──────────
-
-create table if not exists github_evidenced_skills (
+create table github_repo_grants (
   id              uuid default gen_random_uuid() primary key,
-  student_id      uuid references students(id) on delete cascade,
-  skill           text,
-  evidence_count  int default 1,
-  repo_urls       text[],
-  extracted_at    timestamptz default now(),
-  unique (student_id, skill)
-);
-
--- Per-student GitHub OAuth token, stored so the scanner can call the GitHub
--- API on the student's behalf. Uses our own OAuth flow (see /api/github/*)
--- rather than Supabase's manual identity linking, which is a beta feature
--- that isn't reliably togglable.
---
--- Security note: access_token is stored plaintext for MVP. Scope is limited
--- to 'read:user public_repo' — blast radius is bounded. Add pgsodium at-rest
--- encryption before handling any student's private data or paid engagements.
-create table if not exists github_connections (
-  student_id     uuid references students(id) on delete cascade primary key,
-  github_login   text,
-  access_token   text not null,
-  scope          text,
-  connected_at   timestamptz default now()
-);
-
--- Per-repo structural profile (spec §5.1.1): project type, architecture
--- pattern, maturity indicators. Populated by the same scan endpoint.
-create table if not exists github_repo_profiles (
-  id                uuid default gen_random_uuid() primary key,
-  student_id        uuid references students(id) on delete cascade,
-  repo_full_name    text,       -- e.g. "octocat/hello-world"
-  repo_url          text,
-  project_type      text,       -- 'web-app' | 'api' | 'ml' | 'cli' | 'library' | 'mobile' | 'unknown'
-  architecture      text,       -- 'monolith' | 'microservices' | 'serverless' | 'static' | 'unknown'
-  has_tests         boolean default false,
-  has_ci            boolean default false,
-  has_docker        boolean default false,
-  has_docs          boolean default false,
-  has_auth          boolean default false,
-  has_deploy_config boolean default false,
-  extracted_at      timestamptz default now(),
+  student_id      uuid references students(id) on delete cascade not null,
+  installation_id text not null,
+  repo_full_name  text not null,
+  granted_at      timestamptz default now(),
+  revoked_at      timestamptz,
   unique (student_id, repo_full_name)
 );
 
--- ─── Employer profile aggregates (spec §8) ────────────────────────────────────
+-- ─── Artifacts ─────────────────────────────────────────────────────────────
+-- engagement_id is nullable: Tier 0/0.5 artifacts are linked directly by a
+-- student with no listing involved. Only listing-driven artifacts have one.
 
-create table if not exists employer_profiles (
-  poster_id                     uuid primary key,
-  poster_type                   text not null check (poster_type in ('company','faculty')),
-  engagements_completed         int default 0,
-  attestation_completion_rate   decimal(4,3),
-  average_complexity            decimal(4,2),
-  repeat_engagement_rate        decimal(4,3),
-  updated_at                    timestamptz default now()
+create table artifacts (
+  id                  uuid default gen_random_uuid() primary key,
+  student_id          uuid references students(id) on delete cascade not null,
+  engagement_id       uuid references engagements(id) on delete cascade,
+  type                text not null check (type in ('repo', 'url', 'file')),
+  source              text,
+  repo_full_name      text,
+  access_grant_id     uuid references github_repo_grants(id),
+  tier                text not null check (tier in ('tier_0', 'tier_0_5', 'listing_driven')),
+  verification_method text check (verification_method in ('deployment', 'package', 'ci', 'human_review')),
+  verified_at         timestamptz,
+  created_at          timestamptz default now()
 );
 
--- ─── Indexes ──────────────────────────────────────────────────────────────────
+create table artifact_signals (
+  id            uuid default gen_random_uuid() primary key,
+  artifact_id   uuid references artifacts(id) on delete cascade not null,
+  signal_name   text not null,
+  value         text,
+  extracted_at  timestamptz default now()
+);
 
-create index if not exists idx_projects_poster        on projects(poster_id, poster_type);
-create index if not exists idx_projects_is_open       on projects(is_open);
-create index if not exists idx_applications_project   on applications(project_id);
-create index if not exists idx_applications_student   on applications(student_id);
-create index if not exists idx_application_messages_application on application_messages(application_id);
-create index if not exists idx_contact_shares_student  on contact_shares(student_id);
-create index if not exists idx_contact_shares_poster   on contact_shares(poster_id);
-create index if not exists idx_peer_records_student   on peer_records(student_id);
-create index if not exists idx_peer_records_poster    on peer_records(poster_id);
-create index if not exists idx_vwr_student            on verified_work_records(student_id);
-create index if not exists idx_vwr_poster             on verified_work_records(poster_id, poster_type);
-create index if not exists idx_vwr_token              on verified_work_records(verification_token);
-create index if not exists idx_vwr_end_status         on verified_work_records(end_date, verification_status);
-create index if not exists idx_milestones_record      on milestones(record_id);
-create index if not exists idx_issue_flags_record     on issue_flags(record_id);
-create index if not exists idx_ges_student            on github_evidenced_skills(student_id);
-create index if not exists idx_grp_student            on github_repo_profiles(student_id);
-create index if not exists idx_ghc_login              on github_connections(github_login);
+-- ─── Skill evidence — the core record, append-only ────────────────────────
+-- Never UPDATE a row here (enforced below by trigger, not just convention).
+-- A correction is a new row with corrects_evidence_id pointing at the row
+-- it supersedes. Queries that compute depth/track record must read only
+-- evidence with no newer row pointing at it as the "current" value — see
+-- the note above skill_evidence in this file's comments and the matching
+-- layer built in Phase 3.
+--
+-- This is also how the percentile-within-skill bootstrap (§5) is applied:
+-- crossing 30 students for a skill doesn't UPDATE existing rows, it INSERTs
+-- new evidence rows correcting the old difficulty_cleared values.
 
--- ─── Functions & triggers ──────────────────────────────────────────────────────
+create table skill_evidence (
+  id                    uuid default gen_random_uuid() primary key,
+  student_id            uuid references students(id) on delete cascade not null,
+  skill_id              text references skills(id) not null,
+  artifact_id           uuid references artifacts(id) on delete cascade,
+  engagement_id         uuid references engagements(id) on delete cascade,  -- DEFERRED-populated for attested tiers; denormalized convenience today
+  rater_id              uuid,  -- DEFERRED: null until faculty/employer attestation exists
+  base                  numeric not null,
+  independence          numeric not null default 1.0,  -- DEFERRED: always 1.0 in MVP
+  paid                  numeric not null default 1.0,  -- DEFERRED: always 1.0 in MVP
+  tier_weight           numeric generated always as (base * independence * paid) stored,
+  difficulty_cleared    int not null check (difficulty_cleared between 1 and 5),
+  verification_method   text check (verification_method in ('deployment', 'package', 'ci', 'human_review', 'attested')),
+  source_agreement      int default 1 not null,  -- how many independent sources corroborated this row; max 2 in MVP
+  comparative_anchor     text,  -- DEFERRED: null until a rater exists
+  corrects_evidence_id  uuid references skill_evidence(id),
+  created_at            timestamptz default now()
+);
 
--- Aggregates a student's VERIFIED (not self-reported) skills across all three
--- attestation tiers. Used to gate visibility of peer projects behind their
--- required_skills and to rank applicants by verified-fit. Runs as the caller
--- (no security definer needed) — every source table already has a "read own
--- rows" RLS policy, so this only ever reads what the caller could already
--- read directly.
-create or replace function verified_skills_for(p_student_id uuid)
-returns text[]
-language sql
-stable
-as $$
-  select coalesce(array_agg(distinct lower(skill)), array[]::text[])
-  from (
-    select unnest(skills_used) as skill from verified_work_records
-      where student_id = p_student_id and locked_at is not null and skills_used is not null
-    union all
-    select skill from github_evidenced_skills
-      where student_id = p_student_id
-    union all
-    select unnest(skills_used) as skill from peer_records
-      where student_id = p_student_id and locked_at is not null and skills_used is not null
-  ) s
-$$;
+-- ─── Platform-observed signals (free, nobody does any work) ───────────────
 
--- Keeps projects.applicant_count and students.active_application_count in
--- sync with applications, regardless of insert path. security definer
--- because a student inserting/withdrawing their own application has no
--- UPDATE grant on `projects` or other students' rows otherwise — this is the
--- standard Postgres pattern for a maintained counter.
+create table platform_signals (
+  engagement_id   uuid references engagements(id) on delete cascade primary key,
+  days_to_submit  int,
+  est_hours       int,
+  on_time         boolean,
+  scope_changes   int default 0 not null,
+  message_volume  int default 0 not null,
+  dispute_flag    boolean default false not null,
+  repeat_hire     boolean default false not null,  -- was this (poster, student) pair already engaged before?
+  computed_at     timestamptz default now()
+);
+
+-- ─── Outcomes (§14) ────────────────────────────────────────────────────────
+-- Populated by the single close-out satisfaction question (§8, §17) — not
+-- attestation of skill, so it's live in MVP even though rater-based
+-- attestation isn't.
+
+create table outcomes (
+  engagement_id           uuid references engagements(id) on delete cascade primary key,
+  poster_satisfaction     int check (poster_satisfaction between 1 and 5),
+  would_rehire            boolean,
+  hired_beyond_engagement boolean default false not null,  -- DEFERRED: no full-time hiring flow yet
+  recorded_at             timestamptz default now()
+);
+
+-- ─── Project briefs ────────────────────────────────────────────────────────
+-- Cold-start unblock. Never a listing — private to the student, regenerable.
+
+create table project_briefs (
+  id                  uuid default gen_random_uuid() primary key,
+  student_id          uuid references students(id) on delete cascade not null,
+  target_role         text,
+  target_skill_id     text references skills(id),
+  brief_text          text not null,
+  difficulty          int check (difficulty between 1 and 5),
+  issued_at           timestamptz default now(),
+  completed_at        timestamptz,
+  linked_artifact_id  uuid references artifacts(id)
+);
+
+-- ─── FCRA write-path — cannot be backfilled, must exist from row one ──────
+
+create table consents (
+  id            uuid default gen_random_uuid() primary key,
+  student_id    uuid references students(id) on delete cascade not null,
+  scope         text not null,  -- e.g. 'application_disclosure'
+  granted_at    timestamptz default now(),
+  revoked_at    timestamptz,
+  text_version  text not null
+);
+
+create table disclosure_log (
+  id               uuid default gen_random_uuid() primary key,
+  student_id       uuid references students(id) on delete cascade not null,
+  recipient_id     uuid not null,
+  engagement_ids   uuid[],
+  fields_disclosed text[] not null,  -- e.g. {'depth_scores','fit_tier','evidence_summary'} — the scores are what make this a consumer-report furnishing, not just the engagement IDs
+  furnished_at     timestamptz default now()
+);
+
+create table evidence_audit (
+  id            uuid default gen_random_uuid() primary key,
+  evidence_id   uuid references skill_evidence(id) on delete cascade not null,
+  source        text not null,
+  raw_input     jsonb,
+  extracted_at  timestamptz default now()
+);
+
+-- ─── Agent calls — every agent invocation, logged ─────────────────────────
+-- Required to answer "why did the system say that" and for cost control.
+-- Agents never decide (§2) — this table is what proves it after the fact.
+
+create table agent_calls (
+  id           uuid default gen_random_uuid() primary key,
+  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'application_scoring')),
+  student_id   uuid references students(id) on delete cascade,
+  poster_id    uuid,
+  input        jsonb not null,
+  output       jsonb not null,
+  model_version text,
+  created_at   timestamptz default now()
+);
+
+-- ============================================================
+--  Functions & triggers
+-- ============================================================
+
+-- Keeps students.active_application_count in sync with applications,
+-- regardless of insert path. security definer because a student
+-- inserting/withdrawing their own application has no UPDATE grant on
+-- other students' rows otherwise.
 create or replace function sync_application_counters()
 returns trigger
 language plpgsql
@@ -396,35 +428,20 @@ set search_path = public
 as $$
 begin
   if TG_OP = 'INSERT' then
-    if NEW.status <> 'withdrawn' then
-      update projects set applicant_count = applicant_count + 1 where id = NEW.project_id;
-    end if;
-    if NEW.status = 'applied' then
+    if NEW.status = 'submitted' then
       update students set active_application_count = active_application_count + 1 where id = NEW.student_id;
     end if;
-
   elsif TG_OP = 'UPDATE' then
-    if OLD.status <> 'withdrawn' and NEW.status = 'withdrawn' then
-      update projects set applicant_count = greatest(applicant_count - 1, 0) where id = NEW.project_id;
-    elsif OLD.status = 'withdrawn' and NEW.status <> 'withdrawn' then
-      update projects set applicant_count = applicant_count + 1 where id = NEW.project_id;
-    end if;
-
-    if OLD.status = 'applied' and NEW.status <> 'applied' then
+    if OLD.status = 'submitted' and NEW.status <> 'submitted' then
       update students set active_application_count = greatest(active_application_count - 1, 0) where id = NEW.student_id;
-    elsif OLD.status <> 'applied' and NEW.status = 'applied' then
+    elsif OLD.status <> 'submitted' and NEW.status = 'submitted' then
       update students set active_application_count = active_application_count + 1 where id = NEW.student_id;
     end if;
-
   elsif TG_OP = 'DELETE' then
-    if OLD.status <> 'withdrawn' then
-      update projects set applicant_count = greatest(applicant_count - 1, 0) where id = OLD.project_id;
-    end if;
-    if OLD.status = 'applied' then
+    if OLD.status = 'submitted' then
       update students set active_application_count = greatest(active_application_count - 1, 0) where id = OLD.student_id;
     end if;
   end if;
-
   return null;
 end;
 $$;
@@ -434,23 +451,111 @@ create trigger trg_sync_application_counters
   after insert or update of status or delete on applications
   for each row execute function sync_application_counters();
 
--- ─── Row Level Security ───────────────────────────────────────────────────────
+-- Computes repeat_hire at engagement creation — has this (poster, student)
+-- pair engaged before? Free, and per §5 the strongest signal in the system.
+create or replace function sync_repeat_hire()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  prior_count int;
+begin
+  select count(*) into prior_count
+  from engagements
+  where poster_id = NEW.poster_id and student_id = NEW.student_id and id <> NEW.id;
 
-alter table students                enable row level security;
-alter table companies               enable row level security;
-alter table faculty                 enable row level security;
-alter table projects                enable row level security;
-alter table applications            enable row level security;
-alter table application_messages    enable row level security;
-alter table contact_shares          enable row level security;
-alter table peer_records            enable row level security;
-alter table verified_work_records   enable row level security;
-alter table milestones              enable row level security;
-alter table issue_flags             enable row level security;
-alter table github_evidenced_skills enable row level security;
-alter table github_repo_profiles    enable row level security;
-alter table github_connections      enable row level security;
-alter table employer_profiles       enable row level security;
+  insert into platform_signals (engagement_id, repeat_hire)
+  values (NEW.id, prior_count > 0)
+  on conflict (engagement_id) do update set repeat_hire = excluded.repeat_hire;
+
+  return NEW;
+end;
+$$;
+
+drop trigger if exists trg_sync_repeat_hire on engagements;
+create trigger trg_sync_repeat_hire
+  after insert on engagements
+  for each row execute function sync_repeat_hire();
+
+-- Enforces the append-only invariant on skill_evidence and evidence_audit
+-- at the database level, not just by convention — corrections must be new
+-- rows. UPDATE is blocked outright; only INSERT and SELECT are permitted.
+create or replace function reject_evidence_update()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception 'skill_evidence and evidence_audit are append-only — insert a correction row instead of updating % (id=%)', TG_TABLE_NAME, OLD.id;
+end;
+$$;
+
+drop trigger if exists trg_reject_skill_evidence_update on skill_evidence;
+create trigger trg_reject_skill_evidence_update
+  before update on skill_evidence
+  for each row execute function reject_evidence_update();
+
+drop trigger if exists trg_reject_evidence_audit_update on evidence_audit;
+create trigger trg_reject_evidence_audit_update
+  before update on evidence_audit
+  for each row execute function reject_evidence_update();
+
+-- ============================================================
+--  Indexes
+-- ============================================================
+
+create index idx_skill_aliases_skill           on skill_aliases(skill_id);
+create index idx_skill_priors_student           on skill_priors(student_id);
+create index idx_listings_poster                on listings(poster_id, poster_type);
+create index idx_listings_status                on listings(status);
+create index idx_listing_requirements_skill      on listing_requirements(skill_id);
+create index idx_applications_listing            on applications(listing_id);
+create index idx_applications_student            on applications(student_id);
+create index idx_application_messages_application on application_messages(application_id);
+create index idx_contact_shares_student          on contact_shares(student_id);
+create index idx_contact_shares_poster           on contact_shares(poster_id);
+create index idx_engagements_listing             on engagements(listing_id);
+create index idx_engagements_student             on engagements(student_id);
+create index idx_engagements_poster              on engagements(poster_id);
+create index idx_github_repo_grants_student       on github_repo_grants(student_id);
+create index idx_artifacts_student               on artifacts(student_id);
+create index idx_artifacts_engagement            on artifacts(engagement_id);
+create index idx_skill_evidence_student_skill     on skill_evidence(student_id, skill_id);
+create index idx_skill_evidence_artifact         on skill_evidence(artifact_id);
+create index idx_skill_evidence_corrects         on skill_evidence(corrects_evidence_id);
+create index idx_project_briefs_student          on project_briefs(student_id);
+create index idx_consents_student                on consents(student_id);
+create index idx_disclosure_log_student           on disclosure_log(student_id);
+create index idx_evidence_audit_evidence         on evidence_audit(evidence_id);
+create index idx_agent_calls_student             on agent_calls(student_id);
+
+-- ============================================================
+--  Row Level Security
+-- ============================================================
+
+alter table students               enable row level security;
+alter table skills                 enable row level security;
+alter table skill_aliases          enable row level security;
+alter table skill_priors           enable row level security;
+alter table listings               enable row level security;
+alter table listing_requirements   enable row level security;
+alter table applications           enable row level security;
+alter table application_messages   enable row level security;
+alter table contact_shares         enable row level security;
+alter table engagements            enable row level security;
+alter table github_connections     enable row level security;
+alter table github_repo_grants     enable row level security;
+alter table artifacts              enable row level security;
+alter table artifact_signals       enable row level security;
+alter table skill_evidence         enable row level security;
+alter table platform_signals       enable row level security;
+alter table outcomes               enable row level security;
+alter table project_briefs         enable row level security;
+alter table consents               enable row level security;
+alter table disclosure_log         enable row level security;
+alter table evidence_audit         enable row level security;
+alter table agent_calls            enable row level security;
 
 -- ── students ──
 
@@ -463,181 +568,136 @@ create policy "Students: insert own row"
 create policy "Students: update own row"
   on students for update using (auth.uid() = id);
 
-create policy "Posters: read student info via their applications"
+-- Posters need to read applicant profile basics; scoped narrowly to actual
+-- applicants on their own listings, not a general "any signed-in user"
+-- grant.
+create policy "Posters: read applicant profiles via their listings"
   on students for select
   using (
     exists (
-      select 1
-      from applications a
-      join projects p on p.id = a.project_id
+      select 1 from applications a
+      join listings l on l.id = a.listing_id
       where a.student_id = students.id
-        and p.poster_id = auth.uid()
+        and l.poster_id = auth.uid()
     )
   );
 
--- Mirrors "Anyone: read company/faculty info for open projects" below —
--- a student who posts an open project is publicly visible the same way a
--- posting company or faculty member is.
-create policy "Anyone: read student info for open projects"
-  on students for select
-  using (
-    exists (
-      select 1 from projects p
-      where p.poster_id = students.id
-        and p.poster_type = 'student'
-        and p.is_open = true
-    )
-  );
-
--- Opt-in student directory — only visible to other signed-in students, and
--- only for students who've explicitly turned it on (default off).
+-- Opted-in directory (/students) — basic profile + skills only. The RLS
+-- grant is row-level (can this row be read at all), not field-level — the
+-- application layer must select only safe columns (no depth, no evidence,
+-- no track record) for this surface. See §16 for why that split matters.
 create policy "Anyone signed in: read opted-in student directory"
   on students for select
   using (open_to_collab = true and auth.uid() is not null);
 
--- ── companies ──
+-- Public profile lookups by handle, unauthenticated included.
+create policy "Anyone: read student row for public profile lookup"
+  on students for select
+  using (handle is not null);
 
-create policy "Companies: select own row"
-  on companies for select using (auth.uid() = id);
+-- ── skills / skill_aliases ──
+-- Read-only fixed vocabulary for every signed-in user; writes are
+-- service-role only (taxonomy edits are a deliberate, reviewed action, not
+-- a user action).
 
-create policy "Companies: insert own row"
-  on companies for insert with check (auth.uid() = id);
+create policy "Anyone signed in: read skills"
+  on skills for select using (auth.uid() is not null);
 
-create policy "Companies: update own row"
-  on companies for update using (auth.uid() = id);
+create policy "Anyone signed in: read skill aliases"
+  on skill_aliases for select using (auth.uid() is not null);
 
-create policy "Anyone: read company info for open projects"
-  on companies for select
+-- ── skill_priors ──
+
+create policy "Students: read own priors"
+  on skill_priors for select using (auth.uid() = student_id);
+
+create policy "Posters: read applicant priors via their listings"
+  on skill_priors for select
   using (
     exists (
-      select 1 from projects p
-      where p.poster_id = companies.id
-        and p.poster_type = 'company'
-        and p.is_open = true
+      select 1 from applications a
+      join listings l on l.id = a.listing_id
+      where a.student_id = skill_priors.student_id
+        and l.poster_id = auth.uid()
     )
   );
 
--- ── faculty ──
+-- ── listings ──
+-- Every open listing is visible to everyone, logged in or not — presence
+-- gates applying, never seeing (§7).
 
-create policy "Faculty: select own row"
-  on faculty for select using (auth.uid() = id);
+create policy "Anyone: read open listings"
+  on listings for select using (status = 'open');
 
-create policy "Faculty: insert own row"
-  on faculty for insert with check (auth.uid() = id);
+create policy "Posters: read all own listings"
+  on listings for select using (auth.uid() = poster_id);
 
-create policy "Faculty: update own row"
-  on faculty for update using (auth.uid() = id);
+create policy "Posters: insert own listings"
+  on listings for insert with check (auth.uid() = poster_id);
 
-create policy "Anyone: read faculty info for open projects"
-  on faculty for select
+create policy "Posters: update own listings"
+  on listings for update using (auth.uid() = poster_id);
+
+create policy "Posters: delete own listings"
+  on listings for delete using (auth.uid() = poster_id);
+
+-- ── listing_requirements ──
+
+create policy "Anyone: read requirements for open listings"
+  on listing_requirements for select
   using (
-    exists (
-      select 1 from projects p
-      where p.poster_id = faculty.id
-        and p.poster_type = 'faculty'
-        and p.is_open = true
-    )
+    exists (select 1 from listings l where l.id = listing_requirements.listing_id and l.status = 'open')
   );
 
--- ── projects ──
-
--- Peer (student-posted) projects with required_skills are gated behind the
--- viewer's VERIFIED skills — company/faculty projects are unaffected.
-create policy "Anyone: read open projects"
-  on projects for select
-  using (
-    is_open = true
-    and (
-      poster_type <> 'student'
-      or coalesce(array_length(required_skills, 1), 0) = 0
-      or array(select lower(x) from unnest(required_skills) x) <@ verified_skills_for(auth.uid())
-    )
-  );
-
-create policy "Posters: read all own projects"
-  on projects for select using (auth.uid() = poster_id);
-
-create policy "Posters: insert own projects"
-  on projects for insert with check (auth.uid() = poster_id);
-
-create policy "Posters: update own projects"
-  on projects for update using (auth.uid() = poster_id);
-
-create policy "Posters: delete own projects"
-  on projects for delete using (auth.uid() = poster_id);
+create policy "Posters: manage requirements for own listings"
+  on listing_requirements for all
+  using (exists (select 1 from listings l where l.id = listing_requirements.listing_id and l.poster_id = auth.uid()))
+  with check (exists (select 1 from listings l where l.id = listing_requirements.listing_id and l.poster_id = auth.uid()));
 
 -- ── applications ──
+-- Active-application cap (5, §7) enforced here — the only hard application
+-- gate in MVP. Presence/fit is informational, shown before submit, never a
+-- technical block (§7: "eligibility gates applying, not seeing" — and even
+-- within applying, only the slot cap is a hard rule).
 
 create policy "Students: read own applications"
   on applications for select using (auth.uid() = student_id);
 
--- Active-application cap (all posters, throttles spray-applying at the
--- source) plus, for peer projects only, the verified-skill gate and the
--- per-project slot cap. Defense in depth — the UI already won't offer to
--- apply once these are hit.
 create policy "Students: insert own applications"
   on applications for insert
   with check (
     auth.uid() = student_id
     and coalesce((select active_application_count from students where id = auth.uid()), 0) < 5
-    and exists (
-      select 1 from projects p
-      where p.id = applications.project_id
-        and p.is_open = true
-        and (
-          p.poster_type <> 'student'
-          or (
-            (
-              coalesce(array_length(p.required_skills, 1), 0) = 0
-              or array(select lower(x) from unnest(p.required_skills) x) <@ verified_skills_for(auth.uid())
-            )
-            and p.applicant_count < p.max_applicants
-          )
-        )
-    )
   );
 
-create policy "Posters: read applications for their projects"
+create policy "Posters: read applications for their listings"
   on applications for select
-  using (
-    exists (
-      select 1 from projects p
-      where p.id = applications.project_id
-        and p.poster_id = auth.uid()
-    )
-  );
+  using (exists (select 1 from listings l where l.id = applications.listing_id and l.poster_id = auth.uid()));
 
-create policy "Posters: update application status for their projects"
+create policy "Posters: update application status for their listings"
   on applications for update
-  using (
-    exists (
-      select 1 from projects p
-      where p.id = applications.project_id
-        and p.poster_id = auth.uid()
-    )
-  );
+  using (exists (select 1 from listings l where l.id = applications.listing_id and l.poster_id = auth.uid()));
 
--- A student can withdraw their own still-pending request. USING restricts
--- which rows are eligible (must be theirs, must currently be "applied");
--- WITH CHECK restricts what the row is allowed to become (must land on
--- "withdrawn") — together they only permit this one transition.
-create policy "Students: withdraw own pending application"
+-- A student can withdraw their own still-submitted application. USING
+-- restricts which rows are eligible; WITH CHECK restricts what the row is
+-- allowed to become — together they permit only this one transition.
+create policy "Students: withdraw own submitted application"
   on applications for update
-  using (auth.uid() = student_id and status = 'applied')
+  using (auth.uid() = student_id and status = 'submitted')
   with check (auth.uid() = student_id and status = 'withdrawn');
 
 -- ── application_messages ──
--- A small conversation thread on a pending application — either participant
--- (the applicant, or the project's poster) can read and post to it.
+-- 500-char cap is a table CHECK constraint; the "3 messages per side before
+-- acceptance" cap is enforced here.
 
 create policy "Application participants: read messages"
   on application_messages for select
   using (
     exists (
       select 1 from applications a
-      join projects p on p.id = a.project_id
+      join listings l on l.id = a.listing_id
       where a.id = application_messages.application_id
-        and (a.student_id = auth.uid() or p.poster_id = auth.uid())
+        and (a.student_id = auth.uid() or l.poster_id = auth.uid())
     )
   );
 
@@ -647,283 +707,119 @@ create policy "Application participants: send messages"
     sender_id = auth.uid()
     and exists (
       select 1 from applications a
-      join projects p on p.id = a.project_id
+      join listings l on l.id = a.listing_id
       where a.id = application_messages.application_id
-        and (a.student_id = auth.uid() or p.poster_id = auth.uid())
+        and (a.student_id = auth.uid() or l.poster_id = auth.uid())
+        and (
+          a.status <> 'submitted'  -- unlimited once accepted
+          or (
+            select count(*) from application_messages m
+            where m.application_id = a.id and m.sender_id = auth.uid()
+          ) < 3
+        )
     )
   );
 
 -- ── contact_shares ──
--- Insert-only via the service-role client (bypasses RLS) — no insert policy
--- needed for authenticated users.
 
 create policy "Contact shares: participants read"
   on contact_shares for select
   using (auth.uid() = student_id or auth.uid() = poster_id);
 
--- ── peer_records ──
--- Inserted via the service-role client in /api/collab/accept (same
--- centralized-write reasoning as contact_shares). Confirming completion runs
--- under the caller's own session, so it needs a real update policy.
+-- ── engagements ──
 
-create policy "Peer records: participants read"
-  on peer_records for select
+create policy "Engagement participants: read"
+  on engagements for select
   using (auth.uid() = student_id or auth.uid() = poster_id);
 
-create policy "Peer records: participants confirm completion"
-  on peer_records for update
+create policy "Engagement participants: update"
+  on engagements for update
   using (auth.uid() = student_id or auth.uid() = poster_id);
 
--- ── verified_work_records ──
+-- ── github_connections / github_repo_grants ──
 
-create policy "Students: read own records"
-  on verified_work_records for select using (auth.uid() = student_id);
+create policy "Students: manage own github connection"
+  on github_connections for all
+  using (auth.uid() = student_id) with check (auth.uid() = student_id);
 
-create policy "Posters: read own records"
-  on verified_work_records for select using (auth.uid() = poster_id);
+create policy "Students: manage own repo grants"
+  on github_repo_grants for all
+  using (auth.uid() = student_id) with check (auth.uid() = student_id);
 
-create policy "Posters: insert own records"
-  on verified_work_records for insert with check (auth.uid() = poster_id);
+-- ── artifacts / artifact_signals ──
 
-create policy "Posters: update own records"
-  on verified_work_records for update using (auth.uid() = poster_id);
+create policy "Students: manage own artifacts"
+  on artifacts for all
+  using (auth.uid() = student_id) with check (auth.uid() = student_id);
 
-create policy "Students: update own records for co-write"
-  on verified_work_records for update using (auth.uid() = student_id);
+create policy "Anyone: read artifacts for open engagements/profile"
+  on artifacts for select using (true);  -- artifact existence/type is not sensitive; content is never stored (§5)
 
--- ── milestones ──
+create policy "Anyone signed in: read artifact signals"
+  on artifact_signals for select using (auth.uid() is not null);
 
-create policy "Milestone participants: read"
-  on milestones for select
+-- ── skill_evidence ──
+-- Read-only for everyone except the owning student and, narrowly, posters
+-- who received an application from that student. Writes are service-role
+-- only (evidence is written by the scan pipeline / close-out flow, never
+-- inserted directly by a client).
+
+create policy "Students: read own evidence"
+  on skill_evidence for select using (auth.uid() = student_id);
+
+create policy "Posters: read applicant evidence via their listings"
+  on skill_evidence for select
   using (
     exists (
-      select 1 from verified_work_records r
-      where r.id = milestones.record_id
-        and (r.student_id = auth.uid() or r.poster_id = auth.uid())
+      select 1 from applications a
+      join listings l on l.id = a.listing_id
+      where a.student_id = skill_evidence.student_id
+        and l.poster_id = auth.uid()
     )
   );
 
-create policy "Milestone participants: write"
-  on milestones for insert
-  with check (
-    exists (
-      select 1 from verified_work_records r
-      where r.id = milestones.record_id
-        and (r.student_id = auth.uid() or r.poster_id = auth.uid())
-    )
-  );
+-- ── platform_signals / outcomes ──
 
-create policy "Milestone participants: update"
-  on milestones for update
-  using (
-    exists (
-      select 1 from verified_work_records r
-      where r.id = milestones.record_id
-        and (r.student_id = auth.uid() or r.poster_id = auth.uid())
-    )
-  );
+create policy "Engagement participants: read platform signals"
+  on platform_signals for select
+  using (exists (select 1 from engagements e where e.id = platform_signals.engagement_id and (e.student_id = auth.uid() or e.poster_id = auth.uid())));
 
--- ── issue_flags ──
+create policy "Engagement participants: read outcomes"
+  on outcomes for select
+  using (exists (select 1 from engagements e where e.id = outcomes.engagement_id and (e.student_id = auth.uid() or e.poster_id = auth.uid())));
 
-create policy "Flag participants: read"
-  on issue_flags for select
-  using (
-    exists (
-      select 1 from verified_work_records r
-      where r.id = issue_flags.record_id
-        and (r.student_id = auth.uid() or r.poster_id = auth.uid())
-    )
-  );
+create policy "Poster: insert own satisfaction outcome"
+  on outcomes for insert
+  with check (exists (select 1 from engagements e where e.id = outcomes.engagement_id and e.poster_id = auth.uid()));
 
-create policy "Flag participants: insert"
-  on issue_flags for insert
-  with check (
-    exists (
-      select 1 from verified_work_records r
-      where r.id = issue_flags.record_id
-        and (r.student_id = auth.uid() or r.poster_id = auth.uid())
-    )
-  );
+-- ── project_briefs ──
 
--- ── github_evidenced_skills ──
+create policy "Students: manage own briefs"
+  on project_briefs for all
+  using (auth.uid() = student_id) with check (auth.uid() = student_id);
 
-create policy "Students: read own github skills"
-  on github_evidenced_skills for select using (auth.uid() = student_id);
+-- ── consents / disclosure_log / evidence_audit ──
+-- Read-only to the owning student (file disclosure, §10/§12 /me/file).
+-- Writes are service-role only — these are FCRA compliance artifacts, not
+-- user-editable records.
 
-create policy "Students: write own github skills"
-  on github_evidenced_skills for insert with check (auth.uid() = student_id);
+create policy "Students: read own consents"
+  on consents for select using (auth.uid() = student_id);
 
-create policy "Students: update own github skills"
-  on github_evidenced_skills for update using (auth.uid() = student_id);
+create policy "Students: insert own consent"
+  on consents for insert with check (auth.uid() = student_id);
 
-create policy "Students: delete own github skills"
-  on github_evidenced_skills for delete using (auth.uid() = student_id);
+create policy "Students: read own disclosure log"
+  on disclosure_log for select using (auth.uid() = student_id);
 
-create policy "Posters via applications: read github skills"
-  on github_evidenced_skills for select
-  using (
-    exists (
-      select 1
-      from applications a
-      join projects p on p.id = a.project_id
-      where a.student_id = github_evidenced_skills.student_id
-        and p.poster_id = auth.uid()
-    )
-  );
+create policy "Students: read own evidence audit"
+  on evidence_audit for select
+  using (exists (select 1 from skill_evidence se where se.id = evidence_audit.evidence_id and se.student_id = auth.uid()));
 
--- ── github_repo_profiles ──
+-- ── agent_calls ──
 
-create policy "Students: read own repo profiles"
-  on github_repo_profiles for select using (auth.uid() = student_id);
+create policy "Students: read own agent calls"
+  on agent_calls for select using (auth.uid() = student_id);
 
-create policy "Students: write own repo profiles"
-  on github_repo_profiles for insert with check (auth.uid() = student_id);
-
-create policy "Students: update own repo profiles"
-  on github_repo_profiles for update using (auth.uid() = student_id);
-
-create policy "Students: delete own repo profiles"
-  on github_repo_profiles for delete using (auth.uid() = student_id);
-
-create policy "Posters via applications: read repo profiles"
-  on github_repo_profiles for select
-  using (
-    exists (
-      select 1
-      from applications a
-      join projects p on p.id = a.project_id
-      where a.student_id = github_repo_profiles.student_id
-        and p.poster_id = auth.uid()
-    )
-  );
-
--- ── github_connections ──
--- Writes are done from the OAuth callback route using service_role, so no
--- INSERT/UPDATE policies are needed for anon users. Students can only read
--- their own token (and can delete it to disconnect).
-
-create policy "Students: read own github connection"
-  on github_connections for select using (auth.uid() = student_id);
-
-create policy "Students: delete own github connection"
-  on github_connections for delete using (auth.uid() = student_id);
-
--- ── employer_profiles ──
-
-create policy "Anyone: read employer profiles"
-  on employer_profiles for select using (true);
-
--- ─── Storage bucket ───────────────────────────────────────────────────────────
-
-insert into storage.buckets (id, name, public)
-values ('resumes', 'resumes', false)
-on conflict (id) do nothing;
-
-create policy "Students: upload own resume"
-  on storage.objects for insert
-  with check (
-    bucket_id = 'resumes'
-    and auth.uid()::text = (storage.foldername(name))[1]
-  );
-
-create policy "Students: read own resume"
-  on storage.objects for select
-  using (
-    bucket_id = 'resumes'
-    and auth.uid()::text = (storage.foldername(name))[1]
-  );
-
-create policy "Students: update own resume"
-  on storage.objects for update
-  using (
-    bucket_id = 'resumes'
-    and auth.uid()::text = (storage.foldername(name))[1]
-  );
-
--- Companies, faculty, and students can all post projects and act as posters.
-create policy "Posters: read any resume in bucket"
-  on storage.objects for select
-  using (
-    bucket_id = 'resumes'
-    and (
-      exists (select 1 from companies c where c.id = auth.uid())
-      or exists (select 1 from faculty f where f.id = auth.uid())
-      or exists (select 1 from students s where s.id = auth.uid())
-    )
-  );
-
--- ─── Employer profile aggregator ──────────────────────────────────────────────
---  Recomputes an employer's aggregate stats whenever a record is locked or
---  when attestation is completed. Cheap because we only look at that poster's
---  records; a full recompute is fine at MVP scale.
-
-create or replace function recompute_employer_profile(p_id uuid, p_type text)
-returns void language plpgsql as $$
-declare
-  v_engagements int;
-  v_locked int;
-  v_avg_complexity decimal(4,2);
-  v_repeat_rate decimal(4,3);
-  v_would_engage int;
-begin
-  select
-    count(*) filter (where locked_at is not null),
-    count(*) filter (where locked_at is not null),
-    avg(complexity_score) filter (where locked_at is not null and complexity_score is not null),
-    count(*) filter (where locked_at is not null and would_engage_again is true)
-  into v_locked, v_engagements, v_avg_complexity, v_would_engage
-  from verified_work_records
-  where poster_id = p_id and poster_type = p_type;
-
-  insert into employer_profiles (
-    poster_id, poster_type, engagements_completed,
-    attestation_completion_rate, average_complexity,
-    repeat_engagement_rate, updated_at
-  ) values (
-    p_id, p_type, coalesce(v_locked, 0),
-    -- Attestation completion rate: locked / (locked + still-in-progress-past-end-date). Simplified for MVP:
-    case when v_engagements > 0 then 1.0 else null end,
-    v_avg_complexity,
-    case when v_locked > 0 then v_would_engage::decimal / v_locked else null end,
-    now()
-  )
-  on conflict (poster_id) do update set
-    engagements_completed        = excluded.engagements_completed,
-    attestation_completion_rate  = excluded.attestation_completion_rate,
-    average_complexity           = excluded.average_complexity,
-    repeat_engagement_rate       = excluded.repeat_engagement_rate,
-    updated_at                   = excluded.updated_at,
-    poster_type                  = excluded.poster_type;
-end $$;
-
-create or replace function trigger_recompute_employer_profile()
-returns trigger language plpgsql as $$
-begin
-  perform recompute_employer_profile(new.poster_id, new.poster_type);
-  return new;
-end $$;
-
-drop trigger if exists verified_work_records_recompute on verified_work_records;
-create trigger verified_work_records_recompute
-  after insert or update of locked_at, complexity_score, would_engage_again
-  on verified_work_records
-  for each row
-  execute function trigger_recompute_employer_profile();
-
--- ─── pg_cron job for daily verification email trigger ─────────────────────────
-
--- select cron.schedule(
---   'workmark-daily-verification',
---   '0 9 * * *',
---   $$
---     select
---       net.http_post(
---         url := 'https://<YOUR_PROJECT_REF>.supabase.co/functions/v1/send-verification-emails',
---         headers := jsonb_build_object(
---           'Content-Type', 'application/json',
---           'Authorization', 'Bearer <YOUR_ANON_KEY>'
---         ),
---         body := '{}'::jsonb
---       )
---   $$
--- );
+create policy "Posters: read agent calls made on their behalf"
+  on agent_calls for select using (auth.uid() = poster_id);
