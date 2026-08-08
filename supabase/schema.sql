@@ -121,7 +121,7 @@ create table skills (
   id              text primary key,
   canonical_name  text not null,
   parent_id       text references skills(id),
-  embedding       vector(512),  -- voyage-3-lite; alter before backfilling if a different model is chosen
+  embedding       vector(1024),  -- voyage-4, default output_dimension
   deprecated_at   timestamptz,
   merged_into_id  text references skills(id)
 );
