@@ -12,6 +12,7 @@
 // your platform doesn't support real newlines in env vars.
 
 import { App } from '@octokit/app'
+import { Octokit } from '@octokit/rest'
 
 function readPrivateKey(): string {
   const raw = process.env.GITHUB_APP_PRIVATE_KEY
@@ -21,10 +22,17 @@ function readPrivateKey(): string {
   return raw.includes('\n') ? raw : raw.replace(/\\n/g, '\n')
 }
 
-let cachedApp: App | null = null
+// @octokit/app's default Octokit is the bare @octokit/core client — request()
+// and graphql() only, no .rest.* namespace. Passing @octokit/rest's Octokit
+// class here (which already bundles the REST endpoint methods plugin) is
+// what makes octokit.rest.apps.getInstallation(), etc. exist on the client
+// getInstallationOctokit() below returns.
+type WorkmarkApp = App<{ Octokit: typeof Octokit }>
+
+let cachedApp: WorkmarkApp | null = null
 
 /** The GitHub App itself — authenticated as the App, not as any installation. */
-export function getGithubApp(): App {
+export function getGithubApp(): WorkmarkApp {
   if (cachedApp) return cachedApp
 
   const appId = process.env.GITHUB_APP_ID
@@ -36,6 +44,7 @@ export function getGithubApp(): App {
     appId,
     privateKey: readPrivateKey(),
     webhooks: { secret: webhookSecret },
+    Octokit,
   })
   return cachedApp
 }
