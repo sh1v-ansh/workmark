@@ -24,6 +24,7 @@ create extension if not exists vector;
 -- ─── Destructive teardown ─────────────────────────────────────────────────────
 
 drop table if exists agent_calls           cascade;
+drop table if exists fit_tier_impressions  cascade;
 drop table if exists project_briefs        cascade;
 drop table if exists evidence_audit        cascade;
 drop table if exists disclosure_log        cascade;
@@ -43,6 +44,7 @@ drop table if exists listing_requirements  cascade;
 drop table if exists listings              cascade;
 drop table if exists skill_priors          cascade;
 drop table if exists skill_aliases         cascade;
+drop table if exists skill_calibration     cascade;
 drop table if exists skills                cascade;
 drop table if exists students              cascade;
 
@@ -109,11 +111,31 @@ create table students (
 -- id is a stable text slug, not a uuid — see supabase/seed_skills_taxonomy.sql
 -- for why. This is a fixed, hand-authored vocabulary, not user-generated rows.
 
+-- deprecated_at / merged_into_id exist because taxonomy drift is guaranteed,
+-- not hypothetical — the first real listing on the platform already
+-- references nine skills this taxonomy doesn't have. Skills are never
+-- deleted (skill_evidence FKs would block it, and deleting would silently
+-- erase someone's history); they're soft-deprecated, optionally pointing at
+-- the node they were merged into so old evidence stays readable.
 create table skills (
   id              text primary key,
   canonical_name  text not null,
   parent_id       text references skills(id),
-  embedding       vector(512)  -- voyage-3-lite; alter before backfilling if a different model is chosen
+  embedding       vector(512),  -- voyage-3-lite; alter before backfilling if a different model is chosen
+  deprecated_at   timestamptz,
+  merged_into_id  text references skills(id)
+);
+
+-- Records when a skill crossed the N=30 threshold and switched from
+-- absolute difficulty bands to percentile-within-skill (§5). Without this
+-- row you cannot explain why a student's level moved when they did no new
+-- work — which is exactly the kind of unexplained change an FCRA dispute
+-- is about. The switch event is not reconstructible after the fact.
+create table skill_calibration (
+  skill_id                text references skills(id) primary key,
+  method                  text not null default 'absolute_bands' check (method in ('absolute_bands', 'percentile')),
+  student_count_at_switch int,
+  switched_at             timestamptz
 );
 
 -- Free-text input → canonical skill, cached. "ReactJS" / "react 18" /
@@ -180,16 +202,30 @@ create table listing_requirements (
 -- prior Claude emits (§8) — a boundary-case agent output, logged to
 -- agent_calls, never itself a decision.
 
+-- fit_tier_at_apply / rank_score_at_apply / computed_snapshot together
+-- freeze what the matching engine actually saw at submission time. Depth is
+-- a moving target — it accumulates with every new artifact and decays with
+-- recency — so "why was I ranked third on March 3rd" is unanswerable a month
+-- later unless the inputs are snapshotted at the moment of the decision.
+-- Required for FCRA dispute reinvestigation, and it's also the baseline the
+-- §17 falsification test needs (GPA at apply time, not GPA today).
+--
+-- consent_id makes the consent chain explicit rather than inferring it from
+-- timestamp proximity. FCRA asks "did the student consent to this specific
+-- disclosure" — a foreign key answers that; a nearby timestamp doesn't.
 create table applications (
-  id               uuid default gen_random_uuid() primary key,
-  listing_id       uuid references listings(id) on delete cascade not null,
-  student_id       uuid references students(id) on delete cascade not null,
-  claimed_skills   text[],
-  response_text    text,
-  scored_response  jsonb,
-  fit_tier_at_apply text check (fit_tier_at_apply in ('strong_fit', 'competitive', 'reach', 'not_yet')),
-  status           text default 'submitted' not null check (status in ('submitted', 'shortlisted', 'accepted', 'rejected', 'withdrawn')),
-  created_at       timestamptz default now(),
+  id                 uuid default gen_random_uuid() primary key,
+  listing_id         uuid references listings(id) on delete cascade not null,
+  student_id         uuid references students(id) on delete cascade not null,
+  consent_id         uuid,  -- FK added after consents is created (circular declaration order)
+  claimed_skills     text[],
+  response_text      text,
+  scored_response    jsonb,
+  fit_tier_at_apply  text check (fit_tier_at_apply in ('strong_fit', 'competitive', 'reach', 'not_yet')),
+  rank_score_at_apply numeric,
+  computed_snapshot  jsonb,  -- per-skill depth values, missing skills, gpa, track record — as of submission
+  status             text default 'submitted' not null check (status in ('submitted', 'shortlisted', 'accepted', 'rejected', 'withdrawn')),
+  created_at         timestamptz default now(),
   unique (listing_id, student_id)
 );
 
@@ -229,7 +265,14 @@ create table engagements (
   listing_id                          uuid references listings(id) on delete cascade not null,
   poster_id                           uuid not null,
   student_id                          uuid references students(id) on delete cascade not null,
-  stage                               text default 'accepted' not null check (stage in ('accepted', 'in_progress', 'submitted', 'closed')),
+  -- 'abandoned' is load-bearing, not a nicety: close_out_rate (§6 track
+  -- record) is uncomputable without a terminal non-completion state, and
+  -- an engagement that silently sits at 'in_progress' forever is
+  -- indistinguishable from one still genuinely in flight. It's also the
+  -- only source of negative variance in the dataset — positive-only
+  -- evidence otherwise gives a future IRT model nothing to fit against.
+  stage                               text default 'accepted' not null check (stage in ('accepted', 'in_progress', 'submitted', 'closed', 'abandoned')),
+  abandoned_at                        timestamptz,
   opened_at                           timestamptz default now(),
   submitted_at                        timestamptz,
   closed_at                           timestamptz,
@@ -284,6 +327,11 @@ create table artifacts (
   access_grant_id     uuid references github_repo_grants(id),
   tier                text not null check (tier in ('tier_0', 'tier_0_5', 'listing_driven')),
   verification_method text check (verification_method in ('deployment', 'package', 'ci', 'human_review')),
+  -- The specific URL/package that satisfied proof-it-runs. Needed to
+  -- re-verify later (deployments go down), to display "see it live" on
+  -- /p/[handle], and because "we verified something" without recording
+  -- what is not an auditable claim.
+  deployment_url      text,
   verified_at         timestamptz,
   created_at          timestamptz default now()
 );
@@ -346,12 +394,21 @@ create table platform_signals (
 -- attestation of skill, so it's live in MVP even though rater-based
 -- attestation isn't.
 
+-- hired_beyond_engagement is the placement-fee trigger AND the strongest
+-- outcome label in the system (§17) — and it's the one event most likely to
+-- surface months later, through a channel that isn't the product (a student
+-- mentions it, a poster discloses it, a repeat-hire pattern implies it).
+-- Recording *when* and *how* it was learned is what makes it auditable
+-- revenue rather than an unverifiable claim, and none of it is
+-- reconstructible after the fact.
 create table outcomes (
-  engagement_id           uuid references engagements(id) on delete cascade primary key,
-  poster_satisfaction     int check (poster_satisfaction between 1 and 5),
-  would_rehire            boolean,
-  hired_beyond_engagement boolean default false not null,  -- DEFERRED: no full-time hiring flow yet
-  recorded_at             timestamptz default now()
+  engagement_id                  uuid references engagements(id) on delete cascade primary key,
+  poster_satisfaction            int check (poster_satisfaction between 1 and 5),
+  would_rehire                   boolean,
+  hired_beyond_engagement        boolean default false not null,
+  hired_beyond_engagement_at     timestamptz,
+  hired_beyond_engagement_source text check (hired_beyond_engagement_source in ('student_report', 'poster_report', 'detected')),
+  recorded_at                    timestamptz default now()
 );
 
 -- ─── Project briefs ────────────────────────────────────────────────────────
@@ -380,12 +437,20 @@ create table consents (
   text_version  text not null
 );
 
+-- payload_snapshot holds the actual values furnished, not just which field
+-- names were sent. An FCRA dispute is a claim that something *specific* we
+-- reported was wrong — "you told them my React depth was 2.1" — and that is
+-- unanswerable from a list of field names plus a timestamp, because depth
+-- moves on its own as evidence accumulates and decays. Logging what was
+-- said, not merely that something was said, is the difference between a
+-- reinvestigation you can actually conduct and one you can't.
 create table disclosure_log (
   id               uuid default gen_random_uuid() primary key,
   student_id       uuid references students(id) on delete cascade not null,
   recipient_id     uuid not null,
   engagement_ids   uuid[],
-  fields_disclosed text[] not null,  -- e.g. {'depth_scores','fit_tier','evidence_summary'} — the scores are what make this a consumer-report furnishing, not just the engagement IDs
+  fields_disclosed text[] not null,  -- e.g. {'depth_scores','fit_tier','evidence_summary'}
+  payload_snapshot jsonb,            -- the values themselves, as furnished
   furnished_at     timestamptz default now()
 );
 
@@ -395,6 +460,40 @@ create table evidence_audit (
   source        text not null,
   raw_input     jsonb,
   extracted_at  timestamptz default now()
+);
+
+-- applications.consent_id declared without its FK above, since consents is
+-- defined after applications. Added here rather than reordering the file,
+-- because the reading order (listings → applications → engagements) matches
+-- how the product actually works and is worth preserving.
+alter table applications
+  add constraint applications_consent_id_fkey
+  foreign key (consent_id) references consents(id);
+
+-- ─── Fit-tier impressions — EEOC audit trail ──────────────────────────────
+-- §7 names the presence filter as the single highest-priority disparate-
+-- impact audit target, and §7 also names the reason it's hard to audit: the
+-- students it turns away are invisible. Someone who sees "Not yet" and
+-- never applies leaves no trace in `applications` at all — so an audit run
+-- against applications alone measures only the people who got through.
+--
+-- This logs the tier shown at listing-detail view, which is the moment the
+-- self-selection decision actually happens. Recomputing it later is
+-- impossible: depth values move continuously, so last month's tier cannot
+-- be reconstructed from today's data.
+--
+-- TRADEOFF, worth deciding deliberately rather than inheriting: this is
+-- view-level logging, and it grows with traffic rather than with
+-- engagements. At current scale it's nothing. If the surveillance profile
+-- bothers you more than the audit gap does, drop this table — but drop it
+-- now, because turning it on later starts the history from zero.
+create table fit_tier_impressions (
+  id             uuid default gen_random_uuid() primary key,
+  student_id     uuid references students(id) on delete cascade not null,
+  listing_id     uuid references listings(id) on delete cascade not null,
+  tier           text not null check (tier in ('strong_fit', 'competitive', 'reach', 'not_yet')),
+  missing_skills text[],
+  shown_at       timestamptz default now()
 );
 
 -- ─── Agent calls — every agent invocation, logged ─────────────────────────
@@ -529,6 +628,10 @@ create index idx_consents_student                on consents(student_id);
 create index idx_disclosure_log_student           on disclosure_log(student_id);
 create index idx_evidence_audit_evidence         on evidence_audit(evidence_id);
 create index idx_agent_calls_student             on agent_calls(student_id);
+create index idx_skills_merged_into              on skills(merged_into_id);
+create index idx_applications_consent             on applications(consent_id);
+create index idx_fit_tier_impressions_student     on fit_tier_impressions(student_id, shown_at);
+create index idx_fit_tier_impressions_listing     on fit_tier_impressions(listing_id);
 
 -- ============================================================
 --  Row Level Security
@@ -556,6 +659,8 @@ alter table consents               enable row level security;
 alter table disclosure_log         enable row level security;
 alter table evidence_audit         enable row level security;
 alter table agent_calls            enable row level security;
+alter table skill_calibration      enable row level security;
+alter table fit_tier_impressions   enable row level security;
 
 -- ── students ──
 
@@ -823,3 +928,20 @@ create policy "Students: read own agent calls"
 
 create policy "Posters: read agent calls made on their behalf"
   on agent_calls for select using (auth.uid() = poster_id);
+
+-- ── skill_calibration ──
+-- Readable by anyone signed in: a student is entitled to know that their
+-- level moved because a skill crossed its calibration threshold, not
+-- because of anything they did.
+
+create policy "Anyone signed in: read skill calibration"
+  on skill_calibration for select using (auth.uid() is not null);
+
+-- ── fit_tier_impressions ──
+-- The student can read their own impressions (it's their data, and file
+-- disclosure under §10 should include it). Writes are service-role only —
+-- the impression is recorded by the server that computed the tier, never
+-- self-reported by a client, or the audit trail means nothing.
+
+create policy "Students: read own fit tier impressions"
+  on fit_tier_impressions for select using (auth.uid() = student_id);
