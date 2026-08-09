@@ -46,6 +46,27 @@ export default async function GithubScanPage() {
     if (error) console.error(`[student/github] ${label} query failed:`, error)
   }
 
+  // Diagnostic: compare the view's row count against the base table's row
+  // count for the same student. If the base table has rows the view
+  // doesn't, the bug is in current_skill_evidence's "not superseded"
+  // filter (a corrects_evidence_id chain excluding rows it shouldn't); if
+  // they match at zero, the writes themselves aren't landing under this
+  // student_id. Temporary — remove once the scan/evidence-display gap is
+  // confirmed fixed.
+  const { count: rawEvidenceCount, error: rawCountError } = await supabase
+    .from('skill_evidence')
+    .select('id', { count: 'exact', head: true })
+    .eq('student_id', user.id)
+  console.log('[student/github] diagnostic', {
+    userId: user.id,
+    hasConnection: !!connection,
+    grantsCount: grants?.length ?? 0,
+    priorsCount: priors?.length ?? 0,
+    viewEvidenceCount: evidenceRows?.length ?? 0,
+    rawSkillEvidenceCount: rawEvidenceCount ?? null,
+    rawCountError: rawCountError ?? null,
+  })
+
   type EvidenceRow = NonNullable<typeof evidenceRows>[number] & { skills: { canonical_name: string } | null }
   let evidence: EvidenceRow[] = []
   if (evidenceRows && evidenceRows.length > 0) {
