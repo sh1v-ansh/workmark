@@ -213,7 +213,7 @@ async function fetchManifestSkills(octokit: Octokit, owner: string, repo: string
   return Array.from(skills)
 }
 
-async function getFileContent(octokit: Octokit, owner: string, repo: string, path: string): Promise<string | null> {
+export async function getFileContent(octokit: Octokit, owner: string, repo: string, path: string): Promise<string | null> {
   try {
     const { data } = await octokit.rest.repos.getContent({ owner, repo, path })
     if ('content' in data && typeof data.content === 'string') {
