@@ -20,6 +20,7 @@ export interface RepoScanResult {
   studentCommitCount: number
   totalCommitCount: number | null         // null if contributor stats never became available (see getContributorStats)
   fractionAuthored: number | null         // 0-1, null under the same condition
+  distinctContributors: number | null     // null under the same condition — used to tell Tier 0 (solo) from Tier 0.5 (multi-contributor)
   firstCommitAt: string | null
   lastCommitAt: string | null
   filesTouchedByStudent: string[]
@@ -48,7 +49,7 @@ export async function scanRepo(
   const empty: RepoScanResult = {
     repoFullName, skip: true, defaultBranch: '', isFork: false,
     languages: {}, manifestSkills: [], studentCommitCount: 0, totalCommitCount: null,
-    fractionAuthored: null, firstCommitAt: null, lastCommitAt: null,
+    fractionAuthored: null, distinctContributors: null, firstCommitAt: null, lastCommitAt: null,
     filesTouchedByStudent: [], hasTests: false, hasCi: false, hasDockerfile: false, hasInfraConfig: false,
   }
 
@@ -110,6 +111,7 @@ export async function scanRepo(
     fractionAuthored: contributorStats
       ? (contributorStats.studentCommits / Math.max(contributorStats.totalCommits, 1))
       : null,
+    distinctContributors: contributorStats?.distinctContributors ?? null,
     firstCommitAt: studentCommits.firstAt,
     lastCommitAt: studentCommits.lastAt,
     filesTouchedByStudent: studentCommits.filesTouched,
@@ -139,18 +141,21 @@ async function fetchLanguages(octokit: Octokit, owner: string, repo: string): Pr
  */
 async function getContributorStats(
   octokit: Octokit, owner: string, repo: string, githubLogin: string,
-): Promise<{ studentCommits: number; totalCommits: number } | null> {
+): Promise<{ studentCommits: number; totalCommits: number; distinctContributors: number } | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const { status, data } = await octokit.rest.repos.getContributorsStats({ owner, repo })
     if (status === 200 && Array.isArray(data)) {
       let studentCommits = 0
       let totalCommits = 0
+      let distinctContributors = 0
       for (const c of data) {
         const commits = c.total ?? 0
+        if (commits === 0) continue
         totalCommits += commits
+        distinctContributors++
         if (c.author?.login?.toLowerCase() === githubLogin.toLowerCase()) studentCommits = commits
       }
-      return { studentCommits, totalCommits }
+      return { studentCommits, totalCommits, distinctContributors }
     }
     if (attempt < 2) await new Promise((r) => setTimeout(r, 1500))
   }
