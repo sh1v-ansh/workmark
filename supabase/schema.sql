@@ -678,6 +678,11 @@ where not exists (
   select 1 from skill_evidence corrector where corrector.corrects_evidence_id = se.id
 );
 
+-- Explicit, since new-object default-privilege propagation to
+-- anon/authenticated is confirmed for base tables but is a real edge case
+-- for views in some Postgres/Supabase setups — see migration v05_0003.
+grant select on current_skill_evidence to anon, authenticated;
+
 -- ============================================================
 --  Indexes
 -- ============================================================
