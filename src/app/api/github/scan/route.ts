@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { processRepo } from '@/lib/skills/evidence'
+import { syncRepoGrants } from '@/lib/github/sync-grants'
 
 /**
  * POST /api/github/scan
@@ -36,6 +37,15 @@ export async function POST() {
   }
   if (!connection.github_login) {
     return NextResponse.json({ error: 'GitHub account has no login on file — try reconnecting.' }, { status: 400 })
+  }
+
+  // Re-sync visibility before reading the grant list: a repo flipped to
+  // private since the last sync must not be scanned off a stale
+  // is_private=false row just because the picker looked right earlier.
+  try {
+    await syncRepoGrants(admin, user.id, connection.installation_id)
+  } catch (err) {
+    console.error('[api/github/scan] grant sync failed, scanning off existing grants:', err)
   }
 
   const { data: grants } = await admin

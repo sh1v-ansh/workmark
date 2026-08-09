@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import { Icon } from '@/components/Icon'
@@ -57,27 +58,53 @@ export default function GithubScanClient({ studentName, connection, grants, prio
   evidence: SkillEvidenceRow[]
 }) {
   const { toast } = useToast()
+  const router = useRouter()
   const [scanning, setScanning] = useState(false)
-  const [repoStates, setRepoStates] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(grants.map((g) => [g.id, g.scan_enabled])),
-  )
+  const [syncing, setSyncing] = useState(false)
+  // Only holds repos the student has toggled in this session — the stored
+  // value is read from `grants` otherwise, so a router.refresh() after a
+  // sync flows straight through instead of being masked by stale state.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const syncedRef = useRef(false)
+
+  // Grant rows can't be trusted for visibility on their own: rows created
+  // before is_private existed all carry the column default, and a repo's
+  // public/private state can change at any time without a webhook that
+  // says so. Re-sync against GitHub on load so the picker shows what's
+  // actually private BEFORE anything is scanned.
+  useEffect(() => {
+    if (!connection || syncedRef.current) return
+    syncedRef.current = true
+    setSyncing(true)
+    fetch('/api/github/repos/sync', { method: 'POST' })
+      .then((r) => r.json())
+      .then((json) => { if (json?.changed > 0) router.refresh() })
+      .catch(() => { /* picker still works off stored rows */ })
+      .finally(() => setSyncing(false))
+  }, [connection, router])
 
   async function toggleScanEnabled(grantId: string, next: boolean) {
     setTogglingId(grantId)
-    const previous = repoStates[grantId]
-    setRepoStates((prev) => ({ ...prev, [grantId]: next })) // optimistic
+    setOverrides((prev) => ({ ...prev, [grantId]: next })) // optimistic
     const supabase = createClient()
     // RLS ("Students: manage own repo grants", for all) lets a student
     // update their own grant rows directly — this doesn't need to go
     // through a service-role API route.
     const { error } = await supabase.from('github_repo_grants').update({ scan_enabled: next }).eq('id', grantId)
     if (error) {
-      setRepoStates((prev) => ({ ...prev, [grantId]: previous })) // revert
+      setOverrides((prev) => {
+        const revert = { ...prev }
+        delete revert[grantId] // fall back to the stored value
+        return revert
+      })
       toast('Failed to update — please try again.', 'error')
     }
     setTogglingId(null)
   }
+
+  const publicGrants = grants.filter((g) => !g.is_private)
+  const privateGrants = grants.filter((g) => g.is_private)
 
   async function runScan() {
     setScanning(true)
@@ -136,54 +163,81 @@ export default function GithubScanClient({ studentName, connection, grants, prio
           )}
         </Card>
 
-        {/* Granted repos — being granted via GitHub's install picker is not
-            by itself consent to scan. Each repo needs an explicit opt-in
-            here, particularly private ones (default off) which might be
-            an employer's IP rather than the student's own to share. */}
+        {/* Granted repos. Public repos are already world-readable, so
+            they're scanned unconditionally. Private ones are the consent
+            question — being granted access via GitHub's install picker
+            isn't the same as saying "this is mine to share", and a
+            private repo may well be an employer's IP. */}
         {grants.length > 0 && (
           <section>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>
-              Granted repos ({grants.length})
-            </h2>
-            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
-              Pick which repos to actually scan. Private repos default to off — only enable ones you have the right to share (not an employer's private code, for example).
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {grants.map((g) => {
-                const enabled = repoStates[g.id] ?? g.scan_enabled
-                return (
-                  <label
-                    key={g.id}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
-                      padding: '10px 14px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 8,
-                      cursor: togglingId === g.id ? 'wait' : 'pointer',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                      <input
-                        type="checkbox"
-                        checked={enabled}
-                        disabled={togglingId === g.id}
-                        onChange={(e) => toggleScanEnabled(g.id, e.target.checked)}
-                        className="dk-checkbox"
-                      />
-                      <span style={{ fontSize: 13, color: C.textSub, fontFamily: F.mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {g.repo_full_name}
-                      </span>
-                    </div>
-                    <span style={{
-                      flexShrink: 0, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
-                      textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: F.mono,
-                      color: g.is_private ? '#B45309' : C.textFaint,
-                      background: g.is_private ? 'rgba(217,119,6,0.1)' : C.surface,
-                      border: `1px solid ${g.is_private ? 'rgba(217,119,6,0.3)' : C.border}`,
-                    }}>
-                      {g.is_private ? 'Private' : 'Public'}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 12 }}>
+              <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Granted repos ({grants.length})</h2>
+              {syncing && <span style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>syncing with GitHub…</span>}
+            </div>
+
+            {publicGrants.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <p style={{ fontSize: 11, fontFamily: F.mono, color: C.textFaint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Public — always scanned ({publicGrants.length})
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {publicGrants.map((g) => (
+                    <span key={g.id} style={{ fontSize: 12, padding: '4px 10px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 6, color: C.textSub, fontFamily: F.mono }}>
+                      {g.repo_full_name}
                     </span>
-                  </label>
-                )
-              })}
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p style={{ fontSize: 11, fontFamily: F.mono, color: C.textFaint, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 4 }}>
+                Private — you choose ({privateGrants.length})
+              </p>
+              {privateGrants.length === 0 ? (
+                <p style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.5 }}>No private repos shared with Workmark.</p>
+              ) : (
+                <>
+                  <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 10, lineHeight: 1.5 }}>
+                    Off by default. Only enable repos you have the right to share — not an employer&apos;s private code.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {privateGrants.map((g) => {
+                      const enabled = overrides[g.id] ?? g.scan_enabled
+                      return (
+                        <label
+                          key={g.id}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                            padding: '10px 14px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 8,
+                            cursor: togglingId === g.id ? 'wait' : 'pointer',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                            <input
+                              type="checkbox"
+                              checked={enabled}
+                              disabled={togglingId === g.id}
+                              onChange={(e) => toggleScanEnabled(g.id, e.target.checked)}
+                              className="dk-checkbox"
+                            />
+                            <span style={{ fontSize: 13, color: C.textSub, fontFamily: F.mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {g.repo_full_name}
+                            </span>
+                          </div>
+                          <span style={{
+                            flexShrink: 0, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+                            textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: F.mono,
+                            color: '#B45309', background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)',
+                          }}>
+                            Private
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </section>
         )}

@@ -1,6 +1,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getInstallationOctokit } from '@/lib/github/app'
+import { syncRepoGrants } from '@/lib/github/sync-grants'
 
 /**
  * GET /api/github/app/callback
@@ -58,30 +59,10 @@ export async function GET(request: Request) {
     })
     if (connErr) throw connErr
 
-    // listReposAccessibleToInstallation returns the FULL current list, not
-    // a diff, and this route re-runs on every reconnect — an upsert here
-    // would silently reset scan_enabled back to its repo-visibility
-    // default for every already-reviewed repo each time. Only inserting
-    // repos genuinely new to this student's grants (never touching
-    // existing rows) preserves whatever the student already chose.
-    const { data: repos } = await octokit.rest.apps.listReposAccessibleToInstallation()
-    const { data: existing } = await admin
-      .from('github_repo_grants')
-      .select('repo_full_name')
-      .eq('student_id', cookieUserId)
-    const existingNames = new Set((existing ?? []).map((g) => g.repo_full_name))
-    const newRepos = (repos.repositories ?? []).filter((r) => !existingNames.has(r.full_name))
-    if (newRepos.length > 0) {
-      const grantRows = newRepos.map((r) => ({
-        student_id: cookieUserId,
-        installation_id: installationId,
-        repo_full_name: r.full_name,
-        is_private: !!r.private,
-        scan_enabled: !r.private,
-      }))
-      const { error: grantErr } = await admin.from('github_repo_grants').insert(grantRows)
-      if (grantErr) throw grantErr
-    }
+    // Shared with the scan route and the picker's refresh — one place
+    // decides how visibility maps to scan_enabled, so a reconnect can't
+    // quietly reset a private repo the student already opted out of.
+    await syncRepoGrants(admin, cookieUserId, installationId)
 
     if (accountLogin) {
       await admin.from('students').update({ github_username: accountLogin }).eq('id', cookieUserId)

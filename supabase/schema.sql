@@ -313,10 +313,15 @@ create table github_repo_grants (
   -- GitHub's install picker (All repositories / Only select repositories)
   -- is the only consent point upstream of this — it doesn't distinguish
   -- public from private, and doesn't ask per-repo whether to actually
-  -- scan. is_private is set from GitHub's own flag at grant time;
-  -- scan_enabled defaults to true for public repos and false for private
-  -- ones, requiring an explicit opt-in before a private (possibly
-  -- employer-owned) repo is ever scanned.
+  -- scan.
+  --
+  -- These two columns are maintained by syncRepoGrants() (see
+  -- src/lib/github/sync-grants.ts), which reads GitHub as the source of
+  -- truth on every connect, picker load, and scan: public → scan_enabled
+  -- forced true (already world-readable, nothing to withhold), private →
+  -- the student's explicit choice, never overwritten by a sync. The
+  -- defaults below are only the fail-safe for a row that somehow exists
+  -- before its first sync — assume private, assume not-yet-consented.
   is_private      boolean not null default true,
   scan_enabled    boolean not null default false,
   unique (student_id, repo_full_name)
