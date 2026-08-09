@@ -58,16 +58,28 @@ export async function GET(request: Request) {
     })
     if (connErr) throw connErr
 
+    // listReposAccessibleToInstallation returns the FULL current list, not
+    // a diff, and this route re-runs on every reconnect — an upsert here
+    // would silently reset scan_enabled back to its repo-visibility
+    // default for every already-reviewed repo each time. Only inserting
+    // repos genuinely new to this student's grants (never touching
+    // existing rows) preserves whatever the student already chose.
     const { data: repos } = await octokit.rest.apps.listReposAccessibleToInstallation()
-    const grantRows = (repos.repositories ?? []).map((r) => ({
-      student_id: cookieUserId,
-      installation_id: installationId,
-      repo_full_name: r.full_name,
-    }))
-    if (grantRows.length > 0) {
-      const { error: grantErr } = await admin
-        .from('github_repo_grants')
-        .upsert(grantRows, { onConflict: 'student_id,repo_full_name' })
+    const { data: existing } = await admin
+      .from('github_repo_grants')
+      .select('repo_full_name')
+      .eq('student_id', cookieUserId)
+    const existingNames = new Set((existing ?? []).map((g) => g.repo_full_name))
+    const newRepos = (repos.repositories ?? []).filter((r) => !existingNames.has(r.full_name))
+    if (newRepos.length > 0) {
+      const grantRows = newRepos.map((r) => ({
+        student_id: cookieUserId,
+        installation_id: installationId,
+        repo_full_name: r.full_name,
+        is_private: !!r.private,
+        scan_enabled: !r.private,
+      }))
+      const { error: grantErr } = await admin.from('github_repo_grants').insert(grantRows)
       if (grantErr) throw grantErr
     }
 

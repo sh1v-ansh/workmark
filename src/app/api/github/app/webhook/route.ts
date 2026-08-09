@@ -70,15 +70,21 @@ export async function POST(request: Request) {
       .maybeSingle()
 
     if (connection) {
-      const added = (payload.repositories_added ?? []) as { full_name: string }[]
+      const added = (payload.repositories_added ?? []) as { full_name: string; private: boolean }[]
       const removed = (payload.repositories_removed ?? []) as { full_name: string }[]
 
       if (added.length > 0) {
+        // Unlike the callback route's full-list resync, this only ever
+        // contains repos GitHub says were just added — overwriting
+        // is_private/scan_enabled here is a fresh grant, not a re-review
+        // of something already toggled.
         const { error } = await admin.from('github_repo_grants').upsert(
           added.map((r) => ({
             student_id: connection.student_id,
             installation_id: installationId,
             repo_full_name: r.full_name,
+            is_private: !!r.private,
+            scan_enabled: !r.private,
             revoked_at: null,
           })),
           { onConflict: 'student_id,repo_full_name' },

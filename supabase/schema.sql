@@ -310,6 +310,15 @@ create table github_repo_grants (
   repo_full_name  text not null,
   granted_at      timestamptz default now(),
   revoked_at      timestamptz,
+  -- GitHub's install picker (All repositories / Only select repositories)
+  -- is the only consent point upstream of this — it doesn't distinguish
+  -- public from private, and doesn't ask per-repo whether to actually
+  -- scan. is_private is set from GitHub's own flag at grant time;
+  -- scan_enabled defaults to true for public repos and false for private
+  -- ones, requiring an explicit opt-in before a private (possibly
+  -- employer-owned) repo is ever scanned.
+  is_private      boolean not null default true,
+  scan_enabled    boolean not null default false,
   unique (student_id, repo_full_name)
 );
 

@@ -5,6 +5,7 @@ import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
+import { createClient } from '@/lib/supabase/client'
 import { C, F } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 
@@ -21,6 +22,8 @@ interface RepoGrant {
   id: string
   repo_full_name: string
   granted_at: string
+  is_private: boolean
+  scan_enabled: boolean
 }
 interface SkillPrior {
   id: string
@@ -55,6 +58,26 @@ export default function GithubScanClient({ studentName, connection, grants, prio
 }) {
   const { toast } = useToast()
   const [scanning, setScanning] = useState(false)
+  const [repoStates, setRepoStates] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(grants.map((g) => [g.id, g.scan_enabled])),
+  )
+  const [togglingId, setTogglingId] = useState<string | null>(null)
+
+  async function toggleScanEnabled(grantId: string, next: boolean) {
+    setTogglingId(grantId)
+    const previous = repoStates[grantId]
+    setRepoStates((prev) => ({ ...prev, [grantId]: next })) // optimistic
+    const supabase = createClient()
+    // RLS ("Students: manage own repo grants", for all) lets a student
+    // update their own grant rows directly — this doesn't need to go
+    // through a service-role API route.
+    const { error } = await supabase.from('github_repo_grants').update({ scan_enabled: next }).eq('id', grantId)
+    if (error) {
+      setRepoStates((prev) => ({ ...prev, [grantId]: previous })) // revert
+      toast('Failed to update — please try again.', 'error')
+    }
+    setTogglingId(null)
+  }
 
   async function runScan() {
     setScanning(true)
@@ -113,16 +136,54 @@ export default function GithubScanClient({ studentName, connection, grants, prio
           )}
         </Card>
 
-        {/* Granted repos */}
+        {/* Granted repos — being granted via GitHub's install picker is not
+            by itself consent to scan. Each repo needs an explicit opt-in
+            here, particularly private ones (default off) which might be
+            an employer's IP rather than the student's own to share. */}
         {grants.length > 0 && (
           <section>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Granted repos</h2>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+              Granted repos ({grants.length})
+            </h2>
+            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
+              Pick which repos to actually scan. Private repos default to off — only enable ones you have the right to share (not an employer's private code, for example).
+            </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {grants.map((g) => (
-                <div key={g.id} style={{ padding: '10px 14px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 8, fontSize: 13, color: C.textSub, fontFamily: F.mono }}>
-                  {g.repo_full_name}
-                </div>
-              ))}
+              {grants.map((g) => {
+                const enabled = repoStates[g.id] ?? g.scan_enabled
+                return (
+                  <label
+                    key={g.id}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                      padding: '10px 14px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 8,
+                      cursor: togglingId === g.id ? 'wait' : 'pointer',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        disabled={togglingId === g.id}
+                        onChange={(e) => toggleScanEnabled(g.id, e.target.checked)}
+                        className="dk-checkbox"
+                      />
+                      <span style={{ fontSize: 13, color: C.textSub, fontFamily: F.mono, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {g.repo_full_name}
+                      </span>
+                    </div>
+                    <span style={{
+                      flexShrink: 0, fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+                      textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: F.mono,
+                      color: g.is_private ? '#B45309' : C.textFaint,
+                      background: g.is_private ? 'rgba(217,119,6,0.1)' : C.surface,
+                      border: `1px solid ${g.is_private ? 'rgba(217,119,6,0.3)' : C.border}`,
+                    }}>
+                      {g.is_private ? 'Private' : 'Public'}
+                    </span>
+                  </label>
+                )
+              })}
             </div>
           </section>
         )}
