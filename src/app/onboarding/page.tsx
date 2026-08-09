@@ -400,11 +400,28 @@ export default function OnboardingPage() {
 
   const emailDomain = userEmail ? `@${userEmail.split('@')[1]}` : ''
 
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+    router.refresh()
+  }
+
   return (
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px' }}>
-      <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
-        <Wordmark height={33} />
-      </Link>
+      <div style={{ width: '100%', maxWidth: 540, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
+        <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+          <Wordmark height={33} />
+        </Link>
+        {userEmail && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 12, fontFamily: F.mono, color: C.textFaint }}>{userEmail}</span>
+            <button type="button" onClick={handleSignOut} style={{ fontSize: 12, fontFamily: F.mono, color: C.textMuted, background: 'none', border: `1px solid ${C.border}`, padding: '6px 12px', cursor: 'pointer' }}>
+              Sign out
+            </button>
+          </div>
+        )}
+      </div>
 
       <div style={{ width: '100%', maxWidth: 540 }}>
         {/* Progress */}
