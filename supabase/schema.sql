@@ -376,6 +376,11 @@ create table skill_evidence (
   independence          numeric not null default 1.0,  -- DEFERRED: always 1.0 in MVP
   paid                  numeric not null default 1.0,  -- DEFERRED: always 1.0 in MVP
   tier_weight           numeric generated always as (base * independence * paid) stored,
+  -- The complexity extraction composite that produced difficulty_cleared
+  -- (src/lib/github/complexity.ts). Stored because percentile-within-skill
+  -- (§5) needs something to rank a NEW composite against — the
+  -- already-bucketed 1-5 value alone carries no ranking information.
+  raw_composite         numeric,
   difficulty_cleared    int not null check (difficulty_cleared between 1 and 5),
   -- Copied from artifacts.verification_method at the time this row was
   -- written (denormalized — the artifact's method can later be upgraded,
@@ -658,6 +663,20 @@ begin
   update skills set embedding = p_embedding::vector(1024) where id = p_skill_id;
 end;
 $$;
+
+-- "Current" state of skill_evidence — every row minus whichever ones have
+-- been superseded by a correction (a newer row pointing back at them via
+-- corrects_evidence_id). This is what depth/matching/percentile
+-- calculations should read from; the raw table stays the full audit
+-- history. RLS on skill_evidence still applies transparently through this
+-- view — a plain view inherits the underlying table's policies for the
+-- querying role, it isn't a bypass.
+create or replace view current_skill_evidence as
+select se.*
+from skill_evidence se
+where not exists (
+  select 1 from skill_evidence corrector where corrector.corrects_evidence_id = se.id
+);
 
 -- ============================================================
 --  Indexes
