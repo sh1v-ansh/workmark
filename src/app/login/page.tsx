@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/Toast'
 import { C, F } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 
@@ -12,6 +13,7 @@ type Role = 'student' | 'company' | 'faculty'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { toast } = useToast()
 
   const [mode, setMode] = useState<Mode>('signin')
   const [role, setRole] = useState<Role>('student')
@@ -20,6 +22,36 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null)
+  const [resending, setResending] = useState(false)
+  const [resendCooldown, setResendCooldown] = useState(0)
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000)
+    return () => clearTimeout(t)
+  }, [resendCooldown])
+
+  async function handleResend() {
+    if (!pendingConfirmEmail) return
+    setResending(true)
+    const supabase = createClient()
+    try {
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: pendingConfirmEmail,
+        options: {
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/confirmed`,
+        },
+      })
+      if (resendError) throw resendError
+      toast('Confirmation email resent.', 'success')
+      setResendCooldown(30)
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Failed to resend. Please try again.', 'error')
+    } finally {
+      setResending(false)
+    }
+  }
 
   function validateEdu(addr: string): boolean {
     return addr.toLowerCase().endsWith('.edu')
@@ -112,6 +144,19 @@ export default function LoginPage() {
             style={{ width: '100%', padding: '11px 0', background: C.accent, color: C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: 'pointer', letterSpacing: '0.04em' }}
           >
             Go to sign in
+          </button>
+          <button
+            onClick={handleResend}
+            disabled={resending || resendCooldown > 0}
+            style={{
+              width: '100%', padding: '11px 0', marginTop: 10, background: 'transparent',
+              color: resending || resendCooldown > 0 ? C.textFaint : C.textMuted,
+              fontFamily: F.mono, fontSize: 12, fontWeight: 500,
+              border: `1px solid ${C.border}`, cursor: resending || resendCooldown > 0 ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.04em',
+            }}
+          >
+            {resending ? 'Resending…' : resendCooldown > 0 ? `Resend confirmation email (${resendCooldown}s)` : 'Resend confirmation email'}
           </button>
           <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono, marginTop: 16 }}>Can&apos;t find it? Check your spam folder.</p>
         </div>
