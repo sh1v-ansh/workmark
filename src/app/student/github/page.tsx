@@ -46,35 +46,36 @@ export default async function GithubScanPage() {
     if (error) console.error(`[student/github] ${label} query failed:`, error)
   }
 
-  // Diagnostic: compare the view's row count against the base table's row
-  // count for the same student. If the base table has rows the view
-  // doesn't, the bug is in current_skill_evidence's "not superseded"
-  // filter (a corrects_evidence_id chain excluding rows it shouldn't); if
-  // they match at zero, the writes themselves aren't landing under this
-  // student_id. Temporary — remove once the scan/evidence-display gap is
-  // confirmed fixed.
-  const { count: rawEvidenceCount, error: rawCountError } = await supabase
-    .from('skill_evidence')
-    .select('id', { count: 'exact', head: true })
-    .eq('student_id', user.id)
-  console.log('[student/github] diagnostic', {
-    userId: user.id,
-    hasConnection: !!connection,
-    grantsCount: grants?.length ?? 0,
-    priorsCount: priors?.length ?? 0,
-    viewEvidenceCount: evidenceRows?.length ?? 0,
-    rawSkillEvidenceCount: rawEvidenceCount ?? null,
-    rawCountError: rawCountError ?? null,
-  })
-
-  type EvidenceRow = NonNullable<typeof evidenceRows>[number] & { skills: { canonical_name: string } | null }
+  // Evidence is written per (student, skill, artifact) — the same skill
+  // legitimately gets one row per repo that demonstrates it, each with its
+  // own level, since a repo's evidence is independent of any other repo's.
+  // That reads as "duplicates" without knowing which repo each row came
+  // from, so both skill name AND artifact's repo/deployment are resolved
+  // manually here (current_skill_evidence is a VIEW — see prior comment
+  // on why embeds aren't used against it).
+  type EvidenceRow = NonNullable<typeof evidenceRows>[number] & {
+    skills: { canonical_name: string } | null
+    artifacts: { repo_full_name: string | null; deployment_url: string | null } | null
+  }
   let evidence: EvidenceRow[] = []
   if (evidenceRows && evidenceRows.length > 0) {
     const skillIds = Array.from(new Set(evidenceRows.map((r) => r.skill_id)))
-    const { data: skillRows, error: skillsError } = await supabase.from('skills').select('id, canonical_name').in('id', skillIds)
+    const artifactIds = Array.from(new Set(evidenceRows.map((r) => r.artifact_id).filter((id): id is string => !!id)))
+    const [{ data: skillRows, error: skillsError }, { data: artifactRows, error: artifactsError }] = await Promise.all([
+      supabase.from('skills').select('id, canonical_name').in('id', skillIds),
+      supabase.from('artifacts').select('id, repo_full_name, deployment_url').in('id', artifactIds),
+    ])
     if (skillsError) console.error('[student/github] skills lookup failed:', skillsError)
+    if (artifactsError) console.error('[student/github] artifacts lookup failed:', artifactsError)
     const nameById = new Map((skillRows ?? []).map((s) => [s.id, s.canonical_name]))
-    evidence = evidenceRows.map((r) => ({ ...r, skills: nameById.has(r.skill_id) ? { canonical_name: nameById.get(r.skill_id)! } : null }))
+    const artifactById = new Map((artifactRows ?? []).map((a) => [a.id, a]))
+    evidence = evidenceRows.map((r) => ({
+      ...r,
+      skills: nameById.has(r.skill_id) ? { canonical_name: nameById.get(r.skill_id)! } : null,
+      artifacts: r.artifact_id && artifactById.has(r.artifact_id)
+        ? { repo_full_name: artifactById.get(r.artifact_id)!.repo_full_name, deployment_url: artifactById.get(r.artifact_id)!.deployment_url }
+        : null,
+    }))
   }
 
   return (

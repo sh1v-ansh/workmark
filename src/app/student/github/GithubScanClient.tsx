@@ -37,6 +37,7 @@ interface SkillEvidenceRow {
   verification_method: string
   created_at: string
   skills: { canonical_name: string } | null
+  artifacts: { repo_full_name: string | null; deployment_url: string | null } | null
 }
 
 const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
@@ -126,7 +127,10 @@ export default function GithubScanClient({ studentName, connection, grants, prio
           </section>
         )}
 
-        {/* Evidence */}
+        {/* Evidence — grouped by repo, since the same skill legitimately
+            gets one row per repo that demonstrates it (independent
+            evidence, independent level), which reads as "duplicates"
+            without knowing which repo each one came from. */}
         <section>
           <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>
             Skill evidence ({evidence.length})
@@ -134,27 +138,40 @@ export default function GithubScanClient({ studentName, connection, grants, prio
           {evidence.length === 0 ? (
             <p style={{ fontSize: 13, color: C.textFaint }}>No evidence yet — connect GitHub and scan.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {evidence.map((e) => {
-                const name = e.skills?.canonical_name ?? e.skill_id
-                const c = tagColor(name)
-                return (
-                  <Card key={e.id} hoverable={false} padding={16}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {Array.from(
+                evidence.reduce((byRepo, e) => {
+                  const repo = e.artifacts?.repo_full_name ?? '(unknown repo)'
+                  if (!byRepo.has(repo)) byRepo.set(repo, [])
+                  byRepo.get(repo)!.push(e)
+                  return byRepo
+                }, new Map<string, SkillEvidenceRow[]>()),
+              ).map(([repo, rows]) => (
+                <Card key={repo} hoverable={false} padding={16}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: F.mono }}>{repo}</span>
+                    {rows[0]?.artifacts?.deployment_url ? (
+                      <a href={rows[0].artifacts.deployment_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: C.accent, fontFamily: F.mono }}>
+                        {rows[0].verification_method} ↗
+                      </a>
+                    ) : (
+                      <span style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>{rows[0]?.verification_method}</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                    {rows.map((e) => {
+                      const name = e.skills?.canonical_name ?? e.skill_id
+                      const c = tagColor(name)
+                      return (
+                        <span key={e.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}>
                           {name}
+                          <span style={{ fontWeight: 400, opacity: 0.75 }}>{levelLabel(e.difficulty_cleared)}</span>
                         </span>
-                        <span style={{ fontSize: 12, color: C.textMuted }}>{levelLabel(e.difficulty_cleared)}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: 12, fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                        <span>base {e.base}</span>
-                        <span>{e.verification_method}</span>
-                      </div>
-                    </div>
-                  </Card>
-                )
-              })}
+                      )
+                    })}
+                  </div>
+                </Card>
+              ))}
             </div>
           )}
         </section>
