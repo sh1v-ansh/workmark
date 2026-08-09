@@ -126,7 +126,7 @@ export default function StudentDashboardClient({ student, applications: initialA
   }, [searchParams, toast, router])
 
   function connectGithub() {
-    window.location.href = '/api/github/oauth-start'
+    window.location.href = '/api/github/app/install'
   }
 
   async function scanRepos() {
@@ -135,7 +135,8 @@ export default function StudentDashboardClient({ student, applications: initialA
       const res = await fetch('/api/github/scan', { method: 'POST' })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Scan failed.')
-      toast(`Scan complete. Found ${json.skills} skills across ${json.repos} repos.`, 'success')
+      const evidenceCount = json.results.reduce((n: number, r: { evidenceWritten: unknown[] }) => n + r.evidenceWritten.length, 0)
+      toast(`Scan complete — ${json.results.length} repo(s) processed, ${evidenceCount} evidence row(s) written or confirmed.`, 'success')
       window.location.reload()
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Scan failed.', 'error')
