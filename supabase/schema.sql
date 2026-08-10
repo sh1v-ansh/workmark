@@ -404,6 +404,11 @@ create table skill_evidence (
   source_agreement      int default 1 not null,  -- how many independent sources corroborated this row; max 2 in MVP
   comparative_anchor     text,  -- DEFERRED: null until a rater exists
   corrects_evidence_id  uuid references skill_evidence(id),
+  -- Set on a correction row that supersedes without replacing: the
+  -- reinvestigation outcome "this shouldn't be here at all" (§611).
+  -- Retraction rather than deletion keeps the audit trail a dispute
+  -- exists to produce — see migration v05_0006.
+  retracted_at          timestamptz,
   created_at            timestamptz default now()
 );
 
@@ -484,6 +489,33 @@ create table disclosure_log (
   fields_disclosed text[] not null,  -- e.g. {'depth_scores','fit_tier','evidence_summary'}
   payload_snapshot jsonb,            -- the values themselves, as furnished
   furnished_at     timestamptz default now()
+);
+
+-- Consumer disputes (§611). Students file and read their own; they never
+-- update one, since a consumer editing the status of their own dispute
+-- would make the resolution record worthless. See migration v05_0006.
+
+create table disputes (
+  id                     uuid default gen_random_uuid() primary key,
+  student_id             uuid references students(id) on delete cascade not null,
+  evidence_id            uuid references skill_evidence(id),
+  disclosure_id          uuid references disclosure_log(id),
+  category               text not null check (category in (
+    'inaccurate_level', 'skill_not_demonstrated', 'not_my_work',
+    'wrong_attribution', 'disclosure_unauthorized', 'other'
+  )),
+  detail                 text not null,
+  status                 text not null default 'open' check (status in (
+    'open', 'reinvestigating', 'resolved_corrected',
+    'resolved_retracted', 'resolved_verified', 'resolved_manual'
+  )),
+  filed_at               timestamptz default now() not null,
+  -- §611's 30-day reinvestigation clock, stored rather than computed so
+  -- an overdue dispute is a plain query.
+  due_at                 timestamptz default (now() + interval '30 days') not null,
+  resolved_at            timestamptz,
+  resolution_note        text,
+  resolution_evidence_id uuid references skill_evidence(id)
 );
 
 create table evidence_audit (
@@ -688,9 +720,10 @@ $$;
 create or replace view current_skill_evidence as
 select se.*
 from skill_evidence se
-where not exists (
-  select 1 from skill_evidence corrector where corrector.corrects_evidence_id = se.id
-);
+where se.retracted_at is null
+  and not exists (
+    select 1 from skill_evidence corrector where corrector.corrects_evidence_id = se.id
+  );
 
 -- Explicit, since new-object default-privilege propagation to
 -- anon/authenticated is confirmed for base tables but is a real edge case
@@ -718,6 +751,9 @@ create index idx_github_repo_grants_student       on github_repo_grants(student_
 create index idx_artifacts_student               on artifacts(student_id);
 create index idx_artifacts_engagement            on artifacts(engagement_id);
 create index idx_skill_evidence_student_skill     on skill_evidence(student_id, skill_id);
+create index idx_disputes_student                 on disputes(student_id);
+create index idx_disputes_status                  on disputes(status);
+create index idx_disputes_evidence                on disputes(evidence_id);
 create index idx_skill_evidence_artifact         on skill_evidence(artifact_id);
 create index idx_skill_evidence_corrects         on skill_evidence(corrects_evidence_id);
 create index idx_project_briefs_student          on project_briefs(student_id);
@@ -755,6 +791,7 @@ alter table project_briefs         enable row level security;
 alter table consents               enable row level security;
 alter table disclosure_log         enable row level security;
 alter table evidence_audit         enable row level security;
+alter table disputes               enable row level security;
 alter table agent_calls            enable row level security;
 alter table skill_calibration      enable row level security;
 alter table fit_tier_impressions   enable row level security;
@@ -1017,6 +1054,22 @@ create policy "Students: read own disclosure log"
 create policy "Students: read own evidence audit"
   on evidence_audit for select
   using (exists (select 1 from skill_evidence se where se.id = evidence_audit.evidence_id and se.student_id = auth.uid()));
+
+-- ── disputes ──
+
+create policy "Students: read own disputes"
+  on disputes for select using (auth.uid() = student_id);
+
+create policy "Students: file own disputes"
+  on disputes for insert with check (auth.uid() = student_id);
+
+-- Revocation is not deletion: the consent row stays, with revoked_at
+-- set, because "this was consented to at the time" remains true of
+-- disclosures already made under it.
+create policy "Students: revoke own consent"
+  on consents for update
+  using (auth.uid() = student_id)
+  with check (auth.uid() = student_id);
 
 -- ── agent_calls ──
 

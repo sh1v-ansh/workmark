@@ -91,7 +91,12 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
 
         {/* Public profile / handle */}
         <Card hoverable={false} padding={24}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Public profile</h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Public profile</h2>
+            <Link href="/me/file" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
+              Your file &amp; disputes →
+            </Link>
+          </div>
           <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 14, lineHeight: 1.5 }}>
             {student.handle
               ? 'Anyone with this link can see your verified skills and the work you chose to show. Nothing else.'
