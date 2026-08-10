@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useMemo, useState } from 'react'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
@@ -10,7 +12,7 @@ import { C, F } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import type { Student } from '@/lib/types'
 
-type DirectoryEntry = Pick<Student, 'id' | 'full_name' | 'university' | 'major' | 'degree_type' | 'graduation_year' | 'skills' | 'availability' | 'github_url' | 'linkedin_url'>
+type DirectoryEntry = Pick<Student, 'id' | 'full_name' | 'university' | 'major' | 'degree_type' | 'graduation_year' | 'skills' | 'availability' | 'github_url' | 'linkedin_url' | 'handle'>
 
 export default function StudentsDirectoryClient({ student, directory }: { student: Student; directory: DirectoryEntry[] }) {
   const { toast } = useToast()
@@ -97,7 +99,15 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
             {filtered.map((s) => (
               <Card key={s.id} hoverable={false} style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ marginBottom: 10 }}>
-                  <p style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>{s.full_name ?? 'Student'}</p>
+                  <p style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+                    {s.handle ? (
+                      <Link href={`/p/${s.handle}`} style={{ color: C.text, textDecoration: 'none' }}>
+                        {s.full_name ?? 'Student'} <span style={{ fontSize: 12, color: C.accent, fontFamily: F.mono }}>· verified record →</span>
+                      </Link>
+                    ) : (
+                      s.full_name ?? 'Student'
+                    )}
+                  </p>
                   <p style={{ fontSize: 12, color: C.textFaint }}>
                     {[s.degree_type, s.major, s.university].filter(Boolean).join(' · ')}
                     {s.graduation_year ? ` · Class of ${s.graduation_year}` : ''}

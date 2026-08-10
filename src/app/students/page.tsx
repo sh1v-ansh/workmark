@@ -21,7 +21,11 @@ export default async function StudentsDirectoryPage() {
 
   const { data: directory } = await supabase
     .from('students')
-    .select('id, full_name, university, major, degree_type, graduation_year, skills, availability, github_url, linkedin_url')
+    // Self-reported basics only — no depth, no evidence, no comparative
+    // anchors. Discovery stays deliberately outside consumer-report
+    // territory; the verified record lives behind a profile the student
+    // published themselves.
+    .select('id, full_name, university, major, degree_type, graduation_year, skills, availability, github_url, linkedin_url, handle')
     .eq('open_to_collab', true)
     .neq('id', user.id)
     .order('created_at', { ascending: false })
