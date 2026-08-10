@@ -33,6 +33,8 @@ interface Listing {
 interface Fit {
   tier: FitTier
   rankScore: number
+  confidence: number
+  poolSize: number
   perSkill: { skillId: string; name: string; requiredLevel: number; depth: number; present: boolean }[]
   missingNames: string[]
 }
@@ -170,8 +172,21 @@ export default function ListingDetailClient({
               <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Your fit</h2>
               <FitBadge tier={fit.tier} missingCount={fit.missingNames.length} />
             </div>
-            <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginBottom: fit.missingNames.length ? 10 : 16 }}>
+            <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginBottom: 10 }}>
               {FIT_TIER_BLURB[fit.tier]}
+              {fit.poolSize > 0 && (
+                <span style={{ color: C.textFaint }}> Compared against {fit.poolSize} current applicant{fit.poolSize === 1 ? '' : 's'}.</span>
+              )}
+            </p>
+            {/* Confidence is shown next to the tier, never folded into it —
+                two students can share a tier while one's record is
+                deployment-backed and the other's is a bare repo link. */}
+            <p style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.6, marginBottom: fit.missingNames.length ? 10 : 16 }}>
+              {fit.confidence >= 0.99
+                ? 'Every skill this asks for is backed by a project we confirmed runs.'
+                : fit.confidence <= 0.01
+                  ? 'None of your evidence for this listing is backed by a deployment, package, or passing CI — it is all repo links. Deploying a project raises this.'
+                  : `${Math.round(fit.confidence * 100)}% of what this listing asks for is backed by a project we confirmed runs; the rest is repo links.`}
             </p>
             {fit.missingNames.length > 0 && (
               <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>

@@ -59,7 +59,7 @@ export async function loadStudentRecord(
   const [{ data: evidenceRows }, { data: engagementRows }] = await Promise.all([
     supabase
       .from('current_skill_evidence')
-      .select('skill_id, base, tier_weight, difficulty_cleared, artifact_id')
+      .select('skill_id, base, tier_weight, difficulty_cleared, artifact_id, verification_method, created_at')
       .eq('student_id', studentId),
     supabase
       .from('engagements')

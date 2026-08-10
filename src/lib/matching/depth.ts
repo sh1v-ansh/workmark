@@ -1,56 +1,78 @@
-// Per-skill depth: how much demonstrated evidence a student has in one
-// skill, reduced to a single comparable number.
+// Per-skill depth (§6): how much demonstrated evidence a student has in
+// one skill, reduced to a single comparable number.
 //
-// Reads current_skill_evidence (the view, so superseded correction rows
-// are already excluded) — never skill_priors. A prior means "this
-// appeared in a repo you were granted access to"; evidence means "you
-// actually committed to a repo demonstrating it". Only the latter is a
-// claim about the student.
+//   depth(u,s) = Σ_k (tier_weight_k × difficulty_cleared_k)
+//                    × 0.85^(k-1)
+//                    × recency_k
 //
-// The formula is deliberately simple and explainable, because a student
-// is entitled to an answer to "why am I ranked below someone else" that
-// doesn't require reading a model:
+// Evidence is sorted descending by weighted difficulty first, so k is a
+// rank, not an arbitrary order: the student's strongest piece of evidence
+// takes the full multiplier and each subsequent one takes 15% less.
 //
-//   depth = bestLevel × bestTierWeight × (1 + corroboration)
+// The three parts do different jobs and it matters that they stay
+// separable:
 //
-//   bestLevel       the highest difficulty_cleared reached (1-5). One
-//                   genuinely hard project says more than five trivial
-//                   ones, so this is max, not mean.
-//   bestTierWeight  0.4 solo repo / 0.5 multi-contributor today; 0.8
-//                   faculty / 1.0 employer once attestation exists. Keeps
-//                   self-evidenced work ranked below attested work
-//                   automatically as later tiers arrive.
-//   corroboration   +0.1 per additional distinct artifact beyond the
-//                   first, capped at +0.3. Repetition is weak positive
-//                   evidence — it shows the skill wasn't a one-off — but
-//                   it must never let volume outrank depth, hence the cap.
+//   tier_weight        0.4 solo repo / 0.5 multi-contributor and
+//                      listing-driven today; 0.8 faculty / 1.0 employer
+//                      once attestation exists. Keeps self-evidenced work
+//                      ranked below attested work automatically as later
+//                      tiers switch on. (Generated column: base ×
+//                      independence × paid; the latter two are 1.0 in MVP.)
+//   difficulty_cleared 1-5, capped at 3 for self-evidenced work.
+//   0.85^(k-1)         declining marginal information, NOT a penalty.
+//                      Every piece of evidence adds; none is ever zero or
+//                      negative. The tenth still contributes ~23% of face
+//                      value. It exists so three hard engagements outrank
+//                      twelve trivial ones on depth specifically.
+//   recency            work from four years ago is weaker evidence about
+//                      what someone can do now, but it is not worthless —
+//                      the floor is 0.7, never 0.
 //
-// Every constant here is an unvalidated starting point, not an
-// empirically derived weight. There is no outcome data to fit against
-// yet; revisit once engagements have closed and there's something to
-// correlate rank against.
+// Reads current_skill_evidence (the view), so superseded corrections and
+// retracted rows are already excluded. Never reads skill_priors: a prior
+// means "this appeared in a repo you had access to"; evidence means "you
+// committed to a repo demonstrating it". Only the latter is a claim about
+// the student.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-const CORROBORATION_PER_ARTIFACT = 0.1
-const CORROBORATION_CAP = 0.3
+const RANK_DECAY = 0.85
+
+/** §6's recency bands, in months. */
+export function recencyMultiplier(createdAt: string, now: Date = new Date()): number {
+  const months = (now.getTime() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24 * 30.44)
+  if (months < 6) return 1.0
+  if (months < 12) return 0.9
+  if (months < 24) return 0.8
+  return 0.7
+}
+
+/** Verification methods that count as "proof it runs" for confidence (§7). */
+const VERIFIED_METHODS = new Set(['deployment', 'package', 'ci', 'attested', 'human_review'])
 
 export interface SkillDepth {
   skillId: string
   depth: number
+  /** Highest difficulty_cleared reached — what the UI displays as a level. */
   bestLevel: number
+  /** Distinct artifacts contributing, for "React · Strong · 6 projects". */
   artifactCount: number
+  /** True when any contributing evidence is proof-it-runs rather than a
+   *  bare repo link. Feeds the confidence figure in §7. */
+  hasVerifiedEvidence: boolean
 }
 
-interface EvidenceRow {
+export interface EvidenceRow {
   skill_id: string
   base: number
   tier_weight: number | null
   difficulty_cleared: number
   artifact_id: string | null
+  verification_method: string | null
+  created_at: string
 }
 
-export function depthFromEvidenceRows(rows: EvidenceRow[]): Map<string, SkillDepth> {
+export function depthFromEvidenceRows(rows: EvidenceRow[], now: Date = new Date()): Map<string, SkillDepth> {
   const bySkill = new Map<string, EvidenceRow[]>()
   for (const row of rows) {
     if (!bySkill.has(row.skill_id)) bySkill.set(row.skill_id, [])
@@ -59,21 +81,34 @@ export function depthFromEvidenceRows(rows: EvidenceRow[]): Map<string, SkillDep
 
   const result = new Map<string, SkillDepth>()
   for (const [skillId, skillRows] of Array.from(bySkill.entries())) {
-    const bestLevel = Math.max(...skillRows.map((r) => r.difficulty_cleared))
-    // tier_weight is a generated column (base × independence × paid); fall
-    // back to base if a row predates it or it's somehow null.
-    const bestWeight = Math.max(...skillRows.map((r) => r.tier_weight ?? r.base))
-    const artifactCount = new Set(skillRows.map((r) => r.artifact_id).filter(Boolean)).size || skillRows.length
-    const corroboration = Math.min(CORROBORATION_CAP, CORROBORATION_PER_ARTIFACT * (artifactCount - 1))
+    // tier_weight is a generated column (base × independence × paid);
+    // fall back to base if it's somehow null.
+    const scored = skillRows.map((r) => ({
+      row: r,
+      weighted: (r.tier_weight ?? r.base) * r.difficulty_cleared,
+    }))
+
+    // Sorted descending, so rank decay hits the weakest evidence hardest
+    // rather than whatever happened to be scanned last.
+    scored.sort((a, b) => b.weighted - a.weighted)
+
+    let depth = 0
+    scored.forEach((s, k) => {
+      depth += s.weighted * Math.pow(RANK_DECAY, k) * recencyMultiplier(s.row.created_at, now)
+    })
+
     result.set(skillId, {
       skillId,
-      depth: bestLevel * bestWeight * (1 + corroboration),
-      bestLevel,
-      artifactCount,
+      depth,
+      bestLevel: Math.max(...skillRows.map((r) => r.difficulty_cleared)),
+      artifactCount: new Set(skillRows.map((r) => r.artifact_id).filter(Boolean)).size || skillRows.length,
+      hasVerifiedEvidence: skillRows.some((r) => r.verification_method && VERIFIED_METHODS.has(r.verification_method)),
     })
   }
   return result
 }
+
+const EVIDENCE_COLUMNS = 'skill_id, base, tier_weight, difficulty_cleared, artifact_id, verification_method, created_at'
 
 /** Depth for one student across every skill they have evidence in. */
 export async function getStudentDepth(
@@ -82,7 +117,7 @@ export async function getStudentDepth(
 ): Promise<Map<string, SkillDepth>> {
   const { data, error } = await supabase
     .from('current_skill_evidence')
-    .select('skill_id, base, tier_weight, difficulty_cleared, artifact_id')
+    .select(EVIDENCE_COLUMNS)
     .eq('student_id', studentId)
   if (error) throw error
   return depthFromEvidenceRows((data ?? []) as EvidenceRow[])
@@ -98,7 +133,7 @@ export async function getDepthForStudents(
 
   const { data, error } = await supabase
     .from('current_skill_evidence')
-    .select('student_id, skill_id, base, tier_weight, difficulty_cleared, artifact_id')
+    .select(`student_id, ${EVIDENCE_COLUMNS}`)
     .in('student_id', studentIds)
   if (error) throw error
 

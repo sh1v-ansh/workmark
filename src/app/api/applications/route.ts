@@ -2,8 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getStudentDepth } from '@/lib/matching/depth'
-import { getListingRequirements } from '@/lib/matching/listing'
-import { computeFit } from '@/lib/matching/fit'
+import { getListingRequirements, getApplicantPools } from '@/lib/matching/listing'
+import { computeFit, assignTier } from '@/lib/matching/fit'
 import { applicationReceived } from '@/lib/notify/email'
 
 // Versioned so a consent record says which wording was actually agreed to.
@@ -66,12 +66,17 @@ export async function POST(request: Request) {
 
   // Compute fit from the same code the browse/detail pages use, so what
   // the student was shown before submitting is what gets frozen here.
-  const [depth, requirementsByListing] = await Promise.all([
+  const [depth, requirementsByListing, pools] = await Promise.all([
     getStudentDepth(supabase, user.id),
     getListingRequirements(supabase, [listingId]),
+    getApplicantPools(supabase, [listingId]),
   ])
   const requirements = requirementsByListing.get(listingId) ?? []
   const fit = computeFit(requirements, depth)
+  // Tier is pool-relative (§7), so it's assigned against whoever has
+  // already applied — and frozen here, because the pool it was computed
+  // against will have changed by the time anyone reads it back.
+  const fitTier = assignTier(fit, pools.get(listingId) ?? [])
 
   const consentPayload = {
     student_id: user.id,
@@ -98,8 +103,10 @@ export async function POST(request: Request) {
     requirements: requirements.map((r) => ({ skill_id: r.skillId, required_level: r.requiredLevel })),
     per_skill: fit.perSkill,
     missing_skill_ids: fit.missingSkillIds,
-    fit_tier: fit.tier,
+    fit_tier: fitTier,
     rank_score: fit.rankScore,
+    confidence: fit.confidence,
+    applicant_pool_size: (pools.get(listingId) ?? []).length,
     // Every skill the student had evidence in at submission time, not just
     // the ones this listing asked for — a dispute about "you said my depth
     // was X" needs the whole picture as of that moment, not a filtered view.
@@ -115,7 +122,7 @@ export async function POST(request: Request) {
       student_id: user.id,
       consent_id: consent.id,
       response_text: body.responseText?.trim() || null,
-      fit_tier_at_apply: fit.tier,
+      fit_tier_at_apply: fitTier,
       rank_score_at_apply: fit.rankScore,
       computed_snapshot: snapshot,
       status: 'submitted',
@@ -134,7 +141,7 @@ export async function POST(request: Request) {
   const { error: logErr } = await admin.from('disclosure_log').insert({
     student_id: user.id,
     recipient_id: listing.poster_id,
-    fields_disclosed: ['fit_tier', 'rank_score', 'per_skill_depth', 'missing_skills'],
+    fields_disclosed: ['fit_tier', 'rank_score', 'confidence', 'per_skill_depth', 'missing_skills'],
     payload_snapshot: snapshot,
   })
   if (logErr) {
@@ -165,5 +172,5 @@ export async function POST(request: Request) {
     console.error('[api/applications] notification failed:', err)
   }
 
-  return NextResponse.json({ ok: true, id: application.id, fitTier: fit.tier })
+  return NextResponse.json({ ok: true, id: application.id, fitTier })
 }

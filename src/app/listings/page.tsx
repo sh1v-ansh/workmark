@@ -23,7 +23,8 @@ export default async function ListingsPage() {
   const listingIds = rows.map((l) => l.id)
 
   let student: { full_name: string | null } | null = null
-  let fitByListing = new Map<string, { tier: FitTier; missingSkillIds: string[] }>()
+  let fitByListing = new Map<string, { missingSkillIds: string[] }>()
+  let tierByListing = new Map<string, FitTier>()
   let requirementsByListing = new Map<string, { skillId: string; canonicalName?: string }[]>()
 
   if (user) {
@@ -35,6 +36,7 @@ export default async function ListingsPage() {
     if (user && student) {
       const result = await getFitForListings(supabase, user.id, listingIds)
       fitByListing = result.fitByListing
+      tierByListing = result.tierByListing
       requirementsByListing = result.requirementsByListing
     } else {
       const { getListingRequirements } = await import('@/lib/matching/listing')
@@ -58,7 +60,7 @@ export default async function ListingsPage() {
       teamSize: l.team_size,
       createdAt: l.created_at,
       skills: reqs.map((r) => r.canonicalName ?? r.skillId),
-      fitTier: fit?.tier ?? null,
+      fitTier: tierByListing.get(l.id) ?? null,
       missingCount: fit?.missingSkillIds.length ?? 0,
     }
   })

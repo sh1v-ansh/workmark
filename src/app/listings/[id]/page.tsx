@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getStudentDepth } from '@/lib/matching/depth'
-import { getListingRequirements } from '@/lib/matching/listing'
-import { computeFit } from '@/lib/matching/fit'
+import { getListingRequirements, getApplicantPools } from '@/lib/matching/listing'
+import { computeFit, assignTier } from '@/lib/matching/fit'
 import ListingDetailClient from './ListingDetailClient'
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,12 +35,19 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     activeApplicationCount = student?.active_application_count ?? 0
 
     if (student && listing.poster_id !== user.id) {
-      const depth = await getStudentDepth(supabase, user.id)
+      const [depth, pools] = await Promise.all([
+        getStudentDepth(supabase, user.id),
+        getApplicantPools(supabase, [id]),
+      ])
       const computed = computeFit(requirements, depth)
+      const poolScores = pools.get(id) ?? []
+      const tier = assignTier(computed, poolScores)
       const skillNameById = new Map(requirements.map((r) => [r.skillId, r.canonicalName ?? r.skillId]))
       fit = {
-        tier: computed.tier,
+        tier,
         rankScore: computed.rankScore,
+        confidence: computed.confidence,
+        poolSize: poolScores.length,
         perSkill: computed.perSkill.map((s) => ({
           skillId: s.skillId,
           name: skillNameById.get(s.skillId) ?? s.skillId,
@@ -64,7 +71,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         await admin.from('fit_tier_impressions').insert({
           student_id: user.id,
           listing_id: id,
-          tier: computed.tier,
+          tier,
           missing_skills: computed.missingSkillIds,
         })
       } catch (err) {
