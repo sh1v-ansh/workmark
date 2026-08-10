@@ -48,9 +48,12 @@ export default function Navbar({ role, userName }: NavbarProps) {
 
         {/* Desktop links */}
         <div className="mob-hide" style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-          <Link href="/projects" aria-current={pathname === '/projects' ? 'page' : undefined} style={linkStyle('/projects')}>Browse</Link>
+          <Link href="/listings" aria-current={pathname === '/listings' ? 'page' : undefined} style={linkStyle('/listings')}>Projects</Link>
           {role === 'student' && (
-            <Link href="/students" aria-current={pathname === '/students' ? 'page' : undefined} style={linkStyle('/students')}>Students</Link>
+            <>
+              <Link href="/student/github" aria-current={pathname === '/student/github' ? 'page' : undefined} style={linkStyle('/student/github')}>Skills</Link>
+              <Link href="/students" aria-current={pathname === '/students' ? 'page' : undefined} style={linkStyle('/students')}>Students</Link>
+            </>
           )}
           <Link href={dashboardHref} aria-current={pathname === dashboardHref ? 'page' : undefined} style={linkStyle(dashboardHref)}>Dashboard</Link>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 16, borderLeft: `1px solid ${C.border}` }}>
@@ -91,7 +94,11 @@ export default function Navbar({ role, userName }: NavbarProps) {
           {userName && (
             <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, padding: '12px 0', borderBottom: `1px solid ${C.border}`, marginBottom: 4 }}>{userName}</p>
           )}
-          {[{ href: '/projects', label: 'Browse projects' }, { href: dashboardHref, label: 'Dashboard' }].map(({ href, label }) => (
+          {[
+            { href: '/listings', label: 'Projects' },
+            ...(role === 'student' ? [{ href: '/student/github', label: 'My skills' }] : []),
+            { href: dashboardHref, label: 'Dashboard' },
+          ].map(({ href, label }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={pathname === href ? 'page' : undefined}
               style={{ display: 'block', fontFamily: F.mono, fontSize: 13, color: pathname === href ? C.accent : C.textMuted, textDecoration: 'none', padding: '13px 0', borderBottom: `1px solid ${C.border}` }}>
               {label}

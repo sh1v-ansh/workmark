@@ -1,0 +1,110 @@
+import { notFound } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { getStudentDepth } from '@/lib/matching/depth'
+import { getListingRequirements } from '@/lib/matching/listing'
+import { computeFit } from '@/lib/matching/fit'
+import ListingDetailClient from './ListingDetailClient'
+
+export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: listing } = await supabase
+    .from('listings')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (!listing) notFound()
+
+  const requirements = (await getListingRequirements(supabase, [id])).get(id) ?? []
+
+  let studentName: string | null = null
+  let fit = null
+  let application = null
+  let activeApplicationCount = 0
+
+  if (user) {
+    const { data: student } = await supabase
+      .from('students')
+      .select('full_name, active_application_count')
+      .eq('id', user.id)
+      .maybeSingle()
+    studentName = student?.full_name ?? null
+    activeApplicationCount = student?.active_application_count ?? 0
+
+    if (student && listing.poster_id !== user.id) {
+      const depth = await getStudentDepth(supabase, user.id)
+      const computed = computeFit(requirements, depth)
+      const skillNameById = new Map(requirements.map((r) => [r.skillId, r.canonicalName ?? r.skillId]))
+      fit = {
+        tier: computed.tier,
+        rankScore: computed.rankScore,
+        perSkill: computed.perSkill.map((s) => ({
+          skillId: s.skillId,
+          name: skillNameById.get(s.skillId) ?? s.skillId,
+          requiredLevel: s.requiredLevel,
+          depth: s.depth,
+          present: s.present,
+        })),
+        missingNames: computed.missingSkillIds.map((sid) => skillNameById.get(sid) ?? sid),
+      }
+
+      // Impression logging (§ EEOC audit): records that this student was
+      // shown this fit tier for this listing. Service-role — the table has
+      // no user insert policy, since it's an audit record about the user
+      // rather than something they author. Best-effort: a logging failure
+      // must not stop someone reading a listing.
+      try {
+        const admin = createServiceClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        )
+        await admin.from('fit_tier_impressions').insert({
+          student_id: user.id,
+          listing_id: id,
+          tier: computed.tier,
+          missing_skills: computed.missingSkillIds,
+        })
+      } catch (err) {
+        console.error('[listings/[id]] impression log failed:', err)
+      }
+    }
+
+    const { data: app } = await supabase
+      .from('applications')
+      .select('id, status, fit_tier_at_apply, created_at')
+      .eq('listing_id', id)
+      .eq('student_id', user.id)
+      .maybeSingle()
+    application = app
+  }
+
+  return (
+    <ListingDetailClient
+      listing={{
+        id: listing.id,
+        title: listing.title,
+        brief: listing.brief,
+        posterId: listing.poster_id,
+        posterDisplayName: listing.poster_display_name,
+        status: listing.status,
+        estHours: listing.est_hours,
+        hoursPerWeek: listing.hours_per_week,
+        duration: listing.duration,
+        workMode: listing.work_mode,
+        teamSize: listing.team_size,
+        declaredDifficulty: listing.declared_difficulty,
+        createdAt: listing.created_at,
+      }}
+      requirements={requirements.map((r) => ({ skillId: r.skillId, name: r.canonicalName ?? r.skillId, requiredLevel: r.requiredLevel }))}
+      fit={fit}
+      application={application}
+      isOwner={!!user && listing.poster_id === user.id}
+      signedIn={!!user}
+      studentName={studentName}
+      activeApplicationCount={activeApplicationCount}
+    />
+  )
+}
