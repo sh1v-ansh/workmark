@@ -8,12 +8,15 @@ import { useToast } from '@/components/Toast'
 import { C, F } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 
+// Student-only in MVP. The role prop is kept (rather than removed) so
+// company/faculty navs can be reintroduced at Tier 1+ without touching
+// every call site again.
 interface NavbarProps {
-  role: 'student' | 'company' | 'faculty'
+  role?: 'student'
   userName?: string
 }
 
-export default function Navbar({ role, userName }: NavbarProps) {
+export default function Navbar({ role = 'student', userName }: NavbarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
@@ -29,7 +32,7 @@ export default function Navbar({ role, userName }: NavbarProps) {
     router.refresh()
   }
 
-  const dashboardHref = role === 'student' ? '/student/dashboard' : role === 'faculty' ? '/faculty/dashboard' : '/company/dashboard'
+  const dashboardHref = '/student/dashboard'
 
   const linkStyle = (href: string): React.CSSProperties => ({
     fontSize: 13, fontFamily: F.mono, textDecoration: 'none',

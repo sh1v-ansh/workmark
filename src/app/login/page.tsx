@@ -9,14 +9,16 @@ import { C, F } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 
 type Mode = 'signin' | 'signup'
-type Role = 'student' | 'company' | 'faculty'
+// Student-only in MVP: company/faculty accounts are deferred to Tier 1+
+// and have no table in the v0.5 schema to write a profile into.
+type Role = 'student'
 
 export default function LoginPage() {
   const router = useRouter()
   const { toast } = useToast()
 
   const [mode, setMode] = useState<Mode>('signin')
-  const [role, setRole] = useState<Role>('student')
+  const role: Role = 'student'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -65,8 +67,8 @@ export default function LoginPage() {
 
     try {
       if (mode === 'signup') {
-        if ((role === 'student' || role === 'faculty') && !validateEdu(email)) {
-          setError(`${role === 'faculty' ? 'Faculty' : 'Student'} accounts require a university (.edu) email address.`)
+        if (!validateEdu(email)) {
+          setError('Student accounts require a university (.edu) email address.')
           return
         }
         const { error: signUpError } = await supabase.auth.signUp({
@@ -93,12 +95,8 @@ export default function LoginPage() {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Authentication failed.')
         const { data: student } = await supabase.from('students').select('id').eq('id', user.id).maybeSingle()
-        if (student) { router.push('/student/dashboard'); router.refresh(); return }
-        const { data: company } = await supabase.from('companies').select('id').eq('id', user.id).maybeSingle()
-        if (company) { router.push('/company/dashboard'); router.refresh(); return }
-        const { data: faculty } = await supabase.from('faculty').select('id').eq('id', user.id).maybeSingle()
-        if (faculty) { router.push('/faculty/dashboard'); router.refresh(); return }
-        router.push('/onboarding'); router.refresh()
+        router.push(student ? '/student/dashboard' : '/onboarding')
+        router.refresh()
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
@@ -194,38 +192,10 @@ export default function LoginPage() {
           </div>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Role selector — sign-up only */}
             {mode === 'signup' && (
-              <div>
-                <p id="role-label" style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>I am a</p>
-                <div role="group" aria-labelledby="role-label" style={{ display: 'flex', gap: 8 }}>
-                  {([
-                    { r: 'student', label: 'Student' },
-                    { r: 'company', label: 'Company' },
-                    { r: 'faculty', label: 'Faculty' },
-                  ] as { r: Role; label: string }[]).map(({ r, label }) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => { setRole(r); setError(null); setEmail('') }}
-                      aria-pressed={role === r}
-                      style={{
-                        flex: 1, padding: '10px 0', fontFamily: F.mono, fontSize: 11, border: `1px solid ${role === r ? C.accent : C.border}`,
-                        background: role === r ? C.accentHover : C.surfaceAlt,
-                        color: role === r ? C.accent : C.textMuted,
-                        cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.15s',
-                      }}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-                {(role === 'student' || role === 'faculty') && (
-                  <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono, marginTop: 8 }}>
-                    Requires a university <strong style={{ color: C.textMuted }}>.edu</strong> email address.
-                  </p>
-                )}
-              </div>
+              <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono, lineHeight: 1.5 }}>
+                Requires a university <strong style={{ color: C.textMuted }}>.edu</strong> email address.
+              </p>
             )}
 
             <div>
@@ -237,7 +207,7 @@ export default function LoginPage() {
                 autoComplete="email"
                 value={email}
                 onChange={(e) => { setEmail(e.target.value); setError(null) }}
-                placeholder={mode === 'signup' && (role === 'student' || role === 'faculty') ? 'you@university.edu' : 'you@example.com'}
+                placeholder={mode === 'signup' ? 'you@university.edu' : 'you@example.com'}
                 className="dk-input"
               />
             </div>
@@ -281,7 +251,7 @@ export default function LoginPage() {
         </div>
 
         <p style={{ textAlign: 'center', fontSize: 12, color: C.textFaint, fontFamily: F.mono, marginTop: 16 }}>
-          <Link href="/projects" style={{ color: C.textMuted, textDecoration: 'none' }}>
+          <Link href="/listings" style={{ color: C.textMuted, textDecoration: 'none' }}>
             Browse open projects →
           </Link>
         </p>

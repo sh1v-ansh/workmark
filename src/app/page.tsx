@@ -14,23 +14,9 @@ export default async function Home() {
       .select('id')
       .eq('id', user.id)
       .maybeSingle()
-    if (student) redirect('/student/dashboard')
-
-    const { data: company } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle()
-    if (company) redirect('/company/dashboard')
-
-    const { data: faculty } = await supabase
-      .from('faculty')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle()
-    if (faculty) redirect('/faculty/dashboard')
-
-    redirect('/onboarding')
+    // Student-only in MVP — company/faculty accounts are deferred to
+    // Tier 1+ and have no table in the v0.5 schema.
+    redirect(student ? '/student/dashboard' : '/onboarding')
   }
 
   return <LandingPage />

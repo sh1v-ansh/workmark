@@ -28,7 +28,7 @@ export default function MarketplacePage() {
             a permanent, poster-attested Workmark record.
           </p>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <Link href="/projects" className="wm-btn wm-btn-primary">
+            <Link href="/listings" className="wm-btn wm-btn-primary">
               Browse open projects →
             </Link>
             <Link href="/login" className="wm-btn wm-btn-secondary">

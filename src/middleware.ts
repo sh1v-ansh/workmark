@@ -42,10 +42,12 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
+  // Student-only in MVP. Company and faculty accounts are deferred until
+  // Tier 1+ — their tables don't exist in the v0.5 schema at all, so
+  // there's nothing to route to.
   const requiresAuth =
     pathname.startsWith('/student/') ||
-    pathname.startsWith('/company/') ||
-    pathname.startsWith('/faculty/') ||
+    pathname.startsWith('/listings/new') ||
     pathname.startsWith('/onboarding')
 
   if (!user && requiresAuth) {
@@ -61,38 +63,8 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .maybeSingle()
 
-    if (student) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/student/dashboard'
-      return NextResponse.redirect(url)
-    }
-
-    const { data: company } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (company) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/company/dashboard'
-      return NextResponse.redirect(url)
-    }
-
-    const { data: faculty } = await supabase
-      .from('faculty')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (faculty) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/faculty/dashboard'
-      return NextResponse.redirect(url)
-    }
-
     const url = request.nextUrl.clone()
-    url.pathname = '/onboarding'
+    url.pathname = student ? '/student/dashboard' : '/onboarding'
     return NextResponse.redirect(url)
   }
 

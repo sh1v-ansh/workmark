@@ -12,8 +12,9 @@ import { UNIVERSITIES } from '@/lib/data/universities'
 import { MAJORS } from '@/lib/data/majors'
 import { INDUSTRIES } from '@/lib/data/industries'
 
-type Role = 'student' | 'company' | 'faculty'
-type Step = 1 | 2
+// Student-only in MVP: company/faculty accounts are deferred to Tier 1+
+// and have no table in the v0.5 schema to write a profile into.
+type Role = 'student'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -195,157 +196,32 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
   )
 }
 
-// ─── company form ─────────────────────────────────────────────────────────────
-
-function CompanyForm({ onSubmit, loading }: {
-  onSubmit: (data: Record<string, unknown>) => void; loading: boolean
-}) {
-  const [companyName, setCompanyName] = useState('')
-  const [website, setWebsite] = useState('')
-  const [industry, setIndustry] = useState('')
-  const [companySize, setCompanySize] = useState('1-10')
-  const [hqLocation, setHqLocation] = useState('')
-  const [contactName, setContactName] = useState('')
-  const [contactEmail, setContactEmail] = useState('')
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    onSubmit({ company_name: companyName, website: website || null, industry: industry || null, company_size: companySize, hq_location: hqLocation || null, contact_name: contactName, contact_email: contactEmail })
-  }
-
-  const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
-
-  return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={gap}>
-        <FieldLabel htmlFor="company-name">Company name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
-        <input id="company-name" required value={companyName} onChange={(e) => setCompanyName(e.target.value)} className="dk-input" placeholder="Acme Inc." />
-      </div>
-
-      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div style={gap}>
-          <FieldLabel htmlFor="company-website">Website</FieldLabel>
-          <input id="company-website" type="url" autoComplete="url" value={website} onChange={(e) => setWebsite(e.target.value)} className="dk-input" placeholder="https://acme.com" />
-        </div>
-        <div style={gap}>
-          <FieldLabel htmlFor="company-industry">Industry</FieldLabel>
-          <Combobox id="company-industry" value={industry} onChange={setIndustry} options={INDUSTRIES} placeholder="Search industries…" />
-        </div>
-        <div style={gap}>
-          <FieldLabel htmlFor="company-size">Company size</FieldLabel>
-          <select id="company-size" value={companySize} onChange={(e) => setCompanySize(e.target.value)} className="dk-select">
-            <option value="1-10">1–10</option>
-            <option value="11-50">11–50</option>
-            <option value="51-200">51–200</option>
-            <option value="200+">200+</option>
-          </select>
-        </div>
-        <div style={gap}>
-          <FieldLabel htmlFor="company-hq">HQ location</FieldLabel>
-          <input id="company-hq" value={hqLocation} onChange={(e) => setHqLocation(e.target.value)} className="dk-input" placeholder="San Francisco, CA" />
-        </div>
-      </div>
-
-      <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Primary contact</p>
-        <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <div style={gap}>
-            <FieldLabel htmlFor="company-contact-name">Contact name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
-            <input id="company-contact-name" required autoComplete="name" value={contactName} onChange={(e) => setContactName(e.target.value)} className="dk-input" placeholder="Jane Smith" />
-          </div>
-          <div style={gap}>
-            <FieldLabel htmlFor="company-contact-email">Contact email <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
-            <input id="company-contact-email" required type="email" autoComplete="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} className="dk-input" placeholder="jane@acme.com" />
-          </div>
-        </div>
-      </div>
-
-      <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px 0', background: loading ? C.surfaceAlt : C.accent, color: loading ? C.textMuted : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
-        {loading ? 'Saving…' : 'Complete profile →'}
-      </button>
-    </form>
-  )
-}
-
-// ─── faculty form ─────────────────────────────────────────────────────────────
-
-function FacultyForm({ onSubmit, loading, email }: {
-  onSubmit: (data: Record<string, unknown>) => void; loading: boolean; email: string
-}) {
-  const [fullName, setFullName] = useState('')
-  const [institution, setInstitution] = useState('')
-  const [department, setDepartment] = useState('')
-  const [title, setTitle] = useState('Professor')
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    onSubmit({ full_name: fullName, institution, department: department || null, title, email })
-  }
-
-  const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
-
-  return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-      <div style={gap}>
-        <FieldLabel htmlFor="faculty-name">Full name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
-        <input id="faculty-name" required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="dk-input" placeholder="Dr. Jane Smith" />
-      </div>
-      <div style={gap}>
-        <FieldLabel htmlFor="faculty-institution">Institution <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
-        <Combobox id="faculty-institution" value={institution} onChange={setInstitution} options={UNIVERSITIES} placeholder="Search universities…" required />
-      </div>
-      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div style={gap}>
-          <FieldLabel htmlFor="faculty-dept">Department</FieldLabel>
-          <input id="faculty-dept" value={department} onChange={(e) => setDepartment(e.target.value)} className="dk-input" placeholder="Computer Science" />
-        </div>
-        <div style={gap}>
-          <FieldLabel htmlFor="faculty-title">Title</FieldLabel>
-          <select id="faculty-title" value={title} onChange={(e) => setTitle(e.target.value)} className="dk-select">
-            <option value="Professor">Professor</option>
-            <option value="Associate Professor">Associate Professor</option>
-            <option value="Assistant Professor">Assistant Professor</option>
-            <option value="Postdoctoral Researcher">Postdoctoral Researcher</option>
-            <option value="Research Scientist">Research Scientist</option>
-            <option value="Lecturer">Lecturer</option>
-            <option value="Instructor">Instructor</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
-      <div style={gap}>
-        <FieldLabel htmlFor="faculty-email">Institutional email</FieldLabel>
-        <input id="faculty-email" type="email" readOnly value={email} className="dk-input" style={{ opacity: 0.6, cursor: 'default' }} />
-        <p style={{ fontSize: 11, fontFamily: F.mono, color: C.textFaint, marginTop: 4 }}>Used to verify your institutional affiliation</p>
-      </div>
-      <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px 0', background: loading ? C.surfaceAlt : C.accent, color: loading ? C.textMuted : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
-        {loading ? 'Saving profile…' : 'Complete profile →'}
-      </button>
-    </form>
-  )
-}
-
 // ─── page ─────────────────────────────────────────────────────────────────────
 
 export default function OnboardingPage() {
   const router = useRouter()
   const { toast } = useToast()
 
-  const [step, setStep] = useState<Step>(1)
-  const [role, setRole] = useState<Role | null>(null)
   const [loading, setLoading] = useState(false)
   const [userEmail, setUserEmail] = useState('')
   const [userId, setUserId] = useState('')
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
     async function loadUser() {
       const supabase = createClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
+
+      // Already onboarded — landing here again (back button, a second
+      // tab, a retried signup) should reach the dashboard, not a form
+      // whose insert would fail on the primary key.
+      const { data: existing } = await supabase.from('students').select('id').eq('id', user.id).maybeSingle()
+      if (existing) { router.replace('/student/dashboard'); return }
+
       setUserId(user.id)
       setUserEmail(user.email ?? '')
-      const metaRole = user.user_metadata?.role as Role | undefined
-      if (metaRole) { setRole(metaRole); setStep(2) }
+      setChecking(false)
     }
     loadUser()
   }, [router])
@@ -355,9 +231,23 @@ export default function OnboardingPage() {
     setLoading(true)
     const supabase = createClient()
     try {
-      const { error } = await supabase.from('students').insert({ id: userId, ...data })
-      if (error) throw error
-      toast('Profile saved! Welcome to Workmark.', 'success')
+      // edu_domain/edu_verified_at are the permanent record of how this
+      // account was verified as a student. The login email can change
+      // later (a .edu expires at graduation); this pair does not.
+      const domain = userEmail.split('@')[1] ?? null
+      const { error } = await supabase.from('students').insert({
+        id: userId,
+        ...data,
+        edu_domain: domain,
+        edu_verified_at: new Date().toISOString(),
+      })
+      if (error) {
+        // 23505 = primary key: a profile already exists, which is a
+        // success state for the user even though the insert failed.
+        if (error.code === '23505') { router.replace('/student/dashboard'); return }
+        throw error
+      }
+      toast('Profile saved. Welcome to Workmark.', 'success')
       router.push('/student/dashboard'); router.refresh()
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Failed to save profile.', 'error')
@@ -366,46 +256,15 @@ export default function OnboardingPage() {
     }
   }
 
-  async function handleCompanySubmit(data: Record<string, unknown>) {
-    if (!userId) return
-    setLoading(true)
-    const supabase = createClient()
-    try {
-      const { error } = await supabase.from('companies').insert({ id: userId, ...data })
-      if (error) throw error
-      toast('Company profile saved! Welcome to Workmark.', 'success')
-      router.push('/company/dashboard'); router.refresh()
-    } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Failed to save profile.', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleFacultySubmit(data: Record<string, unknown>) {
-    if (!userId) return
-    setLoading(true)
-    const supabase = createClient()
-    try {
-      const { error } = await supabase.from('faculty').insert({ id: userId, ...data })
-      if (error) throw error
-      toast('Faculty profile saved! Welcome to Workmark.', 'success')
-      router.push('/faculty/dashboard'); router.refresh()
-    } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Failed to save profile.', 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const emailDomain = userEmail ? `@${userEmail.split('@')[1]}` : ''
-
   async function handleSignOut() {
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
   }
+
+  const emailDomain = userEmail ? `@${userEmail.split('@')[1]}` : ''
+  const eduInvalid = !!userEmail && !validateEdu(userEmail)
 
   return (
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px' }}>
@@ -424,79 +283,20 @@ export default function OnboardingPage() {
       </div>
 
       <div style={{ width: '100%', maxWidth: 540 }}>
-        {/* Progress */}
-        <div role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={2} aria-label={`Step ${step} of 2`} style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: 24 }}>
-          {[1, 2].map((n, i) => (
-            <div key={n} style={{ display: 'flex', alignItems: 'center', flex: n === 1 ? 'none' : 1 }}>
-              <div aria-hidden="true" style={{ width: 28, height: 28, background: step >= n ? C.accent : C.surfaceAlt, border: `1px solid ${step >= n ? C.accent : C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: F.mono, fontSize: 11, fontWeight: 700, color: step >= n ? C.bg : C.textFaint, flexShrink: 0 }}>
-                {n}
-              </div>
-              {i === 0 && <div aria-hidden="true" style={{ flex: 1, height: 1, background: step >= 2 ? C.accent : C.border, margin: '0 8px' }} />}
-            </div>
-          ))}
-        </div>
-
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 32 }}>
-          {step === 1 && (
-            <>
-              <h1 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Welcome to Workmark</h1>
-              <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.6 }}>Tell us who you are to get started.</p>
+          <h1 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Welcome to Workmark</h1>
+          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.6 }}>
+            Set up your student profile. Your verified skill record comes from the repos you link — this is just the basics.
+          </p>
 
-              <div role="group" aria-label="Account type" className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 20 }}>
-                {([
-                  { r: 'student', icon: '🎓', desc: 'Apply to projects, earn verified records' },
-                  { r: 'company', icon: '🏢', desc: 'Post projects, find CS talent' },
-                  { r: 'faculty', icon: '🔬', desc: 'Post research projects for students' },
-                ] as { r: Role; icon: string; desc: string }[]).map(({ r, icon, desc }) => (
-                  <button key={r} type="button" onClick={() => setRole(r)} aria-pressed={role === r}
-                    style={{ padding: '20px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, border: `1px solid ${role === r ? C.accent : C.border}`, background: role === r ? C.accentHover : C.surfaceAlt, cursor: 'pointer', transition: 'all 0.15s' }}>
-                    <span aria-hidden="true" style={{ fontSize: 24 }}>{icon}</span>
-                    <span style={{ fontFamily: F.mono, fontSize: 11, fontWeight: 500, color: role === r ? C.accent : C.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      {r === 'faculty' ? 'Faculty' : r}
-                    </span>
-                    <span style={{ fontSize: 10, color: C.textFaint, textAlign: 'center', lineHeight: 1.4 }}>{desc}</span>
-                  </button>
-                ))}
-              </div>
-
-              {(role === 'student' || role === 'faculty') && !validateEdu(userEmail) && userEmail && (
-                <div role="alert" style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', padding: '10px 14px', fontSize: 13, color: '#B45309', marginBottom: 16, lineHeight: 1.5 }}>
-                  Your email <strong>{userEmail}</strong> is not a .edu address. {role === 'faculty' ? 'Faculty' : 'Student'} accounts require a university email.
-                </div>
-              )}
-
-              {(() => {
-                const eduRequired = (role === 'student' || role === 'faculty') && !!userEmail && !validateEdu(userEmail)
-                const disabled = !role || eduRequired
-                return (
-                  <button type="button" disabled={disabled} onClick={() => setStep(2)}
-                    style={{ width: '100%', padding: '12px 0', background: disabled ? C.surfaceAlt : C.accent, color: disabled ? C.textFaint : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
-                    Continue →
-                  </button>
-                )
-              })()}
-            </>
-          )}
-
-          {step === 2 && role && (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-                <button type="button" onClick={() => setStep(1)} style={{ fontSize: 12, fontFamily: F.mono, color: C.textFaint, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  ← Back
-                </button>
-                <h2 style={{ fontFamily: F.serif, fontSize: 20, fontWeight: 700, color: C.text }}>
-                  {role === 'student' ? 'Your profile' : role === 'faculty' ? 'Faculty profile' : 'Company profile'}
-                </h2>
-              </div>
-
-              {role === 'student' ? (
-                <StudentForm onSubmit={handleStudentSubmit} loading={loading} emailDomain={emailDomain} />
-              ) : role === 'faculty' ? (
-                <FacultyForm onSubmit={handleFacultySubmit} loading={loading} email={userEmail} />
-              ) : (
-                <CompanyForm onSubmit={handleCompanySubmit} loading={loading} />
-              )}
-            </>
+          {checking ? (
+            <p style={{ fontSize: 13, color: C.textFaint, fontFamily: F.mono }}>Loading…</p>
+          ) : eduInvalid ? (
+            <div role="alert" style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', padding: '12px 16px', fontSize: 13, color: '#B45309', lineHeight: 1.6 }}>
+              Your email <strong>{userEmail}</strong> is not a .edu address. Workmark accounts require a university email to verify student status. Sign out and sign up again with your university address.
+            </div>
+          ) : (
+            <StudentForm onSubmit={handleStudentSubmit} loading={loading} emailDomain={emailDomain} />
           )}
         </div>
       </div>
