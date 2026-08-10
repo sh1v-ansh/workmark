@@ -16,9 +16,10 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.Re
   )
 }
 
-export default function NewListingClient({ studentName, taxonomy }: {
+export default function NewListingClient({ studentName, taxonomy, agentsAvailable }: {
   studentName: string | null
   taxonomy: TaxonomySkill[]
+  agentsAvailable: boolean
 }) {
   const router = useRouter()
   const { toast } = useToast()
@@ -33,6 +34,39 @@ export default function NewListingClient({ studentName, taxonomy }: {
   const [teamSize, setTeamSize] = useState('')
   const [difficulty, setDifficulty] = useState('')
   const [saving, setSaving] = useState(false)
+  const [rough, setRough] = useState('')
+  const [drafting, setDrafting] = useState(false)
+  const [unrecognized, setUnrecognized] = useState<string[]>([])
+
+  // Fills the form and stops. Nothing is saved until the poster reviews
+  // it and submits — the agent proposes, the poster decides (§2).
+  async function draftFromDescription() {
+    setDrafting(true)
+    try {
+      const res = await fetch('/api/agents/listing-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: rough }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Could not draft.')
+      const d = json.draft as {
+        title: string
+        brief: string
+        requirements: { skillId: string; canonicalName: string; requiredLevel: number }[]
+        unrecognizedSkills: string[]
+      }
+      setTitle(d.title)
+      setBrief(d.brief)
+      setRequirements(d.requirements.map((r) => ({ skillId: r.skillId, canonicalName: r.canonicalName, requiredLevel: r.requiredLevel })))
+      setUnrecognized(d.unrecognizedSkills ?? [])
+      toast('Draft ready — edit anything that is off, then post.', 'success')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not draft.', 'error')
+    } finally {
+      setDrafting(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -82,6 +116,32 @@ export default function NewListingClient({ studentName, taxonomy }: {
         <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24 }}>
           Applicants are matched on whether their linked repos actually demonstrate the skills you list.
         </p>
+
+        {agentsAvailable && (
+          <Card hoverable={false} padding={24} style={{ marginBottom: 20 }}>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Start from a description</h2>
+            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
+              Describe the project in your own words and we&apos;ll fill in the form below. Everything stays editable — nothing is posted until you say so.
+            </p>
+            <textarea
+              value={rough} onChange={(e) => setRough(e.target.value)} rows={3}
+              className="dk-input" style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}
+              placeholder="I'm building a tool that pulls my bank transactions and categorizes them. I've done the backend but I need someone for the frontend."
+              aria-label="Rough project description"
+            />
+            <button
+              type="button" onClick={draftFromDescription} disabled={drafting || rough.trim().length < 20}
+              className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}
+            >
+              {drafting ? 'Drafting…' : 'Draft it for me'}
+            </button>
+            {unrecognized.length > 0 && (
+              <p style={{ fontSize: 11, color: '#B45309', marginTop: 10, lineHeight: 1.5 }}>
+                Skipped {unrecognized.length} suggested skill{unrecognized.length === 1 ? '' : 's'} we don&apos;t track yet ({unrecognized.join(', ')}). Add the closest match by hand if it matters.
+              </p>
+            )}
+          </Card>
+        )}
 
         <Card hoverable={false} padding={28}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>

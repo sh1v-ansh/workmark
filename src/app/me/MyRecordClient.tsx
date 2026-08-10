@@ -93,9 +93,14 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
         <Card hoverable={false} padding={24}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
             <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Public profile</h2>
-            <Link href="/me/file" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
-              Your file &amp; disputes →
-            </Link>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+              <Link href="/me/briefs" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
+                Project ideas →
+              </Link>
+              <Link href="/me/file" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
+                Your file &amp; disputes →
+              </Link>
+            </div>
           </div>
           <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 14, lineHeight: 1.5 }}>
             {student.handle

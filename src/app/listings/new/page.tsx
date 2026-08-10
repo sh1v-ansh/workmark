@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import NewListingClient from './NewListingClient'
+import { agentsAvailable } from '@/lib/agents/client'
 
 export default async function NewListingPage() {
   const supabase = await createClient()
@@ -18,5 +19,5 @@ export default async function NewListingPage() {
     .is('deprecated_at', null)
     .order('canonical_name')
 
-  return <NewListingClient studentName={student.full_name} taxonomy={taxonomy ?? []} />
+  return <NewListingClient studentName={student.full_name} taxonomy={taxonomy ?? []} agentsAvailable={agentsAvailable()} />
 }
