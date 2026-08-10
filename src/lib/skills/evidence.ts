@@ -32,6 +32,15 @@ export interface ProcessRepoResult {
   evidenceWritten: { skillId: string; difficultyCleared: number; changed: boolean }[]
 }
 
+/**
+ * options.engagementId promotes the scan from self-evidenced work to
+ * listing-driven work: base 0.5 instead of 0.4/0.5-by-contributor-count,
+ * tier 'listing_driven', and both the artifact and the evidence rows tied
+ * to the engagement. The artifact is looked up scoped to the engagement
+ * too, so a repo that already produced Tier 0 evidence on its own gets a
+ * SECOND artifact for the engagement rather than having its solo-work
+ * record overwritten — the two are different claims about different work.
+ */
 export async function processRepo(
   supabase: SupabaseClient,
   studentId: string,
@@ -39,6 +48,7 @@ export async function processRepo(
   githubLogin: string,
   repoFullName: string,
   grantId: string,
+  options: { engagementId?: string } = {},
 ): Promise<ProcessRepoResult> {
   const scanResult = await scanRepo(installationId, githubLogin, repoFullName)
   if (scanResult.skip) {
@@ -66,14 +76,20 @@ export async function processRepo(
     return { repoFullName, skipped: false, priorsWritten: resolvedSkillIds, evidenceWritten: [] }
   }
 
-  const tier: 'tier_0' | 'tier_0_5' = (scanResult.distinctContributors ?? 1) > 1 ? 'tier_0_5' : 'tier_0'
-  const base = tier === 'tier_0_5' ? 0.5 : 0.4
+  const engagementId = options.engagementId ?? null
+  // Listing-driven work carries base 0.5 regardless of contributor count:
+  // the weight comes from it having been real work someone asked for and
+  // accepted, not from how many people happened to commit to the repo.
+  const tier: ArtifactTier = engagementId
+    ? 'listing_driven'
+    : (scanResult.distinctContributors ?? 1) > 1 ? 'tier_0_5' : 'tier_0'
+  const base = tier === 'tier_0' ? 0.4 : 0.5
 
   const deployment = await verifyDeployment(installationId, repoFullName, scanResult.defaultBranch)
   const verificationMethod = deployment.verified ? deployment.method! : 'repo_link'
 
   const artifactId = await getOrCreateArtifact(
-    supabase, studentId, repoFullName, grantId, tier, verificationMethod, deployment.url,
+    supabase, studentId, repoFullName, grantId, tier, verificationMethod, deployment.url, engagementId,
   )
 
   const { rawComposite } = await extractComplexity(installationId, repoFullName, scanResult, resolvedSkillIds.length)
@@ -82,7 +98,7 @@ export async function processRepo(
   for (const skillId of resolvedSkillIds) {
     const { difficultyCleared } = await computeDifficultyLevel(supabase, skillId, rawComposite)
     const changed = await writeOrCorrectEvidence(supabase, {
-      studentId, skillId, artifactId, base, rawComposite, difficultyCleared, verificationMethod,
+      studentId, skillId, artifactId, base, rawComposite, difficultyCleared, verificationMethod, engagementId,
     })
     evidenceWritten.push({ skillId, difficultyCleared, changed })
   }
@@ -102,21 +118,29 @@ async function writePriors(supabase: SupabaseClient, studentId: string, skillIds
   if (error) throw error
 }
 
+type ArtifactTier = 'tier_0' | 'tier_0_5' | 'listing_driven'
+
 async function getOrCreateArtifact(
   supabase: SupabaseClient,
   studentId: string,
   repoFullName: string,
   grantId: string,
-  tier: 'tier_0' | 'tier_0_5',
+  tier: ArtifactTier,
   verificationMethod: string,
   deploymentUrl: string | null,
+  engagementId: string | null,
 ): Promise<string> {
-  const { data: existing } = await supabase
+  // Scoped to the engagement (or explicitly to no engagement) — `.is`
+  // rather than `.eq` for the null case, since PostgREST renders
+  // `eq.null` as a comparison against the literal string, which never
+  // matches and would create a duplicate artifact on every scan.
+  let query = supabase
     .from('artifacts')
     .select('id')
     .eq('student_id', studentId)
     .eq('repo_full_name', repoFullName)
-    .maybeSingle()
+  query = engagementId ? query.eq('engagement_id', engagementId) : query.is('engagement_id', null)
+  const { data: existing } = await query.maybeSingle()
 
   const patch = {
     student_id: studentId,
@@ -124,6 +148,7 @@ async function getOrCreateArtifact(
     source: 'github',
     repo_full_name: repoFullName,
     access_grant_id: grantId,
+    engagement_id: engagementId,
     tier,
     verification_method: verificationMethod,
     deployment_url: deploymentUrl,
@@ -152,7 +177,7 @@ async function getOrCreateArtifact(
  */
 async function writeOrCorrectEvidence(
   supabase: SupabaseClient,
-  args: { studentId: string; skillId: string; artifactId: string; base: number; rawComposite: number; difficultyCleared: number; verificationMethod: string },
+  args: { studentId: string; skillId: string; artifactId: string; base: number; rawComposite: number; difficultyCleared: number; verificationMethod: string; engagementId: string | null },
 ): Promise<boolean> {
   const { data: existing } = await supabase
     .from('current_skill_evidence')
@@ -170,6 +195,7 @@ async function writeOrCorrectEvidence(
     student_id: args.studentId,
     skill_id: args.skillId,
     artifact_id: args.artifactId,
+    engagement_id: args.engagementId,
     base: args.base,
     raw_composite: args.rawComposite,
     difficulty_cleared: args.difficultyCleared,

@@ -7,6 +7,7 @@ import { Icon } from '@/components/Icon'
 import { C, F } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
+import type { TrackRecord } from '@/lib/engagements/lifecycle'
 
 export interface DashboardData {
   student: {
@@ -19,6 +20,7 @@ export interface DashboardData {
     activeApplicationCount: number
   }
   githubConnected: boolean
+  trackRecord: TrackRecord
   skills: { skillId: string; name: string; bestLevel: number }[]
   applications: {
     id: string
@@ -61,7 +63,7 @@ function SectionHeading({ children, action }: { children: React.ReactNode; actio
 }
 
 export default function StudentDashboardClient({ data }: { data: DashboardData }) {
-  const { student, skills, applications, listings, engagements, githubConnected } = data
+  const { student, skills, applications, listings, engagements, githubConnected, trackRecord } = data
   const activeEngagements = engagements.filter((e) => e.stage !== 'closed' && e.stage !== 'abandoned')
 
   return (
@@ -92,6 +94,31 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
               <Link href="/student/github" className="wm-btn wm-btn-primary wm-btn-sm" style={{ display: 'inline-flex', flexShrink: 0 }}>
                 <Icon name="github" size={13} /> Connect
               </Link>
+            </div>
+          </Card>
+        )}
+
+        {/* Track record — only shown once something has actually finished.
+            A rate off a single data point is noise dressed as a stat. */}
+        {trackRecord.closeOutRate !== null && (
+          <Card hoverable={false} padding={20}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: F.mono }}>
+                  {Math.round(trackRecord.closeOutRate * 100)}%
+                </p>
+                <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>close-out rate</p>
+              </div>
+              <div>
+                <p style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: F.mono }}>{trackRecord.closed}</p>
+                <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>completed</p>
+              </div>
+              {trackRecord.active > 0 && (
+                <div>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: F.mono }}>{trackRecord.active}</p>
+                  <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>in flight</p>
+                </div>
+              )}
             </div>
           </Card>
         )}

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StudentDashboardClient, { type DashboardData } from './StudentDashboardClient'
+import { computeTrackRecord, type Stage } from '@/lib/engagements/lifecycle'
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
@@ -71,6 +72,13 @@ export default async function StudentDashboardPage() {
     : { data: [] as { id: string; canonical_name: string }[] }
   const nameById = new Map((skillRows ?? []).map((s) => [s.id, s.canonical_name]))
 
+  // Track record counts only the student's OWN engagements — work they
+  // did, not projects they posted. Abandoning something you posted says
+  // nothing about you as a collaborator.
+  const trackRecord = computeTrackRecord(
+    (myEngagements ?? []).filter((e) => e.student_id === user.id).map((e) => e.stage as Stage),
+  )
+
   const data: DashboardData = {
     student: {
       fullName: student.full_name,
@@ -82,6 +90,7 @@ export default async function StudentDashboardPage() {
       activeApplicationCount: student.active_application_count ?? 0,
     },
     githubConnected: !!connection,
+    trackRecord,
     skills: skillIds
       .map((id) => ({ skillId: id, name: nameById.get(id) ?? id, bestLevel: bestBySkill.get(id) ?? 0 }))
       .sort((a, b) => b.bestLevel - a.bestLevel || a.name.localeCompare(b.name)),
