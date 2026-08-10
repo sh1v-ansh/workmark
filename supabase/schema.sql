@@ -560,6 +560,24 @@ create table fit_tier_impressions (
   shown_at       timestamptz default now()
 );
 
+-- ─── Human review queue (§3) ───────────────────────────────────────────────
+-- The fallback verification path. Deployment / package / CI cover code
+-- that runs; they cover nothing for a design portfolio, a research
+-- writeup, or a demo that only exists as a video. See migration v05_0007.
+
+create table review_requests (
+  id            uuid default gen_random_uuid() primary key,
+  student_id    uuid references students(id) on delete cascade not null,
+  artifact_id   uuid references artifacts(id) on delete cascade,
+  url           text not null,
+  note          text not null,
+  status        text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  requested_at  timestamptz default now() not null,
+  reviewed_at   timestamptz,
+  reviewed_by   uuid,
+  review_note   text
+);
+
 -- ─── Agent calls — every agent invocation, logged ─────────────────────────
 -- Required to answer "why did the system say that" and for cost control.
 -- Agents never decide (§2) — this table is what proves it after the fact.
@@ -761,6 +779,8 @@ create index idx_consents_student                on consents(student_id);
 create index idx_disclosure_log_student           on disclosure_log(student_id);
 create index idx_evidence_audit_evidence         on evidence_audit(evidence_id);
 create index idx_agent_calls_student             on agent_calls(student_id);
+create index idx_review_requests_status          on review_requests(status, requested_at);
+create index idx_review_requests_student         on review_requests(student_id);
 create index idx_skills_merged_into              on skills(merged_into_id);
 create index idx_applications_consent             on applications(consent_id);
 create index idx_fit_tier_impressions_student     on fit_tier_impressions(student_id, shown_at);
@@ -793,6 +813,7 @@ alter table disclosure_log         enable row level security;
 alter table evidence_audit         enable row level security;
 alter table disputes               enable row level security;
 alter table agent_calls            enable row level security;
+alter table review_requests        enable row level security;
 alter table skill_calibration      enable row level security;
 alter table fit_tier_impressions   enable row level security;
 
@@ -1072,6 +1093,18 @@ create policy "Students: revoke own consent"
   with check (auth.uid() = student_id);
 
 -- ── agent_calls ──
+
+-- ── review_requests ──
+-- Insert-and-read only for students, same reason as disputes: a consumer
+-- editing the status of their own request would make the record useless.
+-- Reviewing is service-role, an honest reflection of "one person reviews
+-- these" rather than a permission system pretending to be more.
+
+create policy "Students: read own review requests"
+  on review_requests for select using (auth.uid() = student_id);
+
+create policy "Students: file own review requests"
+  on review_requests for insert with check (auth.uid() = student_id);
 
 create policy "Students: read own agent calls"
   on agent_calls for select using (auth.uid() = student_id);

@@ -13,6 +13,10 @@ import { FIT_TIER_BLURB, type FitTier } from '@/lib/matching/fit'
 import { FitBadge } from '../ListingsClient'
 
 const MAX_ACTIVE_APPLICATIONS = 5
+// Must match MIN/MAX_RESPONSE_WORDS in the apply route — the server is
+// authoritative; these exist so the button disables before a round trip.
+const MIN_WORDS = 50
+const MAX_WORDS = 250
 
 interface Listing {
   id: string
@@ -59,10 +63,23 @@ export default function ListingDetailClient({
   const { toast } = useToast()
   const [showApply, setShowApply] = useState(false)
   const [responseText, setResponseText] = useState('')
+  // Pre-ticked where the student already has evidence — the point of the
+  // checkbox isn't data collection, it's that ticking a skill your record
+  // doesn't back is a visible act rather than something a paragraph can
+  // imply vaguely.
+  const [claimed, setClaimed] = useState<Set<string>>(
+    () => new Set((fit?.perSkill ?? []).filter((s) => s.present).map((s) => s.skillId)),
+  )
   const [consented, setConsented] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
   const atSlotCap = activeApplicationCount >= MAX_ACTIVE_APPLICATIONS
+  const wordCount = responseText.trim() ? responseText.trim().split(/\s+/).length : 0
+  // The highest-weighted requirement is what the response is scoped to;
+  // ties break on listing order, which is the poster's own ordering.
+  const topRequirement = requirements.length
+    ? requirements.reduce((a, b) => (b.requiredLevel > a.requiredLevel ? b : a))
+    : null
 
   async function submitApplication() {
     if (!consented) {
@@ -74,7 +91,12 @@ export default function ListingDetailClient({
       const res = await fetch('/api/applications', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ listingId: listing.id, responseText, consented: true }),
+        body: JSON.stringify({
+          listingId: listing.id,
+          responseText,
+          claimedSkills: Array.from(claimed),
+          consented: true,
+        }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Could not submit.')
@@ -212,15 +234,59 @@ export default function ListingDetailClient({
               </button>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {/* Claims — against the declared requirements only */}
+                <div>
+                  <p style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+                    Which of these are you claiming?
+                  </p>
+                  <p style={{ fontSize: 11, color: C.textFaint, marginBottom: 8, lineHeight: 1.5 }}>
+                    Ticked where your record already backs it. You can claim a skill your record doesn&apos;t show — the poster sees both.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {requirements.map((r) => {
+                      const mine = fit.perSkill.find((s) => s.skillId === r.skillId)
+                      const isClaimed = claimed.has(r.skillId)
+                      return (
+                        <label key={r.skillId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '7px 12px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 8, cursor: 'pointer' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
+                            <input
+                              type="checkbox" checked={isClaimed} className="dk-checkbox"
+                              onChange={(e) => {
+                                const next = new Set(claimed)
+                                if (e.target.checked) next.add(r.skillId); else next.delete(r.skillId)
+                                setClaimed(next)
+                              }}
+                            />
+                            <span style={{ fontSize: 13, color: C.textSub, fontFamily: F.mono }}>{r.name}</span>
+                          </span>
+                          <span style={{ fontSize: 10, color: mine?.present ? '#15803D' : C.textFaint, fontFamily: F.mono, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                            {mine?.present ? 'evidenced' : 'no evidence'}
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Response, scoped to the single highest-weighted requirement */}
                 <div>
                   <label htmlFor="apply-note" style={{ display: 'block', fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
-                    Anything to add (optional)
+                    {topRequirement ? `About ${topRequirement.name}` : 'Your response'}
                   </label>
+                  <p style={{ fontSize: 11, color: C.textFaint, marginBottom: 8, lineHeight: 1.5 }}>
+                    {topRequirement
+                      ? `This listing weights ${topRequirement.name} highest. What have you actually built with it?`
+                      : 'What makes you a fit for this project?'}
+                  </p>
                   <textarea
                     id="apply-note" value={responseText} onChange={(e) => setResponseText(e.target.value)}
-                    rows={4} className="dk-input" style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
-                    placeholder="Context the poster wouldn't get from your record alone. No resume needed — your verified record is the resume."
+                    rows={6} className="dk-input" style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
+                    placeholder="Be specific about what you built and what was hard about it. No resume needed — your verified record is the resume."
                   />
+                  <p style={{ fontSize: 11, color: wordCount > MAX_WORDS ? '#B91C1C' : C.textFaint, fontFamily: F.mono, marginTop: 6 }}>
+                    {wordCount} word{wordCount === 1 ? '' : 's'}
+                    {wordCount < MIN_WORDS ? ` · ${MIN_WORDS - wordCount} more needed` : wordCount > MAX_WORDS ? ` · ${wordCount - MAX_WORDS} over the limit` : ' · good'}
+                  </p>
                 </div>
 
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
@@ -231,7 +297,7 @@ export default function ListingDetailClient({
                 </label>
 
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button onClick={submitApplication} disabled={submitting || !consented} className="wm-btn wm-btn-primary wm-btn-sm" style={{ display: 'inline-flex' }}>
+                  <button onClick={submitApplication} disabled={submitting || !consented || wordCount < MIN_WORDS || wordCount > MAX_WORDS} className="wm-btn wm-btn-primary wm-btn-sm" style={{ display: 'inline-flex' }}>
                     {submitting ? 'Submitting…' : 'Submit application'}
                   </button>
                   <button onClick={() => setShowApply(false)} disabled={submitting} className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}>

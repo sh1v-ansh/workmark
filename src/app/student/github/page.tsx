@@ -78,8 +78,17 @@ export default async function GithubScanPage() {
     }))
   }
 
+  // §3 fallback path: work with no scannable repo. Surfaced here because
+  // this is the page where "my work isn't showing up" actually happens.
+  const { data: reviewRequests } = await supabase
+    .from('review_requests')
+    .select('id, url, note, status, requested_at, review_note')
+    .eq('student_id', user.id)
+    .order('requested_at', { ascending: false })
+
   return (
     <GithubScanClient
+      reviewRequests={reviewRequests ?? []}
       studentName={student.full_name}
       connection={connection}
       grants={grants ?? []}

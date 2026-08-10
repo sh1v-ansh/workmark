@@ -27,6 +27,8 @@ export interface ApplicantRow {
   fitTier: FitTier | null
   rankScore: number | null
   perSkill: { skillId: string; requiredLevel: number; depth: number; present: boolean }[]
+  claimedSkills: string[]
+  confidence: number | null
   missingCount: number
   createdAt: string
   studentEmail: string | null
@@ -135,7 +137,16 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                     </div>
                   </div>
 
-                  {/* Per-skill evidence, exactly as disclosed at apply time */}
+                  {a.confidence !== null && (
+                    <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono, marginBottom: 8 }}>
+                      {Math.round(a.confidence * 100)}% of what you asked for is backed by a project we confirmed runs
+                    </p>
+                  )}
+
+                  {/* Per-skill evidence, exactly as disclosed at apply time.
+                      A claimed skill with no evidence is shown as claimed
+                      rather than hidden — the applicant said it, and the
+                      poster is entitled to weigh that themselves. */}
                   {a.perSkill.length > 0 && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
                       {a.perSkill.map((s) => {
@@ -150,7 +161,9 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                             opacity: s.present ? 1 : 0.65,
                           }}>
                             {s.skillId}
-                            <span style={{ opacity: 0.75 }}>{s.present ? s.depth.toFixed(1) : 'none'}</span>
+                            <span style={{ opacity: 0.75 }}>
+                              {s.present ? s.depth.toFixed(1) : a.claimedSkills.includes(s.skillId) ? 'claimed only' : 'none'}
+                            </span>
                           </span>
                         )
                       })}

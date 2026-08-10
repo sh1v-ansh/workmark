@@ -55,6 +55,8 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
     const snapshot = (a.computed_snapshot ?? {}) as {
       per_skill?: { skillId: string; requiredLevel: number; depth: number; present: boolean }[]
       missing_skill_ids?: string[]
+      claimed_skills?: string[]
+      confidence?: number
     }
     const profile = profileById.get(a.student_id)
     return {
@@ -70,6 +72,8 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
       fitTier: (a.fit_tier_at_apply as FitTier | null) ?? null,
       rankScore: a.rank_score_at_apply,
       perSkill: snapshot.per_skill ?? [],
+      claimedSkills: snapshot.claimed_skills ?? [],
+      confidence: typeof snapshot.confidence === 'number' ? snapshot.confidence : null,
       missingCount: snapshot.missing_skill_ids?.length ?? 0,
       createdAt: a.created_at,
       studentEmail: emailByApplication.get(a.id) ?? null,

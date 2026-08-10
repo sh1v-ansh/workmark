@@ -54,6 +54,7 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
           <Link href="/listings" aria-current={pathname === '/listings' ? 'page' : undefined} style={linkStyle('/listings')}>Projects</Link>
           {role === 'student' && (
             <>
+              <Link href="/goals" aria-current={pathname === '/goals' ? 'page' : undefined} style={linkStyle('/goals')}>Next steps</Link>
               <Link href="/me" aria-current={pathname === '/me' ? 'page' : undefined} style={linkStyle('/me')}>My record</Link>
               <Link href="/students" aria-current={pathname === '/students' ? 'page' : undefined} style={linkStyle('/students')}>Students</Link>
             </>
@@ -99,7 +100,7 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
           )}
           {[
             { href: '/listings', label: 'Projects' },
-            ...(role === 'student' ? [{ href: '/me', label: 'My record' }] : []),
+            ...(role === 'student' ? [{ href: '/goals', label: 'Next steps' }, { href: '/me', label: 'My record' }] : []),
             { href: dashboardHref, label: 'Dashboard' },
           ].map(({ href, label }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={pathname === href ? 'page' : undefined}

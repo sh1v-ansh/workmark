@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { canCloseOut, type Stage } from '@/lib/engagements/lifecycle'
 import { processRepo } from '@/lib/skills/evidence'
 import { engagementClosed } from '@/lib/notify/email'
+import { recordPlatformSignals } from '@/lib/engagements/signals'
 
 /**
  * POST /api/engagements/[id]/close
@@ -38,7 +39,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { data: engagement } = await supabase
     .from('engagements')
-    .select('id, student_id, poster_id, stage, description, description_agreed_by_student_at, description_agreed_by_poster_at')
+    .select('id, application_id, listing_id, student_id, poster_id, stage, opened_at, submitted_at, closed_at, abandoned_at, description, description_agreed_by_student_at, description_agreed_by_poster_at')
     .eq('id', id)
     .maybeSingle()
   if (!engagement) return NextResponse.json({ error: 'Engagement not found.' }, { status: 404 })
@@ -125,6 +126,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (closeErr) {
     console.error('[api/engagements/close] close failed:', closeErr)
     return NextResponse.json({ error: 'Could not close the engagement.' }, { status: 500 })
+  }
+
+  // §5/§14 — free observations, none of them reconstructible later.
+  try {
+    await recordPlatformSignals(admin, {
+      id: engagement.id,
+      application_id: engagement.application_id,
+      listing_id: engagement.listing_id,
+      opened_at: engagement.opened_at,
+      submitted_at: engagement.submitted_at,
+      closed_at: new Date().toISOString(),
+      abandoned_at: engagement.abandoned_at,
+      description_agreed_by_student_at: engagement.description_agreed_by_student_at,
+      description_agreed_by_poster_at: engagement.description_agreed_by_poster_at,
+    })
+  } catch (err) {
+    console.error('[api/engagements/close] platform signals failed:', err)
   }
 
   try {

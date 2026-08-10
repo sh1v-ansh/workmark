@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { canTransition, isTerminal, type Stage, type Actor } from '@/lib/engagements/lifecycle'
 import { workSubmitted } from '@/lib/notify/email'
+import { recordPlatformSignals } from '@/lib/engagements/signals'
 
 /**
  * PATCH /api/engagements/[id]
@@ -31,7 +32,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const { data: engagement } = await supabase
     .from('engagements')
-    .select('id, student_id, poster_id, stage, description, description_agreed_by_student_at, description_agreed_by_poster_at')
+    .select('id, application_id, listing_id, student_id, poster_id, stage, opened_at, submitted_at, abandoned_at, description, description_agreed_by_student_at, description_agreed_by_poster_at')
     .eq('id', id)
     .maybeSingle()
   if (!engagement) return NextResponse.json({ error: 'Engagement not found.' }, { status: 404 })
@@ -112,6 +113,28 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (error) {
     console.error('[api/engagements] update failed:', error)
     return NextResponse.json({ error: 'Could not update the engagement.' }, { status: 500 })
+  }
+
+  if (patch.stage === 'submitted' || patch.stage === 'abandoned') {
+    try {
+      const admin = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      )
+      await recordPlatformSignals(admin, {
+        id: engagement.id,
+        application_id: engagement.application_id,
+        listing_id: engagement.listing_id,
+        opened_at: engagement.opened_at,
+        submitted_at: (patch.submitted_at as string | null) ?? engagement.submitted_at,
+        closed_at: null,
+        abandoned_at: (patch.abandoned_at as string | null) ?? engagement.abandoned_at,
+        description_agreed_by_student_at: engagement.description_agreed_by_student_at,
+        description_agreed_by_poster_at: engagement.description_agreed_by_poster_at,
+      })
+    } catch (err) {
+      console.error('[api/engagements] platform signals failed:', err)
+    }
   }
 
   if (patch.stage === 'submitted') {

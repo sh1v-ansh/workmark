@@ -50,12 +50,22 @@ function levelLabel(n: number) {
   return LEVEL_NAMES[n] ?? `Level ${n}`
 }
 
-export default function GithubScanClient({ studentName, connection, grants, priors, evidence }: {
+interface ReviewRequest {
+  id: string
+  url: string
+  note: string
+  status: string
+  requested_at: string
+  review_note: string | null
+}
+
+export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests }: {
   studentName: string | null
   connection: GithubConnection | null
   grants: RepoGrant[]
   priors: SkillPrior[]
   evidence: SkillEvidenceRow[]
+  reviewRequests: ReviewRequest[]
 }) {
   const { toast } = useToast()
   const router = useRouter()
@@ -66,6 +76,29 @@ export default function GithubScanClient({ studentName, connection, grants, prio
   // sync flows straight through instead of being masked by stale state.
   const [overrides, setOverrides] = useState<Record<string, boolean>>({})
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [reviewUrl, setReviewUrl] = useState('')
+  const [reviewNote, setReviewNote] = useState('')
+  const [submittingReview, setSubmittingReview] = useState(false)
+
+  async function submitForReview() {
+    setSubmittingReview(true)
+    try {
+      const res = await fetch('/api/review-requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: reviewUrl, note: reviewNote }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Could not submit.')
+      toast('Submitted for review.', 'success')
+      setReviewUrl(''); setReviewNote('')
+      window.location.reload()
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not submit.', 'error')
+    } finally {
+      setSubmittingReview(false)
+    }
+  }
   const syncedRef = useRef(false)
 
   // Grant rows can't be trusted for visibility on their own: rows created
@@ -287,6 +320,62 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                   </div>
                 </Card>
               ))}
+            </div>
+          )}
+        </section>
+
+        {/* Human review — §3's fallback for work with no scannable repo */}
+        <section>
+          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Work without a repo</h2>
+          <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
+            Design work, research, anything we can&apos;t read from code. Submit it and a person will look at it — slower than a scan, but it counts the same once approved.
+          </p>
+
+          {reviewRequests.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+              {reviewRequests.map((r) => (
+                <div key={r.id} style={{ padding: '10px 14px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                    <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: C.accent, fontFamily: F.mono, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 380 }}>
+                      {r.url}
+                    </a>
+                    <span style={{
+                      fontSize: 10, fontWeight: 600, padding: '2px 9px', borderRadius: 999, fontFamily: F.mono,
+                      textTransform: 'uppercase', letterSpacing: '0.06em',
+                      color: r.status === 'approved' ? '#15803D' : r.status === 'rejected' ? '#B91C1C' : C.textFaint,
+                      background: r.status === 'approved' ? 'rgba(21,128,61,0.12)' : r.status === 'rejected' ? 'rgba(185,28,28,0.12)' : C.surface,
+                      border: `1px solid ${r.status === 'approved' ? 'rgba(21,128,61,0.35)' : r.status === 'rejected' ? 'rgba(185,28,28,0.3)' : C.border}`,
+                    }}>
+                      {r.status}
+                    </span>
+                  </div>
+                  {r.review_note && (
+                    <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, lineHeight: 1.5 }}>{r.review_note}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!reviewRequests.some((r) => r.status === 'pending') && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input
+                value={reviewUrl} onChange={(e) => setReviewUrl(e.target.value)}
+                className="dk-input" placeholder="https://link-to-your-work" aria-label="Link to the work"
+              />
+              <textarea
+                value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} rows={3}
+                className="dk-input" style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 13 }}
+                placeholder="What is it, and what did you build? There's no commit history here, so this is all a reviewer has to go on."
+                aria-label="Description"
+              />
+              <button
+                onClick={submitForReview}
+                disabled={submittingReview || !reviewUrl.trim() || reviewNote.trim().length < 30}
+                className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex', alignSelf: 'flex-start' }}
+              >
+                {submittingReview ? 'Submitting…' : 'Submit for review'}
+              </button>
             </div>
           )}
         </section>

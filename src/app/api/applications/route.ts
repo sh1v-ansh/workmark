@@ -11,6 +11,12 @@ import { applicationReceived } from '@/lib/notify/email'
 // can't be tied to specific wording is not much of a consent record.
 const CONSENT_VERSION = 'application_disclosure_v1'
 
+// §8. The floor is the real mechanism: it makes applying cost something,
+// asymmetrically — a student who has done the work writes 50 words about
+// it quickly, one who hasn't finds it slow.
+const MIN_RESPONSE_WORDS = 50
+const MAX_RESPONSE_WORDS = 250
+
 /**
  * POST /api/applications
  *
@@ -40,7 +46,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
 
-  let body: { listingId?: string; responseText?: string; consented?: boolean }
+  let body: { listingId?: string; responseText?: string; claimedSkills?: string[]; consented?: boolean }
   try {
     body = await request.json()
   } catch {
@@ -49,6 +55,25 @@ export async function POST(request: Request) {
 
   const listingId = body.listingId
   if (!listingId) return NextResponse.json({ error: 'Missing listing.' }, { status: 400 })
+
+  // §8: the response is the application cost, and it's the right kind —
+  // cheaper to write for a student who has the skill than one who
+  // doesn't. Bounded on both ends: a floor so it can't degenerate back
+  // into one-click apply, a ceiling so it can't become a cover letter.
+  const responseText = body.responseText?.trim() ?? ''
+  const wordCount = responseText ? responseText.split(/\s+/).length : 0
+  if (wordCount < MIN_RESPONSE_WORDS) {
+    return NextResponse.json(
+      { error: `Write at least ${MIN_RESPONSE_WORDS} words about the skill this listing weights highest.` },
+      { status: 400 },
+    )
+  }
+  if (wordCount > MAX_RESPONSE_WORDS) {
+    return NextResponse.json(
+      { error: `Keep it under ${MAX_RESPONSE_WORDS} words — this is one focused answer, not a cover letter.` },
+      { status: 400 },
+    )
+  }
   if (!body.consented) {
     return NextResponse.json({ error: 'Consent is required to share your verified record with this poster.' }, { status: 400 })
   }
@@ -78,6 +103,13 @@ export async function POST(request: Request) {
   // against will have changed by the time anyone reads it back.
   const fitTier = assignTier(fit, pools.get(listingId) ?? [])
 
+  // Claims are intersected against the listing's actual requirements —
+  // a claim on a skill the listing never asked for is meaningless, and
+  // accepting arbitrary strings here would let the field become
+  // free-text self-report, which is exactly what the product replaces.
+  const requiredIds = new Set(requirements.map((r) => r.skillId))
+  const claimedSkills = Array.from(new Set(body.claimedSkills ?? [])).filter((id) => requiredIds.has(id))
+
   const consentPayload = {
     student_id: user.id,
     scope: 'application_disclosure',
@@ -102,6 +134,7 @@ export async function POST(request: Request) {
     computed_at: new Date().toISOString(),
     requirements: requirements.map((r) => ({ skill_id: r.skillId, required_level: r.requiredLevel })),
     per_skill: fit.perSkill,
+    claimed_skills: claimedSkills,
     missing_skill_ids: fit.missingSkillIds,
     fit_tier: fitTier,
     rank_score: fit.rankScore,
@@ -121,7 +154,8 @@ export async function POST(request: Request) {
       listing_id: listingId,
       student_id: user.id,
       consent_id: consent.id,
-      response_text: body.responseText?.trim() || null,
+      response_text: responseText,
+      claimed_skills: claimedSkills,
       fit_tier_at_apply: fitTier,
       rank_score_at_apply: fit.rankScore,
       computed_snapshot: snapshot,
