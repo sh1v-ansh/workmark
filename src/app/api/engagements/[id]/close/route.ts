@@ -3,6 +3,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { canCloseOut, type Stage } from '@/lib/engagements/lifecycle'
 import { processRepo } from '@/lib/skills/evidence'
+import { engagementClosed } from '@/lib/notify/email'
 
 /**
  * POST /api/engagements/[id]/close
@@ -124,6 +125,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (closeErr) {
     console.error('[api/engagements/close] close failed:', closeErr)
     return NextResponse.json({ error: 'Could not close the engagement.' }, { status: 500 })
+  }
+
+  try {
+    const [{ data: student }, { data: full }] = await Promise.all([
+      admin.auth.admin.getUserById(engagement.student_id),
+      admin.from('engagements').select('listings(title)').eq('id', id).maybeSingle(),
+    ])
+    const listing = full?.listings as unknown as { title: string | null } | null
+    if (student?.user?.email) {
+      await engagementClosed({
+        studentEmail: student.user.email,
+        listingTitle: listing?.title ?? 'the project',
+        skillCount: evidenceResult?.evidenceWritten.length ?? 0,
+      })
+    }
+  } catch (err) {
+    console.error('[api/engagements/close] notification failed:', err)
   }
 
   return NextResponse.json({

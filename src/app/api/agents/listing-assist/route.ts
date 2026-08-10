@@ -3,6 +3,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { draftListing } from '@/lib/agents/listing-assist'
 import { agentsAvailable } from '@/lib/agents/client'
+import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 
 /**
  * POST /api/agents/listing-assist
@@ -50,6 +51,11 @@ export async function POST(request: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
+
+  const limit = await checkAgentRateLimit(admin, 'posting', user.id, 'poster_id')
+  if (!limit.allowed) {
+    return NextResponse.json({ error: limit.message }, { status: 429 })
+  }
 
   try {
     const draft = await draftListing(admin, user.id, description)

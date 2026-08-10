@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { applicationAccepted } from '@/lib/notify/email'
 
 /**
  * PATCH /api/applications/[id]/status
@@ -103,6 +104,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     { onConflict: 'application_id' },
   )
   if (engagementErr) console.error('[api/applications/status] engagement failed:', engagementErr)
+
+  try {
+    const { data: poster } = await admin.from('students').select('full_name').eq('id', user.id).maybeSingle()
+    const { data: engagement } = await admin
+      .from('engagements').select('id').eq('application_id', applicationId).maybeSingle()
+    if (studentAuth?.user?.email && engagement) {
+      await applicationAccepted({
+        studentEmail: studentAuth.user.email,
+        posterName: poster?.full_name ?? 'The poster',
+        listingTitle: listing.title ?? 'the project',
+        engagementId: engagement.id,
+      })
+    }
+  } catch (err) {
+    console.error('[api/applications/status] notification failed:', err)
+  }
 
   if (shareErr || engagementErr) {
     return NextResponse.json(

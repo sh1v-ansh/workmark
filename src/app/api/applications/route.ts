@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { getStudentDepth } from '@/lib/matching/depth'
 import { getListingRequirements } from '@/lib/matching/listing'
 import { computeFit } from '@/lib/matching/fit'
+import { applicationReceived } from '@/lib/notify/email'
 
 // Versioned so a consent record says which wording was actually agreed to.
 // Changing the text below REQUIRES bumping this — an FCRA consent that
@@ -142,6 +143,26 @@ export async function POST(request: Request) {
     // it's loud in the logs rather than silently swallowed, but rolling
     // the application back would be worse for the student.
     console.error('[api/applications] disclosure_log insert FAILED — disclosure occurred unlogged:', logErr)
+  }
+
+  // Best-effort, after the write: a bounced notification must never fail
+  // an application that already succeeded.
+  try {
+    const [{ data: poster }, { data: student }, { data: listingRow }] = await Promise.all([
+      admin.auth.admin.getUserById(listing.poster_id),
+      supabase.from('students').select('full_name').eq('id', user.id).maybeSingle(),
+      admin.from('listings').select('title').eq('id', listingId).maybeSingle(),
+    ])
+    if (poster?.user?.email) {
+      await applicationReceived({
+        posterEmail: poster.user.email,
+        applicantName: student?.full_name ?? 'A student',
+        listingTitle: listingRow?.title ?? 'your project',
+        listingId,
+      })
+    }
+  } catch (err) {
+    console.error('[api/applications] notification failed:', err)
   }
 
   return NextResponse.json({ ok: true, id: application.id, fitTier: fit.tier })

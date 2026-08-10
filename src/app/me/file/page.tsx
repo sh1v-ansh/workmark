@@ -40,9 +40,9 @@ export default async function MyFilePage() {
       .order('created_at', { ascending: false }),
     supabase
       .from('disclosure_log')
-      .select('id, recipient_id, fields_disclosed, payload_snapshot, disclosed_at')
+      .select('id, recipient_id, fields_disclosed, payload_snapshot, furnished_at')
       .eq('student_id', user.id)
-      .order('disclosed_at', { ascending: false }),
+      .order('furnished_at', { ascending: false }),
     supabase
       .from('consents')
       .select('id, scope, text_version, granted_at, revoked_at')
@@ -69,14 +69,14 @@ export default async function MyFilePage() {
   const [{ data: skillRows }, { data: artifactRows }, { data: auditRows }] = await Promise.all([
     skillIds.length ? supabase.from('skills').select('id, canonical_name').in('id', skillIds) : Promise.resolve({ data: [] }),
     artifactIds.length ? supabase.from('artifacts').select('id, repo_full_name, tier').in('id', artifactIds) : Promise.resolve({ data: [] }),
-    evidenceIds.length ? supabase.from('evidence_audit').select('evidence_id, source, raw_input, created_at').in('evidence_id', evidenceIds) : Promise.resolve({ data: [] }),
+    evidenceIds.length ? supabase.from('evidence_audit').select('evidence_id, source, raw_input, extracted_at').in('evidence_id', evidenceIds) : Promise.resolve({ data: [] }),
   ])
 
   const nameById = new Map(((skillRows ?? []) as { id: string; canonical_name: string }[]).map((s) => [s.id, s.canonical_name]))
   const artifactById = new Map(((artifactRows ?? []) as { id: string; repo_full_name: string | null; tier: string }[]).map((a) => [a.id, a]))
-  const auditByEvidence = new Map<string, { source: string | null; created_at: string }>()
-  for (const a of (auditRows ?? []) as { evidence_id: string; source: string | null; created_at: string }[]) {
-    if (!auditByEvidence.has(a.evidence_id)) auditByEvidence.set(a.evidence_id, { source: a.source, created_at: a.created_at })
+  const auditByEvidence = new Map<string, { source: string | null; extracted_at: string }>()
+  for (const a of (auditRows ?? []) as { evidence_id: string; source: string | null; extracted_at: string }[]) {
+    if (!auditByEvidence.has(a.evidence_id)) auditByEvidence.set(a.evidence_id, { source: a.source, extracted_at: a.extracted_at })
   }
 
   // Recipient names — see the note above on why this one read is elevated.
@@ -115,7 +115,7 @@ export default async function MyFilePage() {
       recipientName: recipientNames.get(d.recipient_id) ?? 'A poster',
       fieldsDisclosed: d.fields_disclosed ?? [],
       payloadSnapshot: d.payload_snapshot,
-      disclosedAt: d.disclosed_at,
+      disclosedAt: d.furnished_at,
     })),
     consents: (consents ?? []).map((c) => ({
       id: c.id,

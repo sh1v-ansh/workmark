@@ -3,6 +3,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { generateBrief } from '@/lib/agents/brief'
 import { agentsAvailable } from '@/lib/agents/client'
+import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 
 // A brief is cheap to generate and worthless in bulk — the point is one
 // project the student actually builds, not a catalogue to browse. The cap
@@ -57,6 +58,11 @@ export async function POST(request: Request) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
+
+  const limit = await checkAgentRateLimit(admin, 'brief', user.id, 'student_id')
+  if (!limit.allowed) {
+    return NextResponse.json({ error: limit.message }, { status: 429 })
+  }
 
   try {
     const brief = await generateBrief(admin, user.id, body.skillId, body.targetRole?.trim() || null)

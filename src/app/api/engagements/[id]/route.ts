@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { canTransition, isTerminal, type Stage, type Actor } from '@/lib/engagements/lifecycle'
+import { workSubmitted } from '@/lib/notify/email'
 
 /**
  * PATCH /api/engagements/[id]
@@ -110,6 +112,31 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (error) {
     console.error('[api/engagements] update failed:', error)
     return NextResponse.json({ error: 'Could not update the engagement.' }, { status: 500 })
+  }
+
+  if (patch.stage === 'submitted') {
+    try {
+      const admin = createServiceClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      )
+      const [{ data: poster }, { data: student }, { data: full }] = await Promise.all([
+        admin.auth.admin.getUserById(engagement.poster_id),
+        admin.from('students').select('full_name').eq('id', engagement.student_id).maybeSingle(),
+        admin.from('engagements').select('listings(title)').eq('id', id).maybeSingle(),
+      ])
+      const listing = full?.listings as unknown as { title: string | null } | null
+      if (poster?.user?.email) {
+        await workSubmitted({
+          posterEmail: poster.user.email,
+          studentName: student?.full_name ?? 'The student',
+          listingTitle: listing?.title ?? 'your project',
+          engagementId: id,
+        })
+      }
+    } catch (err) {
+      console.error('[api/engagements] notification failed:', err)
+    }
   }
 
   return NextResponse.json({ ok: true })

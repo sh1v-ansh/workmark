@@ -1,6 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/Toast'
+import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import { Icon } from '@/components/Icon'
@@ -65,6 +69,23 @@ function SectionHeading({ children, action }: { children: React.ReactNode; actio
 export default function StudentDashboardClient({ data }: { data: DashboardData }) {
   const { student, skills, applications, listings, engagements, githubConnected, trackRecord } = data
   const activeEngagements = engagements.filter((e) => e.stage !== 'closed' && e.stage !== 'abandoned')
+  const router = useRouter()
+  const { toast } = useToast()
+  const [withdrawing, setWithdrawing] = useState<string | null>(null)
+
+  // Withdrawing frees a slot against the 5-application cap — without
+  // this, a student who applied to five stale listings is stuck.
+  // The RLS policy permits exactly the submitted -> withdrawn transition
+  // on their own row, so no API route is needed.
+  async function withdraw(id: string) {
+    if (!confirm('Withdraw this application? You can apply again later while the project is still open.')) return
+    setWithdrawing(id)
+    const supabase = createClient()
+    const { error } = await supabase.from('applications').update({ status: 'withdrawn' }).eq('id', id)
+    if (error) toast('Could not withdraw.', 'error')
+    else { toast('Application withdrawn.', 'success'); router.refresh() }
+    setWithdrawing(null)
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
@@ -198,15 +219,25 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {applications.map((a) => (
-                <Card key={a.id} href={`/listings/${a.listingId}`} padding={16}>
+                <Card key={a.id} hoverable={false} padding={16}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                    <div>
+                    <Link href={`/listings/${a.listingId}`} style={{ textDecoration: 'none', color: 'inherit', minWidth: 0 }}>
                       <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{a.title}</p>
                       <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
                         {[a.posterName, `applied ${new Date(a.createdAt).toLocaleDateString()}`, a.fitTier ? FIT_TIER_LABEL[a.fitTier as FitTier] : null].filter(Boolean).join(' · ')}
                       </p>
+                    </Link>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      {a.status === 'submitted' && (
+                        <button
+                          onClick={() => withdraw(a.id)} disabled={withdrawing === a.id}
+                          style={{ fontSize: 11, fontFamily: F.mono, color: C.textMuted, background: 'none', border: `1px solid ${C.border}`, padding: '4px 10px', borderRadius: 6, cursor: 'pointer' }}
+                        >
+                          {withdrawing === a.id ? 'Withdrawing…' : 'Withdraw'}
+                        </button>
+                      )}
+                      <StatusPill label={a.status} />
                     </div>
-                    <StatusPill label={a.status} />
                   </div>
                 </Card>
               ))}
