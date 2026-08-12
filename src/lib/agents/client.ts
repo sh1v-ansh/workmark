@@ -16,12 +16,12 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export const AGENT_MODEL = 'claude-opus-5'
+export const AGENT_MODEL = 'claude-opus-4-8'
 
 // Non-streaming ceiling. Both agents here emit a small structured object,
-// so this is headroom rather than a target — but thinking is on by
-// default on this model and max_tokens caps thinking plus output
-// together, so it can't be sized to the JSON alone.
+// so this is pure headroom: we don't set `thinking`, and Opus 4.8 runs
+// without thinking when the param is omitted, so max_tokens caps only the
+// JSON output. Kept generous so a structured response is never truncated.
 const MAX_TOKENS = 16000
 
 export type AgentType = 'posting' | 'brief' | 'goals' | 'application_scoring'

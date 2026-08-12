@@ -114,7 +114,7 @@ async function sendVerificationEmail(record: VerifiedWorkRecord): Promise<boolea
   if (!RESEND_API_KEY) {
     // Fallback: log to console (useful in development without email provider)
     console.log(`[workmark] Would send email to ${contactEmail}: ${subject}`)
-    console.log(`[workmark] Verify URL: ${verifyUrl}`)
+    console.log(`[workmark] Verify URL: ${quickUrl}`)
     return true
   }
 
