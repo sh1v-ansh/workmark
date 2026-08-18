@@ -10,7 +10,7 @@
 // depending on Next's route precedence — both bad, and unfixable once
 // someone's already shared the link.
 const RESERVED = new Set([
-  'me', 'p', 'api', 'admin', 'auth', 'login', 'logout', 'signup', 'onboarding',
+  'p', 'api', 'admin', 'auth', 'login', 'logout', 'signup', 'onboarding',
   'listings', 'listing', 'students', 'student', 'engagements', 'engagement',
   'about', 'pricing', 'how-it-works', 'marketplace', 'projects', 'settings',
   'help', 'support', 'terms', 'privacy', 'legal', 'blog', 'docs', 'status',

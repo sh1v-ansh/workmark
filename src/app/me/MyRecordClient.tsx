@@ -82,7 +82,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
       <main style={{ maxWidth: 780, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
         <div>
           <h1 style={{ fontFamily: F.serif, fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 6, letterSpacing: '-0.02em' }}>
-            Your record
+            Your Record
           </h1>
           <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>
             Everything Workmark knows you can do, and where each piece came from. This is the full, unredacted view — only you see it.
@@ -91,17 +91,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
 
         {/* Public profile / handle */}
         <Card hoverable={false} padding={24}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Public profile</h2>
-            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
-              <Link href="/me/briefs" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
-                Project ideas →
-              </Link>
-              <Link href="/me/file" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
-                Your file &amp; disputes →
-              </Link>
-            </div>
-          </div>
+          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Public profile</h2>
           <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 14, lineHeight: 1.5 }}>
             {student.handle
               ? 'Anyone with this link can see your verified skills and the work you chose to show. Nothing else.'
@@ -141,6 +131,15 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
               Changing your handle breaks every link you&apos;ve already shared.
             </p>
           )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.borderFaint}` }}>
+            <Link href="/me/briefs" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
+              Project ideas →
+            </Link>
+            <Link href="/me/file" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
+              Your file &amp; disputes →
+            </Link>
+          </div>
         </Card>
 
         {/* Track record */}
@@ -170,7 +169,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
 
         {/* Verified skills */}
         <section>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Verified skills ({skills.length})</h2>
+          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Verified Skills ({skills.length})</h2>
           <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
             Click one to see which projects it came from. Levels above Strong need attestation from faculty or an employer, which isn&apos;t live yet.
           </p>

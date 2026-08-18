@@ -123,15 +123,23 @@ export default function GithubScanClient({ studentName, connection, grants, prio
     const supabase = createClient()
     // RLS ("Students: manage own repo grants", for all) lets a student
     // update their own grant rows directly — this doesn't need to go
-    // through a service-role API route.
-    const { error } = await supabase.from('github_repo_grants').update({ scan_enabled: next }).eq('id', grantId)
-    if (error) {
+    // through a service-role API route. .select() so a write matching zero
+    // rows (stale id, RLS mismatch) surfaces as a failure instead of a
+    // silent no-op that leaves the checkbox on while the DB stays off.
+    const { data, error } = await supabase
+      .from('github_repo_grants')
+      .update({ scan_enabled: next })
+      .eq('id', grantId)
+      .select('id')
+    if (error || !data || data.length === 0) {
       setOverrides((prev) => {
         const revert = { ...prev }
         delete revert[grantId] // fall back to the stored value
         return revert
       })
       toast('Failed to update — please try again.', 'error')
+    } else {
+      router.refresh() // reconcile the checkbox with the persisted value
     }
     setTogglingId(null)
   }
@@ -162,10 +170,10 @@ export default function GithubScanClient({ studentName, connection, grants, prio
       <main style={{ maxWidth: 860, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
         <div>
           <h1 style={{ fontFamily: F.serif, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 6 }}>
-            GitHub evidence engine — verification view
+            GitHub: Verification View
           </h1>
           <p style={{ fontSize: 13, color: C.textMuted }}>
-            Phase 1 debug page. The polished version of this lives on your public profile once that's built.
+            Connect your repositories and scan them to build your verified skill record.
           </p>
         </div>
 
@@ -302,9 +310,11 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                       <a href={rows[0].artifacts.deployment_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: C.accent, fontFamily: F.mono }}>
                         {rows[0].verification_method} ↗
                       </a>
-                    ) : (
-                      <span style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>{rows[0]?.verification_method}</span>
-                    )}
+                    ) : repo !== '(unknown repo)' ? (
+                      <a href={`https://github.com/${repo}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: C.accent, fontFamily: F.mono }}>
+                        repo link ↗
+                      </a>
+                    ) : null}
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {rows.map((e) => {
@@ -380,14 +390,17 @@ export default function GithubScanClient({ studentName, connection, grants, prio
           )}
         </section>
 
-        {/* Priors */}
-        <section>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>
-            Raw priors ({priors.length}) — displayed separately, never summed into tier_weight
-          </h2>
-          {priors.length === 0 ? (
-            <p style={{ fontSize: 13, color: C.textFaint }}>None yet.</p>
-          ) : (
+        {/* Skills detected in repos the student hasn't personally committed
+            to. Shown only when there are any, and kept plain — no internal
+            scoring vocabulary in the UI. */}
+        {priors.length > 0 && (
+          <section>
+            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+              Detected but unverified
+            </h2>
+            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
+              Found in your repositories, but not yet backed by your own commits — so they don&apos;t count toward your record yet.
+            </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {priors.map((p) => {
                 const name = p.skills?.canonical_name ?? p.skill_id
@@ -399,8 +412,8 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 )
               })}
             </div>
-          )}
-        </section>
+          </section>
+        )}
       </main>
     </div>
   )

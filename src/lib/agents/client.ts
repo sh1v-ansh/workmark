@@ -16,12 +16,16 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-export const AGENT_MODEL = 'claude-opus-4-8'
+// These agents are I/O adapters (draft a listing, write a brief) with a
+// fixed output schema — structured extraction/generation, not open-ended
+// reasoning. Sonnet 5 handles that as well as Opus at roughly half the
+// cost; swap to 'claude-haiku-4-5' for max savings or 'claude-opus-4-8' if
+// quality ever regresses. Thinking is disabled below (see create call).
+export const AGENT_MODEL = 'claude-sonnet-5'
 
-// Non-streaming ceiling. Both agents here emit a small structured object,
-// so this is pure headroom: we don't set `thinking`, and Opus 4.8 runs
-// without thinking when the param is omitted, so max_tokens caps only the
-// JSON output. Kept generous so a structured response is never truncated.
+// Non-streaming ceiling. Both agents emit a small structured object, so
+// this is pure headroom: thinking is disabled on the request, so max_tokens
+// caps only the JSON output and a structured response is never truncated.
 const MAX_TOKENS = 16000
 
 export type AgentType = 'posting' | 'brief' | 'goals' | 'application_scoring'
@@ -71,6 +75,10 @@ export async function callStructuredAgent<T>(
   const response = await client.messages.create({
     model: AGENT_MODEL,
     max_tokens: MAX_TOKENS,
+    // Structured drafting doesn't need reasoning; Sonnet 5 runs adaptive
+    // thinking by default when omitted, so disable it explicitly to keep
+    // these calls cheap and their token use predictable.
+    thinking: { type: 'disabled' },
     system: args.system,
     output_config: { format: { type: 'json_schema', schema: args.schema } },
     messages: [{ role: 'user', content: args.userContent }],

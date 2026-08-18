@@ -121,7 +121,7 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
                 )}
 
                 {s.skills && s.skills.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12, flex: 1 }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', alignContent: 'flex-start', gap: 6, marginBottom: 12, flex: 1 }}>
                     {s.skills.slice(0, 5).map((sk) => {
                       const c = tagColor(sk)
                       return (

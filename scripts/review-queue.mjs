@@ -19,6 +19,13 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+// Node 20 has no global WebSocket, which @supabase/supabase-js's realtime
+// client demands at construction — even though this script never uses
+// realtime. Polyfill it from `ws` so the CLI runs on Node 20 (drop this
+// once the toolchain is on Node 22+, which ships a native WebSocket).
+import WebSocket from 'ws'
+globalThis.WebSocket ??= WebSocket
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 

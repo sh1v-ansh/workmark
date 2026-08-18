@@ -220,7 +220,7 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
                   {workModeOptions.length > 0 && (
                     <FilterGroup label="Work mode">
                       {workModeOptions.map((m) => (
-                        <FilterChip key={m} label={m} active={workModes.has(m)} onClick={() => toggle(setWorkModes, m)} />
+                        <FilterChip key={m} label={m.charAt(0).toUpperCase() + m.slice(1)} active={workModes.has(m)} onClick={() => toggle(setWorkModes, m)} />
                       ))}
                     </FilterGroup>
                   )}
