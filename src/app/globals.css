@@ -328,25 +328,6 @@
   );
 }
 
-/* ── Handwriting ──────────────────────────────────────────────────────────
-   RULES, because this is the one element that turns charming into novelty
-   if it spreads:
-     1. At most ONE per page. Never two.
-     2. Only as an aside pointing at something — never as a label, a heading,
-        a button, an error, or body copy.
-     3. Never the only place information appears; removing it must lose
-        nothing but tone.
-     4. Never on money, legal, dispute, or consent surfaces (/me/file, FCRA
-        pages, the consent checkbox). Those need to read as sober.
-   It carries aria-hidden in the component for the same reason — a screen
-   reader announcing a decorative aside is noise. */
-.wm-hand {
-  font-family: var(--font-hand), Caveat, cursive;
-  font-size: 20px;
-  line-height: 1.15;
-  color: #6142F5;
-}
-
 /* ── Cards ────────────────────────────────────────────────────────────────
    Bordered, not floated. A hover lift on a card that isn't clickable is a
    lie about affordance, so only the link/button variants get it. */

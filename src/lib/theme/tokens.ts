@@ -138,7 +138,7 @@ export const E = {
 
 // ─── App font stacks ─────────────────────────────────────────────────────────
 // Exported separately from F so the marketing pages keep Playfair/Inter/Plex
-// while the app moves to Schibsted/Hanken/Caveat.
+// while the app moves to Schibsted + Hanken.
 //
 // `mono` is deliberately NOT monospace any more. The app had ~200 call sites
 // setting fontFamily: F.mono on timestamps and counts, which is what made it
@@ -148,7 +148,6 @@ export const E = {
 export const appFonts = {
   display: 'var(--font-display), "Schibsted Grotesk", system-ui, sans-serif',
   sans:    'var(--font-body), "Hanken Grotesk", system-ui, sans-serif',
-  hand:    'var(--font-hand), Caveat, cursive',
   serif:   'var(--font-display), "Schibsted Grotesk", system-ui, sans-serif',
   mono:    'var(--font-body), "Hanken Grotesk", system-ui, sans-serif',
 } as const

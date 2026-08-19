@@ -3,8 +3,7 @@ import { C } from '@/lib/theme/dark-tokens'
 /**
  * A drawn underline under a phrase in a heading.
  *
- * Same rationing as HandNote: one per page, and only under the few words the
- * whole page is about. Underlining a second phrase halves the emphasis of the
+ * One per page, and only under the few words the whole page is about. Underlining a second phrase halves the emphasis of the
  * first, which is the opposite of the point.
  *
  * The stroke is drawn rather than a border so it keeps a slight hand-made

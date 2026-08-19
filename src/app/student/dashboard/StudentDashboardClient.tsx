@@ -9,7 +9,6 @@ import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge, { type BadgeTone } from '@/components/ui/Badge'
-import HandNote from '@/components/ui/HandNote'
 import Underline from '@/components/ui/Underline'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
@@ -222,9 +221,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         )}
 
         {/* The record */}
-        <div style={{ position: 'relative' }}>
-          <HandNote offset={{ right: -22, top: 62 }}>this is the bit posters actually read</HandNote>
-
+        <div>
           <Card ruled hoverable={false} padding={24}>
             <SectionTitle aside={<Link href="/me" style={{ fontSize: T.meta, color: C.accent, fontWeight: 600, textDecoration: 'none' }}>See everything →</Link>}>
               Your record

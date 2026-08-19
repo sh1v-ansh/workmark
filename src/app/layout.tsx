@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Playfair_Display, Inter, IBM_Plex_Mono, Schibsted_Grotesk, Hanken_Grotesk, Caveat } from 'next/font/google'
+import { Playfair_Display, Inter, IBM_Plex_Mono, Schibsted_Grotesk, Hanken_Grotesk } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/components/Toast'
 
@@ -43,20 +43,6 @@ const hanken = Hanken_Grotesk({
   display: 'swap',
 })
 
-// Handwriting. Loaded for a reason but rationed hard — see .wm-hand in
-// globals.css for where it is and is not allowed.
-const caveat = Caveat({
-  subsets: ['latin'],
-  weight: ['500', '600'],
-  variable: '--font-hand',
-  display: 'swap',
-})
-
-export const metadata: Metadata = {
-  title: 'Workmark — Verified Hiring Infrastructure for CS Talent',
-  description:
-    'A marketplace that connects CS students to real projects at SMBs, startups, and nonprofits. Every completed engagement generates a verified, employer-attested work record.',
-}
 
 export default function RootLayout({
   children,
@@ -64,7 +50,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${inter.variable} ${plexMono.variable} ${schibsted.variable} ${hanken.variable} ${caveat.variable}`}>
+    <html lang="en" className={`${playfair.variable} ${inter.variable} ${plexMono.variable} ${schibsted.variable} ${hanken.variable}`}>
       <body>
         <a href="#main-content" className="skip-to-content">
           Skip to main content
