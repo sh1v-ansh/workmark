@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
-import { C, F } from '@/lib/theme/dark-tokens'
+import { C, F, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 
 // Student-only in MVP. The role prop is kept (rather than removed) so
@@ -16,12 +16,59 @@ interface NavbarProps {
   userName?: string
 }
 
+// Three tabs, down from five.
+//
+// The old nav asked the user to hold our model in their head: Projects,
+// Next steps, My record, Students, Dashboard — three of which were "things
+// about me" with no way to tell them apart. These three answer the only
+// three questions a student actually arrives with: what needs me, where's
+// the work, what do I have. Everything else is reachable from inside one of
+// them or from the account menu, which is where secondary surfaces belong.
+const TABS = [
+  { href: '/student/dashboard', label: 'Home',      also: ['/goals'] },
+  { href: '/listings',          label: 'Find work', also: [] as string[] },
+  { href: '/me',                label: 'My record', also: ['/me/file', '/me/briefs'] },
+]
+
+const MENU = [
+  { href: '/students', label: 'Student directory' },
+  { href: '/me/briefs', label: 'Project ideas' },
+  { href: '/me/file', label: 'Your file & disputes' },
+]
+
+function initials(name?: string) {
+  if (!name) return '·'
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '·'
+  return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase()
+}
+
 export default function Navbar({ role = 'student', userName }: NavbarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
   const [signing, setSigning] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // A menu that stays open after you click past it is a menu that feels
+  // broken, so close on any outside pointer and on Escape.
+  useEffect(() => {
+    if (!menuOpen) return
+    function onDown(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
 
   async function handleSignOut() {
     setSigning(true)
@@ -32,84 +79,135 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
     router.refresh()
   }
 
-  const dashboardHref = '/student/dashboard'
-
-  const linkStyle = (href: string): React.CSSProperties => ({
-    fontSize: 13, fontFamily: F.mono, textDecoration: 'none',
-    color: pathname === href ? C.text : C.textMuted,
-    borderBottom: `1px solid ${pathname === href ? C.accent : 'transparent'}`,
-    paddingBottom: 2, transition: 'color 0.15s', letterSpacing: '-0.01em',
-  })
+  const isActive = (tab: (typeof TABS)[number]) =>
+    pathname === tab.href || tab.also.some((p) => pathname === p)
 
   return (
-    <header style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderBottom: `1px solid ${C.border}`, position: 'sticky', top: 0, zIndex: 40 }}>
-      <nav aria-label="Main navigation" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Logo */}
-        <Link href={dashboardHref} aria-label="Workmark dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <Wordmark height={22} />
-        </Link>
-
-        {/* Desktop links */}
-        <div className="mob-hide" style={{ display: 'flex', alignItems: 'center', gap: 28 }}>
-          <Link href="/listings" aria-current={pathname === '/listings' ? 'page' : undefined} style={linkStyle('/listings')}>Projects</Link>
-          {role === 'student' && (
-            <>
-              <Link href="/goals" aria-current={pathname === '/goals' ? 'page' : undefined} style={linkStyle('/goals')}>Next steps</Link>
-              <Link href="/me" aria-current={pathname === '/me' ? 'page' : undefined} style={linkStyle('/me')}>My record</Link>
-              <Link href="/students" aria-current={pathname === '/students' ? 'page' : undefined} style={linkStyle('/students')}>Students</Link>
-            </>
-          )}
-          <Link href={dashboardHref} aria-current={pathname === dashboardHref ? 'page' : undefined} style={linkStyle(dashboardHref)}>Dashboard</Link>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, paddingLeft: 16, borderLeft: `1px solid ${C.border}` }}>
-            {userName && (
-              <span style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {userName}
-              </span>
+    <header style={{ background: C.bg, position: 'sticky', top: 0, zIndex: 40 }}>
+      <nav aria-label="Main navigation" style={{ maxWidth: 1100, margin: '0 auto', padding: '20px 28px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
+          {/* Logo + tabs */}
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 28, minWidth: 0 }}>
+            <Link href="/student/dashboard" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', paddingBottom: 9 }}>
+              <Wordmark height={22} />
+            </Link>
+            {role === 'student' && (
+              <div className="mob-hide" style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
+                {TABS.map((tab) => (
+                  <Link
+                    key={tab.href}
+                    href={tab.href}
+                    aria-current={isActive(tab) ? 'page' : undefined}
+                    className={`nb-tab${isActive(tab) ? ' nb-tab-active' : ''}`}
+                  >
+                    {tab.label}
+                  </Link>
+                ))}
+              </div>
             )}
-            <button onClick={handleSignOut} disabled={signing}
-              style={{ padding: '6px 14px', fontFamily: F.mono, fontSize: 12, border: `1px solid ${C.border}`, color: C.textMuted, background: 'transparent', cursor: signing ? 'not-allowed' : 'pointer', transition: 'all 0.15s', opacity: signing ? 0.5 : 1 }}>
-              {signing ? 'Signing out…' : 'Sign out'}
-            </button>
           </div>
-        </div>
 
-        {/* Mobile hamburger */}
-        <button className="mob-show" style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 8, alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-          aria-expanded={mobileOpen}>
-          {mobileOpen ? (
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <path d="M3 3l12 12M15 3L3 15" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-              <line x1="2" y1="5" x2="16" y2="5" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round" />
-              <line x1="2" y1="9" x2="16" y2="9" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round" />
-              <line x1="2" y1="13" x2="16" y2="13" stroke={C.textMuted} strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
-          )}
-        </button>
+          {/* Right side */}
+          <div className="mob-hide" style={{ display: 'flex', alignItems: 'center', gap: 14, paddingBottom: 9 }}>
+            <Link href="/listings/new" style={{ fontSize: 14, color: C.textMuted, textDecoration: 'none', fontWeight: 500 }}>
+              Post a project
+            </Link>
+            <div ref={menuRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-label="Account menu"
+                style={{
+                  width: 34, height: 34, borderRadius: R.md, border: 'none', cursor: 'pointer',
+                  background: menuOpen ? C.accent : '#EDE9FF',
+                  color: menuOpen ? '#fff' : C.accentInk,
+                  fontFamily: F.display, fontSize: 12, fontWeight: 700, letterSpacing: '0.02em',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+              >
+                {initials(userName)}
+              </button>
+              {menuOpen && (
+                <div
+                  role="menu"
+                  style={{
+                    position: 'absolute', right: 0, top: 42, minWidth: 218, zIndex: 50,
+                    background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg,
+                    boxShadow: '0 4px 6px rgba(25,30,46,0.04), 0 12px 32px rgba(25,30,46,0.10)',
+                    padding: 6,
+                  }}
+                >
+                  {userName && (
+                    <p style={{ fontSize: 13, color: C.textFaint, padding: '8px 12px 10px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 4 }}>
+                      {userName}
+                    </p>
+                  )}
+                  {MENU.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                      style={{ display: 'block', fontSize: 15, color: C.textSub, textDecoration: 'none', padding: '9px 12px', borderRadius: 8 }}
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
+                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, marginTop: 4, paddingTop: 4 }}>
+                    <button
+                      onClick={handleSignOut}
+                      disabled={signing}
+                      role="menuitem"
+                      style={{ display: 'block', width: '100%', textAlign: 'left', fontSize: 15, color: C.textMuted, background: 'none', border: 'none', padding: '9px 12px', borderRadius: 8, cursor: signing ? 'not-allowed' : 'pointer', font: 'inherit' }}
+                    >
+                      {signing ? 'Signing out…' : 'Sign out'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile hamburger */}
+          <button className="mob-show" style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 8, marginBottom: 4, alignItems: 'center', justifyContent: 'center' }}
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileOpen}>
+            {mobileOpen ? (
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <path d="M3 3l12 12M15 3L3 15" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                <line x1="2" y1="5" x2="16" y2="5" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="2" y1="9" x2="16" y2="9" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
+                <line x1="2" y1="13" x2="16" y2="13" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
+              </svg>
+            )}
+          </button>
+        </div>
+        <div style={{ borderBottom: `1px solid ${C.border}` }} />
       </nav>
 
       {/* Mobile dropdown */}
       {mobileOpen && (
-        <div style={{ borderTop: `1px solid ${C.border}`, background: C.bg, padding: '8px 24px 24px' }}>
+        <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '4px 28px 20px' }}>
           {userName && (
-            <p style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, padding: '12px 0', borderBottom: `1px solid ${C.border}`, marginBottom: 4 }}>{userName}</p>
+            <p style={{ fontSize: 13, color: C.textFaint, padding: '14px 0 10px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 4 }}>{userName}</p>
           )}
           {[
-            { href: '/listings', label: 'Projects' },
-            ...(role === 'student' ? [{ href: '/goals', label: 'Next steps' }, { href: '/me', label: 'My record' }] : []),
-            { href: dashboardHref, label: 'Dashboard' },
+            ...(role === 'student' ? TABS.map((t) => ({ href: t.href, label: t.label })) : []),
+            { href: '/listings/new', label: 'Post a project' },
+            ...MENU,
           ].map(({ href, label }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={pathname === href ? 'page' : undefined}
-              style={{ display: 'block', fontFamily: F.mono, fontSize: 13, color: pathname === href ? C.accent : C.textMuted, textDecoration: 'none', padding: '13px 0', borderBottom: `1px solid ${C.border}` }}>
+              style={{ display: 'block', fontSize: 16, fontWeight: pathname === href ? 600 : 400, color: pathname === href ? C.accent : C.textSub, textDecoration: 'none', padding: '13px 0', borderBottom: `1px solid ${C.borderFaint}` }}>
               {label}
             </Link>
           ))}
-          <button onClick={handleSignOut} disabled={signing}
-            style={{ marginTop: 16, width: '100%', padding: '11px 0', background: 'none', border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono, fontSize: 12, cursor: signing ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          <button onClick={handleSignOut} disabled={signing} className="nb-btn nb-btn-outline" style={{ marginTop: 16, width: '100%' }}>
             {signing ? 'Signing out…' : 'Sign out'}
           </button>
         </div>

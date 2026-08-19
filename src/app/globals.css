@@ -76,48 +76,49 @@
   transform: translateY(0);
 }
 
-/* ─── App form utilities (light theme) ────────────────────────────────────
-   Kept under .dk-* class names so existing consumers don't need updates —
-   the visuals are now light-mode. See src/lib/theme/dark-tokens.ts for the
-   matching palette flip. */
+/* ─── App form controls ───────────────────────────────────────────────────
+   .dk-* is app-only (marketing uses .lt-* below), so these carry the
+   Notebook theme. Kept under the old class names because ~30 call sites
+   reference them and renaming is churn without a payoff. */
 .dk-input,
 .dk-select,
 .dk-textarea {
   background: #FFFFFF;
-  border: 1px solid #E5E4EF;
-  color: #0A0A0A;
-  font-size: 14px;
-  padding: 10px 14px;
+  border: 1.5px solid #E7E2D6;
+  color: #191E2E;
+  font-size: 16px;
+  padding: 12px 15px;
   outline: none;
   width: 100%;
-  font-family: var(--font-sans), Inter, system-ui, sans-serif;
-  transition: border-color 0.15s;
-  border-radius: 8px;
+  font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  border-radius: 11px;
 }
 .dk-input:focus,
 .dk-select:focus,
 .dk-textarea:focus {
-  border-color: #3E1FFF;
+  border-color: #6142F5;
+  box-shadow: 0 0 0 3px rgba(97, 66, 245, 0.12);
 }
 .dk-input::placeholder,
 .dk-textarea::placeholder {
-  color: #8A8A94;
+  color: #8D94A5;
 }
 .dk-select {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A8A94' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666D80' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
+  background-position: right 14px center;
+  padding-right: 34px;
 }
 .dk-textarea {
   resize: vertical;
 }
 .dk-checkbox {
-  accent-color: #3E1FFF;
-  width: 14px;
-  height: 14px;
+  accent-color: #6142F5;
+  width: 16px;
+  height: 16px;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -233,6 +234,129 @@
   box-shadow: 0 16px 40px rgba(10, 10, 10, 0.08);
   border-color: #C7B8FF;
 }
+
+/* ══ APP — "Notebook" ══════════════════════════════════════════════════════
+   Everything under .nb-* belongs to the logged-in product. Marketing keeps
+   .wm-btn / .wm-card / .wm-eyebrow above and is untouched by these.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Buttons ───────────────────────────────────────────────────────────────
+   Four variants and no more. Ink is the workhorse (almost every button in
+   the app); accent is reserved for the single growth action on a page —
+   spending it on ordinary buttons is what made the violet stop meaning
+   anything in the first place. */
+.nb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1;
+  padding: 12px 22px;
+  border-radius: 11px;
+  border: 1.5px solid transparent;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.nb-btn:disabled,
+.nb-btn[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; }
+
+.nb-btn-ink      { background: #191E2E; color: #FFFFFF; border-color: #191E2E; }
+.nb-btn-ink:not(:disabled):hover { background: #262D42; border-color: #262D42; }
+
+.nb-btn-accent   { background: #6142F5; color: #FFFFFF; border-color: #6142F5; }
+.nb-btn-accent:not(:disabled):hover { background: #4E2FD6; border-color: #4E2FD6; }
+
+.nb-btn-outline  { background: #FFFFFF; color: #191E2E; border-color: #DCD6C8; }
+.nb-btn-outline:not(:disabled):hover { border-color: #191E2E; }
+
+.nb-btn-quiet    { background: transparent; color: #5A6172; border-color: transparent; padding-left: 10px; padding-right: 10px; }
+.nb-btn-quiet:not(:disabled):hover { background: #F1EDE3; color: #191E2E; }
+
+.nb-btn-sm { font-size: 14px; padding: 9px 16px; border-radius: 9px; }
+
+/* ── Nav tabs — notebook dividers, not a toolbar ──────────────────────────
+   The active tab shares the card's fill and loses its bottom border, so it
+   reads as the sheet you're currently on rather than a highlighted link. */
+.nb-tab {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display), 'Schibsted Grotesk', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 8px 15px;
+  border-radius: 9px 9px 0 0;
+  color: #5A6172;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  position: relative;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.nb-tab:hover { color: #191E2E; background: #F1EDE3; }
+.nb-tab-active {
+  background: #FFFFFF;
+  color: #191E2E;
+  border-color: #E7E2D6;
+}
+/* Bridge the 1px rule under the bar so the active tab joins the page. */
+.nb-tab-active::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: #FFFFFF;
+}
+
+/* ── Ruled paper ──────────────────────────────────────────────────────────
+   Behind the record only. It signals "this is the written-down part", which
+   is true of the record and not true of anything else — using it as generic
+   texture would make it mean nothing. */
+.nb-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 33px,
+    #EDE8DC 33px,
+    #EDE8DC 34px
+  );
+}
+
+/* ── Handwriting ──────────────────────────────────────────────────────────
+   RULES, because this is the one element that turns charming into novelty
+   if it spreads:
+     1. At most ONE per page. Never two.
+     2. Only as an aside pointing at something — never as a label, a heading,
+        a button, an error, or body copy.
+     3. Never the only place information appears; removing it must lose
+        nothing but tone.
+     4. Never on money, legal, dispute, or consent surfaces (/me/file, FCRA
+        pages, the consent checkbox). Those need to read as sober.
+   It carries aria-hidden in the component for the same reason — a screen
+   reader announcing a decorative aside is noise. */
+.wm-hand {
+  font-family: var(--font-hand), Caveat, cursive;
+  font-size: 20px;
+  line-height: 1.15;
+  color: #6142F5;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────
+   Bordered, not floated. A hover lift on a card that isn't clickable is a
+   lie about affordance, so only the link/button variants get it. */
+.nb-card {
+  background: #FFFFFF;
+  border: 1px solid #E7E2D6;
+  border-radius: 14px;
+}
+.nb-card-interactive { transition: border-color 0.15s ease, background 0.15s ease; }
+.nb-card-interactive:hover { border-color: #C9C2B2; background: #FFFDFA; }
 
 /* Respect user's motion preference — WCAG 2.3.3 */
 @media (prefers-reduced-motion: reduce) {

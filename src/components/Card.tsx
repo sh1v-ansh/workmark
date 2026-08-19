@@ -1,9 +1,12 @@
 import Link from 'next/link'
-import { C } from '@/lib/theme/dark-tokens'
 
-// Shared card shell — rounded corners + the existing .wm-card hover
-// lift/shadow (defined in globals.css), instead of the flat 1px-bordered
-// rectangles that were hand-rolled per component across the app.
+// The app's card shell. Bordered on paper rather than floated on white —
+// elevation is reserved for things that genuinely sit above the page
+// (toasts, menus), so a shadow here would be a lie about layering.
+//
+// Hover treatment only applies when the card actually goes somewhere. A
+// static card that lifts under the cursor promises a click that never
+// happens, which is the most common small dishonesty in card UI.
 interface CardProps {
   href?: string
   onClick?: () => void
@@ -12,21 +15,25 @@ interface CardProps {
   className?: string
   children: React.ReactNode
   hoverable?: boolean
+  /** Puts ruled-paper lines behind the content. The record only — see .nb-ruled. */
+  ruled?: boolean
 }
 
-export default function Card({ href, onClick, padding = 20, style, className, children, hoverable }: CardProps) {
+export default function Card({ href, onClick, padding = 22, style, className, children, hoverable, ruled }: CardProps) {
   const interactive = hoverable ?? (!!href || !!onClick)
   const baseStyle: React.CSSProperties = {
     display: 'block',
-    background: C.surface,
-    border: `1px solid ${C.border}`,
-    borderRadius: 14,
     padding,
     textDecoration: 'none',
     color: 'inherit',
     ...style,
   }
-  const cls = [interactive ? 'wm-card' : '', className].filter(Boolean).join(' ')
+  const cls = [
+    'nb-card',
+    interactive ? 'nb-card-interactive' : '',
+    ruled ? 'nb-ruled' : '',
+    className,
+  ].filter(Boolean).join(' ')
 
   if (href) {
     return (
