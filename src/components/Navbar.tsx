@@ -27,10 +27,11 @@ interface NavbarProps {
 const TABS = [
   { href: '/student/dashboard', label: 'Home',      also: ['/goals'] },
   { href: '/listings',          label: 'Find work', also: [] as string[] },
-  { href: '/me',                label: 'My record', also: ['/me/file', '/me/briefs'] },
+  { href: '/me',                label: 'My record', also: ['/me/file', '/me/briefs', '/student/github'] },
 ]
 
 const MENU = [
+  { href: '/student/github', label: 'Evidence source & rescan' },
   { href: '/students', label: 'Student directory' },
   { href: '/me/briefs', label: 'Project ideas' },
   { href: '/me/file', label: 'Your file & disputes' },
