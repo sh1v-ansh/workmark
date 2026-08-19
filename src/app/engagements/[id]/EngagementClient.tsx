@@ -5,10 +5,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
+import Button from '@/components/ui/Button'
+import Badge from '@/components/ui/Badge'
+import { Kicker } from '@/components/ui/Section'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
-import { C, F } from '@/lib/theme/dark-tokens'
-import { tagColor } from '@/lib/theme/tagColors'
+import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { allowedTransitions, canCloseOut, isTerminal, STAGE_LABEL, type Stage } from '@/lib/engagements/lifecycle'
 
 export interface EngagementData {
@@ -37,6 +39,52 @@ export interface EngagementData {
 
 const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
 const STAGE_ORDER: Stage[] = ['accepted', 'in_progress', 'submitted', 'closed']
+const SHORT_STAGE: Record<string, string> = {
+  accepted: 'Accepted',
+  in_progress: 'In progress',
+  submitted: 'Submitted',
+  closed: 'Closed out',
+}
+
+/**
+ * Progress through four fixed steps is an inherently horizontal fact. It
+ * was previously written as a word in a badge, which made the reader hold
+ * the sequence in their head to know where they were.
+ */
+function Stepper({ current }: { current: Stage }) {
+  const idx = STAGE_ORDER.indexOf(current)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+      {STAGE_ORDER.map((s, i) => {
+        const done = idx > i
+        const now = idx === i
+        const color = done ? state.positive : now ? C.accent : C.border
+        const bg = done ? state.positiveBg : now ? '#EDE9FF' : 'transparent'
+        return (
+          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: 9, flexGrow: i === STAGE_ORDER.length - 1 ? 0 : 1, minWidth: 0 }}>
+            <span
+              style={{
+                width: 26, height: 26, borderRadius: 999, flexShrink: 0,
+                background: bg, border: `2px solid ${color}`,
+                color: done || now ? color : C.textGhost,
+                fontFamily: F.display, fontSize: 12, fontWeight: 700,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              {done ? '✓' : i + 1}
+            </span>
+            <span style={{ fontSize: 14, fontWeight: now ? 700 : 500, color: done || now ? C.text : C.textGhost, whiteSpace: 'nowrap' }}>
+              {SHORT_STAGE[s]}
+            </span>
+            {i < STAGE_ORDER.length - 1 && (
+              <div style={{ flexGrow: 1, height: 2, background: done ? state.positive : C.border, margin: '0 6px', minWidth: 12 }} />
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function EngagementClient({ data }: { data: EngagementData }) {
   const router = useRouter()
@@ -128,250 +176,289 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
   const nextStages = allowedTransitions(data.stage, data.role).filter((s) => s !== 'abandoned')
   const canAbandon = allowedTransitions(data.stage, data.role).includes('abandoned')
 
+  // The headline is the question actually being asked of you, where there
+  // is one. A title tells you which engagement you opened; it does not tell
+  // you why the page is showing you anything.
+  const awaitingMyAgreement = !terminal && !myAgreement && !!data.description?.trim() && !descriptionDirty
+  const headline = data.stage === 'abandoned'
+    ? 'This engagement was abandoned.'
+    : data.stage === 'closed'
+      ? 'This is on the record now.'
+      : awaitingMyAgreement
+        ? 'Do you agree this is what happened?'
+        : data.listingTitle
+
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
       <Navbar userName={data.myName ?? undefined} />
 
-      <main style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
-        <Link href="/student/dashboard" style={{ fontSize: 12, fontFamily: F.mono, color: C.textFaint, textDecoration: 'none' }}>
-          ← Dashboard
-        </Link>
+      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <div>
-          <h1 style={{ fontFamily: F.serif, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 6, lineHeight: 1.25 }}>
-            {data.listingTitle}
+        <Link href="/student/dashboard" style={{ fontSize: 15, color: C.textFaint, textDecoration: 'none' }}>← Home</Link>
+
+        <div style={{ margin: '14px 0 22px' }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.text, marginBottom: 8 }}>
+            {headline}
           </h1>
-          <p style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>
-            {isPoster ? `Working with ${data.counterpartName ?? 'a student'}` : `Posted by ${data.counterpartName ?? 'a student'}`}
+          <p style={{ fontSize: 16, color: C.textMuted }}>
+            {headline === data.listingTitle ? '' : `${data.listingTitle} · `}
+            {isPoster ? `with ${data.counterpartName ?? 'a student'}` : `posted by ${data.counterpartName ?? 'a student'}`}
             {' · opened '}{new Date(data.openedAt).toLocaleDateString()}
           </p>
         </div>
 
-        {/* Stage tracker */}
-        <Card hoverable={false} padding={20}>
+        {/* Where you are, at a glance */}
+        <Card hoverable={false} padding="18px 24px" style={{ marginBottom: 20 }}>
           {data.stage === 'abandoned' ? (
-            <p style={{ fontSize: 13, color: '#B45309', fontFamily: F.mono }}>
-              Abandoned{data.abandonedAt ? ` on ${new Date(data.abandonedAt).toLocaleDateString()}` : ''}.
+            <p style={{ fontSize: 15.5, color: state.caution }}>
+              Abandoned{data.abandonedAt ? ` on ${new Date(data.abandonedAt).toLocaleDateString()}` : ''}. This is permanent and shows on the track record for both sides.
             </p>
           ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 0, flexWrap: 'wrap' }}>
-              {STAGE_ORDER.map((s, i) => {
-                const reached = STAGE_ORDER.indexOf(data.stage) >= i
-                return (
-                  <div key={s} style={{ display: 'flex', alignItems: 'center', flex: i === STAGE_ORDER.length - 1 ? 'none' : 1, minWidth: 0 }}>
-                    <span style={{
-                      fontSize: 10, fontWeight: 600, padding: '4px 10px', borderRadius: 999, whiteSpace: 'nowrap',
-                      fontFamily: F.mono, textTransform: 'uppercase', letterSpacing: '0.05em',
-                      background: reached ? C.accentHover : C.surfaceAlt,
-                      border: `1px solid ${reached ? C.accentBorder : C.border}`,
-                      color: reached ? C.accent : C.textFaint,
-                    }}>
-                      {STAGE_LABEL[s]}
+            <Stepper current={data.stage} />
+          )}
+        </Card>
+
+        {/* Two thirds: the task. One third: settings and reference, visibly
+            lighter so the eye never mistakes the rail for the subject. */}
+        <div className="nb-split">
+
+          <div>
+            <Card hoverable={false} padding={28}>
+              <Kicker style={{ marginBottom: 10 }}>What the work was</Kicker>
+              <p style={{ fontSize: 15, color: C.textFaint, lineHeight: 1.55, marginBottom: 18, maxWidth: 560 }}>
+                This is the text that goes on {isPoster ? "the student's" : 'your'} record permanently. Both of you have to agree to it, and either of you editing it clears both signatures.
+              </p>
+
+              {terminal ? (
+                <p style={{ fontSize: 17, color: C.textSub, lineHeight: 1.75, whiteSpace: 'pre-wrap' }}>
+                  {data.description || <span style={{ color: C.textGhost }}>No description was agreed.</span>}
+                </p>
+              ) : (
+                <>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={6}
+                    className="dk-textarea"
+                    style={{ fontFamily: 'inherit', lineHeight: 1.7, fontSize: 16.5 }}
+                    placeholder="What was built, what they owned, what shipped."
+                    aria-label="Work description"
+                  />
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 18, padding: '14px 18px', background: theirAgreement ? state.positiveBg : C.bg, borderRadius: R.md, margin: '18px 0', flexWrap: 'wrap' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 15, fontWeight: 600, color: theirAgreement ? state.positive : C.textMuted }}>
+                      {theirAgreement && (
+                        <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                          <path d="M5 10.2l3.2 3.2L15 6.6" stroke={state.positive} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                      )}
+                      {theirAgreement
+                        ? `${data.counterpartName ?? 'They'} agreed`
+                        : `${data.counterpartName ?? 'They'} haven't agreed yet`}
                     </span>
-                    {i < STAGE_ORDER.length - 1 && (
-                      <div style={{ flex: 1, height: 1, background: STAGE_ORDER.indexOf(data.stage) > i ? C.accent : C.border, margin: '0 6px', minWidth: 8 }} />
+                    <span style={{ width: 1, height: 18, background: C.border }} />
+                    <span style={{ fontSize: 15, color: myAgreement ? state.positive : C.textMuted, fontWeight: myAgreement ? 600 : 400 }}>
+                      {myAgreement ? 'You agreed' : "You haven't yet"}
+                    </span>
+                  </div>
+
+                  {descriptionDirty && (
+                    <p style={{ fontSize: 14.5, color: state.caution, lineHeight: 1.55, marginBottom: 14 }}>
+                      Saving this edit clears both agreements — an agreement is to specific wording, not to the idea.
+                    </p>
+                  )}
+
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {descriptionDirty && (
+                      <Button variant="ink" onClick={() => patch({ description }, 'Description saved — both agreements reset.')} disabled={busy}>
+                        Save changes
+                      </Button>
+                    )}
+                    {!descriptionDirty && !myAgreement && description.trim() && (
+                      <Button variant="ink" onClick={() => patch({ agreeToDescription: true }, 'You agreed to the description.')} disabled={busy}>
+                        Yes, this is accurate
+                      </Button>
                     )}
                   </div>
-                )
-              })}
-            </div>
-          )}
-
-          {(nextStages.length > 0 || canAbandon) && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
-              {nextStages.map((s) => (
-                <button key={s} onClick={() => patch({ stage: s }, `Moved to ${STAGE_LABEL[s].toLowerCase()}.`)} disabled={busy} className="wm-btn wm-btn-primary wm-btn-sm" style={{ display: 'inline-flex' }}>
-                  {s === 'in_progress' && data.stage === 'submitted' ? 'Send back for more work' : `Mark ${STAGE_LABEL[s].toLowerCase()}`}
-                </button>
-              ))}
-              {canAbandon && (
-                <button
-                  onClick={() => { if (confirm('Abandon this engagement? This is permanent and shows on the track record for both sides.')) patch({ stage: 'abandoned' }, 'Engagement abandoned.') }}
-                  disabled={busy} className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}
-                >
-                  Abandon
-                </button>
+                </>
               )}
-            </div>
-          )}
-        </Card>
+            </Card>
 
-        {/* Contact */}
-        {data.counterpartEmail && (
-          <Card hoverable={false} padding={16}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>Contact</span>
-              <a href={`mailto:${data.counterpartEmail}`} style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontFamily: F.mono }}>
-                {data.counterpartEmail}
-              </a>
-              {data.counterpartGithub && (
-                <a href={`https://github.com/${data.counterpartGithub}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: C.textMuted, textDecoration: 'none', fontFamily: F.mono }}>
-                  <Icon name="github" size={12} /> {data.counterpartGithub}
-                </a>
-              )}
-            </div>
-          </Card>
-        )}
-
-        {/* Agreed description */}
-        <Card hoverable={false} padding={24}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>What the work was</h2>
-          <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 14, lineHeight: 1.5 }}>
-            Both of you have to agree to this before close-out. It becomes part of {isPoster ? "the student's" : 'your'} permanent record, so neither side can write it alone.
-          </p>
-
-          {terminal ? (
-            <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-              {data.description || <span style={{ color: C.textFaint }}>No description was agreed.</span>}
-            </p>
-          ) : (
-            <>
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={5}
-                className="dk-input"
-                style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
-                placeholder="What was built, what they owned, what shipped."
-                aria-label="Work description"
-              />
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, flexWrap: 'wrap' }}>
-                {descriptionDirty && (
-                  <button onClick={() => patch({ description }, 'Description saved — both agreements reset.')} disabled={busy} className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}>
-                    Save changes
-                  </button>
-                )}
-                {!descriptionDirty && !myAgreement && description.trim() && (
-                  <button onClick={() => patch({ agreeToDescription: true }, 'You agreed to the description.')} disabled={busy} className="wm-btn wm-btn-primary wm-btn-sm" style={{ display: 'inline-flex' }}>
-                    <Icon name="check" size={12} /> I agree to this
-                  </button>
-                )}
-                <span style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                  {myAgreement ? 'You agreed' : 'You have not agreed'}
-                  {' · '}
-                  {theirAgreement ? 'They agreed' : 'They have not agreed'}
-                </span>
-              </div>
-              {descriptionDirty && (
-                <p style={{ fontSize: 11, color: '#B45309', marginTop: 8, lineHeight: 1.5 }}>
-                  Saving an edit clears both agreements — an agreement is to specific wording.
-                </p>
-              )}
-            </>
-          )}
-        </Card>
-
-        {/* Close-out (poster only) */}
-        {isPoster && !terminal && (
-          <Card hoverable={false} padding={24}>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Close out</h2>
-            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 14, lineHeight: 1.5 }}>
-              Closing out adds verified skills to their record from the repo the work lives in. Only repos they&apos;ve shared and enabled for scanning appear here.
-            </p>
-
-            {data.scannableRepos.length > 0 ? (
-              <select value={repo} onChange={(e) => setRepo(e.target.value)} className="dk-select" style={{ marginBottom: 12 }} aria-label="Repo the work lives in">
-                <option value="">No repo (design, research, or other non-code work)</option>
-                {data.scannableRepos.map((r) => (
-                  <option key={r} value={r}>{r}</option>
+            {(nextStages.length > 0 || canAbandon) && (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 16 }}>
+                {nextStages.map((s) => (
+                  <Button
+                    key={s} variant="outline" size="sm" disabled={busy}
+                    onClick={() => patch({ stage: s }, `Moved to ${STAGE_LABEL[s].toLowerCase()}.`)}
+                  >
+                    {s === 'in_progress' && data.stage === 'submitted' ? 'Send back for more work' : `Mark ${STAGE_LABEL[s].toLowerCase()}`}
+                  </Button>
                 ))}
-              </select>
-            ) : (
-              <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
-                They haven&apos;t enabled any repos for scanning. You can still close out — it just won&apos;t add skill evidence.
-              </p>
+                {canAbandon && (
+                  <Button
+                    variant="quiet" size="sm" disabled={busy}
+                    onClick={() => { if (confirm('Abandon this engagement? This is permanent and shows on the track record for both sides.')) patch({ stage: 'abandoned' }, 'Engagement abandoned.') }}
+                  >
+                    Abandon
+                  </Button>
+                )}
+              </div>
             )}
 
-            <button onClick={closeOut} disabled={busy || !closeGate.ok} className="wm-btn wm-btn-primary wm-btn-sm" style={{ display: 'inline-flex' }}>
-              <Icon name="check" size={12} /> {busy ? 'Closing…' : 'Close out'}
-            </button>
-            {!closeGate.ok && (
-              <p style={{ fontSize: 12, color: C.textFaint, marginTop: 10, lineHeight: 1.5 }}>{closeGate.reason}</p>
+            {/* Outcome (poster, post-close) */}
+            {isPoster && data.stage === 'closed' && (
+              <Card hoverable={false} padding={26} style={{ marginTop: 16 }}>
+                <Kicker style={{ marginBottom: 10 }}>How did it go?</Kicker>
+                <p style={{ fontSize: 15, color: C.textFaint, lineHeight: 1.55, marginBottom: 18, maxWidth: 520 }}>
+                  This does not change their skill levels — those come from the code. It helps us understand which matches actually work.
+                </p>
+                <div style={{ display: 'flex', gap: 7, marginBottom: 16 }}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <button
+                      key={n} onClick={() => setSatisfaction(n)} aria-label={`${n} out of 5`} aria-pressed={satisfaction === n}
+                      style={{
+                        width: 42, height: 42, borderRadius: R.md, cursor: 'pointer', font: 'inherit', fontSize: 15, fontWeight: 600,
+                        background: satisfaction >= n ? '#EDE9FF' : C.bg,
+                        border: `1.5px solid ${satisfaction >= n ? C.accentBorder : C.border}`,
+                        color: satisfaction >= n ? C.accentInk : C.textFaint,
+                      }}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: 'flex', gap: 9, marginBottom: 18, flexWrap: 'wrap' }}>
+                  {[{ v: true, label: 'Would work with them again' }, { v: false, label: 'Would not' }].map(({ v, label }) => (
+                    <button
+                      key={String(v)} onClick={() => setWouldRehire(v)} aria-pressed={wouldRehire === v}
+                      style={{
+                        padding: '9px 16px', borderRadius: R.md, cursor: 'pointer', font: 'inherit', fontSize: 14.5, fontWeight: 500,
+                        background: wouldRehire === v ? '#EDE9FF' : C.bg,
+                        border: `1.5px solid ${wouldRehire === v ? C.accentBorder : C.border}`,
+                        color: wouldRehire === v ? C.accentInk : C.textMuted,
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <Button variant="ink" size="sm" onClick={saveOutcome} disabled={busy || (!satisfaction && wouldRehire === null)}>
+                  {data.outcome ? 'Update' : 'Submit'}
+                </Button>
+              </Card>
             )}
-          </Card>
-        )}
+          </div>
 
-        {/* Evidence minted */}
-        {data.evidence.length > 0 && (
-          <Card hoverable={false} padding={24}>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>
-              Skills this added to {isPoster ? 'their' : 'your'} record
-            </h2>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {data.evidence.map((e) => {
-                const c = tagColor(e.name)
-                return (
-                  <span key={e.skillId} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}>
-                    {e.name}
-                    <span style={{ fontWeight: 400, opacity: 0.75 }}>{LEVEL_NAMES[e.level] ?? e.level}</span>
-                  </span>
-                )
-              })}
-            </div>
-          </Card>
-        )}
+          {/* Rail */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* Outcome (poster, post-close) */}
-        {isPoster && data.stage === 'closed' && (
-          <Card hoverable={false} padding={24}>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>How did it go?</h2>
-            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 14, lineHeight: 1.5 }}>
-              This does not change their skill levels — those come from the code. It helps us understand which matches actually work.
-            </p>
-            <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n} onClick={() => setSatisfaction(n)} aria-label={`${n} out of 5`} aria-pressed={satisfaction === n}
-                  style={{ width: 38, height: 38, borderRadius: 8, cursor: 'pointer', fontFamily: F.mono, fontSize: 13, background: satisfaction >= n ? C.accentHover : C.surfaceAlt, border: `1px solid ${satisfaction >= n ? C.accentBorder : C.border}`, color: satisfaction >= n ? C.accent : C.textFaint }}
-                >
-                  {n}
-                </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
-              {[{ v: true, label: 'Would work with them again' }, { v: false, label: 'Would not' }].map(({ v, label }) => (
-                <button
-                  key={String(v)} onClick={() => setWouldRehire(v)} aria-pressed={wouldRehire === v}
-                  style={{ padding: '7px 14px', borderRadius: 8, cursor: 'pointer', fontFamily: F.mono, fontSize: 12, background: wouldRehire === v ? C.accentHover : C.surfaceAlt, border: `1px solid ${wouldRehire === v ? C.accentBorder : C.border}`, color: wouldRehire === v ? C.accent : C.textMuted }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <button onClick={saveOutcome} disabled={busy || (!satisfaction && wouldRehire === null)} className="wm-btn wm-btn-primary wm-btn-sm" style={{ display: 'inline-flex' }}>
-              {data.outcome ? 'Update' : 'Submit'}
-            </button>
-          </Card>
-        )}
+            {isPoster && !terminal && (
+              <Card hoverable={false} padding={22}>
+                <Kicker style={{ marginBottom: 10 }}>Close out</Kicker>
+                <p style={{ fontSize: 14.5, color: C.textFaint, lineHeight: 1.55, marginBottom: 14 }}>
+                  Adds verified skills to their record from the repository the work lives in. Only repositories they have enabled appear here.
+                </p>
+                {data.scannableRepos.length > 0 ? (
+                  <select value={repo} onChange={(e) => setRepo(e.target.value)} className="dk-select" style={{ marginBottom: 14 }} aria-label="Repo the work lives in">
+                    <option value="">No repo (design, research, other non-code work)</option>
+                    {data.scannableRepos.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                ) : (
+                  <p style={{ fontSize: 14, color: C.textGhost, lineHeight: 1.5, marginBottom: 14 }}>
+                    They have not enabled any repositories. You can still close out — it just won&apos;t add skill evidence.
+                  </p>
+                )}
+                <Button variant="ink" size="sm" fullWidth onClick={closeOut} disabled={busy || !closeGate.ok} busyLabel={busy ? 'Closing…' : null}>
+                  Close out
+                </Button>
+                {!closeGate.ok && (
+                  <p style={{ fontSize: 14, color: C.textFaint, marginTop: 11, lineHeight: 1.5 }}>{closeGate.reason}</p>
+                )}
+              </Card>
+            )}
 
-        {/* Visibility (student only) */}
-        {!isPoster && (
-          <Card hoverable={false} padding={24}>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>How this shows on your record</h2>
-            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 14, lineHeight: 1.5 }}>
-              Hidden engagements still count toward your skills and track record. Your total engagement count is never displayed, so nobody can tell anything was hidden.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {([
-                { v: 'full', label: 'Full', desc: 'Shows normally, with the project and who posted it.' },
-                { v: 'redacted', label: 'Redacted', desc: 'Counts toward your skills, but displays as a confidential engagement.' },
-                { v: 'hidden', label: 'Hidden', desc: "Doesn't display at all. Still counts toward your skills." },
-              ]).map(({ v, label, desc }) => (
-                <label key={v} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', background: C.surfaceAlt, border: `1px solid ${data.visibility === v ? C.accentBorder : C.border}`, borderRadius: 8, cursor: 'pointer' }}>
-                  <input
-                    type="radio" name="visibility" checked={data.visibility === v} disabled={busy}
-                    onChange={() => patch({ visibility: v }, 'Visibility updated.')}
-                    style={{ marginTop: 3 }}
-                  />
-                  <span>
-                    <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.text }}>{label}</span>
-                    <span style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.5 }}>{desc}</span>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </Card>
-        )}
+            {data.evidence.length > 0 && (
+              <Card hoverable={false} padding={22}>
+                <Kicker style={{ marginBottom: 12 }}>Added to {isPoster ? 'their' : 'your'} record</Kicker>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {data.evidence.map((e) => (
+                    <span key={e.skillId} style={{ fontSize: 13.5, fontWeight: 600, color: C.accentInk, background: '#EDE9FF', borderRadius: R.sm, padding: '6px 12px' }}>
+                      {e.name} · {LEVEL_NAMES[e.level] ?? e.level}
+                    </span>
+                  ))}
+                </div>
+                <p style={{ fontSize: 13.5, color: C.textGhost, lineHeight: 1.5, marginTop: 12 }}>
+                  Tagged as collaboration, not solo work.
+                </p>
+              </Card>
+            )}
+
+            {data.counterpartEmail && (
+              <Card hoverable={false} padding={22}>
+                <Kicker style={{ marginBottom: 10 }}>Contact</Kicker>
+                <a href={`mailto:${data.counterpartEmail}`} style={{ fontSize: 15, color: C.accent, textDecoration: 'none', wordBreak: 'break-all' }}>
+                  {data.counterpartEmail}
+                </a>
+                {data.counterpartGithub && (
+                  <div style={{ marginTop: 10 }}>
+                    <a
+                      href={`https://github.com/${data.counterpartGithub}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 14.5, color: C.textMuted, textDecoration: 'none' }}
+                    >
+                      <Icon name="github" size={14} /> {data.counterpartGithub}
+                    </a>
+                  </div>
+                )}
+              </Card>
+            )}
+
+            {!isPoster && (
+              <Card hoverable={false} padding={22}>
+                <Kicker style={{ marginBottom: 10 }}>Who can see this</Kicker>
+                <p style={{ fontSize: 14.5, color: C.textFaint, lineHeight: 1.55, marginBottom: 14 }}>
+                  Hidden engagements still count toward your skills. Your total engagement count is never displayed, so nobody can tell anything was hidden.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {([
+                    { v: 'full', label: 'Public', desc: 'Shows the project and who posted it.' },
+                    { v: 'redacted', label: 'Redacted', desc: 'Displays only that the work happened.' },
+                    { v: 'hidden', label: 'Hidden', desc: 'Not on your profile at all.' },
+                  ]).map(({ v, label, desc }) => (
+                    <label
+                      key={v}
+                      style={{
+                        display: 'flex', alignItems: 'flex-start', gap: 10, padding: '11px 14px',
+                        background: data.visibility === v ? '#EDE9FF' : C.bg,
+                        border: `1px solid ${data.visibility === v ? '#D9D0F5' : 'transparent'}`,
+                        borderRadius: R.md, cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="radio" name="visibility" checked={data.visibility === v} disabled={busy}
+                        onChange={() => patch({ visibility: v }, 'Visibility updated.')}
+                        style={{ marginTop: 3, accentColor: C.accent }}
+                      />
+                      <span>
+                        <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: C.text }}>{label}</span>
+                        <span style={{ fontSize: 13.5, color: C.textGhost, lineHeight: 1.45 }}>{desc}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {terminal && data.stage === 'closed' && (
+              <Card hoverable={false} padding={22}>
+                <Badge tone="positive">Closed out</Badge>
+                <p style={{ fontSize: 14.5, color: C.textFaint, lineHeight: 1.55, marginTop: 12 }}>
+                  {data.closedAt ? `Finished on ${new Date(data.closedAt).toLocaleDateString()}.` : 'Finished.'} Neither side can change the description now.
+                </p>
+              </Card>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   )

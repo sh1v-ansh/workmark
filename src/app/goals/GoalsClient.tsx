@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
-import { Icon } from '@/components/Icon'
+import Button from '@/components/ui/Button'
+import Badge, { type BadgeTone } from '@/components/ui/Badge'
+import Section, { Kicker } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
-import { C, F } from '@/lib/theme/dark-tokens'
-import { tagColor } from '@/lib/theme/tagColors'
+import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 
 export interface GoalsData {
@@ -31,11 +32,24 @@ export interface GoalsData {
   agentsAvailable: boolean
 }
 
-const TIER_COLOR: Record<FitTier, string> = {
-  strong_fit: '#15803D',
-  competitive: '#0369A1',
-  reach: '#B45309',
-  not_yet: '#6B7280',
+const TIER_TONE: Record<FitTier, BadgeTone> = {
+  strong_fit: 'positive',
+  competitive: 'info',
+  reach: 'caution',
+  not_yet: 'neutral',
+}
+
+/** A single number carrying a whole argument. Deliberately oversized. */
+function BigStat({ value, suffix, caption, tone }: { value: string | number; suffix?: string; caption: string; tone?: string }) {
+  return (
+    <Card hoverable={false} padding={24} style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div style={{ fontFamily: F.display, fontSize: 52, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums', color: tone ?? C.text }}>
+        {value}
+        {suffix && <span style={{ fontSize: 24, color: C.textGhost }}>{suffix}</span>}
+      </div>
+      <div style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.5, marginTop: 8 }}>{caption}</div>
+    </Card>
+  )
 }
 
 export default function GoalsClient({ data }: { data: GoalsData }) {
@@ -65,152 +79,181 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
     }
   }
 
-  const nothingOpen = data.recommendations.length === 0
+  const [topGap, ...otherGaps] = data.gaps
+  const topRecs = data.recommendations.slice(0, 3)
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
       <Navbar userName={data.studentName ?? undefined} />
 
-      <main style={{ maxWidth: 760, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
-        <div>
-          <h1 style={{ fontFamily: F.serif, fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 6, letterSpacing: '-0.02em' }}>
-            What to do next
-          </h1>
-          <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>
-            Built from what open projects actually ask for, compared against what your linked repos demonstrate.
-          </p>
-        </div>
+      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        {/* Honesty about the sample size — §8 says say so when it's seeded
-            or thin, rather than presenting a distribution that isn't one. */}
-        {data.thinData && (
-          <Card hoverable={false} padding={16} style={{ borderColor: 'rgba(217,119,6,0.3)', background: 'rgba(217,119,6,0.06)' }}>
-            <p style={{ fontSize: 12, color: '#B45309', lineHeight: 1.6 }}>
+        <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.025em', color: C.text, marginBottom: 20 }}>
+          What to build next
+        </h1>
+
+        {/* Focal band. The single gap worth closing takes two thirds; the
+            evidence for the claim takes the last third as two numbers, so
+            the argument is legible before a word of it is read. */}
+        {topGap ? (
+          <div className="nb-g3" style={{ marginBottom: 26 }}>
+            <div className="nb-focal nb-s2" style={{ padding: '32px 34px' }}>
+              <Kicker style={{ color: C.accentInk }}>The one gap worth closing</Kicker>
+              <p style={{ fontFamily: F.display, fontSize: 38, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1.1, color: C.text, margin: '16px 0 14px' }}>
+                Build something with {topGap.name}.
+              </p>
+              <p style={{ fontSize: 16.5, color: C.textMuted, lineHeight: 1.65, maxWidth: 470, marginBottom: 26 }}>
+                {topGap.listingCount === 1
+                  ? `One of the projects open right now asks for ${topGap.name}, and nothing in your record touches it.`
+                  : `${topGap.listingCount} of the projects open right now ask for ${topGap.name}, and nothing in your record touches it.`}
+                {' '}One weekend project would put it there permanently.
+              </p>
+              {data.agentsAvailable ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  <Button
+                    variant="accent"
+                    onClick={() => buildFor(topGap.skillId, topGap.name)}
+                    busyLabel={buildingSkill === topGap.skillId ? 'Thinking…' : null}
+                  >
+                    Write me the brief
+                  </Button>
+                  <span style={{ fontSize: 15, color: C.textGhost }}>You can change it before you start</span>
+                </div>
+              ) : (
+                <p style={{ fontSize: 15, color: C.textGhost }}>
+                  Project briefs need an Anthropic API key configured. The gap itself stands either way.
+                </p>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, alignSelf: 'stretch' }}>
+              <BigStat
+                value={topGap.listingCount}
+                suffix={`/${data.derivedFromListings}`}
+                caption={`of the open projects ask for ${topGap.name}`}
+              />
+              <BigStat value={0} caption="repositories of yours touch it" tone={state.caution} />
+            </div>
+          </div>
+        ) : (
+          <Card hoverable={false} padding={30} style={{ marginBottom: 26 }}>
+            <p style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 10 }}>
+              Nothing open is asking for something you don&apos;t have.
+            </p>
+            <p style={{ fontSize: 16.5, color: C.textMuted, lineHeight: 1.6, maxWidth: 560 }}>
               {data.derivedFromListings === 0
-                ? "There are no open projects yet, so there's nothing to derive demand from. What's below will fill in as projects get posted."
-                : `This is derived from only ${data.derivedFromListings} project${data.derivedFromListings === 1 ? '' : 's'}, so treat it as a sample rather than a trend. It gets more reliable as more get posted.`}
+                ? 'There are no open projects to compare against yet. This page fills in as projects get posted.'
+                : 'Every skill the open projects ask for is already evidenced somewhere in your record. Apply to something, or build for its own sake.'}
             </p>
           </Card>
         )}
 
-        {/* Gaps — the actionable half */}
-        {data.gaps.length > 0 && (
-          <section>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>
-              What&apos;s missing from your record
-            </h2>
-            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
-              Skills open projects ask for that nothing in your linked repos demonstrates. Each one is a project away from being on your record.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {data.gaps.map((g) => {
-                const c = tagColor(g.name)
-                return (
-                  <div key={g.skillId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 8, flexWrap: 'wrap' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}>
-                        {g.name}
-                      </span>
-                      <span style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                        {g.listingCount} project{g.listingCount === 1 ? '' : 's'} want this
-                      </span>
-                    </div>
-                    {data.agentsAvailable && (
-                      <button
-                        onClick={() => buildFor(g.skillId, g.name)}
-                        disabled={buildingSkill === g.skillId}
-                        className="wm-btn wm-btn-secondary wm-btn-sm"
-                        style={{ display: 'inline-flex' }}
-                      >
-                        {buildingSkill === g.skillId ? 'Thinking…' : 'Get something to build'}
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </section>
+        {/* Honesty about the sample size — §8 says say so when it's thin,
+            rather than presenting a distribution that isn't one. */}
+        {data.thinData && (
+          <div style={{ background: state.cautionBg, borderRadius: R.md, padding: '13px 18px', fontSize: 14.5, color: '#6B3A0A', lineHeight: 1.55, marginBottom: 34 }}>
+            {data.derivedFromListings === 0
+              ? 'There are no open projects yet, so there is nothing to derive demand from. This fills in as projects get posted.'
+              : `This is derived from only ${data.derivedFromListings} project${data.derivedFromListings === 1 ? '' : 's'}, so treat it as a sample rather than the market. It sharpens as more get posted.`}
+          </div>
         )}
 
-        {/* Recommendations */}
-        <section>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text }}>Where you can act today</h2>
-            <span style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-              {data.activeApplicationCount}/5 slots used
-            </span>
-          </div>
-          <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
-            Open projects you haven&apos;t applied to, best fit first.
-          </p>
-
-          {nothingOpen ? (
-            <Card hoverable={false} padding={24}>
-              <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginBottom: data.gaps.length ? 14 : 0 }}>
+        {/* Three across reads as a set you choose from. The same three
+            stacked would read as a queue you work through. */}
+        <Section
+          label="Open now, and you already fit"
+          explain={topRecs.length > 0 ? 'The percentage is how much of what each project asks for your record already covers.' : undefined}
+          aside={<span style={{ fontSize: 14, color: C.textGhost }}>{data.activeApplicationCount}/5 slots used</span>}
+        >
+          {topRecs.length === 0 ? (
+            <Card hoverable={false} padding={26}>
+              <p style={{ fontSize: 16, color: C.textMuted, lineHeight: 1.6, maxWidth: 620 }}>
                 {data.openListingCount === 0
-                  ? "Nothing is open right now. Rather than invent a plan for an empty marketplace: build something in one of the skills below, and it's on your record whenever projects do appear."
+                  ? 'Nothing is open right now. Rather than invent a plan for an empty marketplace: build, and the evidence is on your record whenever projects do appear.'
                   : "You've applied to everything currently open. The most useful thing you can do now is build — evidence you add today is what you'll be matched on tomorrow."}
               </p>
-              {data.gaps.length > 0 && data.agentsAvailable && (
-                <button
-                  onClick={() => buildFor(data.gaps[0].skillId, data.gaps[0].name)}
-                  disabled={buildingSkill === data.gaps[0].skillId}
-                  className="wm-btn wm-btn-primary wm-btn-sm"
-                  style={{ display: 'inline-flex' }}
-                >
-                  <Icon name="plus" size={12} /> Get a project idea for {data.gaps[0].name}
-                </button>
-              )}
             </Card>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {data.recommendations.map((r) => (
-                <Card key={r.id} href={`/listings/${r.id}`} padding={16}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{r.title}</p>
-                      <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                        {[r.posterName, `${Math.round(r.matchedShare * 100)}% of what it asks for`].filter(Boolean).join(' · ')}
-                      </p>
+            <div className="nb-g3">
+              {topRecs.map((r) => (
+                <Card key={r.id} href={`/listings/${r.id}`} padding={22}>
+                  <p style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.3, color: C.text, marginBottom: 6 }}>
+                    {r.title}
+                  </p>
+                  <p style={{ fontSize: 13.5, color: C.textGhost, marginBottom: 16 }}>{r.posterName ?? 'Unnamed poster'}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <div style={{ flexGrow: 1, height: 6, borderRadius: 3, background: C.border, overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.round(r.matchedShare * 100)}%`, height: '100%', background: C.accent }} />
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: TIER_COLOR[r.tier], fontFamily: F.mono, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' }}>
-                      {FIT_TIER_LABEL[r.tier]}
+                    <span style={{ fontSize: 13.5, fontWeight: 700, color: C.accentInk, fontVariantNumeric: 'tabular-nums' }}>
+                      {Math.round(r.matchedShare * 100)}%
                     </span>
                   </div>
-                  {r.missingNames.length > 0 && (
-                    <p style={{ fontSize: 11, color: C.textFaint, lineHeight: 1.5 }}>
-                      Missing: {r.missingNames.join(', ')}
-                    </p>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <Badge tone={TIER_TONE[r.tier]}>{FIT_TIER_LABEL[r.tier]}</Badge>
+                    {r.missingNames.length > 0 && (
+                      <span style={{ fontSize: 13, color: C.textGhost }}>
+                        missing {r.missingNames.slice(0, 2).join(', ')}
+                      </span>
+                    )}
+                  </div>
                 </Card>
               ))}
             </div>
           )}
-        </section>
+        </Section>
 
-        {/* Strengths — last, because it's reassurance rather than action */}
-        {data.strengths.length > 0 && (
-          <section>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>What&apos;s working</h2>
-            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
-              Skills you have evidence in that open projects are asking for.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {data.strengths.map((s) => {
-                const c = tagColor(s.name)
-                return (
-                  <span key={s.skillId} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}>
-                    {s.name}
-                    <span style={{ fontWeight: 400, opacity: 0.7 }}>{s.listingCount} want it</span>
-                  </span>
-                )
-              })}
-            </div>
-          </section>
+        {otherGaps.length > 0 && (
+          <Section label="Other gaps" explain="Worth doing, but none would change as much as the one above.">
+            <Card hoverable={false} padding="6px 22px 12px">
+              {otherGaps.map((g, i) => (
+                <div
+                  key={g.skillId}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
+                    padding: '13px 0', flexWrap: 'wrap',
+                    borderBottom: i < otherGaps.length - 1 ? `1px solid ${C.borderFaint}` : 'none',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <p style={{ fontSize: 15.5, fontWeight: 600, color: C.textSub, marginBottom: 2 }}>{g.name}</p>
+                    <p style={{ fontSize: 13.5, color: C.textGhost }}>
+                      Asked for by {g.listingCount} of {data.derivedFromListings} open project{data.derivedFromListings === 1 ? '' : 's'}
+                    </p>
+                  </div>
+                  {data.agentsAvailable && (
+                    <Button
+                      variant="quiet"
+                      size="sm"
+                      onClick={() => buildFor(g.skillId, g.name)}
+                      busyLabel={buildingSkill === g.skillId ? 'Thinking…' : null}
+                    >
+                      Get a brief
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </Card>
+          </Section>
         )}
 
-        <p style={{ fontSize: 11, color: C.textFaint, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
-          Nothing here is a prediction. It&apos;s a count of what open projects ask for, compared against what your linked repos show —{' '}
+        {data.strengths.length > 0 && (
+          <Section label="Already covered" explain="Skills you have evidence in that open projects are asking for." gap={30}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {data.strengths.map((s) => (
+                <span
+                  key={s.skillId}
+                  style={{ fontSize: 13.5, fontWeight: 600, color: C.accentInk, background: '#EDE9FF', borderRadius: R.sm, padding: '7px 13px' }}
+                >
+                  {s.name} · asked for by {s.listingCount}
+                </span>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        <p style={{ fontSize: 14, color: C.textGhost, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 18 }}>
+          Nothing here is a prediction. It is a count of what open projects ask for, compared against what your linked repositories show —{' '}
           <Link href="/me" style={{ color: C.textMuted, textDecoration: 'none' }}>see your record</Link>.
         </p>
       </main>

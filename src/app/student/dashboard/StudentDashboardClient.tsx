@@ -8,8 +8,8 @@ import { createClient } from '@/lib/supabase/client'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
-import Badge, { type BadgeTone } from '@/components/ui/Badge'
-import Underline from '@/components/ui/Underline'
+import { type BadgeTone } from '@/components/ui/Badge'
+import { Kicker, Stat } from '@/components/ui/Section'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
 
@@ -42,11 +42,8 @@ export interface DashboardData {
 const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
 const MAX_ACTIVE_APPLICATIONS = 5
 
-// Status words, written the way a person would say them. "submitted" is
-// what the database calls it; "waiting to be read" is what is actually
-// happening to you, and it is the difference between a table and a product.
 const APPLICATION_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
-  submitted:   { label: 'Waiting to be read', tone: 'neutral' },
+  submitted:   { label: 'Not read yet',       tone: 'neutral' },
   shortlisted: { label: "They're interested", tone: 'info' },
   accepted:    { label: "You're in",          tone: 'positive' },
   rejected:    { label: 'Not this time',      tone: 'neutral' },
@@ -54,7 +51,7 @@ const APPLICATION_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
 }
 
 const STAGE_LABEL: Record<string, string> = {
-  open: 'Getting started',
+  accepted: 'Getting started',
   in_progress: 'In progress',
   submitted: 'Waiting on sign-off',
   closed: 'Finished',
@@ -70,32 +67,52 @@ function relativeDays(iso: string): string {
   return months === 1 ? 'a month ago' : `${months} months ago`
 }
 
-function SectionTitle({ children, aside }: { children: React.ReactNode; aside?: React.ReactNode }) {
+/** One of the three glyphs a to-do can carry. Drawn, never emoji. */
+function TodoIcon({ kind, size = 21 }: { kind: Todo['kind']; size?: number }) {
+  const stroke = { message: C.accent, signoff: '#94500F', applicants: '#1D4ED8', github: C.accent }[kind]
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-      <h2 style={{ fontFamily: F.display, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', color: C.text }}>{children}</h2>
-      {aside}
-    </div>
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      {kind === 'message' && (
+        <path d="M4 6.5A2.5 2.5 0 016.5 4h11A2.5 2.5 0 0120 6.5v7a2.5 2.5 0 01-2.5 2.5H10l-4.5 4v-4A2.5 2.5 0 014 13.5v-7z" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round" />
+      )}
+      {kind === 'signoff' && (
+        <>
+          <path d="M6 4h8l4 4v12H6V4z" stroke={stroke} strokeWidth="1.8" strokeLinejoin="round" />
+          <path d="M9 13.5l2 2 4-4.5" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      )}
+      {kind === 'applicants' && (
+        <>
+          <circle cx="9" cy="8" r="3.2" stroke={stroke} strokeWidth="1.8" />
+          <path d="M3.5 19c.6-3 2.8-4.6 5.5-4.6S13.9 16 14.5 19" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M16 6.2a3 3 0 010 5.6M17.6 14.8c1.9.6 3.9 2.2 3.4 4.2" stroke={stroke} strokeWidth="1.8" strokeLinecap="round" />
+        </>
+      )}
+      {kind === 'github' && (
+        <path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49l-.01-1.72c-2.78.62-3.37-1.37-3.37-1.37-.46-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.62.07-.62 1 .07 1.53 1.06 1.53 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.55-1.14-4.55-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.3 9.3 0 015 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.33 4.8-4.56 5.05.36.32.68.94.68 1.9l-.01 2.82c0 .27.18.6.69.49A10.06 10.06 0 0022 12.25C22 6.58 17.52 2 12 2z" fill={stroke} />
+      )}
+    </svg>
   )
 }
 
-/** One row inside a card — title, a quiet second line, and something on the right. */
-function Row({ title, meta, right, href }: { title: string; meta: string; right?: React.ReactNode; href?: string }) {
-  const body = (
-    <>
-      <div style={{ minWidth: 0 }}>
-        <p style={{ fontSize: T.body, fontWeight: 600, color: C.text, marginBottom: 2 }}>{title}</p>
-        <p style={{ fontSize: T.meta, color: C.textFaint }}>{meta}</p>
-      </div>
-      {right && <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>{right}</div>}
-    </>
-  )
-  const style: React.CSSProperties = {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-    padding: '15px 17px', background: C.bg, borderRadius: R.md, flexWrap: 'wrap',
-    textDecoration: 'none', color: 'inherit',
-  }
-  return href ? <Link href={href} style={style}>{body}</Link> : <div style={style}>{body}</div>
+interface Todo {
+  key: string
+  kind: 'message' | 'signoff' | 'applicants' | 'github'
+  /** The fact that matters, not the name of the task. */
+  headline: string
+  body: string
+  /** Shown only on the focal card, where there is room for it. */
+  detail?: string
+  href: string
+  cta: string
+  eyebrow: string
+}
+
+const ICON_BG: Record<Todo['kind'], string> = {
+  message: '#EDE9FF',
+  signoff: '#FBEFE0',
+  applicants: '#E4EBFF',
+  github: '#EDE9FF',
 }
 
 export default function StudentDashboardClient({ data }: { data: DashboardData }) {
@@ -106,10 +123,6 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
   const activeEngagements = engagements.filter((e) => e.stage !== 'closed' && e.stage !== 'abandoned')
 
-  // Withdrawing frees a slot against the 5-application cap — without
-  // this, a student who applied to five stale listings is stuck.
-  // The RLS policy permits exactly the submitted -> withdrawn transition
-  // on their own row, so no API route is needed.
   async function withdraw(id: string) {
     if (!confirm('Withdraw this application? You can apply again later while the project is still open.')) return
     setWithdrawing(id)
@@ -120,132 +133,250 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
     setWithdrawing(null)
   }
 
-  // ── What's actually waiting on you ────────────────────────────────────
-  // The old dashboard opened with statistics, which answer a question
-  // nobody arrives with. This answers the one they do: is there anything
-  // I need to do? Every item is derived from real state — if there is
-  // nothing, the block does not appear rather than inventing filler.
-  const todo: { key: string; title: string; body: string; href: string; cta: string; accent?: boolean }[] = []
+  // ── What needs you ────────────────────────────────────────────────────
+  // Ordered by how much the delay costs. A person waiting on a reply is
+  // the most expensive thing on the list; a listing collecting applicants
+  // is the least. The first item gets the focal card, so this ordering is
+  // the page's judgement about what to do first — it is not decoration.
+  const todos: Todo[] = []
 
   if (!githubConnected) {
-    todo.push({
+    todos.push({
       key: 'github',
-      title: 'Connect GitHub to start your record',
-      body: 'Your skills come from repositories you link. Nothing else here works without it.',
+      kind: 'github',
+      headline: 'Your record is empty until GitHub is connected',
+      body: 'Every skill here is read out of repositories you link.',
+      detail: 'Nothing else on Workmark does anything useful until this is done — matching, applying and your public profile all read from it.',
       href: '/student/github',
-      cta: 'Connect',
-      accent: true,
+      cta: 'Connect GitHub',
+      eyebrow: 'Start here',
     })
   }
   for (const a of applications) {
-    if (a.status === 'shortlisted' || a.status === 'accepted') {
-      todo.push({
+    if (a.status === 'accepted') {
+      todos.push({
         key: `app-${a.id}`,
-        title: a.status === 'accepted'
-          ? `${a.posterName ?? 'A poster'} accepted you`
-          : `${a.posterName ?? 'A poster'} shortlisted you`,
+        kind: 'message',
+        headline: `${a.posterName ?? 'The poster'} accepted you`,
         body: a.title,
+        detail: 'Their contact details are on the project page. The engagement starts when one of you opens it.',
         href: `/listings/${a.listingId}`,
-        cta: a.status === 'accepted' ? 'Open it' : 'Reply',
+        cta: 'Open it',
+        eyebrow: 'Do this first',
+      })
+    } else if (a.status === 'shortlisted') {
+      todos.push({
+        key: `app-${a.id}`,
+        kind: 'message',
+        headline: `${a.posterName ?? 'A poster'} is deciding`,
+        body: a.title,
+        detail: `They shortlisted you ${relativeDays(a.createdAt)} and can send two more messages before choosing. Not replying reads as not interested.`,
+        href: `/listings/${a.listingId}`,
+        cta: 'Reply',
+        eyebrow: 'Do this first',
       })
     }
   }
   for (const e of activeEngagements) {
     if (e.stage === 'submitted') {
-      todo.push({
+      todos.push({
         key: `eng-${e.id}`,
-        title: 'Agree on what was built',
-        body: `${e.title} — nothing lands on your record until you both sign off.`,
+        kind: 'signoff',
+        headline: 'Agree on what was built',
+        body: e.title,
+        detail: 'Nothing lands on your record until you both sign off, and neither of you can write the other’s version of what happened.',
         href: `/engagements/${e.id}`,
-        cta: 'Take a look',
+        cta: 'Review it',
+        eyebrow: 'Waiting on you',
       })
     }
   }
   for (const l of listings) {
     if (l.status === 'open' && l.applicantCount > 0) {
-      todo.push({
+      todos.push({
         key: `list-${l.id}`,
-        title: `${l.applicantCount} ${l.applicantCount === 1 ? 'person has' : 'people have'} applied to your project`,
+        kind: 'applicants',
+        headline: `${l.applicantCount} ${l.applicantCount === 1 ? 'person has' : 'people have'} applied to your project`,
         body: l.title ?? 'Untitled project',
+        detail: 'You can see exactly which of your required skills each of them has evidence for, and which they only claimed.',
         href: `/listings/${l.id}/applicants`,
-        cta: 'Review them',
+        cta: 'See them',
+        eyebrow: 'Your project',
       })
     }
   }
 
+  const [lead, ...restTodos] = todos
+  const rail = restTodos.slice(0, 2)
+  const overflow = restTodos.slice(2)
+
+  // Everything that is genuinely not the reader's move. Deliberately one
+  // list rather than three sections: from where they sit, an unread
+  // application and an in-flight engagement are the same thing.
+  const waiting: { key: string; title: string; meta: string; right: React.ReactNode; href: string }[] = []
+  for (const e of activeEngagements) {
+    if (e.stage === 'submitted') continue
+    waiting.push({
+      key: `w-eng-${e.id}`,
+      title: e.title,
+      meta: `${e.asPoster ? 'You posted this' : 'In progress'} · opened ${relativeDays(e.openedAt)}`,
+      right: <span style={{ fontSize: 13.5, color: C.textFaint }}>{STAGE_LABEL[e.stage] ?? e.stage}</span>,
+      href: `/engagements/${e.id}`,
+    })
+  }
+  for (const a of applications) {
+    if (a.status === 'accepted' || a.status === 'shortlisted') continue
+    const s = APPLICATION_STATUS[a.status] ?? { label: a.status, tone: 'neutral' as BadgeTone }
+    waiting.push({
+      key: `w-app-${a.id}`,
+      title: a.title,
+      meta: `Applied ${relativeDays(a.createdAt)}${a.posterName ? ` · ${a.posterName}` : ''}`,
+      right: a.status === 'submitted' ? (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={(e) => { e.preventDefault(); withdraw(a.id) }}
+            disabled={withdrawing === a.id}
+            style={{ fontSize: 13.5, color: C.textGhost, background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit' }}
+          >
+            {withdrawing === a.id ? 'Withdrawing…' : 'Withdraw'}
+          </button>
+          <span style={{ fontSize: 13.5, color: C.textFaint }}>{s.label}</span>
+        </span>
+      ) : (
+        <span style={{ fontSize: 13.5, color: C.textFaint }}>{s.label}</span>
+      ),
+      href: `/listings/${a.listingId}`,
+    })
+  }
+  for (const l of listings) {
+    if (l.status === 'open' && l.applicantCount > 0) continue
+    waiting.push({
+      key: `w-list-${l.id}`,
+      title: l.title ?? 'Untitled project',
+      meta: `Your project · posted ${relativeDays(l.createdAt)}`,
+      right: <span style={{ fontSize: 13.5, color: C.textFaint }}>{l.status === 'open' ? 'No applicants yet' : l.status}</span>,
+      href: `/listings/${l.id}/applicants`,
+    })
+  }
+
   const firstName = student.fullName?.trim().split(/\s+/)[0]
+
+  const nudge = (
+    <div style={{ background: C.bgDeep, borderRadius: R.lg, padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 168 }}>
+      <div>
+        <p style={{ fontFamily: F.display, fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.25, marginBottom: 8 }}>
+          Not sure what to build next?
+        </p>
+        <p style={{ fontSize: 14.5, color: '#A9B0C2', lineHeight: 1.55 }}>
+          We&apos;ll compare what open projects ask for against your record and hand you something small.
+        </p>
+      </div>
+      <div style={{ marginTop: 18 }}>
+        <Button href="/goals" variant="accent" size="sm">Show me the gaps</Button>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
       <Navbar role="student" userName={student.fullName ?? undefined} />
 
-      <main id="main-content" style={{ maxWidth: 820, margin: '0 auto', padding: '36px 28px 72px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        {/* Greeting */}
-        <div>
-          <h1 className="mob-text-h1" style={{ fontFamily: F.display, fontSize: T.display, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.12, color: C.text }}>
-            {firstName ? `Hey ${firstName} — ` : ''}
-            {todo.length > 0 ? (
-              <>
-                {todo.length === 1 ? 'one thing is ' : `${todo.length} things are `}
-                <Underline>waiting on you</Underline>.
-              </>
-            ) : (
-              <>you&apos;re all caught up.</>
-            )}
+        {/* Header — the answer, not a greeting */}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.025em', color: C.text }}>
+            {todos.length === 0
+              ? `You're all caught up${firstName ? `, ${firstName}` : ''}`
+              : `${todos.length === 1 ? 'One thing needs' : `${todos.length} things need`} you`}
           </h1>
-          <p style={{ fontSize: 17, color: C.textMuted, marginTop: 16 }}>
-            {[student.degreeType, student.major, student.university].filter(Boolean).join(' · ') || 'Welcome back.'}
-          </p>
+          <span style={{ fontSize: 15, color: C.textGhost }}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </span>
         </div>
 
-        {/* Waiting on you */}
-        {todo.length > 0 && (
-          <Card padding={6} hoverable={false}>
-            {todo.map((item, i) => (
-              <div
-                key={item.key}
-                style={{
-                  padding: '18px 20px', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap',
-                  borderBottom: i < todo.length - 1 ? `1px solid ${C.borderFaint}` : 'none',
-                }}
-              >
-                <div style={{ flexGrow: 1, minWidth: 200 }}>
-                  <p style={{ fontFamily: F.display, fontSize: T.h3, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 3 }}>{item.title}</p>
-                  <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.5 }}>{item.body}</p>
+        {/* Focal band. The lead item is roughly four times the area of a
+            supporting tile, so the eye lands rather than searches. When the
+            rail has only one item the focal drops to a single row so the
+            band stays square-edged instead of ragged. */}
+        {lead && (
+          <div className="nb-g3" style={{ marginBottom: 18 }}>
+            <div
+              className="nb-focal nb-s2"
+              style={{ gridRow: rail.length > 1 ? 'span 2' : 'span 1', padding: '32px 34px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+            >
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 20 }}>
+                  <div style={{ width: 38, height: 38, borderRadius: 11, background: ICON_BG[lead.kind], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <TodoIcon kind={lead.kind} />
+                  </div>
+                  <Kicker style={{ color: C.accentInk }}>{lead.eyebrow}</Kicker>
                 </div>
-                <Button href={item.href} variant={item.accent ? 'accent' : 'ink'} size="sm">{item.cta}</Button>
+                <p style={{ fontFamily: F.display, fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.text, marginBottom: 12 }}>
+                  {lead.headline}
+                </p>
+                <p style={{ fontSize: 16.5, color: C.textMuted, lineHeight: 1.6, maxWidth: 470 }}>
+                  {lead.detail ?? lead.body}
+                </p>
               </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 28, flexWrap: 'wrap' }}>
+                <Button href={lead.href} variant="accent">{lead.cta}</Button>
+                <span style={{ fontSize: 15, color: C.textGhost }}>{lead.body}</span>
+              </div>
+            </div>
+
+            {rail.map((t) => (
+              <Card key={t.key} hoverable={false} padding={20} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 14, minHeight: 168 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 9, background: ICON_BG[t.kind], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <TodoIcon kind={t.kind} size={17} />
+                    </div>
+                    <Kicker>{t.eyebrow}</Kicker>
+                  </div>
+                  <p style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.25, color: C.text, marginBottom: 4 }}>
+                    {t.headline}
+                  </p>
+                  <p style={{ fontSize: 14, color: C.textFaint, lineHeight: 1.45 }}>{t.body}</p>
+                </div>
+                <div><Button href={t.href} variant="outline" size="sm">{t.cta}</Button></div>
+              </Card>
             ))}
-          </Card>
+
+            {/* With no rail items the third column would sit empty, so the
+                page's one accent panel moves up to fill it. */}
+            {rail.length === 0 && nudge}
+          </div>
         )}
 
-        {/* The record */}
-        <div>
-          <Card ruled hoverable={false} padding={24}>
-            <SectionTitle aside={<Link href="/me" style={{ fontSize: T.meta, color: C.accent, fontWeight: 600, textDecoration: 'none' }}>See everything →</Link>}>
-              Your record
-            </SectionTitle>
+        {overflow.length > 0 && (
+          <div className="nb-g3" style={{ marginBottom: 18 }}>
+            {overflow.map((t) => (
+              <Card key={t.key} hoverable={false} padding={18} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: 15.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{t.headline}</p>
+                  <p style={{ fontSize: 13.5, color: C.textGhost }}>{t.body}</p>
+                </div>
+                <Button href={t.href} variant="outline" size="sm">{t.cta}</Button>
+              </Card>
+            ))}
+          </div>
+        )}
 
-            <div style={{ display: 'flex', gap: 34, flexWrap: 'wrap', marginBottom: 22 }}>
-              <div>
-                <div style={{ fontFamily: F.display, fontSize: 40, fontWeight: 800, lineHeight: 1, color: C.text }}>{skills.length}</div>
-                <div style={{ fontSize: T.meta, color: C.textFaint, marginTop: 3 }}>{skills.length === 1 ? 'skill proven' : 'skills proven'}</div>
+        {/* Second band — the record at two thirds against the accent panel */}
+        <div className="nb-g3" style={{ marginBottom: 18 }}>
+          <Card ruled hoverable={false} padding={26} className={lead && rail.length === 0 ? 'nb-s3' : 'nb-s2'}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 20, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
+                <Stat value={skills.length} label={skills.length === 1 ? 'skill proven' : 'skills proven'} />
+                {trackRecord.closeOutRate !== null && (
+                  <Stat value={trackRecord.closed} suffix={`/${trackRecord.closed + trackRecord.abandoned}`} label="projects finished" />
+                )}
+                {trackRecord.active > 0 && <Stat value={trackRecord.active} label="in flight" />}
               </div>
-              {trackRecord.closeOutRate !== null && (
-                <div>
-                  <div style={{ fontFamily: F.display, fontSize: 40, fontWeight: 800, lineHeight: 1, color: C.text }}>
-                    {trackRecord.closed}<span style={{ fontSize: 22, color: C.textGhost }}>/{trackRecord.closed + trackRecord.abandoned}</span>
-                  </div>
-                  <div style={{ fontSize: T.meta, color: C.textFaint, marginTop: 3 }}>projects finished</div>
-                </div>
-              )}
-              {trackRecord.active > 0 && (
-                <div>
-                  <div style={{ fontFamily: F.display, fontSize: 40, fontWeight: 800, lineHeight: 1, color: C.text }}>{trackRecord.active}</div>
-                  <div style={{ fontSize: T.meta, color: C.textFaint, marginTop: 3 }}>in flight</div>
-                </div>
-              )}
+              <Link href="/me" style={{ fontSize: 14, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                See it all →
+              </Link>
             </div>
 
             {skills.length === 0 ? (
@@ -255,17 +386,17 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
                   : 'Connect GitHub and scan your repositories — everything on this page grows from that.'}
               </p>
             ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {skills.map((s) => {
                   const strong = s.bestLevel >= 3
                   return (
                     <span
                       key={s.skillId}
                       style={{
-                        fontSize: T.meta, fontWeight: strong ? 600 : 500,
+                        fontSize: 13.5, fontWeight: strong ? 600 : 500,
                         color: strong ? C.accentInk : C.textMuted,
                         background: strong ? '#EDE9FF' : C.surfaceAlt,
-                        borderRadius: R.sm, padding: '7px 13px',
+                        borderRadius: R.sm, padding: '6px 12px',
                       }}
                     >
                       {s.name} · {LEVEL_NAMES[s.bestLevel] ?? s.bestLevel}
@@ -275,103 +406,43 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
               </div>
             )}
           </Card>
+
+          {!(lead && rail.length === 0) && nudge}
         </div>
 
-        {/* The one accent moment on the page */}
-        <div style={{ background: C.bgDeep, borderRadius: R.lg, padding: '24px 26px', display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
-          <div style={{ flexGrow: 1, minWidth: 240 }}>
-            <p style={{ fontFamily: F.display, fontSize: T.h2, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', marginBottom: 6 }}>
-              Not sure what to build next?
-            </p>
-            <p style={{ fontSize: T.bodySm, color: '#A9B0C2', lineHeight: 1.6 }}>
-              We&apos;ll look at what open projects are actually asking for, compare it to your record, and hand you something small enough to finish this weekend.
-            </p>
-          </div>
-          <Button href="/goals" variant="accent" size="sm">Show me the gaps</Button>
-        </div>
-
-        {/* Active work */}
-        {activeEngagements.length > 0 && (
-          <Card hoverable={false} padding={24}>
-            <SectionTitle>Work in flight</SectionTitle>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {activeEngagements.map((e) => (
-                <Row
-                  key={e.id}
-                  href={`/engagements/${e.id}`}
-                  title={e.title}
-                  meta={`${e.asPoster ? 'You posted this' : 'You were accepted'} · opened ${relativeDays(e.openedAt)}`}
-                  right={<Badge tone={e.stage === 'submitted' ? 'info' : 'neutral'}>{STAGE_LABEL[e.stage] ?? e.stage.replace('_', ' ')}</Badge>}
-                />
+        {/* Closing strip — everything that isn't the reader's move */}
+        {waiting.length > 0 && (
+          <Card hoverable={false} padding="16px 24px 18px">
+            <Kicker style={{ marginBottom: 6 }}>Waiting on someone else — nothing here needs you</Kicker>
+            <div className="nb-g3" style={{ gap: 32 }}>
+              {waiting.map((w) => (
+                <div key={w.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 0' }}>
+                  <Link href={w.href} style={{ minWidth: 0, textDecoration: 'none' }}>
+                    <p style={{ fontSize: 15, color: C.textSub }}>{w.title}</p>
+                    <p style={{ fontSize: 13.5, color: C.textGhost }}>{w.meta}</p>
+                  </Link>
+                  <span style={{ whiteSpace: 'nowrap' }}>{w.right}</span>
+                </div>
               ))}
             </div>
           </Card>
         )}
 
-        {/* Applications */}
-        <Card hoverable={false} padding={24}>
-          <SectionTitle aside={
-            <span style={{ fontSize: T.meta, color: C.textFaint }}>
-              {MAX_ACTIVE_APPLICATIONS - student.activeApplicationCount} more you can send
-            </span>
-          }>
-            Where you&apos;ve applied
-          </SectionTitle>
-          {applications.length === 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-              <p style={{ fontSize: T.body, color: C.textMuted }}>Nothing out yet.</p>
-              <Button href="/listings" variant="outline" size="sm">Find something</Button>
+        {waiting.length === 0 && todos.length === 0 && (
+          <Card hoverable={false} padding={26}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ fontFamily: F.display, fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 4 }}>
+                  Nothing out, nothing in flight.
+                </p>
+                <p style={{ fontSize: 15, color: C.textMuted }}>
+                  You have {MAX_ACTIVE_APPLICATIONS - student.activeApplicationCount} application slots free.
+                </p>
+              </div>
+              <Button href="/listings" variant="ink" size="sm">Find work</Button>
             </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {applications.map((a) => {
-                const s = APPLICATION_STATUS[a.status] ?? { label: a.status, tone: 'neutral' as BadgeTone }
-                return (
-                  <Row
-                    key={a.id}
-                    title={a.title}
-                    meta={[a.posterName, relativeDays(a.createdAt)].filter(Boolean).join(' · ')}
-                    right={
-                      <>
-                        {a.status === 'submitted' && (
-                          <Button variant="quiet" size="sm" onClick={() => withdraw(a.id)} busyLabel={withdrawing === a.id ? 'Withdrawing…' : null}>
-                            Withdraw
-                          </Button>
-                        )}
-                        <Badge tone={s.tone}>{s.label}</Badge>
-                      </>
-                    }
-                  />
-                )
-              })}
-            </div>
-          )}
-        </Card>
-
-        {/* Posted */}
-        <Card hoverable={false} padding={24}>
-          <SectionTitle aside={<Button href="/listings/new" variant="outline" size="sm">Post a project</Button>}>
-            Projects you posted
-          </SectionTitle>
-          {listings.length === 0 ? (
-            <p style={{ fontSize: T.body, color: C.textMuted, lineHeight: 1.6 }}>
-              Need a collaborator? Post a project and get matched with students whose repositories actually demonstrate what you need.
-            </p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {listings.map((l) => (
-                <Row
-                  key={l.id}
-                  href={`/listings/${l.id}/applicants`}
-                  title={l.title ?? 'Untitled project'}
-                  meta={`${l.applicantCount} ${l.applicantCount === 1 ? 'applicant' : 'applicants'} · posted ${relativeDays(l.createdAt)}`}
-                  right={<Badge tone={l.status === 'open' ? 'positive' : 'neutral'}>{l.status === 'open' ? 'Open' : l.status}</Badge>}
-                />
-              ))}
-            </div>
-          )}
-        </Card>
-
+          </Card>
+        )}
       </main>
     </div>
   )

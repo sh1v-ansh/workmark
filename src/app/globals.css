@@ -328,6 +328,48 @@
   );
 }
 
+/* ── The page grid ────────────────────────────────────────────────────────
+   Three columns, and nothing is allowed to take exactly half. A 50/50 split
+   is what makes the eye ping-pong: neither side wins, so it keeps checking
+   both. The dominant element takes .nb-s2, which puts every divider on a
+   third line instead of the middle.
+
+   Collapses to one column on narrow screens — a third of a phone is not a
+   column, it is a gutter. */
+.nb-g3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+.nb-s2 { grid-column: span 2; }
+.nb-s3 { grid-column: span 3; }
+
+/* Two thirds against one, for pages that are content + a subordinate rail. */
+.nb-split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .nb-g3 { grid-template-columns: 1fr; }
+  .nb-s2, .nb-s3 { grid-column: span 1; }
+  .nb-g3 > * { grid-row: auto !important; }
+  .nb-split { grid-template-columns: 1fr; }
+}
+
+/* The focal card. One per page — it is the thing the eye should land on,
+   and a second one means neither is focal. The wash is barely there; it
+   exists to separate the subject from the supporting cards without adding
+   another border weight. */
+.nb-focal {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FCFAFF 100%);
+  border: 1px solid #D9D0F5;
+  border-radius: 14px;
+}
+
 /* ── Cards ────────────────────────────────────────────────────────────────
    Bordered, not floated. A hover lift on a card that isn't clickable is a
    lie about affordance, so only the link/button variants get it. */
