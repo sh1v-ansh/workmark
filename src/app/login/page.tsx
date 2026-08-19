@@ -121,7 +121,7 @@ export default function LoginPage() {
     return (
       <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
-          <Wordmark height={33} />
+          <Wordmark height={26} />
         </Link>
 
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 40, width: '100%', maxWidth: 380, textAlign: 'center' }}>
@@ -165,7 +165,7 @@ export default function LoginPage() {
   return (
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 40 }}>
-        <Wordmark height={33} />
+        <Wordmark height={26} />
       </Link>
 
       <div style={{ width: '100%', maxWidth: 380 }}>

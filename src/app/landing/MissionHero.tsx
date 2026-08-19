@@ -140,7 +140,7 @@ export function MissionHero() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 1000, margin: '28px auto 0', display: 'flex', justifyContent: 'center', opacity: 0.5 }}>
-        <Wordmark height={27} />
+        <Wordmark height={22} />
       </div>
     </section>
   )

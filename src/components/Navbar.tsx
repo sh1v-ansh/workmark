@@ -46,7 +46,7 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
       <nav aria-label="Main navigation" style={{ maxWidth: 1100, margin: '0 auto', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Logo */}
         <Link href={dashboardHref} aria-label="Workmark dashboard" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <Wordmark height={27} />
+          <Wordmark height={22} />
         </Link>
 
         {/* Desktop links */}

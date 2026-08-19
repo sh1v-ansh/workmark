@@ -270,7 +270,7 @@ export default function OnboardingPage() {
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px' }}>
       <div style={{ width: '100%', maxWidth: 540, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <Wordmark height={33} />
+          <Wordmark height={26} />
         </Link>
         {userEmail && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

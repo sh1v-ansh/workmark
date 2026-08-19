@@ -48,7 +48,7 @@ export default function PublicProfileClient({
       ) : (
         <header style={{ borderBottom: `1px solid ${C.border}`, padding: '0 24px', height: 56, display: 'flex', alignItems: 'center' }}>
           <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <Wordmark height={27} />
+            <Wordmark height={22} />
           </Link>
         </header>
       )}
