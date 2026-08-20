@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { C, F } from '@/lib/theme/dark-tokens'
+import { C, R, E } from '@/lib/theme/dark-tokens'
 
 interface Props {
   id: string
@@ -92,8 +92,9 @@ export function Combobox({ id, value, onChange, options, placeholder, required }
           style={{
             position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
             background: C.surface, border: `1px solid ${C.border}`, borderTop: 'none',
+            borderRadius: `0 0 ${R.md}px ${R.md}px`,
             maxHeight: 220, overflowY: 'auto', margin: 0, padding: 0, listStyle: 'none',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            boxShadow: E.overlay,
           }}
         >
           {filtered.map((option, i) => (
@@ -105,13 +106,12 @@ export function Combobox({ id, value, onChange, options, placeholder, required }
               onMouseDown={(e) => { e.preventDefault(); select(option) }}
               onMouseEnter={() => setHighlighted(i)}
               style={{
-                padding: '9px 14px',
-                fontFamily: F.mono,
-                fontSize: 12,
+                padding: '10px 15px',
+                fontSize: 15,
                 color: i === highlighted ? C.text : C.textSub,
                 background: i === highlighted ? C.accentHover : 'transparent',
                 cursor: 'pointer',
-                borderTop: i > 0 ? `1px solid ${C.border}` : 'none',
+                borderTop: i > 0 ? `1px solid ${C.borderFaint}` : 'none',
               }}
             >
               {option}

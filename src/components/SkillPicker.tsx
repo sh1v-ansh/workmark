@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { C, F } from '@/lib/theme/dark-tokens'
+import { C, F, R, E } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 
 // Picks from the fixed taxonomy only — free text isn't accepted here.
@@ -76,13 +76,13 @@ export default function SkillPicker({ taxonomy, value, onChange, max = 8 }: {
           aria-label="Search skills"
         />
         {matches.length > 0 && (
-          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 20, marginTop: 4, background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.md, overflow: 'hidden', boxShadow: E.overlay }}>
             {matches.map((s) => (
               <button
                 key={s.id}
                 type="button"
                 onClick={() => add(s)}
-                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 13, fontFamily: F.mono, cursor: 'pointer' }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 15px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 15, cursor: 'pointer', font: 'inherit' }}
               >
                 {s.canonical_name}
               </button>

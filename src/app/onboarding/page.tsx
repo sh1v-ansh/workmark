@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import Link from 'next/link'
-import { C, F } from '@/lib/theme/dark-tokens'
+import Button from '@/components/ui/Button'
+import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 import { Combobox } from '@/components/Combobox'
 import { UNIVERSITIES } from '@/lib/data/universities'
 import { MAJORS } from '@/lib/data/majors'
-import { INDUSTRIES } from '@/lib/data/industries'
 
 // Student-only in MVP: company/faculty accounts are deferred to Tier 1+
 // and have no table in the v0.5 schema to write a profile into.
@@ -20,7 +20,7 @@ type Role = 'student'
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
   return (
-    <label htmlFor={htmlFor} style={{ display: 'block', fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase' as const, marginBottom: 6 }}>
+    <label htmlFor={htmlFor} style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.textSub, marginBottom: 7 }}>
       {children}
     </label>
   )
@@ -38,7 +38,7 @@ function TagInput({ label, inputId, value, onChange, placeholder }: {
   return (
     <div>
       <FieldLabel htmlFor={inputId}>{label}</FieldLabel>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 9 }}>
         <input
           id={inputId} type="text" value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -46,16 +46,14 @@ function TagInput({ label, inputId, value, onChange, placeholder }: {
           placeholder={placeholder ?? 'Add and press Enter'}
           className="dk-input" style={{ flex: 1 }}
         />
-        <button type="button" onClick={add} style={{ padding: '0 14px', background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted, fontFamily: F.mono, fontSize: 11, cursor: 'pointer' }}>
-          Add
-        </button>
+        <Button type="button" variant="outline" onClick={add}>Add</Button>
       </div>
       {value.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
           {value.map((tag) => (
-            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '2px 8px', background: C.surfaceAlt, border: `1px solid ${C.border}`, fontSize: 11, color: C.textSub, fontFamily: F.mono }}>
+            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, padding: '5px 6px 5px 12px', background: C.surfaceAlt, borderRadius: R.pill, fontSize: 13.5, color: C.textSub }}>
               {tag}
-              <button type="button" onClick={() => onChange(value.filter((t) => t !== tag))} aria-label={`Remove ${tag}`} style={{ background: 'none', border: 'none', color: C.textFaint, cursor: 'pointer', padding: 0, lineHeight: 1 }}>
+              <button type="button" onClick={() => onChange(value.filter((t) => t !== tag))} aria-label={`Remove ${tag}`} style={{ display: 'flex', background: 'none', border: 'none', color: C.textFaint, cursor: 'pointer', padding: 3, lineHeight: 1, borderRadius: '50%' }}>
                 <span aria-hidden="true">×</span>
               </button>
             </span>
@@ -99,10 +97,10 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
     })
   }
 
-  const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 6 }
+  const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column' }
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-full-name">Full name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
@@ -164,10 +162,10 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
         </div>
       </div>
 
-      <div style={{ background: C.surfaceAlt, border: `1px solid ${C.border}`, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
           <input id="student-international" type="checkbox" checked={isInternational} onChange={(e) => setIsInternational(e.target.checked)} className="dk-checkbox" />
-          <span style={{ fontSize: 13, color: C.textMuted }}>I am an international student</span>
+          <span style={{ fontSize: 15, color: C.textMuted }}>I am an international student</span>
         </label>
         {isInternational && (
           <div style={gap}>
@@ -186,12 +184,12 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
       </div>
 
       {emailDomain && (
-        <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>Signing up with <strong style={{ color: C.textMuted }}>{emailDomain}</strong></p>
+        <p style={{ fontSize: 14, color: C.textGhost }}>Signing up with <strong style={{ color: C.textMuted }}>{emailDomain}</strong></p>
       )}
 
-      <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px 0', background: loading ? C.surfaceAlt : C.accent, color: loading ? C.textMuted : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: loading ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em', transition: 'all 0.2s' }}>
-        {loading ? 'Saving profile…' : 'Complete profile →'}
-      </button>
+      <Button type="submit" variant="accent" fullWidth disabled={loading} busyLabel={loading ? 'Saving profile…' : null}>
+        Complete profile
+      </Button>
     </form>
   )
 }
@@ -268,31 +266,29 @@ export default function OnboardingPage() {
 
   return (
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '48px 24px' }}>
-      <div style={{ width: '100%', maxWidth: 540, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
+      <div style={{ width: '100%', maxWidth: 560, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40 }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <Wordmark height={26} />
         </Link>
         {userEmail && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 12, fontFamily: F.mono, color: C.textFaint }}>{userEmail}</span>
-            <button type="button" onClick={handleSignOut} style={{ fontSize: 12, fontFamily: F.mono, color: C.textMuted, background: 'none', border: `1px solid ${C.border}`, padding: '6px 12px', cursor: 'pointer' }}>
-              Sign out
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 14, color: C.textGhost }}>{userEmail}</span>
+            <button type="button" onClick={handleSignOut} className="nb-btn nb-btn-outline nb-btn-sm">Sign out</button>
           </div>
         )}
       </div>
 
-      <div style={{ width: '100%', maxWidth: 540 }}>
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 32 }}>
-          <h1 style={{ fontFamily: F.serif, fontSize: 22, fontWeight: 700, color: C.text, marginBottom: 6 }}>Welcome to Workmark</h1>
-          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24, lineHeight: 1.6 }}>
+      <div style={{ width: '100%', maxWidth: 560 }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 34 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 8 }}>Welcome to Workmark</h1>
+          <p style={{ fontSize: 15, color: C.textMuted, marginBottom: 26, lineHeight: 1.6 }}>
             Set up your student profile. Your verified skill record comes from the repos you link — this is just the basics.
           </p>
 
           {checking ? (
-            <p style={{ fontSize: 13, color: C.textFaint, fontFamily: F.mono }}>Loading…</p>
+            <p style={{ fontSize: 15, color: C.textFaint }}>Loading…</p>
           ) : eduInvalid ? (
-            <div role="alert" style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(217,119,6,0.3)', padding: '12px 16px', fontSize: 13, color: '#B45309', lineHeight: 1.6 }}>
+            <div role="alert" style={{ background: state.cautionBg, borderRadius: R.md, padding: '14px 18px', fontSize: 15, color: '#6B3A0A', lineHeight: 1.6 }}>
               Your email <strong>{userEmail}</strong> is not a .edu address. Workmark accounts require a university email to verify student status. Sign out and sign up again with your university address.
             </div>
           ) : (

@@ -4,13 +4,15 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
+import Button from '@/components/ui/Button'
+import { Kicker } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
 import SkillPicker, { type TaxonomySkill, type PickedRequirement } from '@/components/SkillPicker'
-import { C, F } from '@/lib/theme/dark-tokens'
+import { C, F, state } from '@/lib/theme/dark-tokens'
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
   return (
-    <label htmlFor={htmlFor} style={{ display: 'block', fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+    <label htmlFor={htmlFor} style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.textSub, marginBottom: 7 }}>
       {children}
     </label>
   )
@@ -109,42 +111,39 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
     <div style={{ minHeight: '100vh', background: C.bg }}>
       <Navbar role="student" userName={studentName ?? undefined} />
 
-      <main style={{ maxWidth: 640, margin: '0 auto', padding: '40px 24px' }}>
-        <h1 style={{ fontFamily: F.serif, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 6 }}>
+      <main id="main-content" style={{ maxWidth: 680, margin: '0 auto', padding: '30px 28px 72px' }}>
+        <h1 style={{ fontFamily: F.display, fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 8 }}>
           Post a project
         </h1>
-        <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 24 }}>
+        <p style={{ fontSize: 16, color: C.textMuted, marginBottom: 26 }}>
           Applicants are matched on whether their linked repos actually demonstrate the skills you list.
         </p>
 
         {agentsAvailable && (
-          <Card hoverable={false} padding={24} style={{ marginBottom: 20 }}>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Start from a description</h2>
-            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
+          <div className="nb-focal" style={{ padding: 24, marginBottom: 22 }}>
+            <Kicker style={{ color: C.accentInk, marginBottom: 9 }}>Start from a description</Kicker>
+            <p style={{ fontSize: 14.5, color: C.textMuted, marginBottom: 14, lineHeight: 1.5 }}>
               Describe the project in your own words and we&apos;ll fill in the form below. Everything stays editable — nothing is posted until you say so.
             </p>
             <textarea
               value={rough} onChange={(e) => setRough(e.target.value)} rows={3}
-              className="dk-input" style={{ resize: 'vertical', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.6, marginBottom: 10 }}
+              className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 15, marginBottom: 12 }}
               placeholder="I'm building a tool that pulls my bank transactions and categorizes them. I've done the backend but I need someone for the frontend."
               aria-label="Rough project description"
             />
-            <button
-              type="button" onClick={draftFromDescription} disabled={drafting || rough.trim().length < 20}
-              className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}
-            >
-              {drafting ? 'Drafting…' : 'Draft it for me'}
-            </button>
+            <Button type="button" variant="outline" size="sm" onClick={draftFromDescription} disabled={rough.trim().length < 20} busyLabel={drafting ? 'Drafting…' : null}>
+              Draft it for me
+            </Button>
             {unrecognized.length > 0 && (
-              <p style={{ fontSize: 11, color: '#B45309', marginTop: 10, lineHeight: 1.5 }}>
+              <p style={{ fontSize: 13.5, color: state.caution, marginTop: 12, lineHeight: 1.5 }}>
                 Skipped {unrecognized.length} suggested skill{unrecognized.length === 1 ? '' : 's'} we don&apos;t track yet ({unrecognized.join(', ')}). Add the closest match by hand if it matters.
               </p>
             )}
-          </Card>
+          </div>
         )}
 
         <Card hoverable={false} padding={28}>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
             <div style={gap}>
               <FieldLabel htmlFor="listing-title">Title <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
               <input id="listing-title" required value={title} onChange={(e) => setTitle(e.target.value)} className="dk-input" placeholder="Build a real-time collaboration backend" />
@@ -154,7 +153,7 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
               <FieldLabel htmlFor="listing-brief">What needs building <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
               <textarea
                 id="listing-brief" required value={brief} onChange={(e) => setBrief(e.target.value)}
-                rows={6} className="dk-input" style={{ resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.6 }}
+                rows={6} className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 16, lineHeight: 1.65 }}
                 placeholder="What the project is, what the collaborator would own, and what done looks like."
               />
             </div>
@@ -195,12 +194,9 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
               </div>
             </div>
 
-            <button
-              type="submit" disabled={saving}
-              style={{ width: '100%', padding: '12px 0', background: saving ? C.surfaceAlt : C.accent, color: saving ? C.textMuted : C.bg, fontFamily: F.mono, fontSize: 13, fontWeight: 500, border: 'none', cursor: saving ? 'not-allowed' : 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}
-            >
-              {saving ? 'Posting…' : 'Post project →'}
-            </button>
+            <Button type="submit" variant="accent" fullWidth disabled={saving} busyLabel={saving ? 'Posting…' : null}>
+              Post project
+            </Button>
           </form>
         </Card>
       </main>
