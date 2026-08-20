@@ -12,7 +12,7 @@ import { C, F, state } from '@/lib/theme/dark-tokens'
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
   return (
-    <label htmlFor={htmlFor} style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
+    <label htmlFor={htmlFor} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.textSub, marginBottom: 6.5 }}>
       {children}
     </label>
   )
@@ -112,22 +112,22 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
       <Navbar role="student" userName={studentName ?? undefined} />
 
       <main id="main-content" style={{ maxWidth: 680, margin: '0 auto', padding: '30px 28px 72px' }}>
-        <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 6 }}>
+        <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
           Post a project
         </h1>
-        <p style={{ fontSize: 13.5, color: C.textMuted, marginBottom: 20 }}>
+        <p style={{ fontSize: 15, color: C.textMuted, marginBottom: 23 }}>
           Applicants are matched on whether their linked repos actually demonstrate the skills you list.
         </p>
 
         {agentsAvailable && (
-          <div className="nb-focal" style={{ padding: 18, marginBottom: 18 }}>
-            <Kicker style={{ color: C.accentInk, marginBottom: 8 }}>Start from a description</Kicker>
-            <p style={{ fontSize: 12.5, color: C.textMuted, marginBottom: 12, lineHeight: 1.45 }}>
+          <div className="nb-focal" style={{ padding: 21, marginBottom: 20 }}>
+            <Kicker style={{ color: C.accentInk, marginBottom: 8.5 }}>Start from a description</Kicker>
+            <p style={{ fontSize: 13.5, color: C.textMuted, marginBottom: 13, lineHeight: 1.5 }}>
               Describe the project in your own words and we&apos;ll fill in the form below. Everything stays editable — nothing is posted until you say so.
             </p>
             <textarea
               value={rough} onChange={(e) => setRough(e.target.value)} rows={3}
-              className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 13, marginBottom: 11 }}
+              className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 14, marginBottom: 11.5 }}
               placeholder="I'm building a tool that pulls my bank transactions and categorizes them. I've done the backend but I need someone for the frontend."
               aria-label="Rough project description"
             />
@@ -135,15 +135,15 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
               Draft it for me
             </Button>
             {unrecognized.length > 0 && (
-              <p style={{ fontSize: 12, color: state.caution, marginTop: 10, lineHeight: 1.45 }}>
+              <p style={{ fontSize: 13, color: state.caution, marginTop: 11, lineHeight: 1.5 }}>
                 Skipped {unrecognized.length} suggested skill{unrecognized.length === 1 ? '' : 's'} we don&apos;t track yet ({unrecognized.join(', ')}). Add the closest match by hand if it matters.
               </p>
             )}
           </div>
         )}
 
-        <Card hoverable={false} padding={22}>
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <Card hoverable={false} padding={25}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div style={gap}>
               <FieldLabel htmlFor="listing-title">Title <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
               <input id="listing-title" required value={title} onChange={(e) => setTitle(e.target.value)} className="dk-input" placeholder="Build a real-time collaboration backend" />

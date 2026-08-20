@@ -16,7 +16,7 @@ type Role = 'student'
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
   return (
-    <label htmlFor={htmlFor} style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
+    <label htmlFor={htmlFor} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.textSub, marginBottom: 6.5 }}>
       {children}
     </label>
   )
@@ -117,21 +117,21 @@ export default function LoginPage() {
   if (pendingConfirmEmail) {
     return (
       <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-        <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 32 }}>
-          <Wordmark height={22} />
+        <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 36 }}>
+          <Wordmark height={24} />
         </Link>
 
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 30, width: '100%', maxWidth: 380, textAlign: 'center' }}>
-          <div style={{ width: 44, height: 44, background: '#EDE9FF', borderRadius: R.md, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' }} aria-hidden="true">
-            <svg width="19" height="19" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 35, width: '100%', maxWidth: 390, textAlign: 'center' }}>
+          <div style={{ width: 47, height: 47, background: '#EDE9FF', borderRadius: R.md, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 22px' }} aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
               <rect x="2" y="4" width="16" height="12" rx="1.5" stroke={C.accent} strokeWidth="1.4" />
               <path d="M2 5.5l8 5 8-5" stroke={C.accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <h1 style={{ fontFamily: F.display, fontSize: 18, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 10 }}>Check your inbox</h1>
-          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 5, lineHeight: 1.5 }}>We sent a confirmation link to</p>
-          <p style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12, wordBreak: 'break-all' }}>{pendingConfirmEmail}</p>
-          <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.5, marginBottom: 20 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 19.5, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 11 }}>Check your inbox</h1>
+          <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 5.5, lineHeight: 1.6 }}>We sent a confirmation link to</p>
+          <p style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 13, wordBreak: 'break-all' }}>{pendingConfirmEmail}</p>
+          <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 23 }}>
             Click the link in that email to activate your account, then come back here and sign in.
           </p>
           <Button variant="ink" fullWidth onClick={() => { setPendingConfirmEmail(null); setMode('signin'); setPassword('') }}>
@@ -142,7 +142,7 @@ export default function LoginPage() {
               {resending ? 'Resending…' : resendCooldown > 0 ? `Resend confirmation email (${resendCooldown}s)` : 'Resend confirmation email'}
             </Button>
           </div>
-          <p style={{ fontSize: 12, color: C.textGhost, marginTop: 15 }}>Can&apos;t find it? Check your spam folder.</p>
+          <p style={{ fontSize: 13, color: C.textGhost, marginTop: 16.5 }}>Can&apos;t find it? Check your spam folder.</p>
         </div>
       </main>
     )
@@ -150,14 +150,14 @@ export default function LoginPage() {
 
   return (
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 32 }}>
-        <Wordmark height={22} />
+      <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 36 }}>
+        <Wordmark height={24} />
       </Link>
 
-      <div style={{ width: '100%', maxWidth: 380 }}>
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 26 }}>
+      <div style={{ width: '100%', maxWidth: 390 }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 29 }}>
           {/* Mode tabs */}
-          <div role="group" aria-label="Sign in or sign up" style={{ display: 'flex', gap: 2, marginBottom: 22, background: C.bg, borderRadius: R.md, padding: 3 }}>
+          <div role="group" aria-label="Sign in or sign up" style={{ display: 'flex', gap: 2, marginBottom: 25, background: C.bg, borderRadius: R.md, padding: 3 }}>
             {(['signin', 'signup'] as Mode[]).map((m) => (
               <button
                 key={m}
@@ -165,7 +165,7 @@ export default function LoginPage() {
                 onClick={() => { setMode(m); setError(null) }}
                 aria-pressed={mode === m}
                 style={{
-                  flex: 1, padding: '8px 0', fontSize: 12.5, fontWeight: 600, border: 'none', cursor: 'pointer', borderRadius: R.sm, font: 'inherit',
+                  flex: 1, padding: '8.5px 0', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', borderRadius: R.sm, font: 'inherit',
                   background: mode === m ? C.surface : 'transparent',
                   color: mode === m ? C.text : C.textMuted,
                   boxShadow: mode === m ? '0 1px 2px rgba(25,30,46,0.08)' : 'none',
@@ -177,9 +177,9 @@ export default function LoginPage() {
             ))}
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16.5 }}>
             {mode === 'signup' && (
-              <p style={{ fontSize: 12.5, color: C.textFaint, lineHeight: 1.45 }}>
+              <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5 }}>
                 Requires a university <strong style={{ color: C.textMuted }}>.edu</strong> email address.
               </p>
             )}
@@ -214,7 +214,7 @@ export default function LoginPage() {
             </div>
 
             {error && (
-              <div role="alert" style={{ background: '#FCE9E9', borderRadius: R.md, padding: '10px 13px', fontSize: 12.5, color: '#B91C1C', lineHeight: 1.45 }}>
+              <div role="alert" style={{ background: '#FCE9E9', borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#B91C1C', lineHeight: 1.5 }}>
                 {error}
               </div>
             )}
@@ -227,7 +227,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        <p style={{ textAlign: 'center', fontSize: 12.5, color: C.textGhost, marginTop: 15 }}>
+        <p style={{ textAlign: 'center', fontSize: 13, color: C.textGhost, marginTop: 16.5 }}>
           <Link href="/listings" style={{ color: C.textMuted, textDecoration: 'none' }}>
             Browse open projects →
           </Link>

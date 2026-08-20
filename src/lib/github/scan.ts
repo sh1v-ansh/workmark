@@ -134,15 +134,19 @@ async function fetchLanguages(octokit: Octokit, owner: string, repo: string): Pr
 /**
  * GET /repos/{owner}/{repo}/stats/contributors is famously eventually
  * consistent — GitHub computes it asynchronously and returns 202 with an
- * empty body on first request while it's still working. Poll a few times
- * with a short backoff; if it never materializes, return null and let the
- * caller treat fractionAuthored as unknown rather than blocking the scan
- * indefinitely on one slow endpoint.
+ * empty body on first request while it's still working.
+ *
+ * Two attempts with a short backoff, not three with 1.5s gaps: the old
+ * shape spent up to 3 seconds sleeping PER REPO on a signal that is only
+ * used to pick Tier 0 vs Tier 0.5 and to fill fractionAuthored. Paying
+ * seconds of wall-clock for a nice-to-have is the wrong trade when the
+ * caller already handles null — and because the endpoint caches once
+ * GitHub finishes computing, the next scan of the same repo gets it free.
  */
 async function getContributorStats(
   octokit: Octokit, owner: string, repo: string, githubLogin: string,
 ): Promise<{ studentCommits: number; totalCommits: number; distinctContributors: number } | null> {
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < 2; attempt++) {
     const { status, data } = await octokit.rest.repos.getContributorsStats({ owner, repo })
     if (status === 200 && Array.isArray(data)) {
       let studentCommits = 0
@@ -157,7 +161,7 @@ async function getContributorStats(
       }
       return { studentCommits, totalCommits, distinctContributors }
     }
-    if (attempt < 2) await new Promise((r) => setTimeout(r, 1500))
+    if (attempt < 1) await new Promise((r) => setTimeout(r, 600))
   }
   return null
 }
@@ -189,13 +193,27 @@ async function fetchStudentCommits(
     // scale — sample the most recent 20 rather than every commit, enough
     // to characterize which parts of the repo the student actually touches
     // without a request-per-commit blowup on large histories.
-    for (const sha of commits.slice(0, 20)) {
-      try {
-        const { data: detail } = await octokit.rest.repos.getCommit({ owner, repo, ref: sha })
-        for (const f of detail.files ?? []) filesTouched.add(f.filename)
-      } catch {
-        // A single commit detail failing isn't worth aborting the sample over.
-      }
+    //
+    // Fetched in parallel: these were previously awaited one at a time,
+    // which made a single repo cost 20 serial round trips (~5s) for what is
+    // 20 independent reads. Capped concurrency rather than a bare
+    // Promise.all so a student with many repos doesn't open 20 sockets per
+    // repo and trip GitHub's abuse-detection secondary rate limit.
+    const sample = commits.slice(0, 20)
+    const CONCURRENCY = 5
+    for (let i = 0; i < sample.length; i += CONCURRENCY) {
+      const details = await Promise.all(
+        sample.slice(i, i + CONCURRENCY).map(async (sha) => {
+          try {
+            const { data } = await octokit.rest.repos.getCommit({ owner, repo, ref: sha })
+            return data.files ?? []
+          } catch {
+            // A single commit detail failing isn't worth aborting the sample over.
+            return []
+          }
+        }),
+      )
+      for (const files of details) for (const f of files) filesTouched.add(f.filename)
     }
   } catch {
     // No commits attributable to this login (or the API call failed) —

@@ -20,7 +20,7 @@ type Role = 'student'
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
   return (
-    <label htmlFor={htmlFor} style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
+    <label htmlFor={htmlFor} style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.textSub, marginBottom: 6.5 }}>
       {children}
     </label>
   )
@@ -51,7 +51,7 @@ function TagInput({ label, inputId, value, onChange, placeholder }: {
       {value.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
           {value.map((tag) => (
-            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 5px 4px 10px', background: C.surfaceAlt, borderRadius: R.pill, fontSize: 12, color: C.textSub }}>
+            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: 6.5, padding: '4.5px 5.5px 4.5px 11px', background: C.surfaceAlt, borderRadius: R.pill, fontSize: 13, color: C.textSub }}>
               {tag}
               <button type="button" onClick={() => onChange(value.filter((t) => t !== tag))} aria-label={`Remove ${tag}`} style={{ display: 'flex', background: 'none', border: 'none', color: C.textFaint, cursor: 'pointer', padding: 3, lineHeight: 1, borderRadius: '50%' }}>
                 <span aria-hidden="true">×</span>
@@ -162,10 +162,10 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
         </div>
       </div>
 
-      <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: 14, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 9, cursor: 'pointer' }}>
+      <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: 16, display: 'flex', flexDirection: 'column', gap: 13 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 9.5, cursor: 'pointer' }}>
           <input id="student-international" type="checkbox" checked={isInternational} onChange={(e) => setIsInternational(e.target.checked)} className="dk-checkbox" />
-          <span style={{ fontSize: 13, color: C.textMuted }}>I am an international student</span>
+          <span style={{ fontSize: 14, color: C.textMuted }}>I am an international student</span>
         </label>
         {isInternational && (
           <div style={gap}>
@@ -184,7 +184,7 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
       </div>
 
       {emailDomain && (
-        <p style={{ fontSize: 12.5, color: C.textGhost }}>Signing up with <strong style={{ color: C.textMuted }}>{emailDomain}</strong></p>
+        <p style={{ fontSize: 13, color: C.textGhost }}>Signing up with <strong style={{ color: C.textMuted }}>{emailDomain}</strong></p>
       )}
 
       <Button type="submit" variant="accent" fullWidth disabled={loading} busyLabel={loading ? 'Saving profile…' : null}>
@@ -265,30 +265,30 @@ export default function OnboardingPage() {
   const eduInvalid = !!userEmail && !validateEdu(userEmail)
 
   return (
-    <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 24px' }}>
-      <div style={{ width: '100%', maxWidth: 540, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
+    <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '44px 24px' }}>
+      <div style={{ width: '100%', maxWidth: 550, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 36 }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
-          <Wordmark height={22} />
+          <Wordmark height={24} />
         </Link>
         {userEmail && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-            <span style={{ fontSize: 12.5, color: C.textGhost }}>{userEmail}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 11.5 }}>
+            <span style={{ fontSize: 13, color: C.textGhost }}>{userEmail}</span>
             <button type="button" onClick={handleSignOut} className="nb-btn nb-btn-outline nb-btn-sm">Sign out</button>
           </div>
         )}
       </div>
 
-      <div style={{ width: '100%', maxWidth: 540 }}>
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 26 }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 7 }}>Welcome to Workmark</h1>
-          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 20, lineHeight: 1.55 }}>
+      <div style={{ width: '100%', maxWidth: 550 }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 30 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 7.5 }}>Welcome to Workmark</h1>
+          <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 23, lineHeight: 1.6 }}>
             Set up your student profile. Your verified skill record comes from the repos you link — this is just the basics.
           </p>
 
           {checking ? (
-            <p style={{ fontSize: 13, color: C.textFaint }}>Loading…</p>
+            <p style={{ fontSize: 14, color: C.textFaint }}>Loading…</p>
           ) : eduInvalid ? (
-            <div role="alert" style={{ background: state.cautionBg, borderRadius: R.md, padding: '12px 15px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55 }}>
+            <div role="alert" style={{ background: state.cautionBg, borderRadius: R.md, padding: '13px 16.5px', fontSize: 14, color: '#6B3A0A', lineHeight: 1.6 }}>
               Your email <strong>{userEmail}</strong> is not a .edu address. Workmark accounts require a university email to verify student status. Sign out and sign up again with your university address.
             </div>
           ) : (

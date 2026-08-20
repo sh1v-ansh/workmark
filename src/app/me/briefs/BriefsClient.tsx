@@ -108,22 +108,22 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
   function BriefCard({ b }: { b: BriefRow }) {
     const c = b.targetSkillName ? tagColor(b.targetSkillName) : null
     return (
-      <Card hoverable={false} padding={17}>
-        <div style={{ marginBottom: 9 }}>
-          <p style={{ fontFamily: F.display, fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.01em', color: C.text, marginBottom: 5 }}>{b.title}</p>
+      <Card hoverable={false} padding={19.5}>
+        <div style={{ marginBottom: 10 }}>
+          <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 5.5 }}>{b.title}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
             {b.targetSkillName && c && (
-              <span style={{ fontSize: 11, padding: '3px 9px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+              <span style={{ fontSize: 12, padding: '3px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
                 {b.targetSkillName}
               </span>
             )}
-            <span style={{ fontSize: 11.5, color: C.textGhost }}>
+            <span style={{ fontSize: 12, color: C.textGhost }}>
               {[b.difficulty ? DIFFICULTY_LABEL[b.difficulty] : null, new Date(b.issuedAt).toLocaleDateString()].filter(Boolean).join(' · ')}
             </span>
           </div>
         </div>
 
-        <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, whiteSpace: 'pre-wrap', marginBottom: 13 }}>{b.body}</p>
+        <p style={{ fontSize: 14, color: C.textSub, lineHeight: 1.7, whiteSpace: 'pre-wrap', marginBottom: 14.5 }}>{b.body}</p>
 
         <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
           <Button variant="outline" size="sm" onClick={() => setCompleted(b.id, !b.completedAt)} disabled={busyId === b.id}>
@@ -141,21 +141,21 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
       <Navbar userName={studentName ?? undefined} />
 
       <main id="main-content" style={{ maxWidth: 680, margin: '0 auto', padding: '30px 28px 72px' }}>
-        <Link href="/me" style={{ fontSize: 13, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
+        <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
-        <div style={{ margin: '12px 0 18px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 6 }}>
+        <div style={{ margin: '13px 0 21px' }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
             Project ideas
           </h1>
-          <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.55 }}>
+          <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.6 }}>
             Private to you — never posted, never shown to anyone. Build one, link the repo, and it becomes verified evidence the same way any other project does.
           </p>
         </div>
 
         {agentsAvailable ? (
-          <div className="nb-focal" style={{ padding: 18, marginBottom: 20 }}>
-            <Kicker style={{ color: C.accentInk, marginBottom: 8 }}>Get an idea</Kicker>
-            <p style={{ fontSize: 12.5, color: C.textMuted, marginBottom: 13, lineHeight: 1.45 }}>
+          <div className="nb-focal" style={{ padding: 21, marginBottom: 23 }}>
+            <Kicker style={{ color: C.accentInk, marginBottom: 8.5 }}>Get an idea</Kicker>
+            <p style={{ fontSize: 13.5, color: C.textMuted, marginBottom: 14.5, lineHeight: 1.5 }}>
               Pick a skill you want on your record. We&apos;ll suggest something concrete enough to actually finish.
             </p>
 
@@ -173,10 +173,10 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
                     <button
                       key={s.id} type="button"
                       onClick={() => { setSkillId(s.id); setSkillName(s.canonicalName); setQuery('') }}
-                      style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9px 13px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 13, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
+                      style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9.5px 14px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 14, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
                     >
                       {s.canonicalName}
-                      {s.alreadyEvidenced && <span style={{ fontSize: 11, color: C.textGhost }}>already evidenced</span>}
+                      {s.alreadyEvidenced && <span style={{ fontSize: 12, color: C.textGhost }}>already evidenced</span>}
                     </button>
                   ))}
                 </div>
@@ -195,14 +195,14 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
             </Button>
           </div>
         ) : (
-          <Card hoverable={false} padding={17} style={{ marginBottom: 20 }}>
-            <p style={{ fontSize: 13, color: C.textFaint }}>Project suggestions aren&apos;t configured on this deployment.</p>
+          <Card hoverable={false} padding={19.5} style={{ marginBottom: 23 }}>
+            <p style={{ fontSize: 14, color: C.textFaint }}>Project suggestions aren&apos;t configured on this deployment.</p>
           </Card>
         )}
 
         {open.length > 0 && (
-          <div style={{ marginBottom: 26 }}>
-            <Kicker style={{ marginBottom: 11 }}>To build · {open.length}</Kicker>
+          <div style={{ marginBottom: 29 }}>
+            <Kicker style={{ marginBottom: 12 }}>To build · {open.length}</Kicker>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {open.map((b) => <BriefCard key={b.id} b={b} />)}
             </div>
@@ -211,7 +211,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
 
         {done.length > 0 && (
           <div>
-            <Kicker style={{ marginBottom: 11 }}>Built · {done.length}</Kicker>
+            <Kicker style={{ marginBottom: 12 }}>Built · {done.length}</Kicker>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {done.map((b) => <BriefCard key={b.id} b={b} />)}
             </div>

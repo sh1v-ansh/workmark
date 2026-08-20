@@ -52,23 +52,23 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <div style={{ marginBottom: 18 }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 6 }}>
+        <div style={{ marginBottom: 20 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
             Student directory
           </h1>
-          <p style={{ fontSize: 13.5, color: C.textMuted }}>
+          <p style={{ fontSize: 15, color: C.textMuted }}>
             Students who&apos;ve opted in to being found for collaborations.
           </p>
         </div>
 
-        <Card hoverable={false} padding="13px 16px" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: R.md, background: openToCollab ? '#EDE9FF' : C.surfaceAlt, color: openToCollab ? C.accent : C.textFaint, flexShrink: 0 }}>
-              <Icon name="users" size={16} />
+        <Card hoverable={false} padding="14.5px 18px" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 15, flexWrap: 'wrap', marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 13 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 37, height: 37, borderRadius: R.md, background: openToCollab ? '#EDE9FF' : C.surfaceAlt, color: openToCollab ? C.accent : C.textFaint, flexShrink: 0 }}>
+              <Icon name="users" size={17} />
             </div>
             <div>
-              <p style={{ fontSize: 13, fontWeight: 600, color: C.text, marginBottom: 3 }}>List me in this directory</p>
-              <p style={{ fontSize: 12, color: C.textFaint }}>Other students can find and message you to team up on a project.</p>
+              <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>List me in this directory</p>
+              <p style={{ fontSize: 13, color: C.textFaint }}>Other students can find and message you to team up on a project.</p>
             </div>
           </div>
           <Button variant={openToCollab ? 'ink' : 'outline'} size="sm" onClick={toggleOptIn} disabled={saving}>
@@ -76,7 +76,7 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
           </Button>
         </Card>
 
-        <div style={{ position: 'relative', marginBottom: 16 }}>
+        <div style={{ position: 'relative', marginBottom: 18 }}>
           <Icon name="search" size={15} style={{ position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', color: C.textGhost, pointerEvents: 'none' }} />
           <input
             value={query}
@@ -88,38 +88,38 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
         </div>
 
         {filtered.length === 0 ? (
-          <Card hoverable={false} padding={34}>
+          <Card hoverable={false} padding={39}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 46, height: 46, borderRadius: R.md, background: '#EDE9FF', color: C.accent, marginBottom: 16 }}>
                 <Icon name="inbox" size={20} />
               </div>
-              <p style={{ fontSize: 13, color: C.textMuted }}>
+              <p style={{ fontSize: 14, color: C.textMuted }}>
                 {directory.length === 0 ? 'No one has opted into the directory yet.' : 'No matches for that search.'}
               </p>
             </div>
           </Card>
         ) : (
-          <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
+          <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 13 }}>
             {filtered.map((s) => (
-              <Card key={s.id} hoverable={false} padding={16} style={{ display: 'flex', flexDirection: 'column' }}>
+              <Card key={s.id} hoverable={false} padding={18} style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ marginBottom: 11 }}>
-                  <p style={{ fontFamily: F.display, fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.01em', color: C.text, marginBottom: 3 }}>
+                  <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 3.5 }}>
                     {s.handle ? (
                       <Link href={`/p/${s.handle}`} style={{ color: C.text, textDecoration: 'none' }}>
-                        {s.full_name ?? 'Student'} <span style={{ fontFamily: F.sans, fontSize: 11.5, fontWeight: 600, color: C.accent }}>· verified record →</span>
+                        {s.full_name ?? 'Student'} <span style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 600, color: C.accent }}>· verified record →</span>
                       </Link>
                     ) : (
                       s.full_name ?? 'Student'
                     )}
                   </p>
-                  <p style={{ fontSize: 12, color: C.textFaint }}>
+                  <p style={{ fontSize: 13, color: C.textFaint }}>
                     {[s.degree_type, s.major, s.university].filter(Boolean).join(' · ')}
                     {s.graduation_year ? ` · Class of ${s.graduation_year}` : ''}
                   </p>
                 </div>
 
                 {s.availability && (
-                  <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.textFaint, marginBottom: s.skills && s.skills.length > 0 ? 11 : 0 }}>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: C.textFaint, marginBottom: s.skills && s.skills.length > 0 ? 11 : 0 }}>
                     <Icon name="clock" size={12} />{s.availability}
                   </p>
                 )}
@@ -129,7 +129,7 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
                     {s.skills.slice(0, 5).map((sk) => {
                       const c = tagColor(sk)
                       return (
-                        <span key={sk} style={{ fontSize: 11, fontWeight: 500, padding: '3px 9px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                        <span key={sk} style={{ fontSize: 12, fontWeight: 500, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
                           {sk}
                         </span>
                       )
@@ -140,12 +140,12 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
                 {(s.github_url || s.linkedin_url) && (
                   <div style={{ display: 'flex', gap: 16, marginTop: 'auto', paddingTop: 11, borderTop: `1px solid ${C.borderFaint}` }}>
                     {s.github_url && (
-                      <a href={s.github_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.textMuted, textDecoration: 'none' }}>
+                      <a href={s.github_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: C.textMuted, textDecoration: 'none' }}>
                         <Icon name="github" size={13} />GitHub
                       </a>
                     )}
                     {s.linkedin_url && (
-                      <a href={s.linkedin_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: C.textMuted, textDecoration: 'none' }}>
+                      <a href={s.linkedin_url} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: C.textMuted, textDecoration: 'none' }}>
                         <Icon name="linkedin" size={13} />LinkedIn
                       </a>
                     )}

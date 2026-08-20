@@ -62,7 +62,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       onClick={onClick}
       aria-pressed={active}
       style={{
-        fontSize: 12.5, padding: '5px 11px', borderRadius: R.pill, cursor: 'pointer', font: 'inherit', fontWeight: 500,
+        fontSize: 13, padding: '5.5px 12px', borderRadius: R.pill, cursor: 'pointer', font: 'inherit', fontWeight: 500,
         transition: 'background 120ms, border-color 120ms, color 120ms',
         color: active ? '#fff' : C.textMuted,
         background: active ? C.text : 'transparent',
@@ -149,12 +149,12 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 18, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 6 }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
               Find work
             </h1>
-            <p style={{ fontSize: 13.5, color: C.textMuted }}>
+            <p style={{ fontSize: 15, color: C.textMuted }}>
               {listings.length} project{listings.length === 1 ? '' : 's'} open.
               {signedIn && ' Sorted by how much of each one your record already covers.'}
             </p>
@@ -163,24 +163,24 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
         </div>
 
         {listings.length === 0 ? (
-          <Card hoverable={false} padding={32}>
-            <p style={{ fontSize: 14, color: C.textMuted, textAlign: 'center' }}>
+          <Card hoverable={false} padding={36}>
+            <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center' }}>
               No open projects right now.{signedIn ? ' Post the first one.' : ' Sign in to post one.'}
             </p>
           </Card>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: hasAnyFacet ? '220px minmax(0, 1fr)' : '1fr', gap: 20, alignItems: 'start' }} className="mob-1col">
+          <div style={{ display: 'grid', gridTemplateColumns: hasAnyFacet ? '230px minmax(0, 1fr)' : '1fr', gap: 22, alignItems: 'start' }} className="mob-1col">
 
             {hasAnyFacet && (
-              <Card hoverable={false} padding={15} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <Card hoverable={false} padding={16.5} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <span style={{ fontSize: 12.5, color: C.textMuted, fontWeight: 600 }}>
+                  <span style={{ fontSize: 13, color: C.textMuted, fontWeight: 600 }}>
                     Filter{activeCount > 0 ? ` · ${activeCount}` : ''}
                   </span>
                   {activeCount > 0 && (
                     <button
                       type="button" onClick={clearAll}
-                      style={{ fontSize: 11.5, color: C.textFaint, background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0, font: 'inherit' }}
+                      style={{ fontSize: 12, color: C.textFaint, background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0, font: 'inherit' }}
                     >
                       Clear
                     </button>
@@ -223,23 +223,23 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
 
             <div>
               {activeCount > 0 && (
-                <p style={{ fontSize: 12.5, color: C.textGhost, marginBottom: 12 }}>
+                <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 13 }}>
                   Showing {filtered.length} of {listings.length}
                 </p>
               )}
 
               {filtered.length === 0 ? (
-                <Card hoverable={false} padding={32}>
-                  <p style={{ fontSize: 14, color: C.textMuted, textAlign: 'center' }}>
+                <Card hoverable={false} padding={36}>
+                  <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center' }}>
                     No projects match your filters. Clear one to see more.
                   </p>
                 </Card>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 13 }} className="mob-1col">
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14.5 }} className="mob-1col">
                   {filtered.map((l) => (
-                    <Card key={l.id} href={`/listings/${l.id}`} padding={16}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                        <h2 style={{ fontFamily: F.display, fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.01em', color: C.text, lineHeight: 1.3 }}>
+                    <Card key={l.id} href={`/listings/${l.id}`} padding={18}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 9, flexWrap: 'wrap' }}>
+                        <h2 style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, lineHeight: 1.3 }}>
                           {l.title ?? 'Untitled project'}
                         </h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -253,7 +253,7 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
 
                       {l.brief && (
                         <p style={{
-                          fontSize: 12.5, color: C.textMuted, lineHeight: 1.5, marginBottom: 11,
+                          fontSize: 13.5, color: C.textMuted, lineHeight: 1.55, marginBottom: 12,
                           display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
                         }}>
                           {l.brief}
@@ -261,11 +261,11 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
                       )}
 
                       {l.skills.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginBottom: 11 }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5.5, marginBottom: 12 }}>
                           {l.skills.map((s) => {
                             const c = tagColor(s)
                             return (
-                              <span key={s} style={{ fontSize: 11.5, padding: '3px 9px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                              <span key={s} style={{ fontSize: 12, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
                                 {s}
                               </span>
                             )
@@ -273,7 +273,7 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
                         </div>
                       )}
 
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, fontSize: 12, color: C.textGhost }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 11, fontSize: 13, color: C.textGhost }}>
                         {l.posterDisplayName && <span>{l.posterDisplayName}</span>}
                         {l.hoursPerWeek != null && <span>{l.hoursPerWeek} hrs/wk</span>}
                         {l.duration && <span>{l.duration}</span>}

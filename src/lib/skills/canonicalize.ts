@@ -19,7 +19,7 @@
 // regular users by design (it's a system-computed cache, not user input).
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { embedText } from '@/lib/embeddings/voyage'
+import { embedText, embedTexts } from '@/lib/embeddings/voyage'
 
 // Unvalidated starting point, not an empirically derived constant — there's
 // no real canonicalization traffic yet to calibrate against. Revisit once
@@ -85,23 +85,95 @@ export async function canonicalizeSkill(
   return { resolved: false, skillId: null, source: 'unresolved', candidates }
 }
 
-/** Batch form — canonicalizes many raw strings, deduping identical inputs
- *  before doing any embedding work. */
+/**
+ * Batch form. A single repo's manifests routinely yield 40-80 raw
+ * dependency names, so this is the hot path for scan latency.
+ *
+ * Three round-trips total regardless of batch size, where the previous
+ * per-string loop cost 2N:
+ *   1. ONE cache query for every normalized string at once.
+ *   2. ONE Voyage call embedding every cache miss together — the API takes
+ *      an array and bills per token, so N strings in one request costs the
+ *      same as N requests but pays the ~300ms round trip once.
+ *   3. The pgvector lookups, fanned out in parallel (each needs its own
+ *      RPC since match_skill_by_embedding takes a single vector).
+ *
+ * Alias writes are one bulk insert at the end rather than one per hit.
+ */
 export async function canonicalizeSkills(
   supabase: SupabaseClient,
   rawTexts: string[],
 ): Promise<Map<string, CanonicalizeResult>> {
   const unique = Array.from(new Set(rawTexts.map(normalize).filter(Boolean)))
   const results = new Map<string, CanonicalizeResult>()
-  // Sequential, not Promise.all — cache writes from an earlier resolution
-  // in this same batch should be visible to later ones (two inputs that
-  // normalize differently but embed to the same skill shouldn't both pay
-  // the embedding cost if avoidable... they still will today, since the
-  // cache key is the raw string, not the resolved skill. Left sequential
-  // for now because scan volume per student is small; revisit if batch
-  // sizes grow enough for embedding-call latency to matter.
-  for (const raw of unique) {
-    results.set(raw, await canonicalizeSkill(supabase, raw))
+  if (unique.length === 0) return results
+
+  // 1. Cache, in bulk.
+  const { data: cached } = await supabase
+    .from('skill_aliases')
+    .select('raw_string, skill_id')
+    .in('raw_string', unique)
+
+  const cacheHits = new Map<string, string>()
+  for (const row of cached ?? []) {
+    cacheHits.set(row.raw_string, row.skill_id)
+    results.set(row.raw_string, { resolved: true, skillId: row.skill_id, source: 'cache' })
   }
+
+  const misses = unique.filter((raw) => !cacheHits.has(raw))
+  if (misses.length === 0) return results
+
+  // 2. Embed every miss in one request.
+  let embeddings: number[][]
+  try {
+    embeddings = await embedTexts(misses)
+  } catch (err) {
+    // Embedding is the only path for an uncached string; if the provider is
+    // down, report every miss unresolved rather than failing the whole scan
+    // — the priors/evidence already resolved from cache still get written.
+    for (const raw of misses) {
+      results.set(raw, { resolved: false, skillId: null, source: 'unresolved' })
+    }
+    console.error('[canonicalize] batch embedding failed:', err)
+    return results
+  }
+
+  // 3. Nearest-neighbour per embedding, in parallel.
+  const looked = await Promise.all(
+    misses.map(async (raw, i) => {
+      const { data: matches, error } = await supabase.rpc('match_skill_by_embedding', {
+        query_embedding: embeddings[i],
+        match_count: CANDIDATE_COUNT,
+      })
+      if (error) return { raw, candidates: [] as CanonicalizeResult['candidates'] & object[] }
+      const candidates = (matches ?? []).map((m: { skill_id: string; canonical_name: string; similarity: number }) => ({
+        skillId: m.skill_id,
+        canonicalName: m.canonical_name,
+        similarity: m.similarity,
+      }))
+      return { raw, candidates }
+    }),
+  )
+
+  const newAliases: { raw_string: string; skill_id: string }[] = []
+  for (const { raw, candidates } of looked) {
+    const top = candidates[0]
+    if (top && top.similarity >= CONFIDENCE_THRESHOLD) {
+      results.set(raw, { resolved: true, skillId: top.skillId, source: 'embedding' })
+      newAliases.push({ raw_string: raw, skill_id: top.skillId })
+    } else {
+      results.set(raw, { resolved: false, skillId: null, source: 'unresolved', candidates })
+    }
+  }
+
+  if (newAliases.length > 0) {
+    // ignoreDuplicates: a concurrent scan resolving the same alias is a
+    // benign race on the raw_string primary key, not a failure.
+    const { error } = await supabase
+      .from('skill_aliases')
+      .upsert(newAliases, { onConflict: 'raw_string', ignoreDuplicates: true })
+    if (error) console.error('[canonicalize] alias cache write failed:', error)
+  }
+
   return results
 }

@@ -85,12 +85,12 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
 
   return (
     <header style={{ background: C.bg, position: 'sticky', top: 0, zIndex: 40 }}>
-      <nav aria-label="Main navigation" style={{ maxWidth: 1100, margin: '0 auto', padding: '16px 28px 0' }}>
+      <nav aria-label="Main navigation" style={{ maxWidth: 1100, margin: '0 auto', padding: '18px 28px 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
           {/* Logo + tabs */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 24, minWidth: 0 }}>
-            <Link href="/student/dashboard" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', paddingBottom: 8 }}>
-              <Wordmark height={19} />
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 26, minWidth: 0 }}>
+            <Link href="/student/dashboard" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', paddingBottom: 8.5 }}>
+              <Wordmark height={20} />
             </Link>
             {role === 'student' && (
               <div className="mob-hide" style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
@@ -109,8 +109,8 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
           </div>
 
           {/* Right side */}
-          <div className="mob-hide" style={{ display: 'flex', alignItems: 'center', gap: 12, paddingBottom: 8 }}>
-            <Link href="/listings/new" style={{ fontSize: 13, color: C.textMuted, textDecoration: 'none', fontWeight: 500 }}>
+          <div className="mob-hide" style={{ display: 'flex', alignItems: 'center', gap: 13, paddingBottom: 8.5 }}>
+            <Link href="/listings/new" style={{ fontSize: 13.5, color: C.textMuted, textDecoration: 'none', fontWeight: 500 }}>
               Post a project
             </Link>
             <div ref={menuRef} style={{ position: 'relative' }}>
@@ -120,10 +120,10 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
                 aria-expanded={menuOpen}
                 aria-label="Account menu"
                 style={{
-                  width: 29, height: 29, borderRadius: R.md, border: 'none', cursor: 'pointer',
+                  width: 32, height: 32, borderRadius: R.md, border: 'none', cursor: 'pointer',
                   background: menuOpen ? C.accent : '#EDE9FF',
                   color: menuOpen ? '#fff' : C.accentInk,
-                  fontFamily: F.display, fontSize: 10.5, fontWeight: 700, letterSpacing: '0.02em',
+                  fontFamily: F.display, fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   transition: 'background 0.15s, color 0.15s',
                 }}
@@ -134,14 +134,14 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
                 <div
                   role="menu"
                   style={{
-                    position: 'absolute', right: 0, top: 37, minWidth: 200, zIndex: 50,
+                    position: 'absolute', right: 0, top: 40, minWidth: 209, zIndex: 50,
                     background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg,
                     boxShadow: '0 4px 6px rgba(25,30,46,0.04), 0 12px 32px rgba(25,30,46,0.10)',
-                    padding: 5,
+                    padding: 5.5,
                   }}
                 >
                   {userName && (
-                    <p style={{ fontSize: 12, color: C.textFaint, padding: '7px 11px 9px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 3 }}>
+                    <p style={{ fontSize: 12.5, color: C.textFaint, padding: '7.5px 11.5px 9.5px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 3.5 }}>
                       {userName}
                     </p>
                   )}
@@ -151,17 +151,17 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
                       href={item.href}
                       role="menuitem"
                       onClick={() => setMenuOpen(false)}
-                      style={{ display: 'block', fontSize: 13.5, color: C.textSub, textDecoration: 'none', padding: '8px 11px', borderRadius: 7 }}
+                      style={{ display: 'block', fontSize: 14, color: C.textSub, textDecoration: 'none', padding: '8.5px 11.5px', borderRadius: 7.5 }}
                     >
                       {item.label}
                     </Link>
                   ))}
-                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, marginTop: 3, paddingTop: 3 }}>
+                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, marginTop: 3.5, paddingTop: 3.5 }}>
                     <button
                       onClick={handleSignOut}
                       disabled={signing}
                       role="menuitem"
-                      style={{ display: 'block', width: '100%', textAlign: 'left', fontSize: 13.5, color: C.textMuted, background: 'none', border: 'none', padding: '8px 11px', borderRadius: 7, cursor: signing ? 'not-allowed' : 'pointer', font: 'inherit' }}
+                      style={{ display: 'block', width: '100%', textAlign: 'left', fontSize: 14, color: C.textMuted, background: 'none', border: 'none', padding: '8.5px 11.5px', borderRadius: 7.5, cursor: signing ? 'not-allowed' : 'pointer', font: 'inherit' }}
                     >
                       {signing ? 'Signing out…' : 'Sign out'}
                     </button>

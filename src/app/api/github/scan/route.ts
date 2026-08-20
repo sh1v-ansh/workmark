@@ -4,6 +4,14 @@ import { NextResponse } from 'next/server'
 import { processRepo } from '@/lib/skills/evidence'
 import { syncRepoGrants } from '@/lib/github/sync-grants'
 
+// A scan is dozens of GitHub round-trips per repo. Without this, the route
+// inherits the platform default (10s on Vercel Hobby, 15s on Pro) and gets
+// killed mid-scan on any account with more than a repo or two — which is
+// exactly the "sometimes it just doesn't work" failure. 300s is the Pro
+// ceiling; the work is idempotent, so a scan cut short still leaves a
+// consistent record and re-running resumes rather than duplicating.
+export const maxDuration = 300
+
 /**
  * POST /api/github/scan
  *
@@ -58,22 +66,38 @@ export async function POST() {
     return NextResponse.json({ error: 'No repos enabled for scanning yet — pick which repos to scan below, then scan again.' }, { status: 400 })
   }
 
-  const results = []
-  for (const grant of grants) {
-    try {
-      const result = await processRepo(
-        admin, user.id, connection.installation_id, connection.github_login, grant.repo_full_name, grant.id,
-      )
-      results.push(result)
-    } catch (err) {
-      results.push({
-        repoFullName: grant.repo_full_name,
-        skipped: true,
-        skipReason: `scan failed: ${(err as Error).message}`,
-        priorsWritten: [],
-        evidenceWritten: [],
-      })
-    }
+  // Repos are independent — nothing one scan writes is read by another, and
+  // every write is keyed by (student, skill, artifact), so ordering does not
+  // matter. Scanning them serially was costing the sum of every repo's
+  // latency for no isolation benefit.
+  //
+  // Concurrency is capped rather than unbounded: each repo already fans out
+  // to ~30 GitHub calls internally, and a student with 15 granted repos
+  // would otherwise open several hundred concurrent requests and hit
+  // GitHub's secondary (abuse) rate limit, which fails the whole scan
+  // rather than slowing it.
+  const REPO_CONCURRENCY = 3
+  const results: Awaited<ReturnType<typeof processRepo>>[] = []
+
+  for (let i = 0; i < grants.length; i += REPO_CONCURRENCY) {
+    const batch = await Promise.all(
+      grants.slice(i, i + REPO_CONCURRENCY).map(async (grant) => {
+        try {
+          return await processRepo(
+            admin, user.id, connection.installation_id, connection.github_login!, grant.repo_full_name, grant.id,
+          )
+        } catch (err) {
+          return {
+            repoFullName: grant.repo_full_name,
+            skipped: true,
+            skipReason: `scan failed: ${(err as Error).message}`,
+            priorsWritten: [],
+            evidenceWritten: [],
+          }
+        }
+      }),
+    )
+    results.push(...batch)
   }
 
   return NextResponse.json({ ok: true, results })

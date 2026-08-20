@@ -86,13 +86,13 @@
   background: #FFFFFF;
   border: 1.5px solid #E7E2D6;
   color: #191E2E;
-  font-size: 14.5px;
-  padding: 10px 13px;
+  font-size: 15px;
+  padding: 11px 14px;
   outline: none;
   width: 100%;
   font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
   transition: border-color 0.15s, box-shadow 0.15s;
-  border-radius: 9px;
+  border-radius: 10px;
 }
 .dk-input:focus,
 .dk-select:focus,
@@ -117,8 +117,8 @@
 }
 .dk-checkbox {
   accent-color: #6142F5;
-  width: 15px;
-  height: 15px;
+  width: 15.5px;
+  height: 15.5px;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -249,13 +249,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: 7.5px;
   font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
   font-weight: 600;
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1;
-  padding: 9px 16px;
-  border-radius: 9px;
+  padding: 10.5px 19px;
+  border-radius: 10px;
   border: 1.5px solid transparent;
   text-decoration: none;
   cursor: pointer;
@@ -274,10 +274,10 @@
 .nb-btn-outline  { background: #FFFFFF; color: #191E2E; border-color: #DCD6C8; }
 .nb-btn-outline:not(:disabled):hover { border-color: #191E2E; }
 
-.nb-btn-quiet    { background: transparent; color: #5A6172; border-color: transparent; padding-left: 8px; padding-right: 8px; }
+.nb-btn-quiet    { background: transparent; color: #5A6172; border-color: transparent; padding-left: 9px; padding-right: 9px; }
 .nb-btn-quiet:not(:disabled):hover { background: #F1EDE3; color: #191E2E; }
 
-.nb-btn-sm { font-size: 12.5px; padding: 7px 13px; border-radius: 8px; }
+.nb-btn-sm { font-size: 13px; padding: 8px 14.5px; border-radius: 8.5px; }
 
 /* ── Nav tabs — notebook dividers, not a toolbar ──────────────────────────
    The active tab shares the card's fill and loses its bottom border, so it
@@ -286,12 +286,12 @@
   display: inline-flex;
   align-items: center;
   font-family: var(--font-display), 'Schibsted Grotesk', system-ui, sans-serif;
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.075em;
   text-transform: uppercase;
-  padding: 7px 12px;
-  border-radius: 8px 8px 0 0;
+  padding: 7.5px 13.5px;
+  border-radius: 8.5px 8.5px 0 0;
   color: #5A6172;
   text-decoration: none;
   border: 1px solid transparent;
@@ -367,7 +367,7 @@
 .nb-focal {
   background: linear-gradient(180deg, #FFFFFF 0%, #FCFAFF 100%);
   border: 1px solid #D9D0F5;
-  border-radius: 12px;
+  border-radius: 13px;
 }
 
 /* ── Cards ────────────────────────────────────────────────────────────────
@@ -376,7 +376,7 @@
 .nb-card {
   background: #FFFFFF;
   border: 1px solid #E7E2D6;
-  border-radius: 12px;
+  border-radius: 13px;
 }
 .nb-card-interactive { transition: border-color 0.15s ease, background 0.15s ease; }
 .nb-card-interactive:hover { border-color: #C9C2B2; background: #FFFDFA; }

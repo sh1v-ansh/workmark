@@ -12,8 +12,8 @@ export function Kicker({ children, style }: { children: React.ReactNode; style?:
   return (
     <div
       style={{
-        fontFamily: F.display, fontSize: 10.5, fontWeight: 700,
-        letterSpacing: '0.12em', textTransform: 'uppercase', color: C.textGhost,
+        fontFamily: F.display, fontSize: 11, fontWeight: 700,
+        letterSpacing: '0.13em', textTransform: 'uppercase', color: C.textGhost,
         ...style,
       }}
     >
@@ -27,7 +27,7 @@ export default function Section({
   explain,
   aside,
   children,
-  gap = 28,
+  gap = 32,
 }: {
   label: string
   explain?: string
@@ -37,12 +37,12 @@ export default function Section({
 }) {
   return (
     <section style={{ marginBottom: gap }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, marginBottom: explain ? 4 : 10, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, marginBottom: explain ? 4.5 : 11.5, flexWrap: 'wrap' }}>
         <Kicker>{label}</Kicker>
         {aside}
       </div>
       {explain && (
-        <p style={{ fontSize: 13.5, color: C.textFaint, lineHeight: 1.5, marginBottom: 12, maxWidth: 520 }}>{explain}</p>
+        <p style={{ fontSize: 14, color: C.textFaint, lineHeight: 1.5, marginBottom: 13.5, maxWidth: 540 }}>{explain}</p>
       )}
       {children}
     </section>
@@ -53,11 +53,11 @@ export default function Section({
 export function Stat({ value, label, suffix }: { value: React.ReactNode; label: string; suffix?: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontFamily: F.display, fontSize: 28, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', color: C.text }}>
+      <div style={{ fontFamily: F.display, fontSize: 34, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', color: C.text }}>
         {value}
-        {suffix && <span style={{ fontSize: 16, color: C.textGhost }}>{suffix}</span>}
+        {suffix && <span style={{ fontSize: 19, color: C.textGhost }}>{suffix}</span>}
       </div>
-      <div style={{ fontSize: 12, color: C.textFaint, marginTop: 3 }}>{label}</div>
+      <div style={{ fontSize: 13, color: C.textFaint, marginTop: 3 }}>{label}</div>
     </div>
   )
 }
