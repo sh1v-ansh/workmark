@@ -12,6 +12,7 @@ import { type BadgeTone } from '@/components/ui/Badge'
 import { Kicker, Stat } from '@/components/ui/Section'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
+import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 
 export interface DashboardData {
   student: {
@@ -230,7 +231,11 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
     waiting.push({
       key: `w-app-${a.id}`,
       title: a.title,
-      meta: `Applied ${relativeDays(a.createdAt)}${a.posterName ? ` · ${a.posterName}` : ''}`,
+      meta: [
+        `Applied ${relativeDays(a.createdAt)}`,
+        a.posterName,
+        a.fitTier ? FIT_TIER_LABEL[a.fitTier as FitTier] : null,
+      ].filter(Boolean).join(' · '),
       right: a.status === 'submitted' ? (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
           <button
@@ -284,12 +289,19 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         {/* Header — the answer, not a greeting */}
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.025em', color: C.text }}>
-            {todos.length === 0
-              ? `You're all caught up${firstName ? `, ${firstName}` : ''}`
-              : `${todos.length === 1 ? 'One thing needs' : `${todos.length} things need`} you`}
-          </h1>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+          <div>
+            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.025em', color: C.text, marginBottom: 5 }}>
+              {todos.length === 0
+                ? `You're all caught up${firstName ? `, ${firstName}` : ''}`
+                : `${todos.length === 1 ? 'One thing needs' : `${todos.length} things need`} you`}
+            </h1>
+            {(student.degreeType || student.major || student.university) && (
+              <p style={{ fontSize: 15, color: C.textMuted }}>
+                {[student.degreeType, student.major, student.university].filter(Boolean).join(' · ')}
+              </p>
+            )}
+          </div>
           <span style={{ fontSize: 15, color: C.textGhost }}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
           </span>
