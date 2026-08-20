@@ -112,22 +112,24 @@ export const state = {
 
 /** Corner radii. The app has three, not eleven. */
 export const R = {
-  sm: 8,    // chips, badges, small inputs
-  md: 11,   // buttons, rows nested inside a card
-  lg: 14,   // cards, panels
+  sm: 7,    // chips, badges, small inputs
+  md: 9,    // buttons, rows nested inside a card
+  lg: 12,   // cards, panels
   pill: 999,
 } as const
 
-/** Type sizes. Display sizes use F.display; the rest use F.sans. */
+/** Type sizes. Display sizes use F.display; the rest use F.sans.
+ *  Trimmed once, deliberately, after the composed pages shipped too large —
+ *  keep new sizes inside this scale rather than reaching for a raw px value. */
 export const T = {
-  display: 38,  // page title
-  h1: 30,
-  h2: 22,       // section heading inside a card
-  h3: 18,       // row title
-  body: 16,
-  bodySm: 15,   // secondary line under a row title
-  meta: 14,     // timestamps, counts, attribution
-  label: 12,    // uppercase tab/eyebrow labels
+  display: 27,  // page title
+  h1: 22,
+  h2: 17,       // section heading inside a card
+  h3: 15,       // row title
+  body: 14.5,
+  bodySm: 13.5, // secondary line under a row title
+  meta: 12.5,   // timestamps, counts, attribution
+  label: 11,    // uppercase tab/eyebrow labels
 } as const
 
 /** Elevation. Cards are bordered, not floated — shadow is for overlays only. */

@@ -62,9 +62,9 @@ const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 
 // document about your legal rights should read as sober.
 function Section({ id, title, blurb, children }: { id: string; title: string; blurb: string; children: React.ReactNode }) {
   return (
-    <section id={id} style={{ scrollMarginTop: 90, marginBottom: 40 }}>
+    <section id={id} style={{ scrollMarginTop: 80, marginBottom: 30 }}>
       <Kicker style={{ marginBottom: 6 }}>{title}</Kicker>
-      <p style={{ fontSize: 14, color: C.textGhost, lineHeight: 1.5, marginBottom: 15, maxWidth: 560 }}>{blurb}</p>
+      <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.45, marginBottom: 12, maxWidth: 520 }}>{blurb}</p>
       {children}
     </section>
   )
@@ -141,63 +141,63 @@ export default function MyFileClient({ data }: { data: FileData }) {
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <Link href="/me" style={{ fontSize: 15, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
+        <Link href="/me" style={{ fontSize: 13, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
-        <div style={{ margin: '14px 0 22px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 30, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 10 }}>
+        <div style={{ margin: '12px 0 18px' }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 8 }}>
             Your file
           </h1>
-          <p style={{ fontSize: 16, color: C.textMuted, lineHeight: 1.6, maxWidth: 660 }}>
+          <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.55, maxWidth: 600 }}>
             Everything we hold about you, where each piece came from, and everyone we&apos;ve shared it with. If something here is wrong, dispute it — most are settled by rescanning the code within seconds.
           </p>
         </div>
 
         {/* Answers "is anything wrong with my file" before any reading. */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14, marginBottom: 34 }} className="mob-1col">
-          <Card hoverable={false} padding={20}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 26 }} className="mob-1col">
+          <Card hoverable={false} padding={16}>
             <Stat value={data.disclosures.length} label={data.disclosures.length === 1 ? 'person has seen your record' : 'people have seen your record'} />
           </Card>
-          <Card hoverable={false} padding={20}>
+          <Card hoverable={false} padding={16}>
             <Stat value={openDisputes} label={openDisputes === 1 ? 'dispute currently open' : 'disputes currently open'} />
           </Card>
-          <Card hoverable={false} padding={20}>
+          <Card hoverable={false} padding={16}>
             <Stat value={corrections} label={corrections === 1 ? 'correction on your record' : 'corrections on your record'} />
           </Card>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '210px minmax(0, 1fr)', gap: 32, alignItems: 'start' }} className="mob-1col">
+        <div style={{ display: 'grid', gridTemplateColumns: '190px minmax(0, 1fr)', gap: 26, alignItems: 'start' }} className="mob-1col">
 
-          <nav aria-label="Sections" className="mob-hide" style={{ position: 'sticky', top: 90, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <nav aria-label="Sections" className="mob-hide" style={{ position: 'sticky', top: 80, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {INDEX.map((item) => (
-              <a key={item.id} href={`#${item.id}`} style={{ fontSize: 14.5, color: C.textMuted, textDecoration: 'none', padding: '8px 12px', borderRadius: R.sm }}>
+              <a key={item.id} href={`#${item.id}`} style={{ fontSize: 12.5, color: C.textMuted, textDecoration: 'none', padding: '7px 11px', borderRadius: R.sm }}>
                 {item.label}
               </a>
             ))}
           </nav>
 
-          <div style={{ maxWidth: 700 }}>
+          <div style={{ maxWidth: 640 }}>
 
             {/* Current evidence, each disputable */}
             <Section id="current" title={`Current record · ${current.length}`} blurb="What your record says today. Each line came from a specific repository.">
               {current.length === 0 ? (
-                <Card hoverable={false} padding={22}><p style={{ fontSize: 15, color: C.textFaint }}>Nothing on your record yet.</p></Card>
+                <Card hoverable={false} padding={17}><p style={{ fontSize: 13, color: C.textFaint }}>Nothing on your record yet.</p></Card>
               ) : (
-                <Card hoverable={false} padding="4px 20px 8px">
+                <Card hoverable={false} padding="3px 16px 6px">
                   {current.map((e, i) => {
                     const c = tagColor(e.skillName)
                     const existing = disputesByEvidence.get(e.id)
                     return (
-                      <div key={e.id} style={{ padding: '15px 0', borderBottom: i < current.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
+                      <div key={e.id} style={{ padding: '12px 0', borderBottom: i < current.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 13.5, fontWeight: 600, padding: '4px 10px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                            <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 9px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
                               {e.skillName}
                             </span>
-                            <span style={{ fontSize: 14, color: C.textMuted }}>{LEVEL_NAMES[e.level] ?? e.level}</span>
+                            <span style={{ fontSize: 12.5, color: C.textMuted }}>{LEVEL_NAMES[e.level] ?? e.level}</span>
                             {e.isCorrection && <Badge>corrected</Badge>}
                           </div>
                           {existing ? (
-                            <span style={{ fontSize: 13, color: C.textGhost }}>{STATUS_LABEL[existing.status]}</span>
+                            <span style={{ fontSize: 11.5, color: C.textGhost }}>{STATUS_LABEL[existing.status]}</span>
                           ) : (
                             <Button variant="quiet" size="sm" onClick={() => { setDisputingId(disputingId === e.id ? null : e.id); setDetail('') }}>
                               Dispute
@@ -205,29 +205,29 @@ export default function MyFileClient({ data }: { data: FileData }) {
                           )}
                         </div>
 
-                        <p style={{ fontSize: 13, color: C.textGhost, marginTop: 7 }}>
+                        <p style={{ fontSize: 11.5, color: C.textGhost, marginTop: 6 }}>
                           {[e.repoFullName, e.verificationMethod, e.source, new Date(e.createdAt).toLocaleDateString()].filter(Boolean).join(' · ')}
                         </p>
 
                         {existing?.resolutionNote && (
-                          <p style={{ fontSize: 14, color: C.textMuted, marginTop: 9, lineHeight: 1.5, paddingTop: 9, borderTop: `1px solid ${C.borderFaint}` }}>
+                          <p style={{ fontSize: 12.5, color: C.textMuted, marginTop: 8, lineHeight: 1.45, paddingTop: 8, borderTop: `1px solid ${C.borderFaint}` }}>
                             {existing.resolutionNote}
                           </p>
                         )}
 
                         {disputingId === e.id && (
-                          <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.borderFaint}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.borderFaint}`, display: 'flex', flexDirection: 'column', gap: 9 }}>
                             <select value={category} onChange={(ev) => setCategory(ev.target.value as DisputeCategory)} className="dk-select" aria-label="What's wrong">
                               {DISPUTE_CATEGORIES.filter((cc) => cc.needsEvidence || cc.value === 'other').map((cc) => (
                                 <option key={cc.value} value={cc.value}>{cc.label}</option>
                               ))}
                             </select>
-                            <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5 }}>
+                            <p style={{ fontSize: 11.5, color: C.textGhost, lineHeight: 1.45 }}>
                               {DISPUTE_CATEGORIES.find((cc) => cc.value === category)?.help}
                             </p>
                             <textarea
                               value={detail} onChange={(ev) => setDetail(ev.target.value)} rows={3}
-                              className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 15 }}
+                              className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 13 }}
                               placeholder="What's wrong with this?" aria-label="Dispute detail"
                             />
                             <div style={{ display: 'flex', gap: 9 }}>
@@ -246,13 +246,13 @@ export default function MyFileClient({ data }: { data: FileData }) {
             {/* Superseded / retracted history */}
             {history.length > 0 && (
               <Section id="history" title={`History · ${history.length}`} blurb="Values your record used to carry. Kept so you can see what changed and when — nothing is ever deleted.">
-                <Card hoverable={false} padding="4px 20px 8px">
+                <Card hoverable={false} padding="3px 16px 6px">
                   {history.map((e, i) => (
-                    <div key={e.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 0', borderBottom: i < history.length - 1 ? `1px solid ${C.borderFaint}` : 'none', flexWrap: 'wrap', opacity: 0.7 }}>
-                      <span style={{ fontSize: 14, color: C.textMuted, textDecoration: 'line-through' }}>
+                    <div key={e.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 0', borderBottom: i < history.length - 1 ? `1px solid ${C.borderFaint}` : 'none', flexWrap: 'wrap', opacity: 0.7 }}>
+                      <span style={{ fontSize: 12.5, color: C.textMuted, textDecoration: 'line-through' }}>
                         {e.skillName} · {LEVEL_NAMES[e.level] ?? e.level}
                       </span>
-                      <span style={{ fontSize: 13, color: C.textGhost }}>
+                      <span style={{ fontSize: 11.5, color: C.textGhost }}>
                         {e.retracted ? 'retracted' : 'superseded'} · {new Date(e.createdAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -264,15 +264,15 @@ export default function MyFileClient({ data }: { data: FileData }) {
             {/* Disclosures */}
             <Section id="shared" title={`Who has seen your record · ${data.disclosures.length}`} blurb="Every time your record was furnished to someone else, and exactly which values were sent.">
               {data.disclosures.length === 0 ? (
-                <Card hoverable={false} padding={22}><p style={{ fontSize: 15, color: C.textFaint }}>Your record has never been shared with anyone.</p></Card>
+                <Card hoverable={false} padding={17}><p style={{ fontSize: 13, color: C.textFaint }}>Your record has never been shared with anyone.</p></Card>
               ) : (
-                <Card hoverable={false} padding="4px 20px 8px">
+                <Card hoverable={false} padding="3px 16px 6px">
                   {data.disclosures.map((d, i) => (
-                    <div key={d.id} style={{ padding: '15px 0', borderBottom: i < data.disclosures.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
+                    <div key={d.id} style={{ padding: '12px 0', borderBottom: i < data.disclosures.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
                         <div>
-                          <p style={{ fontSize: 15.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{d.recipientName}</p>
-                          <p style={{ fontSize: 13.5, color: C.textGhost }}>
+                          <p style={{ fontSize: 13.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{d.recipientName}</p>
+                          <p style={{ fontSize: 12, color: C.textGhost }}>
                             {new Date(d.disclosedAt).toLocaleString()} · {d.fieldsDisclosed.join(', ')}
                           </p>
                         </div>
@@ -281,7 +281,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                         </Button>
                       </div>
                       {expandedDisclosure === d.id && (
-                        <pre style={{ marginTop: 12, padding: 14, background: C.bg, borderRadius: R.md, fontSize: 12.5, color: C.textMuted, overflowX: 'auto', lineHeight: 1.5, fontFamily: 'ui-monospace, Menlo, monospace' }}>
+                        <pre style={{ marginTop: 10, padding: 12, background: C.bg, borderRadius: R.md, fontSize: 11.5, color: C.textMuted, overflowX: 'auto', lineHeight: 1.5, fontFamily: 'ui-monospace, Menlo, monospace' }}>
                           {JSON.stringify(d.payloadSnapshot, null, 2)}
                         </pre>
                       )}
@@ -294,14 +294,14 @@ export default function MyFileClient({ data }: { data: FileData }) {
             {/* Consents */}
             <Section id="permissions" title={`Permissions you gave · ${data.consents.length}`} blurb="Revoking stops a permission being used for anything new. It can't un-send what was already shared, and we won't pretend otherwise.">
               {data.consents.length === 0 ? (
-                <Card hoverable={false} padding={22}><p style={{ fontSize: 15, color: C.textFaint }}>None yet.</p></Card>
+                <Card hoverable={false} padding={17}><p style={{ fontSize: 13, color: C.textFaint }}>None yet.</p></Card>
               ) : (
-                <Card hoverable={false} padding="4px 20px 8px">
+                <Card hoverable={false} padding="3px 16px 6px">
                   {data.consents.map((c, i) => (
-                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '14px 0', borderBottom: i < data.consents.length - 1 ? `1px solid ${C.borderFaint}` : 'none', flexWrap: 'wrap' }}>
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 0', borderBottom: i < data.consents.length - 1 ? `1px solid ${C.borderFaint}` : 'none', flexWrap: 'wrap' }}>
                       <div>
-                        <p style={{ fontSize: 15, color: C.textSub }}>{c.scope}</p>
-                        <p style={{ fontSize: 13.5, color: C.textGhost }}>
+                        <p style={{ fontSize: 13, color: C.textSub }}>{c.scope}</p>
+                        <p style={{ fontSize: 12, color: C.textGhost }}>
                           {c.textVersion} · granted {new Date(c.grantedAt).toLocaleDateString()}
                           {c.revokedAt ? ` · revoked ${new Date(c.revokedAt).toLocaleDateString()}` : ''}
                         </p>
@@ -318,37 +318,37 @@ export default function MyFileClient({ data }: { data: FileData }) {
             {/* Disputes */}
             <Section id="disputes" title={`Disputes · ${data.disputes.length}`} blurb="We have 30 days to reinvestigate. Most are settled in seconds because your record is computed from code we can simply re-read.">
               {data.disputes.length === 0 ? (
-                <Card hoverable={false} padding={22}>
+                <Card hoverable={false} padding={17}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-                    <p style={{ fontSize: 15, color: C.textFaint }}>You haven&apos;t disputed anything.</p>
+                    <p style={{ fontSize: 13, color: C.textFaint }}>You haven&apos;t disputed anything.</p>
                     <Button variant="outline" size="sm" onClick={() => { setDisputingId('general'); setCategory('other'); setDetail('') }}>
                       Dispute something else
                     </Button>
                   </div>
                 </Card>
               ) : (
-                <Card hoverable={false} padding="4px 20px 8px">
+                <Card hoverable={false} padding="3px 16px 6px">
                   {data.disputes.map((d, i) => {
                     const days = daysRemaining(d.dueAt)
                     return (
-                      <div key={d.id} style={{ padding: '15px 0', borderBottom: i < data.disputes.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
+                      <div key={d.id} style={{ padding: '12px 0', borderBottom: i < data.disputes.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                          <p style={{ fontSize: 15.5, fontWeight: 600, color: C.text }}>
+                          <p style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>
                             {DISPUTE_CATEGORIES.find((cc) => cc.value === d.category)?.label ?? d.category}
                           </p>
-                          <span style={{ fontSize: 13, color: isResolved(d.status) ? C.textGhost : C.accent, fontWeight: 600 }}>
+                          <span style={{ fontSize: 11.5, color: isResolved(d.status) ? C.textGhost : C.accent, fontWeight: 600 }}>
                             {STATUS_LABEL[d.status]}
                           </span>
                         </div>
-                        <p style={{ fontSize: 14.5, color: C.textMuted, marginTop: 6, lineHeight: 1.5 }}>{d.detail}</p>
-                        <p style={{ fontSize: 13, color: days < 0 && !isResolved(d.status) ? '#B91C1C' : C.textGhost, marginTop: 9 }}>
+                        <p style={{ fontSize: 12.5, color: C.textMuted, marginTop: 5, lineHeight: 1.45 }}>{d.detail}</p>
+                        <p style={{ fontSize: 11.5, color: days < 0 && !isResolved(d.status) ? '#B91C1C' : C.textGhost, marginTop: 9 }}>
                           Filed {new Date(d.filedAt).toLocaleDateString()}
                           {isResolved(d.status)
                             ? d.resolvedAt ? ` · resolved ${new Date(d.resolvedAt).toLocaleDateString()}` : ''
                             : days < 0 ? ` · overdue by ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'}` : ` · ${days} day${days === 1 ? '' : 's'} left to reinvestigate`}
                         </p>
                         {d.resolutionNote && (
-                          <p style={{ fontSize: 14, color: C.textSub, marginTop: 9, lineHeight: 1.5, paddingTop: 9, borderTop: `1px solid ${C.borderFaint}` }}>
+                          <p style={{ fontSize: 12.5, color: C.textSub, marginTop: 8, lineHeight: 1.45, paddingTop: 8, borderTop: `1px solid ${C.borderFaint}` }}>
                             {d.resolutionNote}
                           </p>
                         )}
@@ -361,20 +361,20 @@ export default function MyFileClient({ data }: { data: FileData }) {
 
             {/* General dispute form */}
             {disputingId === 'general' && (
-              <Card hoverable={false} padding={24}>
-                <Kicker style={{ marginBottom: 12 }}>File a dispute</Kicker>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+              <Card hoverable={false} padding={18}>
+                <Kicker style={{ marginBottom: 10 }}>File a dispute</Kicker>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                   <select value={category} onChange={(e) => setCategory(e.target.value as DisputeCategory)} className="dk-select" aria-label="What's wrong">
                     {DISPUTE_CATEGORIES.filter((c) => !c.needsEvidence).map((c) => (
                       <option key={c.value} value={c.value}>{c.label}</option>
                     ))}
                   </select>
-                  <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 11.5, color: C.textGhost, lineHeight: 1.45 }}>
                     {DISPUTE_CATEGORIES.find((c) => c.value === category)?.help}
                   </p>
                   <textarea
                     value={detail} onChange={(e) => setDetail(e.target.value)} rows={4}
-                    className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 15 }}
+                    className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 13 }}
                     placeholder="Describe the problem." aria-label="Dispute detail"
                   />
                   <div style={{ display: 'flex', gap: 9 }}>

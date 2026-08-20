@@ -267,16 +267,16 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
   const firstName = student.fullName?.trim().split(/\s+/)[0]
 
   const nudge = (
-    <div style={{ background: C.bgDeep, borderRadius: R.lg, padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 168 }}>
+    <div style={{ background: C.bgDeep, borderRadius: R.lg, padding: 18, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 140 }}>
       <div>
-        <p style={{ fontFamily: F.display, fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.25, marginBottom: 8 }}>
+        <p style={{ fontFamily: F.display, fontSize: 15.5, fontWeight: 700, letterSpacing: '-0.015em', color: '#FFFFFF', lineHeight: 1.25, marginBottom: 6 }}>
           Not sure what to build next?
         </p>
-        <p style={{ fontSize: 14.5, color: '#A9B0C2', lineHeight: 1.55 }}>
+        <p style={{ fontSize: 12.5, color: '#A9B0C2', lineHeight: 1.5 }}>
           We&apos;ll compare what open projects ask for against your record and hand you something small.
         </p>
       </div>
-      <div style={{ marginTop: 18 }}>
+      <div style={{ marginTop: 14 }}>
         <Button href="/goals" variant="accent" size="sm">Show me the gaps</Button>
       </div>
     </div>
@@ -291,18 +291,18 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         {/* Header — the answer, not a greeting */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.025em', color: C.text, marginBottom: 5 }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 4 }}>
               {todos.length === 0
                 ? `You're all caught up${firstName ? `, ${firstName}` : ''}`
                 : `${todos.length === 1 ? 'One thing needs' : `${todos.length} things need`} you`}
             </h1>
             {(student.degreeType || student.major || student.university) && (
-              <p style={{ fontSize: 15, color: C.textMuted }}>
+              <p style={{ fontSize: 13, color: C.textMuted }}>
                 {[student.degreeType, student.major, student.university].filter(Boolean).join(' · ')}
               </p>
             )}
           </div>
-          <span style={{ fontSize: 15, color: C.textGhost }}>
+          <span style={{ fontSize: 13, color: C.textGhost }}>
             {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
           </span>
         </div>
@@ -315,41 +315,41 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           <div className="nb-g3" style={{ marginBottom: 18 }}>
             <div
               className="nb-focal nb-s2"
-              style={{ gridRow: rail.length > 1 ? 'span 2' : 'span 1', padding: '32px 34px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+              style={{ gridRow: rail.length > 1 ? 'span 2' : 'span 1', padding: '22px 24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
             >
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 20 }}>
-                  <div style={{ width: 38, height: 38, borderRadius: 11, background: ICON_BG[lead.kind], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <TodoIcon kind={lead.kind} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 15 }}>
+                  <div style={{ width: 30, height: 30, borderRadius: 9, background: ICON_BG[lead.kind], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <TodoIcon kind={lead.kind} size={16} />
                   </div>
                   <Kicker style={{ color: C.accentInk }}>{lead.eyebrow}</Kicker>
                 </div>
-                <p style={{ fontFamily: F.display, fontSize: 32, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.text, marginBottom: 12 }}>
+                <p style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2, color: C.text, marginBottom: 9 }}>
                   {lead.headline}
                 </p>
-                <p style={{ fontSize: 16.5, color: C.textMuted, lineHeight: 1.6, maxWidth: 470 }}>
+                <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.55, maxWidth: 440 }}>
                   {lead.detail ?? lead.body}
                 </p>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 28, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 13, marginTop: 20, flexWrap: 'wrap' }}>
                 <Button href={lead.href} variant="accent">{lead.cta}</Button>
-                <span style={{ fontSize: 15, color: C.textGhost }}>{lead.body}</span>
+                <span style={{ fontSize: 13, color: C.textGhost }}>{lead.body}</span>
               </div>
             </div>
 
             {rail.map((t) => (
-              <Card key={t.key} hoverable={false} padding={20} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 14, minHeight: 168 }}>
+              <Card key={t.key} hoverable={false} padding={16} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 12, minHeight: 140 }}>
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 9 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: 9, background: ICON_BG[t.kind], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <TodoIcon kind={t.kind} size={17} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <div style={{ width: 26, height: 26, borderRadius: 8, background: ICON_BG[t.kind], display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <TodoIcon kind={t.kind} size={14} />
                     </div>
                     <Kicker>{t.eyebrow}</Kicker>
                   </div>
-                  <p style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.25, color: C.text, marginBottom: 4 }}>
+                  <p style={{ fontFamily: F.display, fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.015em', lineHeight: 1.25, color: C.text, marginBottom: 4 }}>
                     {t.headline}
                   </p>
-                  <p style={{ fontSize: 14, color: C.textFaint, lineHeight: 1.45 }}>{t.body}</p>
+                  <p style={{ fontSize: 12.5, color: C.textFaint, lineHeight: 1.4 }}>{t.body}</p>
                 </div>
                 <div><Button href={t.href} variant="outline" size="sm">{t.cta}</Button></div>
               </Card>
@@ -364,10 +364,10 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         {overflow.length > 0 && (
           <div className="nb-g3" style={{ marginBottom: 18 }}>
             {overflow.map((t) => (
-              <Card key={t.key} hoverable={false} padding={18} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+              <Card key={t.key} hoverable={false} padding={14} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ fontSize: 15.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{t.headline}</p>
-                  <p style={{ fontSize: 13.5, color: C.textGhost }}>{t.body}</p>
+                  <p style={{ fontSize: 13.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{t.headline}</p>
+                  <p style={{ fontSize: 12, color: C.textGhost }}>{t.body}</p>
                 </div>
                 <Button href={t.href} variant="outline" size="sm">{t.cta}</Button>
               </Card>
@@ -377,16 +377,16 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
         {/* Second band — the record at two thirds against the accent panel */}
         <div className="nb-g3" style={{ marginBottom: 18 }}>
-          <Card ruled hoverable={false} padding={26} className={lead && rail.length === 0 ? 'nb-s3' : 'nb-s2'}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, marginBottom: 20, flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
+          <Card ruled hoverable={false} padding={20} className={lead && rail.length === 0 ? 'nb-s3' : 'nb-s2'}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 18, marginBottom: 16, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 30, flexWrap: 'wrap' }}>
                 <Stat value={skills.length} label={skills.length === 1 ? 'skill proven' : 'skills proven'} />
                 {trackRecord.closeOutRate !== null && (
                   <Stat value={trackRecord.closed} suffix={`/${trackRecord.closed + trackRecord.abandoned}`} label="projects finished" />
                 )}
                 {trackRecord.active > 0 && <Stat value={trackRecord.active} label="in flight" />}
               </div>
-              <Link href="/me" style={{ fontSize: 14, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+              <Link href="/me" style={{ fontSize: 12.5, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
                 See it all →
               </Link>
             </div>
@@ -405,10 +405,10 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
                     <span
                       key={s.skillId}
                       style={{
-                        fontSize: 13.5, fontWeight: strong ? 600 : 500,
+                        fontSize: 12, fontWeight: strong ? 600 : 500,
                         color: strong ? C.accentInk : C.textMuted,
                         background: strong ? '#EDE9FF' : C.surfaceAlt,
-                        borderRadius: R.sm, padding: '6px 12px',
+                        borderRadius: R.sm, padding: '5px 10px',
                       }}
                     >
                       {s.name} · {LEVEL_NAMES[s.bestLevel] ?? s.bestLevel}
@@ -424,14 +424,14 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
         {/* Closing strip — everything that isn't the reader's move */}
         {waiting.length > 0 && (
-          <Card hoverable={false} padding="16px 24px 18px">
-            <Kicker style={{ marginBottom: 6 }}>Waiting on someone else — nothing here needs you</Kicker>
-            <div className="nb-g3" style={{ gap: 32 }}>
+          <Card hoverable={false} padding="13px 20px 15px">
+            <Kicker style={{ marginBottom: 5 }}>Waiting on someone else — nothing here needs you</Kicker>
+            <div className="nb-g3" style={{ gap: 28 }}>
               {waiting.map((w) => (
-                <div key={w.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '11px 0' }}>
+                <div key={w.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '9px 0' }}>
                   <Link href={w.href} style={{ minWidth: 0, textDecoration: 'none' }}>
-                    <p style={{ fontSize: 15, color: C.textSub }}>{w.title}</p>
-                    <p style={{ fontSize: 13.5, color: C.textGhost }}>{w.meta}</p>
+                    <p style={{ fontSize: 13, color: C.textSub }}>{w.title}</p>
+                    <p style={{ fontSize: 12, color: C.textGhost }}>{w.meta}</p>
                   </Link>
                   <span style={{ whiteSpace: 'nowrap' }}>{w.right}</span>
                 </div>
@@ -441,13 +441,13 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         )}
 
         {waiting.length === 0 && todos.length === 0 && (
-          <Card hoverable={false} padding={26}>
+          <Card hoverable={false} padding={20}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
-                <p style={{ fontFamily: F.display, fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 4 }}>
+                <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 4 }}>
                   Nothing out, nothing in flight.
                 </p>
-                <p style={{ fontSize: 15, color: C.textMuted }}>
+                <p style={{ fontSize: 13, color: C.textMuted }}>
                   You have {MAX_ACTIVE_APPLICATIONS - student.activeApplicationCount} application slots free.
                 </p>
               </div>

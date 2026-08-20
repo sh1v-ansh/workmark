@@ -10,7 +10,7 @@ import { C, F } from '@/lib/theme/dark-tokens'
  * Rotated -90deg so the arc starts at twelve o'clock, where people expect a
  * dial to start.
  */
-export default function Ring({ pct, size = 92, stroke = 9 }: { pct: number; size?: number; stroke?: number }) {
+export default function Ring({ pct, size = 72, stroke = 7 }: { pct: number; size?: number; stroke?: number }) {
   const clamped = Math.max(0, Math.min(100, Math.round(pct)))
   const r = (size - stroke) / 2 - 1
   const circumference = 2 * Math.PI * r

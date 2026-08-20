@@ -26,12 +26,12 @@ export default function Badge({ tone = 'neutral', children }: { tone?: BadgeTone
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        fontSize: 13,
+        fontSize: 11.5,
         fontWeight: 600,
         color: t.color,
         background: t.bg,
         borderRadius: R.sm,
-        padding: '6px 12px',
+        padding: '4px 9px',
         whiteSpace: 'nowrap',
       }}
     >

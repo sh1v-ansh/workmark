@@ -60,11 +60,11 @@ function relativeDays(iso: string) {
 /** One of the three numbers that carry the whole comparison. */
 function Metric({ value, caption, tone }: { value: React.ReactNode; caption: string; tone?: string }) {
   return (
-    <div style={{ background: C.bg, borderRadius: R.md, padding: '15px 17px' }}>
-      <div style={{ fontFamily: F.display, fontSize: 26, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', color: tone ?? C.text }}>
+    <div style={{ background: C.bg, borderRadius: R.md, padding: '12px 14px' }}>
+      <div style={{ fontFamily: F.display, fontSize: 20, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums', color: tone ?? C.text }}>
         {value}
       </div>
-      <div style={{ fontSize: 13.5, color: C.textFaint, marginTop: 4 }}>{caption}</div>
+      <div style={{ fontSize: 12, color: C.textFaint, marginTop: 4 }}>{caption}</div>
     </div>
   )
 }
@@ -122,17 +122,17 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <Link href={`/listings/${listing.id}`} style={{ fontSize: 15, color: C.textFaint, textDecoration: 'none' }}>
+        <Link href={`/listings/${listing.id}`} style={{ fontSize: 13, color: C.textFaint, textDecoration: 'none' }}>
           ← {listing.title ?? 'Untitled project'}
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, margin: '14px 0 22px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, margin: '12px 0 18px', flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 30, fontWeight: 700, letterSpacing: '-0.03em', color: C.text }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text }}>
               {applicants.length === 0 ? 'No applicants yet' : `${applicants.length} applicant${applicants.length === 1 ? '' : 's'}`}
             </h1>
             {applicants.length > 0 && (
-              <p style={{ fontSize: 16, color: C.textMuted, marginTop: 6 }}>
+              <p style={{ fontSize: 13.5, color: C.textMuted, marginTop: 5 }}>
                 Ordered by how much of what you asked for their code actually shows.
               </p>
             )}
@@ -145,8 +145,8 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
         </div>
 
         {applicants.length === 0 || !selected ? (
-          <Card hoverable={false} padding={40}>
-            <p style={{ fontSize: 16, color: C.textMuted, textAlign: 'center', lineHeight: 1.6 }}>
+          <Card hoverable={false} padding={32}>
+            <p style={{ fontSize: 14, color: C.textMuted, textAlign: 'center', lineHeight: 1.55 }}>
               Nobody has applied yet. Students see this project in Find work, ranked by how much of it their record already covers.
             </p>
           </Card>
@@ -176,18 +176,18 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                     }}
                   >
                     <span style={{
-                      width: 34, height: 34, borderRadius: R.md, flexShrink: 0,
+                      width: 30, height: 30, borderRadius: R.md, flexShrink: 0,
                       background: on ? C.surface : C.surfaceAlt, color: C.textSub,
-                      fontFamily: F.display, fontSize: 12, fontWeight: 700,
+                      fontFamily: F.display, fontSize: 11, fontWeight: 700,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {initials(a.fullName)}
                     </span>
                     <span style={{ flexGrow: 1, minWidth: 0 }}>
-                      <span style={{ display: 'block', fontSize: 15.5, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {a.fullName}
                       </span>
-                      <span style={{ display: 'block', fontSize: 13.5, color: C.textGhost, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'block', fontSize: 12, color: C.textGhost, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {[a.major, a.university].filter(Boolean).join(' · ') || 'No details given'}
                       </span>
                     </span>
@@ -197,14 +197,14 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
               })}
             </Card>
 
-            <Card hoverable={false} padding={26}>
+            <Card hoverable={false} padding={20}>
               {/* Head */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20, paddingBottom: 20, borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 22, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 18, paddingBottom: 16, borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 18, flexWrap: 'wrap' }}>
                 <div>
-                  <h2 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 5 }}>
+                  <h2 style={{ fontFamily: F.display, fontSize: 20, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 4 }}>
                     {selected.fullName}
                   </h2>
-                  <p style={{ fontSize: 15, color: C.textMuted }}>
+                  <p style={{ fontSize: 13, color: C.textMuted }}>
                     {[
                       [selected.major, selected.university].filter(Boolean).join(' · ') || null,
                       selected.graduationYear ? `graduating ${selected.graduationYear}` : null,
@@ -235,7 +235,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
               </div>
 
               {/* The three numbers that are the whole pitch of the product */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14, marginBottom: 24 }} className="mob-1col">
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 20 }} className="mob-1col">
                 <Metric
                   value={`${evidencedCount}/${selected.perSkill.length}`}
                   caption="of your skills their code shows"
@@ -251,10 +251,10 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
               </div>
 
               {selected.fitTier && (
-                <div style={{ marginBottom: 24 }}>
+                <div style={{ marginBottom: 20 }}>
                   <Badge tone={FIT_TIER_TONE[selected.fitTier]}>{FIT_TIER_LABEL[selected.fitTier]}</Badge>
                   {selected.missingCount > 0 && (
-                    <span style={{ fontSize: 14, color: C.textGhost, marginLeft: 10 }}>
+                    <span style={{ fontSize: 12.5, color: C.textGhost, marginLeft: 9 }}>
                       no evidence in {selected.missingCount} skill{selected.missingCount === 1 ? '' : 's'} you asked for
                     </span>
                   )}
@@ -266,8 +266,8 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                   than hidden — the applicant said it, and you are entitled
                   to weigh that yourself. */}
               {selected.perSkill.length > 0 && (
-                <div style={{ marginBottom: 24 }}>
-                  <Kicker style={{ marginBottom: 11 }}>What their code shows</Kicker>
+                <div style={{ marginBottom: 20 }}>
+                  <Kicker style={{ marginBottom: 9 }}>What their code shows</Kicker>
                   <div>
                     {selected.perSkill.map((s, i) => {
                       const claimedOnly = !s.present && selected.claimedSkills.includes(s.skillId)
@@ -275,13 +275,13 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                         <div
                           key={s.skillId}
                           style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14,
-                            padding: '12px 0',
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                            padding: '10px 0',
                             borderBottom: i < selected.perSkill.length - 1 ? `1px solid ${C.borderFaint}` : 'none',
                           }}
                         >
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-                            <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
                               <circle cx="10" cy="10" r="9" fill={s.present ? state.positiveBg : state.cautionBg} />
                               {s.present ? (
                                 <path d="M6 10.2l2.6 2.6L14 7.4" stroke={state.positive} strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
@@ -290,8 +290,8 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                               )}
                             </svg>
                             <span style={{ minWidth: 0 }}>
-                              <span style={{ display: 'block', fontSize: 15.5, fontWeight: 600, color: C.text }}>{s.skillId}</span>
-                              <span style={{ display: 'block', fontSize: 13.5, color: s.present ? state.positive : state.caution }}>
+                              <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: C.text }}>{s.skillId}</span>
+                              <span style={{ display: 'block', fontSize: 12, color: s.present ? state.positive : state.caution }}>
                                 {s.present
                                   ? `evidenced · depth ${s.depth.toFixed(1)}`
                                   : claimedOnly
@@ -300,7 +300,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                               </span>
                             </span>
                           </span>
-                          <span style={{ fontSize: 13, fontWeight: 600, color: C.textGhost, whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: 11.5, fontWeight: 600, color: C.textGhost, whiteSpace: 'nowrap' }}>
                             {s.requiredLevel >= 4 ? 'Essential' : s.requiredLevel >= 2 ? 'Useful' : 'Bonus'}
                           </span>
                         </div>
@@ -311,17 +311,17 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
               )}
 
               {selected.responseText && (
-                <div style={{ marginBottom: 24 }}>
-                  <Kicker style={{ marginBottom: 11 }}>In their words</Kicker>
-                  <div style={{ background: C.bg, borderRadius: R.md, padding: '18px 20px', fontSize: 16, lineHeight: 1.65, color: C.textSub, whiteSpace: 'pre-wrap' }}>
+                <div style={{ marginBottom: 20 }}>
+                  <Kicker style={{ marginBottom: 9 }}>In their words</Kicker>
+                  <div style={{ background: C.bg, borderRadius: R.md, padding: '15px 17px', fontSize: 14, lineHeight: 1.6, color: C.textSub, whiteSpace: 'pre-wrap' }}>
                     {selected.responseText}
                   </div>
                 </div>
               )}
 
               {selected.status === 'accepted' && selected.studentEmail && (
-                <div style={{ background: state.positiveBg, borderRadius: R.md, padding: '14px 18px', marginBottom: 22 }}>
-                  <p style={{ fontSize: 15, color: '#0E4F2E' }}>
+                <div style={{ background: state.positiveBg, borderRadius: R.md, padding: '12px 15px', marginBottom: 18 }}>
+                  <p style={{ fontSize: 13, color: '#0E4F2E' }}>
                     Contact:{' '}
                     <a href={`mailto:${selected.studentEmail}`} style={{ color: state.positive, fontWeight: 600, textDecoration: 'underline' }}>
                       {selected.studentEmail}

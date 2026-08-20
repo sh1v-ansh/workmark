@@ -12,8 +12,8 @@ export function Kicker({ children, style }: { children: React.ReactNode; style?:
   return (
     <div
       style={{
-        fontFamily: F.display, fontSize: 11, fontWeight: 700,
-        letterSpacing: '0.13em', textTransform: 'uppercase', color: C.textGhost,
+        fontFamily: F.display, fontSize: 10.5, fontWeight: 700,
+        letterSpacing: '0.12em', textTransform: 'uppercase', color: C.textGhost,
         ...style,
       }}
     >
@@ -27,7 +27,7 @@ export default function Section({
   explain,
   aside,
   children,
-  gap = 36,
+  gap = 28,
 }: {
   label: string
   explain?: string
@@ -37,27 +37,27 @@ export default function Section({
 }) {
   return (
     <section style={{ marginBottom: gap }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, marginBottom: explain ? 5 : 13, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 14, marginBottom: explain ? 4 : 10, flexWrap: 'wrap' }}>
         <Kicker>{label}</Kicker>
         {aside}
       </div>
       {explain && (
-        <p style={{ fontSize: 15, color: C.textFaint, lineHeight: 1.5, marginBottom: 15, maxWidth: 560 }}>{explain}</p>
+        <p style={{ fontSize: 13.5, color: C.textFaint, lineHeight: 1.5, marginBottom: 12, maxWidth: 520 }}>{explain}</p>
       )}
       {children}
     </section>
   )
 }
 
-/** A large number with its caption. Size is the hierarchy — resist shrinking it. */
+/** A large number with its caption. */
 export function Stat({ value, label, suffix }: { value: React.ReactNode; label: string; suffix?: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontFamily: F.display, fontSize: 40, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', color: C.text }}>
+      <div style={{ fontFamily: F.display, fontSize: 28, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', color: C.text }}>
         {value}
-        {suffix && <span style={{ fontSize: 22, color: C.textGhost }}>{suffix}</span>}
+        {suffix && <span style={{ fontSize: 16, color: C.textGhost }}>{suffix}</span>}
       </div>
-      <div style={{ fontSize: 13.5, color: C.textFaint, marginTop: 3 }}>{label}</div>
+      <div style={{ fontSize: 12, color: C.textFaint, marginTop: 3 }}>{label}</div>
     </div>
   )
 }

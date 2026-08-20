@@ -19,7 +19,7 @@ interface CardProps {
   ruled?: boolean
 }
 
-export default function Card({ href, onClick, padding = 22, style, className, children, hoverable, ruled }: CardProps) {
+export default function Card({ href, onClick, padding = 18, style, className, children, hoverable, ruled }: CardProps) {
   const interactive = hoverable ?? (!!href || !!onClick)
   const baseStyle: React.CSSProperties = {
     display: 'block',

@@ -182,18 +182,18 @@ export default function GithubScanClient({ studentName, connection, grants, prio
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <div style={{ marginBottom: 26 }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 30, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 10 }}>
+        <div style={{ marginBottom: 20 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 8 }}>
             Choose what we may read
           </h1>
-          <p style={{ fontSize: 16, color: C.textMuted, lineHeight: 1.6, maxWidth: 660 }}>
+          <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.55, maxWidth: 600 }}>
             Every skill on your record comes from one of these repositories. Turn one off and it stops being scanned — anything already on your record stays, because the record is append-only.
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 340px', gap: 24, alignItems: 'start' }} className="mob-1col">
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 20, alignItems: 'start' }} className="mob-1col">
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
             {/* Granted repos. Public repos are already world-readable, so
                 they're scanned unconditionally. Private ones are the consent
@@ -204,20 +204,20 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 already tells the story per row. */}
             {grants.length > 0 && (
               <div>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 5 }}>
                   <Kicker>Your repositories</Kicker>
-                  <span style={{ fontSize: 14, color: C.textGhost }}>
+                  <span style={{ fontSize: 12.5, color: C.textGhost }}>
                     {syncing ? 'syncing with GitHub…' : `${grants.filter((g) => (overrides[g.id] ?? g.scan_enabled) || !g.is_private).length} of ${grants.length} enabled`}
                   </span>
                 </div>
-                <Card hoverable={false} padding="4px 20px 8px">
+                <Card hoverable={false} padding="3px 16px 6px">
                   {grants.map((g, i) => {
                     const enabled = g.is_private ? (overrides[g.id] ?? g.scan_enabled) : true
                     return (
-                      <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0', borderBottom: i < grants.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
+                      <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '11px 0', borderBottom: i < grants.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
                         <div style={{ flexGrow: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 3, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 15.5, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.repo_full_name}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3, flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 13.5, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.repo_full_name}</span>
                             <Badge tone={g.is_private ? 'caution' : 'neutral'}>{g.is_private ? 'Private' : 'Public'}</Badge>
                           </div>
                         </div>
@@ -229,25 +229,25 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                             disabled={togglingId === g.id}
                             onClick={() => toggleScanEnabled(g.id, !enabled)}
                             style={{
-                              flexShrink: 0, width: 40, height: 23, borderRadius: 999, position: 'relative', border: 'none',
+                              flexShrink: 0, width: 34, height: 20, borderRadius: 999, position: 'relative', border: 'none',
                               cursor: togglingId === g.id ? 'wait' : 'pointer',
                               background: enabled ? C.accent : C.border,
                               transition: 'background 0.15s',
                             }}
                           >
                             <span style={{
-                              position: 'absolute', top: 3, left: enabled ? 20 : 3, width: 17, height: 17, borderRadius: 999,
+                              position: 'absolute', top: 2.5, left: enabled ? 17 : 2.5, width: 15, height: 15, borderRadius: 999,
                               background: '#fff', transition: 'left 0.15s',
                             }} />
                           </button>
                         ) : (
-                          <span style={{ flexShrink: 0, fontSize: 13.5, color: C.textGhost }}>Always scanned</span>
+                          <span style={{ flexShrink: 0, fontSize: 12, color: C.textGhost }}>Always scanned</span>
                         )}
                       </div>
                     )
                   })}
                 </Card>
-                <p style={{ fontSize: 13.5, color: C.textGhost, lineHeight: 1.5, marginTop: 10 }}>
+                <p style={{ fontSize: 12, color: C.textGhost, lineHeight: 1.45, marginTop: 9 }}>
                   Private repos are off by default. Only enable ones you have the right to share — not an employer&apos;s code.
                 </p>
               </div>
@@ -258,33 +258,33 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 evidence, independent level), which reads as "duplicates"
                 without knowing which repo each one came from. */}
             <div>
-              <Kicker style={{ marginBottom: 13 }}>Skill evidence · {evidence.length}</Kicker>
+              <Kicker style={{ marginBottom: 11 }}>Skill evidence · {evidence.length}</Kicker>
               {evidence.length === 0 ? (
-                <Card hoverable={false} padding={22}>
-                  <p style={{ fontSize: 15, color: C.textMuted }}>No evidence yet — connect GitHub and scan.</p>
+                <Card hoverable={false} padding={17}>
+                  <p style={{ fontSize: 13, color: C.textMuted }}>No evidence yet — connect GitHub and scan.</p>
                 </Card>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {evidenceByRepo.map(([repo, rows]) => (
-                    <Card key={repo} hoverable={false} padding={18}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 15, fontWeight: 600, color: C.text, wordBreak: 'break-word' }}>{repo}</span>
+                    <Card key={repo} hoverable={false} padding={14}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: C.text, wordBreak: 'break-word' }}>{repo}</span>
                         {rows[0]?.artifacts?.deployment_url ? (
-                          <a href={rows[0].artifacts.deployment_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, color: C.accent, fontWeight: 600, textDecoration: 'none' }}>
+                          <a href={rows[0].artifacts.deployment_url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: C.accent, fontWeight: 600, textDecoration: 'none' }}>
                             {rows[0].verification_method} ↗
                           </a>
                         ) : repo !== '(unknown repo)' ? (
-                          <a href={`https://github.com/${repo}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13.5, color: C.accent, fontWeight: 600, textDecoration: 'none' }}>
+                          <a href={`https://github.com/${repo}`} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12, color: C.accent, fontWeight: 600, textDecoration: 'none' }}>
                             repo link ↗
                           </a>
                         ) : null}
                       </div>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                         {rows.map((e) => {
                           const name = e.skills?.canonical_name ?? e.skill_id
                           const c = tagColor(name)
                           return (
-                            <span key={e.id} style={{ fontSize: 13, fontWeight: 600, padding: '4px 10px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                            <span key={e.id} style={{ fontSize: 11.5, fontWeight: 600, padding: '3px 9px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
                               {name} <span style={{ fontWeight: 400, opacity: 0.75 }}>{levelLabel(e.difficulty_cleared)}</span>
                             </span>
                           )
@@ -298,23 +298,23 @@ export default function GithubScanClient({ studentName, connection, grants, prio
 
             {/* Human review — §3's fallback for work with no scannable repo */}
             <div>
-              <Kicker style={{ marginBottom: 6 }}>Work without a repo</Kicker>
-              <p style={{ fontSize: 14, color: C.textGhost, lineHeight: 1.5, marginBottom: 14, maxWidth: 560 }}>
+              <Kicker style={{ marginBottom: 5 }}>Work without a repo</Kicker>
+              <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.45, marginBottom: 12, maxWidth: 520 }}>
                 Design work, research, anything we can&apos;t read from code. Submit it and a person will look at it — slower than a scan, but it counts the same once approved.
               </p>
 
               {reviewRequests.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: hasPending ? 0 : 16 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7, marginBottom: hasPending ? 0 : 14 }}>
                   {reviewRequests.map((r) => (
-                    <Card key={r.id} hoverable={false} padding="12px 16px">
+                    <Card key={r.id} hoverable={false} padding="10px 13px">
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                        <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 14, color: C.accent, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 380 }}>
+                        <a href={r.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 12.5, color: C.accent, textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 380 }}>
                           {r.url}
                         </a>
                         <Badge tone={REVIEW_TONE[r.status as keyof typeof REVIEW_TONE] ?? 'neutral'}>{r.status}</Badge>
                       </div>
                       {r.review_note && (
-                        <p style={{ fontSize: 13.5, color: C.textMuted, marginTop: 9, lineHeight: 1.5 }}>{r.review_note}</p>
+                        <p style={{ fontSize: 12, color: C.textMuted, marginTop: 8, lineHeight: 1.45 }}>{r.review_note}</p>
                       )}
                     </Card>
                   ))}
@@ -322,14 +322,14 @@ export default function GithubScanClient({ studentName, connection, grants, prio
               )}
 
               {!hasPending && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginTop: reviewRequests.length > 0 ? 14 : 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: reviewRequests.length > 0 ? 12 : 0 }}>
                   <input
                     value={reviewUrl} onChange={(e) => setReviewUrl(e.target.value)}
                     className="dk-input" placeholder="https://link-to-your-work" aria-label="Link to the work"
                   />
                   <textarea
                     value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} rows={3}
-                    className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 15 }}
+                    className="dk-textarea" style={{ fontFamily: 'inherit', fontSize: 13 }}
                     placeholder="What is it, and what did you build? There's no commit history here, so this is all a reviewer has to go on."
                     aria-label="Description"
                   />
@@ -352,16 +352,16 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 — no internal scoring vocabulary in the UI. */}
             {priors.length > 0 && (
               <div>
-                <Kicker style={{ marginBottom: 6 }}>Detected but unverified</Kicker>
-                <p style={{ fontSize: 14, color: C.textGhost, lineHeight: 1.5, marginBottom: 12, maxWidth: 560 }}>
+                <Kicker style={{ marginBottom: 5 }}>Detected but unverified</Kicker>
+                <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.45, marginBottom: 10, maxWidth: 520 }}>
                   Found in your repositories, but not yet backed by your own commits — so these don&apos;t count toward your record yet.
                 </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
                   {priors.map((p) => {
                     const name = p.skills?.canonical_name ?? p.skill_id
                     const c = tagColor(name)
                     return (
-                      <span key={p.id} style={{ fontSize: 12.5, padding: '3px 9px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text, opacity: 0.7 }}>
+                      <span key={p.id} style={{ fontSize: 11, padding: '3px 8px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text, opacity: 0.7 }}>
                         {name}
                       </span>
                     )
@@ -372,19 +372,19 @@ export default function GithubScanClient({ studentName, connection, grants, prio
           </div>
 
           {/* Rail */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <Card hoverable={false} padding={22}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+            <Card hoverable={false} padding={17}>
               {connection ? (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 11, marginBottom: 16 }}>
-                    <div style={{ width: 38, height: 38, borderRadius: R.md, background: '#EDE9FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.accent, flexShrink: 0 }}>
-                      <Icon name="github" size={18} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 13 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: R.md, background: '#EDE9FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.accent, flexShrink: 0 }}>
+                      <Icon name="github" size={16} />
                     </div>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ fontSize: 15, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         Connected as {connection.github_login ?? '(unknown)'}
                       </p>
-                      <p style={{ fontSize: 13.5, color: C.textFaint }}>{grants.length} repo{grants.length === 1 ? '' : 's'} granted</p>
+                      <p style={{ fontSize: 12, color: C.textFaint }}>{grants.length} repo{grants.length === 1 ? '' : 's'} granted</p>
                     </div>
                   </div>
                   <Button variant="ink" size="sm" fullWidth onClick={runScan} busyLabel={scanning ? 'Scanning…' : null}>
@@ -393,23 +393,23 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 </>
               ) : (
                 <>
-                  <p style={{ fontSize: 15, color: C.textMuted, marginBottom: 14 }}>Not connected yet.</p>
+                  <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 12 }}>Not connected yet.</p>
                   <a href="/api/github/app/install" className="nb-btn nb-btn-ink" style={{ width: '100%' }}>
-                    <Icon name="github" size={14} /> Connect GitHub
+                    <Icon name="github" size={13} /> Connect GitHub
                   </a>
                 </>
               )}
             </Card>
 
-            <Card hoverable={false} padding={22}>
-              <Kicker style={{ marginBottom: 10 }}>What a scan reads</Kicker>
-              <p style={{ fontSize: 14.5, color: C.textFaint, lineHeight: 1.6 }}>
+            <Card hoverable={false} padding={17}>
+              <Kicker style={{ marginBottom: 8 }}>What a scan reads</Kicker>
+              <p style={{ fontSize: 12.5, color: C.textFaint, lineHeight: 1.55 }}>
                 Only commits attributed to your GitHub identity. Forks with no commits of yours are skipped. We look at what the code does, not how much of it there is.
               </p>
             </Card>
 
-            <div style={{ background: state.cautionBg, borderRadius: R.md, padding: '13px 16px' }}>
-              <p style={{ fontSize: 13.5, color: '#6B3A0A', lineHeight: 1.5 }}>
+            <div style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px' }}>
+              <p style={{ fontSize: 12, color: '#6B3A0A', lineHeight: 1.45 }}>
                 Only enable a private repository if you have the right to share it.
               </p>
             </div>

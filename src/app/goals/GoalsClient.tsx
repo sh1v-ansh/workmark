@@ -36,12 +36,12 @@ export interface GoalsData {
 /** A single number carrying a whole argument. Deliberately oversized. */
 function BigStat({ value, suffix, caption, tone }: { value: string | number; suffix?: string; caption: string; tone?: string }) {
   return (
-    <Card hoverable={false} padding={24} style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      <div style={{ fontFamily: F.display, fontSize: 52, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums', color: tone ?? C.text }}>
+    <Card hoverable={false} padding={18} style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <div style={{ fontFamily: F.display, fontSize: 32, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', color: tone ?? C.text }}>
         {value}
-        {suffix && <span style={{ fontSize: 24, color: C.textGhost }}>{suffix}</span>}
+        {suffix && <span style={{ fontSize: 17, color: C.textGhost }}>{suffix}</span>}
       </div>
-      <div style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.5, marginTop: 8 }}>{caption}</div>
+      <div style={{ fontSize: 12.5, color: C.textMuted, lineHeight: 1.4, marginTop: 6 }}>{caption}</div>
     </Card>
   )
 }
@@ -82,7 +82,7 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.025em', color: C.text, marginBottom: 20 }}>
+        <h1 style={{ fontFamily: F.display, fontSize: 21, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 16 }}>
           What to build next
         </h1>
 
@@ -90,20 +90,20 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
             evidence for the claim takes the last third as two numbers, so
             the argument is legible before a word of it is read. */}
         {topGap ? (
-          <div className="nb-g3" style={{ marginBottom: 26 }}>
-            <div className="nb-focal nb-s2" style={{ padding: '32px 34px' }}>
+          <div className="nb-g3" style={{ marginBottom: 20 }}>
+            <div className="nb-focal nb-s2" style={{ padding: '22px 24px' }}>
               <Kicker style={{ color: C.accentInk }}>The one gap worth closing</Kicker>
-              <p style={{ fontFamily: F.display, fontSize: 38, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1.1, color: C.text, margin: '16px 0 14px' }}>
+              <p style={{ fontFamily: F.display, fontSize: 24, fontWeight: 700, letterSpacing: '-0.025em', lineHeight: 1.15, color: C.text, margin: '11px 0 10px' }}>
                 Build something with {topGap.name}.
               </p>
-              <p style={{ fontSize: 16.5, color: C.textMuted, lineHeight: 1.65, maxWidth: 470, marginBottom: 26 }}>
+              <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.55, maxWidth: 420, marginBottom: 18 }}>
                 {topGap.listingCount === 1
                   ? `One of the projects open right now asks for ${topGap.name}, and nothing in your record touches it.`
                   : `${topGap.listingCount} of the projects open right now ask for ${topGap.name}, and nothing in your record touches it.`}
                 {' '}One weekend project would put it there permanently.
               </p>
               {data.agentsAvailable ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 13, flexWrap: 'wrap' }}>
                   <Button
                     variant="accent"
                     onClick={() => buildFor(topGap.skillId, topGap.name)}
@@ -111,16 +111,16 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
                   >
                     Write me the brief
                   </Button>
-                  <span style={{ fontSize: 15, color: C.textGhost }}>You can change it before you start</span>
+                  <span style={{ fontSize: 12.5, color: C.textGhost }}>You can change it before you start</span>
                 </div>
               ) : (
-                <p style={{ fontSize: 15, color: C.textGhost }}>
+                <p style={{ fontSize: 12.5, color: C.textGhost }}>
                   Project briefs need an Anthropic API key configured. The gap itself stands either way.
                 </p>
               )}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, alignSelf: 'stretch' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, alignSelf: 'stretch' }}>
               <BigStat
                 value={topGap.listingCount}
                 suffix={`/${data.derivedFromListings}`}
@@ -130,11 +130,11 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
             </div>
           </div>
         ) : (
-          <Card hoverable={false} padding={30} style={{ marginBottom: 26 }}>
-            <p style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 10 }}>
+          <Card hoverable={false} padding={22} style={{ marginBottom: 20 }}>
+            <p style={{ fontFamily: F.display, fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 8 }}>
               Nothing open is asking for something you don&apos;t have.
             </p>
-            <p style={{ fontSize: 16.5, color: C.textMuted, lineHeight: 1.6, maxWidth: 560 }}>
+            <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.55, maxWidth: 520 }}>
               {data.derivedFromListings === 0
                 ? 'There are no open projects to compare against yet. This page fills in as projects get posted.'
                 : 'Every skill the open projects ask for is already evidenced somewhere in your record. Apply to something, or build for its own sake.'}
@@ -145,7 +145,7 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
         {/* Honesty about the sample size — §8 says say so when it's thin,
             rather than presenting a distribution that isn't one. */}
         {data.thinData && (
-          <div style={{ background: state.cautionBg, borderRadius: R.md, padding: '13px 18px', fontSize: 14.5, color: '#6B3A0A', lineHeight: 1.55, marginBottom: 34 }}>
+          <div style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 15px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.5, marginBottom: 26 }}>
             {data.derivedFromListings === 0
               ? 'There are no open projects yet, so there is nothing to derive demand from. This fills in as projects get posted.'
               : `This is derived from only ${data.derivedFromListings} project${data.derivedFromListings === 1 ? '' : 's'}, so treat it as a sample rather than the market. It sharpens as more get posted.`}
@@ -157,11 +157,11 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
         <Section
           label="Open now, and you already fit"
           explain={topRecs.length > 0 ? 'The percentage is how much of what each project asks for your record already covers.' : undefined}
-          aside={<span style={{ fontSize: 14, color: C.textGhost }}>{data.activeApplicationCount}/5 slots used</span>}
+          aside={<span style={{ fontSize: 12.5, color: C.textGhost }}>{data.activeApplicationCount}/5 slots used</span>}
         >
           {topRecs.length === 0 ? (
-            <Card hoverable={false} padding={26}>
-              <p style={{ fontSize: 16, color: C.textMuted, lineHeight: 1.6, maxWidth: 620 }}>
+            <Card hoverable={false} padding={20}>
+              <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.55, maxWidth: 580 }}>
                 {data.openListingCount === 0
                   ? 'Nothing is open right now. Rather than invent a plan for an empty marketplace: build, and the evidence is on your record whenever projects do appear.'
                   : "You've applied to everything currently open. The most useful thing you can do now is build — evidence you add today is what you'll be matched on tomorrow."}
@@ -170,23 +170,23 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
           ) : (
             <div className="nb-g3">
               {topRecs.map((r) => (
-                <Card key={r.id} href={`/listings/${r.id}`} padding={22}>
-                  <p style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.3, color: C.text, marginBottom: 6 }}>
+                <Card key={r.id} href={`/listings/${r.id}`} padding={17}>
+                  <p style={{ fontFamily: F.display, fontSize: 14.5, fontWeight: 700, letterSpacing: '-0.015em', lineHeight: 1.3, color: C.text, marginBottom: 5 }}>
                     {r.title}
                   </p>
-                  <p style={{ fontSize: 13.5, color: C.textGhost, marginBottom: 16 }}>{r.posterName ?? 'Unnamed poster'}</p>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                    <div style={{ flexGrow: 1, height: 6, borderRadius: 3, background: C.border, overflow: 'hidden' }}>
+                  <p style={{ fontSize: 12, color: C.textGhost, marginBottom: 13 }}>{r.posterName ?? 'Unnamed poster'}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
+                    <div style={{ flexGrow: 1, height: 5, borderRadius: 3, background: C.border, overflow: 'hidden' }}>
                       <div style={{ width: `${Math.round(r.matchedShare * 100)}%`, height: '100%', background: C.accent }} />
                     </div>
-                    <span style={{ fontSize: 13.5, fontWeight: 700, color: C.accentInk, fontVariantNumeric: 'tabular-nums' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: C.accentInk, fontVariantNumeric: 'tabular-nums' }}>
                       {Math.round(r.matchedShare * 100)}%
                     </span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
                     <Badge tone={FIT_TIER_TONE[r.tier]}>{FIT_TIER_LABEL[r.tier]}</Badge>
                     {r.missingNames.length > 0 && (
-                      <span style={{ fontSize: 13, color: C.textGhost }}>
+                      <span style={{ fontSize: 11.5, color: C.textGhost }}>
                         missing {r.missingNames.slice(0, 2).join(', ')}
                       </span>
                     )}
@@ -199,19 +199,19 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
 
         {otherGaps.length > 0 && (
           <Section label="Other gaps" explain="Worth doing, but none would change as much as the one above.">
-            <Card hoverable={false} padding="6px 22px 12px">
+            <Card hoverable={false} padding="4px 18px 8px">
               {otherGaps.map((g, i) => (
                 <div
                   key={g.skillId}
                   style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16,
-                    padding: '13px 0', flexWrap: 'wrap',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14,
+                    padding: '11px 0', flexWrap: 'wrap',
                     borderBottom: i < otherGaps.length - 1 ? `1px solid ${C.borderFaint}` : 'none',
                   }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <p style={{ fontSize: 15.5, fontWeight: 600, color: C.textSub, marginBottom: 2 }}>{g.name}</p>
-                    <p style={{ fontSize: 13.5, color: C.textGhost }}>
+                    <p style={{ fontSize: 13.5, fontWeight: 600, color: C.textSub, marginBottom: 2 }}>{g.name}</p>
+                    <p style={{ fontSize: 12, color: C.textGhost }}>
                       Asked for by {g.listingCount} of {data.derivedFromListings} open project{data.derivedFromListings === 1 ? '' : 's'}
                     </p>
                   </div>
@@ -232,12 +232,12 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
         )}
 
         {data.strengths.length > 0 && (
-          <Section label="Already covered" explain="Skills you have evidence in that open projects are asking for." gap={30}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+          <Section label="Already covered" explain="Skills you have evidence in that open projects are asking for." gap={24}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {data.strengths.map((s) => (
                 <span
                   key={s.skillId}
-                  style={{ fontSize: 13.5, fontWeight: 600, color: C.accentInk, background: '#EDE9FF', borderRadius: R.sm, padding: '7px 13px' }}
+                  style={{ fontSize: 12, fontWeight: 600, color: C.accentInk, background: '#EDE9FF', borderRadius: R.sm, padding: '6px 11px' }}
                 >
                   {s.name} · asked for by {s.listingCount}
                 </span>
@@ -246,7 +246,7 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
           </Section>
         )}
 
-        <p style={{ fontSize: 14, color: C.textGhost, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 18 }}>
+        <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, borderTop: `1px solid ${C.border}`, paddingTop: 15 }}>
           Nothing here is a prediction. It is a count of what open projects ask for, compared against what your linked repositories show —{' '}
           <Link href="/me" style={{ color: C.textMuted, textDecoration: 'none' }}>see your record</Link>.
         </p>
