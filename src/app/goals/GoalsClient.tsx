@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
-import Badge, { type BadgeTone } from '@/components/ui/Badge'
+import Badge from '@/components/ui/Badge'
 import Section, { Kicker } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
+import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 
 export interface GoalsData {
@@ -30,13 +31,6 @@ export interface GoalsData {
     skillNames: string[]
   }[]
   agentsAvailable: boolean
-}
-
-const TIER_TONE: Record<FitTier, BadgeTone> = {
-  strong_fit: 'positive',
-  competitive: 'info',
-  reach: 'caution',
-  not_yet: 'neutral',
 }
 
 /** A single number carrying a whole argument. Deliberately oversized. */
@@ -190,7 +184,7 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <Badge tone={TIER_TONE[r.tier]}>{FIT_TIER_LABEL[r.tier]}</Badge>
+                    <Badge tone={FIT_TIER_TONE[r.tier]}>{FIT_TIER_LABEL[r.tier]}</Badge>
                     {r.missingNames.length > 0 && (
                       <span style={{ fontSize: 13, color: C.textGhost }}>
                         missing {r.missingNames.slice(0, 2).join(', ')}

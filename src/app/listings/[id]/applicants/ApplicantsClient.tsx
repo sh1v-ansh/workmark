@@ -12,6 +12,7 @@ import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import { createClient } from '@/lib/supabase/client'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
+import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import MessageThread from './MessageThread'
 
@@ -33,13 +34,6 @@ export interface ApplicantRow {
   missingCount: number
   createdAt: string
   studentEmail: string | null
-}
-
-const TIER_TONE: Record<FitTier, BadgeTone> = {
-  strong_fit: 'positive',
-  competitive: 'info',
-  reach: 'caution',
-  not_yet: 'neutral',
 }
 
 const STATUS: Record<string, { label: string; tone: BadgeTone }> = {
@@ -258,7 +252,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
 
               {selected.fitTier && (
                 <div style={{ marginBottom: 24 }}>
-                  <Badge tone={TIER_TONE[selected.fitTier]}>{FIT_TIER_LABEL[selected.fitTier]}</Badge>
+                  <Badge tone={FIT_TIER_TONE[selected.fitTier]}>{FIT_TIER_LABEL[selected.fitTier]}</Badge>
                   {selected.missingCount > 0 && (
                     <span style={{ fontSize: 14, color: C.textGhost, marginLeft: 10 }}>
                       no evidence in {selected.missingCount} skill{selected.missingCount === 1 ? '' : 's'} you asked for
