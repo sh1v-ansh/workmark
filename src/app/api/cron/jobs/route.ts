@@ -11,6 +11,19 @@ const STALL_SECONDS = 90
 const MAX_PER_TICK = 20
 
 /**
+ * How long a finished job's record is kept.
+ *
+ * Job rows are operational telemetry, not part of the student's record —
+ * unlike skill_evidence and evidence_audit, which are deliberately permanent
+ * because a consumer report has to be auditable. A job's steps hold the
+ * names of the student's private repos and one line about what was found in
+ * each, and nothing needs that once the scan is over and the evidence it
+ * produced has been written. Keeping it around is data we hold for no
+ * purpose, so it goes. A week is long enough to debug a failed scan.
+ */
+const KEEP_FINISHED_DAYS = 7
+
+/**
  * GET /api/cron/jobs
  *
  * The safety net. The worker normally chains itself from step to step, but
@@ -56,6 +69,20 @@ export async function GET(request: Request) {
   }
 
   for (const job of stalled ?? []) kickJob(job.id)
+
+  // Purge finished jobs past their keep window. Done here rather than in a
+  // separate cron because it is the same "once a minute, tidy the queue"
+  // responsibility, and a delete that finds nothing costs nothing.
+  const purgeBefore = new Date(Date.now() - KEEP_FINISHED_DAYS * 86_400_000).toISOString()
+  const { error: purgeError } = await admin
+    .from('jobs')
+    .delete()
+    .in('status', ['succeeded', 'failed', 'cancelled'])
+    .lt('finished_at', purgeBefore)
+  if (purgeError) {
+    // Not fatal — the sweep above is the part that keeps scans moving.
+    console.error('[cron/jobs] purge of finished jobs failed:', purgeError)
+  }
 
   return NextResponse.json({ ok: true, kicked: (stalled ?? []).length })
 }
