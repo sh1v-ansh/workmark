@@ -32,7 +32,7 @@ const KEEP_FINISHED_DAYS = 7
  * student's scan would stop silently at step 3 and never resume, which is
  * the exact failure the queue exists to prevent.
  *
- * Runs every minute. Kicking a job that is already progressing is harmless:
+ * Runs once per day on Hobby (Vercel's per-plan limit). Kicking a job that is already progressing is harmless:
  * claim_job() refuses the lease and the extra call returns immediately.
  *
  * Vercel Cron sends `Authorization: Bearer $CRON_SECRET` automatically when
