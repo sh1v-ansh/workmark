@@ -5,6 +5,16 @@ import { generateBrief } from '@/lib/agents/brief'
 import { agentsAvailable } from '@/lib/agents/client'
 import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 
+// This route does slow third-party work — a Claude generation of up to 16k tokens. Without an explicit
+// maxDuration it inherits the platform default and gets killed mid-flight.
+//
+// 60s is the value that is safe on every Vercel plan — Hobby without Fluid
+// Compute caps here, and a deployment whose maxDuration exceeds the plan
+// limit fails to build rather than being clamped. Raise it if the project
+// is on Pro; the durable fix is not a bigger number, it is doing this work
+// in a background job so no single request has to finish it.
+export const maxDuration = 60
+
 // A brief is cheap to generate and worthless in bulk — the point is one
 // project the student actually builds, not a catalogue to browse. The cap
 // is on unstarted briefs specifically, so completing one always frees a

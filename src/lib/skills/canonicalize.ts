@@ -123,20 +123,21 @@ export async function canonicalizeSkills(
   const misses = unique.filter((raw) => !cacheHits.has(raw))
   if (misses.length === 0) return results
 
-  // 2. Embed every miss in one request.
-  let embeddings: number[][]
-  try {
-    embeddings = await embedTexts(misses)
-  } catch (err) {
-    // Embedding is the only path for an uncached string; if the provider is
-    // down, report every miss unresolved rather than failing the whole scan
-    // — the priors/evidence already resolved from cache still get written.
-    for (const raw of misses) {
-      results.set(raw, { resolved: false, skillId: null, source: 'unresolved' })
-    }
-    console.error('[canonicalize] batch embedding failed:', err)
-    return results
+  // 2. Embed every miss, chunked — Voyage caps inputs per request, and a
+  //    monorepo's manifests can produce a few hundred dependency names.
+  //    Chunks go in parallel; the cap is on inputs per call, not calls.
+  //
+  //    Deliberately NOT caught: if embedding fails there is no other way to
+  //    resolve an uncached string, and swallowing it would report a
+  //    successful scan that silently found no skills. Let it throw so the
+  //    caller records "scan failed" against that repo and the student can
+  //    retry, rather than seeing an empty record and believing it.
+  const EMBED_CHUNK = 96
+  const chunks: string[][] = []
+  for (let i = 0; i < misses.length; i += EMBED_CHUNK) {
+    chunks.push(misses.slice(i, i + EMBED_CHUNK))
   }
+  const embeddings = (await Promise.all(chunks.map((c) => embedTexts(c)))).flat()
 
   // 3. Nearest-neighbour per embedding, in parallel.
   const looked = await Promise.all(

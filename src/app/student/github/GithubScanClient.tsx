@@ -64,6 +64,24 @@ interface ReviewRequest {
 
 const REVIEW_TONE = { approved: 'positive', rejected: 'neutral', pending: 'info' } as const
 
+/**
+ * A serverless timeout does not return JSON — it returns an HTML or plain
+ * text gateway error. Calling res.json() on that throws a parse error, and
+ * the student sees "Unexpected token '<'" instead of being told the scan
+ * ran out of time. Translate it into something true and actionable.
+ */
+async function readJson(res: Response) {
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    if (res.status === 504 || res.status === 502 || /timeout/i.test(text)) {
+      throw new Error('The scan ran longer than the server allows and was cut off. Anything already scanned was saved — run it again to continue.')
+    }
+    throw new Error(`Unexpected response from the server (${res.status}).`)
+  }
+}
+
 export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests }: {
   studentName: string | null
   connection: GithubConnection | null
@@ -93,11 +111,11 @@ export default function GithubScanClient({ studentName, connection, grants, prio
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: reviewUrl, note: reviewNote }),
       })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Could not submit.')
+      const json = await readJson(res)
+      if (!res.ok) throw new Error(json?.error ?? 'Could not submit.')
       toast('Submitted for review.', 'success')
       setReviewUrl(''); setReviewNote('')
-      window.location.reload()
+      router.refresh()
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Could not submit.', 'error')
     } finally {
@@ -153,11 +171,22 @@ export default function GithubScanClient({ studentName, connection, grants, prio
     setScanning(true)
     try {
       const res = await fetch('/api/github/scan', { method: 'POST' })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Scan failed.')
+      const json = await readJson(res)
+      if (!res.ok) throw new Error(json?.error ?? 'Scan failed.')
       const evidenceCount = json.results.reduce((n: number, r: { evidenceWritten: unknown[] }) => n + r.evidenceWritten.length, 0)
-      toast(`Scan complete — ${json.results.length} repo(s) processed, ${evidenceCount} evidence row(s) written or confirmed.`, 'success')
-      window.location.reload()
+      const failed = json.results.filter((r: { skipped?: boolean; skipReason?: string }) => r.skipped && r.skipReason?.startsWith('scan failed'))
+      toast(
+        failed.length > 0
+          ? `Scanned ${json.results.length} repo(s), ${evidenceCount} skill(s) recorded — ${failed.length} repo(s) failed and can be retried.`
+          : `Scan complete — ${json.results.length} repo(s) processed, ${evidenceCount} skill(s) recorded.`,
+        failed.length > 0 ? 'info' : 'success',
+      )
+      // router.refresh() rather than window.location.reload(): a full reload
+      // tears down the page — and the toast with it — before the student can
+      // read the result, which is why a finished scan appeared to say
+      // nothing at all. This re-renders the server component with fresh data
+      // and leaves the toast standing.
+      router.refresh()
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Scan failed.', 'error')
     } finally {

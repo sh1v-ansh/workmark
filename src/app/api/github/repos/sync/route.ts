@@ -3,6 +3,16 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { syncRepoGrants } from '@/lib/github/sync-grants'
 
+// This route does slow third-party work — paginates the installation's repo list. Without an explicit
+// maxDuration it inherits the platform default and gets killed mid-flight.
+//
+// 60s is the value that is safe on every Vercel plan — Hobby without Fluid
+// Compute caps here, and a deployment whose maxDuration exceeds the plan
+// limit fails to build rather than being clamped. Raise it if the project
+// is on Pro; the durable fix is not a bigger number, it is doing this work
+// in a background job so no single request has to finish it.
+export const maxDuration = 60
+
 /**
  * POST /api/github/repos/sync
  *

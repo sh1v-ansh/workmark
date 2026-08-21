@@ -7,10 +7,14 @@ import { syncRepoGrants } from '@/lib/github/sync-grants'
 // A scan is dozens of GitHub round-trips per repo. Without this, the route
 // inherits the platform default (10s on Vercel Hobby, 15s on Pro) and gets
 // killed mid-scan on any account with more than a repo or two — which is
-// exactly the "sometimes it just doesn't work" failure. 300s is the Pro
-// ceiling; the work is idempotent, so a scan cut short still leaves a
-// consistent record and re-running resumes rather than duplicating.
-export const maxDuration = 300
+// exactly the "sometimes it just doesn't work" failure.
+//
+// 60s, not 300: a deployment whose maxDuration exceeds the plan limit
+// fails to build, and 300 is only available above Hobby. The work is
+// idempotent, so a scan cut short still leaves a consistent record and
+// re-running continues rather than duplicating — but the real fix is the
+// job queue, so that no single request has to finish the whole scan.
+export const maxDuration = 60
 
 /**
  * POST /api/github/scan
