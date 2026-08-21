@@ -78,6 +78,20 @@ export default async function GithubScanPage() {
     }))
   }
 
+  // A scan runs in the background now, so it outlives the page. If the
+  // student navigated away mid-scan and came back, the page has to pick the
+  // job back up — otherwise the scan is silently running with nothing on
+  // screen saying so, which is the failure the queue was built to end.
+  const { data: activeJob } = await supabase
+    .from('jobs')
+    .select('id')
+    .eq('student_id', user.id)
+    .eq('kind', 'github_scan')
+    .in('status', ['queued', 'running'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   // §3 fallback path: work with no scannable repo. Surfaced here because
   // this is the page where "my work isn't showing up" actually happens.
   const { data: reviewRequests } = await supabase
@@ -94,6 +108,7 @@ export default async function GithubScanPage() {
       grants={grants ?? []}
       priors={priors ?? []}
       evidence={evidence}
+      activeJobId={activeJob?.id ?? null}
     />
   )
 }

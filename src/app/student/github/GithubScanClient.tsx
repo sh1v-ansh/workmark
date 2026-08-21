@@ -82,17 +82,37 @@ async function readJson(res: Response) {
   }
 }
 
-export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests }: {
+interface JobStep {
+  id: string
+  label: string
+  status: 'pending' | 'running' | 'done' | 'failed'
+  detail?: string | null
+}
+
+interface JobView {
+  id: string
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+  steps: JobStep[]
+  total_steps: number
+  completed_steps: number
+  result: { total?: number; failed?: number } | null
+  error: string | null
+}
+
+export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests, activeJobId }: {
   studentName: string | null
   connection: GithubConnection | null
   grants: RepoGrant[]
   priors: SkillPrior[]
   evidence: SkillEvidenceRow[]
   reviewRequests: ReviewRequest[]
+  activeJobId: string | null
 }) {
   const { toast } = useToast()
   const router = useRouter()
   const [scanning, setScanning] = useState(false)
+  const [jobId, setJobId] = useState<string | null>(activeJobId)
+  const [job, setJob] = useState<JobView | null>(null)
   const [syncing, setSyncing] = useState(false)
   // Only holds repos the student has toggled in this session — the stored
   // value is read from `grants` otherwise, so a router.refresh() after a
@@ -167,32 +187,77 @@ export default function GithubScanClient({ studentName, connection, grants, prio
     setTogglingId(null)
   }
 
+  // Poll whichever scan job is in flight — one queued just now, or one that
+  // was already running when this page loaded. The scan happens on the
+  // server one repo at a time, so this is the only thing that knows how far
+  // it has got; without it the student is back to staring at a spinner.
+  useEffect(() => {
+    if (!jobId) return
+    let cancelled = false
+    setScanning(true)
+
+    async function tick() {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}`, { cache: 'no-store' })
+        const json = await readJson(res)
+        if (!res.ok) throw new Error(json?.error ?? 'Lost track of the scan.')
+        if (cancelled) return
+        const next = json.job as JobView
+        setJob(next)
+        if (next.status === 'succeeded' || next.status === 'failed') {
+          const failed = next.result?.failed ?? 0
+          const total = next.result?.total ?? next.total_steps
+          toast(
+            next.status === 'failed'
+              ? next.error ?? 'The scan could not read any of your repos — try again in a minute.'
+              : failed > 0
+                ? `Scan complete — ${total - failed} of ${total} repo(s) read. ${failed} failed and can be retried.`
+                : `Scan complete — ${total} repo(s) read.`,
+            next.status === 'failed' ? 'error' : failed > 0 ? 'info' : 'success',
+          )
+          setScanning(false)
+          setJobId(null)
+          // Re-render the server component so the new evidence appears,
+          // without a full reload (which would tear down the toast above
+          // before it could be read).
+          router.refresh()
+          return
+        }
+      } catch {
+        // A single failed poll is not a failed scan — the job keeps running
+        // server-side regardless. Stay quiet and try again on the next tick.
+      }
+      if (!cancelled) timer = setTimeout(tick, 2500)
+    }
+
+    let timer = setTimeout(tick, 400)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [jobId, router, toast])
+
   async function runScan() {
     setScanning(true)
+    setJob(null)
     try {
       const res = await fetch('/api/github/scan', { method: 'POST' })
       const json = await readJson(res)
       if (!res.ok) throw new Error(json?.error ?? 'Scan failed.')
-      const evidenceCount = json.results.reduce((n: number, r: { evidenceWritten: unknown[] }) => n + r.evidenceWritten.length, 0)
-      const failed = json.results.filter((r: { skipped?: boolean; skipReason?: string }) => r.skipped && r.skipReason?.startsWith('scan failed'))
+      // The request only queues the work — the effect above takes it from
+      // here. Nothing is awaited on this path, so the student is free to
+      // navigate away; the scan finishes without them.
+      setJobId(json.jobId)
       toast(
-        failed.length > 0
-          ? `Scanned ${json.results.length} repo(s), ${evidenceCount} skill(s) recorded — ${failed.length} repo(s) failed and can be retried.`
-          : `Scan complete — ${json.results.length} repo(s) processed, ${evidenceCount} skill(s) recorded.`,
-        failed.length > 0 ? 'info' : 'success',
+        json.alreadyRunning
+          ? 'A scan is already running — showing its progress.'
+          : `Scanning ${json.totalSteps} repo(s) in the background. You can leave this page.`,
+        'info',
       )
-      // router.refresh() rather than window.location.reload(): a full reload
-      // tears down the page — and the toast with it — before the student can
-      // read the result, which is why a finished scan appeared to say
-      // nothing at all. This re-renders the server component with fresh data
-      // and leaves the toast standing.
-      router.refresh()
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Scan failed.', 'error')
-    } finally {
       setScanning(false)
     }
   }
+
+  const currentStepLabel = job?.steps.find((s) => s.status === 'pending' || s.status === 'running')?.label ?? null
 
   const evidenceByRepo = Array.from(
     evidence.reduce((byRepo, e) => {
@@ -419,6 +484,31 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                   <Button variant="ink" size="sm" fullWidth onClick={runScan} busyLabel={scanning ? 'Scanning…' : null}>
                     Scan now
                   </Button>
+                  {scanning && (
+                    <div style={{ marginTop: 12 }}>
+                      {/* Named progress, not a spinner: a scan can take minutes,
+                          and "3 of 7 · acme/api" is the difference between
+                          waiting and wondering whether it's stuck. */}
+                      <div style={{ height: 4, borderRadius: R.pill, background: C.border, overflow: 'hidden' }}>
+                        <div
+                          style={{
+                            height: '100%',
+                            width: `${job && job.total_steps > 0 ? Math.round((job.completed_steps / job.total_steps) * 100) : 4}%`,
+                            background: C.accent,
+                            transition: 'width 400ms ease',
+                          }}
+                        />
+                      </div>
+                      <p style={{ fontSize: 12.5, color: C.textFaint, marginTop: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {job
+                          ? `${job.completed_steps} of ${job.total_steps}${currentStepLabel ? ` · ${currentStepLabel}` : ''}`
+                          : 'Queueing…'}
+                      </p>
+                      <p style={{ fontSize: 12.5, color: C.textFaint, marginTop: 3 }}>
+                        Runs in the background — you can leave this page.
+                      </p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
