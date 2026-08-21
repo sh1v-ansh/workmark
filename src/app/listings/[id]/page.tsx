@@ -63,6 +63,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
       // no user insert policy, since it's an audit record about the user
       // rather than something they author. Best-effort: a logging failure
       // must not stop someone reading a listing.
+      //
+      // Still awaited rather than fire-and-forget: this Next version has
+      // no after()/waitUntil, so an un-awaited write here could be dropped
+      // if the serverless function freezes right after the response is
+      // sent — which would silently break an audit trail that matters more
+      // than the ~1 insert's worth of latency it costs.
       try {
         const admin = createServiceClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -61,6 +61,11 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes nb-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
