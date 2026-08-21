@@ -457,11 +457,30 @@ create table project_briefs (
   target_role         text,
   target_skill_id     text references skills(id),
   brief_text          text not null,
+  -- The agent's estimate of how LONG the project takes (1 = a weekend,
+  -- 5 = a month+). Deliberately not the same thing as skill_level below:
+  -- "how hard is this for someone at my level" and "how many evenings is
+  -- this" are different questions, and one 1-5 column answered neither.
   difficulty          int check (difficulty between 1 and 5),
+  -- Student-chosen, set BEFORE generation. Without these the agent had
+  -- nothing to calibrate against, so an absolute beginner and a researcher
+  -- asking about the same skill got the same project.
+  skill_level         text check (skill_level is null or skill_level in ('beginner', 'intermediate', 'advanced', 'research')),
+  career_track        text check (career_track is null or career_track in (
+                        'frontend', 'backend', 'systems', 'ml_ai', 'data', 'security', 'mobile', 'infrastructure'
+                      )),
+  -- The repo this brief turned into, once the student starts building.
+  -- A brief with a repo is in progress; one without is still just an idea.
+  repo_full_name      text,
+  started_at          timestamptz,
   issued_at           timestamptz default now(),
   completed_at        timestamptz,
   linked_artifact_id  uuid references artifacts(id)
 );
+
+create index project_briefs_repo_idx
+  on project_briefs (student_id, repo_full_name)
+  where repo_full_name is not null;
 
 -- ─── FCRA write-path — cannot be backfilled, must exist from row one ──────
 

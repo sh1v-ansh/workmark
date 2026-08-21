@@ -66,6 +66,27 @@
   100% { background-position: 0% 50%; }
 }
 
+@keyframes nb-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes nb-drawer-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes nb-drawer-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Respect a stated preference for less motion — the drawer still appears,
+   it just stops sliding. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes nb-drawer-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes nb-shimmer { 0%, 100% { background-position: 50% 50%; } }
+}
+
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }

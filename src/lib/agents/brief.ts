@@ -17,6 +17,10 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { callStructuredAgent } from './client'
+import {
+  CAREER_TRACK_META, SKILL_LEVEL_META,
+  type CareerTrack, type SkillLevel,
+} from './tracks'
 
 export interface GeneratedBrief {
   targetSkillId: string
@@ -24,6 +28,12 @@ export interface GeneratedBrief {
   title: string
   briefText: string
   difficulty: number
+}
+
+export interface BriefOptions {
+  targetRole: string | null
+  skillLevel: SkillLevel | null
+  careerTrack: CareerTrack | null
 }
 
 const SYSTEM = `You write a short, concrete project brief for a computer science student who wants to demonstrate a specific skill.
@@ -39,7 +49,9 @@ Requirements for a good brief:
 
 Write in second person, plainly, as if briefing a capable peer. No preamble, no encouragement, no restating the task back. Keep it to a few short paragraphs — this is a brief, not a specification.
 
-difficulty is 1 (a weekend) to 5 (several weeks of sustained work).`
+The student states their level. Calibrate the project to it: the same skill should produce a visibly different project for a beginner than for someone working at research level. Match the level you are given rather than hedging toward the middle.
+
+difficulty is your estimate of TIME, from 1 (a weekend) to 5 (several weeks of sustained work). It is not a measure of how advanced the project is — a research-level brief can be a weekend, and a beginner project can take a month. Judge it independently of the student's stated level.`
 
 const SCHEMA = {
   type: 'object',
@@ -62,8 +74,9 @@ export async function generateBrief(
   supabase: SupabaseClient,
   studentId: string,
   targetSkillId: string,
-  targetRole: string | null,
+  options: BriefOptions,
 ): Promise<GeneratedBrief | null> {
+  const { targetRole, skillLevel, careerTrack } = options
   const { data: skill } = await supabase
     .from('skills')
     .select('id, canonical_name')
@@ -86,7 +99,11 @@ export async function generateBrief(
 
   const context = [
     `Target skill: ${skill.canonical_name}`,
-    targetRole ? `The student is aiming for roles like: ${targetRole}` : null,
+    // Level first: it changes the shape of a good answer more than anything
+    // else here, including the skill itself.
+    skillLevel ? `Level: ${SKILL_LEVEL_META[skillLevel].label}. ${SKILL_LEVEL_META[skillLevel].prompt}` : null,
+    careerTrack ? CAREER_TRACK_META[careerTrack].prompt : null,
+    targetRole ? `Additional context on what they're aiming for: ${targetRole}` : null,
     existingNames.length
       ? `They already have verified evidence in: ${existingNames.join(', ')}. Build on these where it makes the project better, but the target skill is what this brief must demonstrate.`
       : 'They have no verified evidence yet — this would be their first project on the platform, so keep the scope achievable.',
@@ -100,7 +117,13 @@ export async function generateBrief(
     system: SYSTEM,
     userContent: context,
     schema: SCHEMA as unknown as Record<string, unknown>,
-    inputForAudit: { target_skill_id: targetSkillId, target_role: targetRole, existing_skills: existingNames },
+    inputForAudit: {
+      target_skill_id: targetSkillId,
+      target_role: targetRole,
+      skill_level: skillLevel,
+      career_track: careerTrack,
+      existing_skills: existingNames,
+    },
   })
 
   if (!result) return null

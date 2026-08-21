@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server'
 import { generateBrief } from '@/lib/agents/brief'
 import { agentsAvailable } from '@/lib/agents/client'
 import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
+import { isCareerTrack, isSkillLevel } from '@/lib/agents/tracks'
 
 // This route does slow third-party work — a Claude generation of up to 16k tokens. Without an explicit
 // maxDuration it inherits the platform default and gets killed mid-flight.
@@ -41,7 +42,7 @@ export async function POST(request: Request) {
     )
   }
 
-  let body: { skillId?: string; targetRole?: string }
+  let body: { skillId?: string; targetRole?: string; skillLevel?: string; careerTrack?: string }
   try {
     body = await request.json()
   } catch {
@@ -51,6 +52,18 @@ export async function POST(request: Request) {
   if (!body.skillId) {
     return NextResponse.json({ error: 'Pick a skill to build toward.' }, { status: 400 })
   }
+
+  // Validated rather than passed through: these reach both a CHECK
+  // constraint and a prompt, and an unrecognised value would fail the
+  // insert after the expensive generation had already run.
+  if (body.skillLevel != null && !isSkillLevel(body.skillLevel)) {
+    return NextResponse.json({ error: 'Unknown level.' }, { status: 400 })
+  }
+  if (body.careerTrack != null && !isCareerTrack(body.careerTrack)) {
+    return NextResponse.json({ error: 'Unknown career track.' }, { status: 400 })
+  }
+  const skillLevel = body.skillLevel ?? null
+  const careerTrack = body.careerTrack ?? null
 
   const { count } = await supabase
     .from('project_briefs')
@@ -75,7 +88,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const brief = await generateBrief(admin, user.id, body.skillId, body.targetRole?.trim() || null)
+    const brief = await generateBrief(admin, user.id, body.skillId, {
+      targetRole: body.targetRole?.trim() || null,
+      skillLevel,
+      careerTrack,
+    })
     if (!brief) {
       return NextResponse.json({ error: 'Could not generate a project idea. Try again.' }, { status: 502 })
     }
@@ -90,6 +107,8 @@ export async function POST(request: Request) {
         target_role: body.targetRole?.trim() || null,
         brief_text: `${brief.title}\n\n${brief.briefText}`,
         difficulty: brief.difficulty,
+        skill_level: skillLevel,
+        career_track: careerTrack,
       })
       .select('id')
       .single()

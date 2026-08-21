@@ -8,6 +8,7 @@ import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Ring from '@/components/ui/Ring'
+import Drawer from '@/components/ui/Drawer'
 import { Kicker } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
@@ -247,9 +248,25 @@ export default function ListingDetailClient({
           </div>
         )}
 
-        {/* Apply form, expanded inline above the sticky bar */}
-        {showApply && applyState === 'apply' && fit && (
-          <Card hoverable={false} padding={23} style={{ marginTop: 23, maxWidth: 750 }}>
+        {/* The apply form lives in a drawer rather than inline: what you're
+            writing is an answer to this listing's requirements, so the
+            listing stays on screen behind it instead of being replaced by
+            a form that opens below the fold. */}
+        {applyState === 'apply' && fit && (
+          <Drawer
+            open={showApply}
+            onClose={() => { if (!submitting) setShowApply(false) }}
+            title="Apply to this project"
+            subtitle={listing.title ?? undefined}
+            footer={
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <Button variant="accent" onClick={submitApplication} disabled={!canSubmit} busyLabel={submitting ? 'Submitting…' : null}>
+                  Submit application
+                </Button>
+                <Button variant="quiet" onClick={() => setShowApply(false)} disabled={submitting}>Cancel</Button>
+              </div>
+            }
+          >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div>
                 <Kicker style={{ marginBottom: 5.5 }}>Which of these are you claiming?</Kicker>
@@ -309,20 +326,14 @@ export default function ListingDetailClient({
                 </span>
               </label>
 
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                <Button variant="accent" onClick={submitApplication} disabled={!canSubmit} busyLabel={submitting ? 'Submitting…' : null}>
-                  Submit application
-                </Button>
-                <Button variant="outline" onClick={() => setShowApply(false)} disabled={submitting}>Cancel</Button>
-              </div>
             </div>
-          </Card>
+          </Drawer>
         )}
       </main>
 
       {/* The action follows the reader instead of sitting in a column
           competing with the brief for attention. */}
-      {applyState === 'apply' && fit && !showApply && (
+      {applyState === 'apply' && fit && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'rgba(250,247,240,0.94)', backdropFilter: 'blur(6px)', borderTop: `1px solid ${C.border}`, padding: '14.5px 28px', zIndex: 30 }}>
           <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 14, color: C.textMuted }}>Four checkboxes and one short answer. About five minutes.</span>
