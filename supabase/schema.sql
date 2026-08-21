@@ -457,11 +457,30 @@ create table project_briefs (
   target_role         text,
   target_skill_id     text references skills(id),
   brief_text          text not null,
+  -- The agent's estimate of how LONG the project takes (1 = a weekend,
+  -- 5 = a month+). Deliberately not the same thing as skill_level below:
+  -- "how hard is this for someone at my level" and "how many evenings is
+  -- this" are different questions, and one 1-5 column answered neither.
   difficulty          int check (difficulty between 1 and 5),
+  -- Student-chosen, set BEFORE generation. Without these the agent had
+  -- nothing to calibrate against, so an absolute beginner and a researcher
+  -- asking about the same skill got the same project.
+  skill_level         text check (skill_level is null or skill_level in ('beginner', 'intermediate', 'advanced', 'research')),
+  career_track        text check (career_track is null or career_track in (
+                        'frontend', 'backend', 'systems', 'ml_ai', 'data', 'security', 'mobile', 'infrastructure'
+                      )),
+  -- The repo this brief turned into, once the student starts building.
+  -- A brief with a repo is in progress; one without is still just an idea.
+  repo_full_name      text,
+  started_at          timestamptz,
   issued_at           timestamptz default now(),
   completed_at        timestamptz,
   linked_artifact_id  uuid references artifacts(id)
 );
+
+create index project_briefs_repo_idx
+  on project_briefs (student_id, repo_full_name)
+  where repo_full_name is not null;
 
 -- ─── FCRA write-path — cannot be backfilled, must exist from row one ──────
 
@@ -1112,6 +1131,109 @@ create policy "Students: read own agent calls"
 create policy "Posters: read agent calls made on their behalf"
   on agent_calls for select using (auth.uid() = poster_id);
 
+-- Background jobs.
+--
+-- Everything slow in this product — scanning a student's repos, re-running
+-- a scan to settle a dispute, generating a project brief — was being done
+-- inside the request that triggered it. That fails two ways: the student is
+-- pinned to the page while it runs, and a serverless function has a hard
+-- timeout that a multi-repo scan simply exceeds, killing the work partway
+-- with no way to resume.
+--
+-- A job is a list of independent STEPS plus a cursor. A worker claims the
+-- job, does exactly ONE step, records it, and hands back. No single request
+-- ever has to finish the whole thing, so the platform timeout stops being a
+-- correctness problem and becomes a per-step budget that is trivially met.
+--
+-- Progress is stored rather than inferred so the UI can show "3 of 7" and
+-- name the repo currently being read — and so it survives the student
+-- closing the tab, which is the entire point.
+
+create table if not exists jobs (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references students(id) on delete cascade,
+
+  -- Extensible on purpose: scan is the first consumer, but close-out
+  -- evidence and dispute reinvestigation are the same shape of problem.
+  kind text not null check (kind in ('github_scan')),
+
+  status text not null default 'queued'
+    check (status in ('queued', 'running', 'succeeded', 'failed', 'cancelled')),
+
+  -- The work list. Each entry: { id, label, status, detail }, where status
+  -- is pending | running | done | failed. Kept as one document rather than
+  -- a child table because steps are only ever read and written together,
+  -- as a unit, by the worker that owns the job's lease.
+  steps jsonb not null default '[]'::jsonb,
+  total_steps int not null default 0,
+  completed_steps int not null default 0,
+
+  -- Whatever the finished job wants to tell the user. Shape is per-kind.
+  result jsonb,
+  error text,
+
+  -- Lease. A worker may only touch a job whose lease is free or expired;
+  -- this is what stops the self-chained call and the cron sweeper from
+  -- both running step 4 at the same time and double-writing evidence.
+  locked_at timestamptz,
+  attempts int not null default 0,
+
+  created_at timestamptz not null default now(),
+  started_at timestamptz,
+  finished_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+-- The sweeper's query: unfinished jobs, oldest first.
+create index if not exists jobs_pending_idx
+  on jobs (status, updated_at)
+  where status in ('queued', 'running');
+
+-- "Do I already have a scan running?" on every page load.
+create index if not exists jobs_student_kind_idx
+  on jobs (student_id, kind, status);
+
+alter table jobs enable row level security;
+
+-- Students read their own jobs and nothing else. There is deliberately no
+-- insert or update policy: a job is created and advanced by the server
+-- under service-role. A client that could write its own job rows could
+-- claim work was done that never ran, which would put unearned evidence on
+-- a record — the one thing this product cannot allow.
+
+/**
+ * Atomically claim a job for one step of work.
+ *
+ * Returns the job row on success and no rows if it could not be claimed —
+ * because it is already finished, or because another worker holds a live
+ * lease. Callers must treat "no rows" as "someone else has it", not as an
+ * error: with a self-chaining worker AND a cron sweeper, losing the race is
+ * the normal, healthy case.
+ *
+ * The lease expires rather than being explicitly released, so a worker that
+ * is killed mid-step (the exact failure this whole table exists to survive)
+ * frees its job automatically instead of stranding it forever.
+ */
+create or replace function claim_job(p_job_id uuid, p_lease_seconds int default 120)
+returns setof jobs
+language sql
+security definer
+set search_path = public
+as $$
+  update jobs
+     set locked_at = now(),
+         attempts = attempts + 1,
+         status = case when status = 'queued' then 'running' else status end,
+         started_at = coalesce(started_at, now()),
+         updated_at = now()
+   where id = p_job_id
+     and status in ('queued', 'running')
+     and (locked_at is null or locked_at < now() - make_interval(secs => p_lease_seconds))
+  returning *;
+$$;
+
+revoke all on function claim_job(uuid, int) from public, anon, authenticated;
+
 -- ── skill_calibration ──
 -- Readable by anyone signed in: a student is entitled to know that their
 -- level moved because a skill crossed its calibration threshold, not
@@ -1128,3 +1250,7 @@ create policy "Anyone signed in: read skill calibration"
 
 create policy "Students: read own fit tier impressions"
   on fit_tier_impressions for select using (auth.uid() = student_id);
+
+-- ── jobs ──
+create policy "Students: read own jobs"
+  on jobs for select using (auth.uid() = student_id);

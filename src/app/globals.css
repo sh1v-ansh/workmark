@@ -61,6 +61,32 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes nb-shimmer {
+  0%   { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes nb-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes nb-drawer-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes nb-drawer-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Respect a stated preference for less motion — the drawer still appears,
+   it just stops sliding. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes nb-drawer-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes nb-shimmer { 0%, 100% { background-position: 50% 50%; } }
+}
+
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(16px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -76,48 +102,49 @@
   transform: translateY(0);
 }
 
-/* ─── App form utilities (light theme) ────────────────────────────────────
-   Kept under .dk-* class names so existing consumers don't need updates —
-   the visuals are now light-mode. See src/lib/theme/dark-tokens.ts for the
-   matching palette flip. */
+/* ─── App form controls ───────────────────────────────────────────────────
+   .dk-* is app-only (marketing uses .lt-* below), so these carry the
+   Notebook theme. Kept under the old class names because ~30 call sites
+   reference them and renaming is churn without a payoff. */
 .dk-input,
 .dk-select,
 .dk-textarea {
   background: #FFFFFF;
-  border: 1px solid #E5E4EF;
-  color: #0A0A0A;
-  font-size: 14px;
-  padding: 10px 14px;
+  border: 1.5px solid #E7E2D6;
+  color: #191E2E;
+  font-size: 15px;
+  padding: 11px 14px;
   outline: none;
   width: 100%;
-  font-family: var(--font-sans), Inter, system-ui, sans-serif;
-  transition: border-color 0.15s;
-  border-radius: 8px;
+  font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  border-radius: 10px;
 }
 .dk-input:focus,
 .dk-select:focus,
 .dk-textarea:focus {
-  border-color: #3E1FFF;
+  border-color: #6142F5;
+  box-shadow: 0 0 0 3px rgba(97, 66, 245, 0.12);
 }
 .dk-input::placeholder,
 .dk-textarea::placeholder {
-  color: #8A8A94;
+  color: #8D94A5;
 }
 .dk-select {
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238A8A94' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666D80' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
-  padding-right: 32px;
+  background-position: right 14px center;
+  padding-right: 34px;
 }
 .dk-textarea {
   resize: vertical;
 }
 .dk-checkbox {
-  accent-color: #3E1FFF;
-  width: 14px;
-  height: 14px;
+  accent-color: #6142F5;
+  width: 15.5px;
+  height: 15.5px;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -233,6 +260,152 @@
   box-shadow: 0 16px 40px rgba(10, 10, 10, 0.08);
   border-color: #C7B8FF;
 }
+
+/* ══ APP — "Notebook" ══════════════════════════════════════════════════════
+   Everything under .nb-* belongs to the logged-in product. Marketing keeps
+   .wm-btn / .wm-card / .wm-eyebrow above and is untouched by these.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Buttons ───────────────────────────────────────────────────────────────
+   Four variants and no more. Ink is the workhorse (almost every button in
+   the app); accent is reserved for the single growth action on a page —
+   spending it on ordinary buttons is what made the violet stop meaning
+   anything in the first place. */
+.nb-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7.5px;
+  font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1;
+  padding: 10.5px 19px;
+  border-radius: 10px;
+  border: 1.5px solid transparent;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+}
+.nb-btn:disabled,
+.nb-btn[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; }
+
+.nb-btn-ink      { background: #191E2E; color: #FFFFFF; border-color: #191E2E; }
+.nb-btn-ink:not(:disabled):hover { background: #262D42; border-color: #262D42; }
+
+.nb-btn-accent   { background: #6142F5; color: #FFFFFF; border-color: #6142F5; }
+.nb-btn-accent:not(:disabled):hover { background: #4E2FD6; border-color: #4E2FD6; }
+
+.nb-btn-outline  { background: #FFFFFF; color: #191E2E; border-color: #DCD6C8; }
+.nb-btn-outline:not(:disabled):hover { border-color: #191E2E; }
+
+.nb-btn-quiet    { background: transparent; color: #5A6172; border-color: transparent; padding-left: 9px; padding-right: 9px; }
+.nb-btn-quiet:not(:disabled):hover { background: #F1EDE3; color: #191E2E; }
+
+.nb-btn-sm { font-size: 13px; padding: 8px 14.5px; border-radius: 8.5px; }
+
+/* ── Nav tabs — notebook dividers, not a toolbar ──────────────────────────
+   The active tab shares the card's fill and loses its bottom border, so it
+   reads as the sheet you're currently on rather than a highlighted link. */
+.nb-tab {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-display), 'Schibsted Grotesk', system-ui, sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  padding: 7.5px 13.5px;
+  border-radius: 8.5px 8.5px 0 0;
+  color: #5A6172;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  position: relative;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.nb-tab:hover { color: #191E2E; background: #F1EDE3; }
+.nb-tab-active {
+  background: #FFFFFF;
+  color: #191E2E;
+  border-color: #E7E2D6;
+}
+/* Bridge the 1px rule under the bar so the active tab joins the page. */
+.nb-tab-active::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: #FFFFFF;
+}
+
+/* ── Ruled paper ──────────────────────────────────────────────────────────
+   Behind the record only. It signals "this is the written-down part", which
+   is true of the record and not true of anything else — using it as generic
+   texture would make it mean nothing. */
+.nb-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 33px,
+    #EDE8DC 33px,
+    #EDE8DC 34px
+  );
+}
+
+/* ── The page grid ────────────────────────────────────────────────────────
+   Three columns, and nothing is allowed to take exactly half. A 50/50 split
+   is what makes the eye ping-pong: neither side wins, so it keeps checking
+   both. The dominant element takes .nb-s2, which puts every divider on a
+   third line instead of the middle.
+
+   Collapses to one column on narrow screens — a third of a phone is not a
+   column, it is a gutter. */
+.nb-g3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+.nb-s2 { grid-column: span 2; }
+.nb-s3 { grid-column: span 3; }
+
+/* Two thirds against one, for pages that are content + a subordinate rail. */
+.nb-split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .nb-g3 { grid-template-columns: 1fr; }
+  .nb-s2, .nb-s3 { grid-column: span 1; }
+  .nb-g3 > * { grid-row: auto !important; }
+  .nb-split { grid-template-columns: 1fr; }
+}
+
+/* The focal card. One per page — it is the thing the eye should land on,
+   and a second one means neither is focal. The wash is barely there; it
+   exists to separate the subject from the supporting cards without adding
+   another border weight. */
+.nb-focal {
+  background: linear-gradient(180deg, #FFFFFF 0%, #FCFAFF 100%);
+  border: 1px solid #D9D0F5;
+  border-radius: 13px;
+}
+
+/* ── Cards ────────────────────────────────────────────────────────────────
+   Bordered, not floated. A hover lift on a card that isn't clickable is a
+   lie about affordance, so only the link/button variants get it. */
+.nb-card {
+  background: #FFFFFF;
+  border: 1px solid #E7E2D6;
+  border-radius: 13px;
+}
+.nb-card-interactive { transition: border-color 0.15s ease, background 0.15s ease; }
+.nb-card-interactive:hover { border-color: #C9C2B2; background: #FFFDFA; }
 
 /* Respect user's motion preference — WCAG 2.3.3 */
 @media (prefers-reduced-motion: reduce) {

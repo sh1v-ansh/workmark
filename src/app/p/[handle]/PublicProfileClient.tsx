@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
+import { Kicker, Stat } from '@/components/ui/Section'
 import { Icon } from '@/components/Icon'
-import { C, F } from '@/lib/theme/dark-tokens'
-import { tagColor } from '@/lib/theme/tagColors'
+import { C, F, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 import type { PublicEngagement } from '@/lib/profile/visibility'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
@@ -46,147 +46,148 @@ export default function PublicProfileClient({
       {signedIn ? (
         <Navbar userName={undefined} />
       ) : (
-        <header style={{ borderBottom: `1px solid ${C.border}`, padding: '0 24px', height: 56, display: 'flex', alignItems: 'center' }}>
+        <header style={{ borderBottom: `1px solid ${C.border}`, padding: '0 28px', height: 60, display: 'flex', alignItems: 'center' }}>
           <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
-            <Wordmark height={27} />
+            <Wordmark height={22} />
           </Link>
         </header>
       )}
 
-      <main style={{ maxWidth: 720, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
+      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+
         {isOwner && (
-          <Card hoverable={false} padding={14}>
+          <Card hoverable={false} padding="11px 16.5px" style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <p style={{ fontSize: 12, color: C.textMuted }}>This is your public profile — exactly as everyone else sees it.</p>
-              <Link href="/me" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
-                Manage →
-              </Link>
+              <p style={{ fontSize: 13, color: C.textMuted }}>This is your public profile — exactly as everyone else sees it.</p>
+              <Link href="/me" style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none' }}>Manage →</Link>
             </div>
           </Card>
         )}
 
-        {/* Header */}
-        <div>
-          <h1 style={{ fontFamily: F.serif, fontSize: 30, fontWeight: 700, color: C.text, marginBottom: 8, letterSpacing: '-0.02em' }}>
-            {student.fullName ?? 'Student'}
-          </h1>
-          <p style={{ fontSize: 13, color: C.textMuted, marginBottom: 12 }}>
-            {[student.degreeType, student.major, student.university, student.graduationYear ? `Class of ${student.graduationYear}` : null]
-              .filter(Boolean)
-              .join(' · ')}
-          </p>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            {student.githubUsername && (
-              <a href={`https://github.com/${student.githubUsername}`} target="_blank" rel="noopener noreferrer" className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}>
-                <Icon name="github" size={12} /> {student.githubUsername}
-              </a>
-            )}
-            {student.linkedinUrl && (
-              <a href={student.linkedinUrl} target="_blank" rel="noopener noreferrer" className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}>
-                <Icon name="linkedin" size={12} /> LinkedIn
-              </a>
+        {/* A stranger reads top to bottom and can't choose where to start,
+            so the identity and the argument for it share one band instead
+            of competing across a two-column layout. */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 36, alignItems: 'center', paddingBottom: 26, borderBottom: `1px solid ${C.border}`, marginBottom: 31 }} className="mob-1col">
+          <div>
+            <h1 style={{ fontFamily: F.display, fontSize: 34, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1.05, color: C.text, marginBottom: 10.5 }}>
+              {student.fullName ?? 'Student'}
+            </h1>
+            <p style={{ fontSize: 15.5, color: C.textMuted, marginBottom: 14.5 }}>
+              {[student.degreeType, student.major, student.university, student.graduationYear ? `Class of ${student.graduationYear}` : null]
+                .filter(Boolean).join(' · ')}
+            </p>
+            <div style={{ display: 'flex', gap: 8.5, flexWrap: 'wrap' }}>
+              {student.githubUsername && (
+                <a href={`https://github.com/${student.githubUsername}`} target="_blank" rel="noopener noreferrer" className="nb-btn nb-btn-outline nb-btn-sm">
+                  <Icon name="github" size={12.5} /> {student.githubUsername}
+                </a>
+              )}
+              {student.linkedinUrl && (
+                <a href={student.linkedinUrl} target="_blank" rel="noopener noreferrer" className="nb-btn nb-btn-outline nb-btn-sm">
+                  <Icon name="linkedin" size={12.5} /> LinkedIn
+                </a>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12.5, borderLeft: `1px solid ${C.border}`, paddingLeft: 32 }} className="mob-static">
+            <Stat value={skills.length} label={skills.length === 1 ? 'skill proven from code' : 'skills proven from code'} />
+            {trackRecord.closeOutRate !== null && (
+              <>
+                <Stat value={trackRecord.closed} label="collaborations completed" />
+                <Stat value={`${Math.round(trackRecord.closeOutRate * 100)}%`} label="close-out rate" />
+              </>
             )}
           </div>
         </div>
 
-        {/* Verified skills — the point of the page */}
-        <section>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Verified skills</h2>
-          <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
-            Derived from code they actually wrote — commit-attributed, in repos they linked themselves. Not self-reported.
-          </p>
-          {skills.length === 0 ? (
-            <Card hoverable={false} padding={20}>
-              <p style={{ fontSize: 13, color: C.textFaint }}>No verified skills on this record yet.</p>
-            </Card>
-          ) : (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-              {skills.map((s) => {
-                const c = tagColor(s.name)
-                return (
-                  <span
-                    key={s.skillId}
-                    title={`${s.artifactCount} project${s.artifactCount === 1 ? '' : 's'}`}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 600, padding: '5px 12px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}
-                  >
-                    {s.name}
-                    <span style={{ fontWeight: 400, opacity: 0.75 }}>{LEVEL_NAMES[s.bestLevel] ?? s.bestLevel}</span>
-                  </span>
-                )
-              })}
+        <div className="nb-split">
+          <div>
+            {/* Verified skills — the point of the page */}
+            <div style={{ marginBottom: 35 }}>
+              <Kicker style={{ marginBottom: 5.5 }}>What the code shows</Kicker>
+              <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginBottom: 14, maxWidth: 480 }}>
+                Derived from code they actually wrote — commit-attributed, in repositories they linked themselves. Not self-reported.
+              </p>
+              {skills.length === 0 ? (
+                <Card hoverable={false} padding={19.5}><p style={{ fontSize: 14, color: C.textFaint }}>No verified skills on this record yet.</p></Card>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+                  {skills.map((s) => (
+                    <div key={s.skillId}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 6.5 }}>
+                        <span style={{ fontSize: 15, fontWeight: 600 }}>{s.name}</span>
+                        <span style={{ fontSize: 12, color: C.textGhost }}>
+                          {LEVEL_NAMES[s.bestLevel] ?? s.bestLevel} · {s.artifactCount} project{s.artifactCount === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', gap: 3 }}>
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <span key={i} style={{ flexGrow: 1, height: 5.5, borderRadius: 3, background: i <= s.bestLevel ? C.accent : C.border }} />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Self-reported, clearly separated */}
+            {claimedOnly.length > 0 && (
+              <div style={{ marginBottom: 35 }}>
+                <Kicker style={{ marginBottom: 5.5 }}>Also claims</Kicker>
+                <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginBottom: 11 }}>
+                  Self-reported. Nothing in their linked repositories evidences these yet.
+                </p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5.5 }}>
+                  {claimedOnly.map((s) => (
+                    <span key={s} style={{ fontSize: 12, padding: '3.5px 9.5px', borderRadius: R.pill, background: 'transparent', border: `1px dashed ${C.border}`, color: C.textGhost }}>
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 16.5 }}>
+              Verified by <Link href="/" style={{ color: C.textMuted, textDecoration: 'none' }}>Workmark</Link> — skills evidenced by commit-attributed code, not self-reported.
+            </p>
+          </div>
+
+          {/* Public work. Rendered only when there's something to show — an
+              empty section with a heading would itself signal that
+              something was withheld. */}
+          {engagements.length > 0 && (
+            <div>
+              <Kicker style={{ marginBottom: 12 }}>Collaborations</Kicker>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+                {engagements.map((e) => (
+                  <Card key={e.id} hoverable={false} padding={18}>
+                    {e.redacted ? (
+                      <div>
+                        <p style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, marginBottom: 3 }}>Confidential engagement</p>
+                        <p style={{ fontSize: 12, color: C.textGhost }}>
+                          Completed{e.closedAt ? ` ${new Date(e.closedAt).toLocaleDateString()}` : ''} · details withheld
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <p style={{ fontFamily: F.display, fontSize: 15.5, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 3 }}>
+                          {e.listingTitle ?? 'Untitled project'}
+                        </p>
+                        <p style={{ fontSize: 12, color: C.textGhost, marginBottom: e.description ? 9.5 : 0 }}>
+                          {[e.posterDisplayName, e.closedAt ? `completed ${new Date(e.closedAt).toLocaleDateString()}` : null].filter(Boolean).join(' · ')}
+                        </p>
+                        {e.description && (
+                          <p style={{ fontSize: 13.5, color: C.textSub, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{e.description}</p>
+                        )}
+                      </div>
+                    )}
+                  </Card>
+                ))}
+              </div>
             </div>
           )}
-        </section>
-
-        {/* Track record */}
-        {trackRecord.closeOutRate !== null && (
-          <Card hoverable={false} padding={20}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
-              <div>
-                <p style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: F.mono }}>{Math.round(trackRecord.closeOutRate * 100)}%</p>
-                <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>close-out rate</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: F.mono }}>{trackRecord.closed}</p>
-                <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>collaborations completed</p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Public work. Rendered only when there's something to show —
-            an empty section with a heading would itself signal that
-            something was withheld. */}
-        {engagements.length > 0 && (
-          <section>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Collaborations</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {engagements.map((e) => (
-                <Card key={e.id} hoverable={false} padding={16}>
-                  {e.redacted ? (
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: C.textMuted }}>Confidential engagement</p>
-                      <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                        Completed{e.closedAt ? ` ${new Date(e.closedAt).toLocaleDateString()}` : ''} · details withheld
-                      </p>
-                    </div>
-                  ) : (
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{e.listingTitle ?? 'Untitled project'}</p>
-                      <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono, marginBottom: e.description ? 8 : 0 }}>
-                        {[e.posterDisplayName, e.closedAt ? `completed ${new Date(e.closedAt).toLocaleDateString()}` : null].filter(Boolean).join(' · ')}
-                      </p>
-                      {e.description && (
-                        <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{e.description}</p>
-                      )}
-                    </div>
-                  )}
-                </Card>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Self-reported, clearly separated */}
-        {claimedOnly.length > 0 && (
-          <section>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Also claims</h2>
-            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 10, lineHeight: 1.5 }}>
-              Self-reported. Nothing in their linked repos evidences these yet.
-            </p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {claimedOnly.map((s) => (
-                <span key={s} style={{ fontSize: 11, padding: '3px 9px', borderRadius: 999, background: 'transparent', border: `1px dashed ${C.border}`, color: C.textFaint, fontFamily: F.mono }}>
-                  {s}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <p style={{ fontSize: 11, color: C.textFaint, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 16 }}>
-          Verified by <Link href="/" style={{ color: C.textMuted, textDecoration: 'none' }}>Workmark</Link> — skills evidenced by commit-attributed code, not self-reported.
-        </p>
+        </div>
       </main>
     </div>
   )

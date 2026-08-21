@@ -11,13 +11,20 @@ import ListingsClient, { type ListingCardData } from './ListingsClient'
  */
 export default async function ListingsPage() {
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: listings } = await supabase
-    .from('listings')
-    .select('id, poster_id, poster_display_name, title, brief, est_hours, hours_per_week, duration, work_mode, team_size, created_at')
-    .eq('status', 'open')
-    .order('created_at', { ascending: false })
+  // getUser() and the listings query are independent — the listings query
+  // doesn't need to know who's asking — so they go out together instead of
+  // one after the other. Each is its own network round trip, and the
+  // second one waiting on the first was pure added latency on every visit
+  // to this page, signed in or not.
+  const [{ data: { user } }, { data: listings }] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from('listings')
+      .select('id, poster_id, poster_display_name, title, brief, est_hours, hours_per_week, duration, work_mode, team_size, created_at')
+      .eq('status', 'open')
+      .order('created_at', { ascending: false }),
+  ])
 
   const rows = listings ?? []
   const listingIds = rows.map((l) => l.id)

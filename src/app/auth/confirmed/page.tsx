@@ -11,7 +11,7 @@ export default function ConfirmedPage() {
   return (
     <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 48 }}>
-        <Wordmark height={30} />
+        <Wordmark height={24} />
       </Link>
 
       <div style={{ width: '100%', maxWidth: 400, background: C.surface, border: `1px solid ${C.border}`, padding: 40, textAlign: 'center' }}>

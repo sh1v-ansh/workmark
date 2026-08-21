@@ -9,7 +9,7 @@ import Image from 'next/image'
  * showing a white box. workmark-logo2.png is a separate, already-cropped
  * asset (743×164) — pass variant="2" to use it instead if ever needed.
  */
-export function Wordmark({ height = 42, variant = '1' }: { height?: number; variant?: '1' | '2' }) {
+export function Wordmark({ height = 34, variant = '1' }: { height?: number; variant?: '1' | '2' }) {
   if (variant === '2') {
     const width = Math.round(height * (743 / 164))
     return (

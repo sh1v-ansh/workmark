@@ -1,21 +1,31 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { processRepo } from '@/lib/skills/evidence'
 import { syncRepoGrants } from '@/lib/github/sync-grants'
+import { createJob, findActiveJob, kickJob, type JobStep } from '@/lib/jobs/queue'
+
+// This route no longer scans anything — it builds the work list and hands
+// back a job id. It stays generous only because syncRepoGrants pages the
+// installation's repo list, which is one slow-ish call, not dozens.
+export const maxDuration = 60
 
 /**
  * POST /api/github/scan
  *
- * Scans every currently-granted, scan-enabled repo for the signed-in
- * student. scan_enabled is a per-repo opt-in the student sets explicitly
- * (defaults on for public repos, off for private ones) — being granted
- * access via the GitHub App install picker is not by itself consent to
- * scan, particularly for a private repo that might be an employer's IP.
- * Runs under service-role — skill_priors/skill_evidence/evidence_audit/
- * artifacts have no insert policy for regular users by design (§10:
- * system-computed, not user input), so this can't run as the student's
- * own session no matter how the route is invoked.
+ * Queues a scan of every currently-granted, scan-enabled repo and returns
+ * immediately with a job id to poll. The actual work happens one repo at a
+ * time in /api/jobs/step.
+ *
+ * This used to scan every repo inline. That meant the student was pinned to
+ * the page for as long as it took, and — worse — a multi-repo scan simply
+ * exceeded the serverless timeout and was killed partway with no way to
+ * resume. Neither is fixable by making the scan faster; the request has to
+ * stop being the thing that does the work.
+ *
+ * scan_enabled is a per-repo opt-in the student sets explicitly (defaults
+ * on for public repos, off for private ones) — being granted access via the
+ * GitHub App install picker is not by itself consent to scan, particularly
+ * for a private repo that might be an employer's IP.
  */
 export async function POST() {
   const supabase = await createClient()
@@ -39,13 +49,22 @@ export async function POST() {
     return NextResponse.json({ error: 'GitHub account has no login on file — try reconnecting.' }, { status: 400 })
   }
 
-  // Re-sync visibility before reading the grant list: a repo flipped to
+  // One scan at a time per student. Queueing a second while the first is
+  // mid-flight would have two workers writing evidence for the same repos —
+  // harmless thanks to the dedup rule, but it doubles the API spend and
+  // makes the progress UI incoherent.
+  const active = await findActiveJob(admin, user.id, 'github_scan')
+  if (active) {
+    return NextResponse.json({ ok: true, jobId: active.id, alreadyRunning: true })
+  }
+
+  // Re-sync visibility before building the work list: a repo flipped to
   // private since the last sync must not be scanned off a stale
   // is_private=false row just because the picker looked right earlier.
   try {
     await syncRepoGrants(admin, user.id, connection.installation_id)
   } catch (err) {
-    console.error('[api/github/scan] grant sync failed, scanning off existing grants:', err)
+    console.error('[api/github/scan] grant sync failed, queueing off existing grants:', err)
   }
 
   const { data: grants } = await admin
@@ -58,23 +77,14 @@ export async function POST() {
     return NextResponse.json({ error: 'No repos enabled for scanning yet — pick which repos to scan below, then scan again.' }, { status: 400 })
   }
 
-  const results = []
-  for (const grant of grants) {
-    try {
-      const result = await processRepo(
-        admin, user.id, connection.installation_id, connection.github_login, grant.repo_full_name, grant.id,
-      )
-      results.push(result)
-    } catch (err) {
-      results.push({
-        repoFullName: grant.repo_full_name,
-        skipped: true,
-        skipReason: `scan failed: ${(err as Error).message}`,
-        priorsWritten: [],
-        evidenceWritten: [],
-      })
-    }
-  }
+  const steps: JobStep[] = grants.map((g) => ({
+    id: g.id,
+    label: g.repo_full_name,
+    status: 'pending',
+  }))
 
-  return NextResponse.json({ ok: true, results })
+  const job = await createJob(admin, user.id, 'github_scan', steps)
+  kickJob(job.id)
+
+  return NextResponse.json({ ok: true, jobId: job.id, totalSteps: steps.length })
 }

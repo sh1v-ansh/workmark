@@ -5,9 +5,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
+import Button from '@/components/ui/Button'
+import Badge from '@/components/ui/Badge'
+import { Kicker, Stat } from '@/components/ui/Section'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
-import { C, F } from '@/lib/theme/dark-tokens'
+import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import type { StudentRecord } from '@/lib/profile/record'
 import { STAGE_LABEL, type Stage } from '@/lib/engagements/lifecycle'
@@ -79,209 +82,205 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
     <div style={{ minHeight: '100vh', background: C.bg }}>
       <Navbar userName={student.fullName ?? undefined} />
 
-      <main style={{ maxWidth: 780, margin: '0 auto', padding: '40px 24px', display: 'flex', flexDirection: 'column', gap: 28 }}>
-        <div>
-          <h1 style={{ fontFamily: F.serif, fontSize: 28, fontWeight: 700, color: C.text, marginBottom: 6, letterSpacing: '-0.02em' }}>
-            Your Record
-          </h1>
-          <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>
-            Everything Workmark knows you can do, and where each piece came from. This is the full, unredacted view — only you see it.
-          </p>
-        </div>
+      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        {/* Public profile / handle */}
-        <Card hoverable={false} padding={24}>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Public profile</h2>
-          <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 14, lineHeight: 1.5 }}>
-            {student.handle
-              ? 'Anyone with this link can see your verified skills and the work you chose to show. Nothing else.'
-              : 'Claim a handle to get a shareable link to your verified record. Until you do, your record is private.'}
-          </p>
+        {/* Left third: the anchor — who, how much, and the controls you set
+            once. Right two thirds: the content those numbers summarize. */}
+        <div style={{ display: 'grid', gridTemplateColumns: '330px minmax(0, 1fr)', gap: 29, alignItems: 'start' }} className="mob-1col">
 
-          {student.handle && profileUrl ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-              <Link href={`/p/${student.handle}`} style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontFamily: F.mono }}>
-                /p/{student.handle}
-              </Link>
-              <button
-                onClick={() => { navigator.clipboard.writeText(profileUrl); toast('Link copied.', 'success') }}
-                className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}
-              >
-                <Icon name="link" size={12} /> Copy link
-              </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14.5 }}>
+            <div>
+              <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
+                Your record
+              </h1>
+              <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.55 }}>
+                Everything Workmark knows you can do, and where each piece came from. Only you see this full view.
+              </p>
             </div>
-          ) : null}
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 13, color: C.textFaint, fontFamily: F.mono }}>/p/</span>
-            <input
-              value={handle}
-              onChange={(e) => setHandle(e.target.value)}
-              className="dk-input"
-              style={{ flex: 1, minWidth: 180, fontFamily: F.mono }}
-              placeholder="your-handle"
-              aria-label="Profile handle"
-            />
-            <button onClick={saveHandle} disabled={savingHandle || !handle.trim() || handle === student.handle} className="wm-btn wm-btn-primary wm-btn-sm" style={{ display: 'inline-flex' }}>
-              {savingHandle ? 'Saving…' : student.handle ? 'Change' : 'Claim'}
-            </button>
-          </div>
-          {student.handle && (
-            <p style={{ fontSize: 11, color: '#B45309', marginTop: 8, lineHeight: 1.5 }}>
-              Changing your handle breaks every link you&apos;ve already shared.
-            </p>
-          )}
+            {trackRecord.closeOutRate !== null && (
+              <Card hoverable={false} padding={19.5}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <Stat value={`${Math.round(trackRecord.closeOutRate * 100)}%`} label="close-out rate" />
+                  <div style={{ display: 'flex', gap: 25, borderTop: `1px solid ${C.borderFaint}`, paddingTop: 14 }}>
+                    <Stat value={trackRecord.closed} label="completed" />
+                    {trackRecord.abandoned > 0 && <Stat value={trackRecord.abandoned} label="abandoned" />}
+                  </div>
+                </div>
+                <p style={{ fontSize: 12, color: C.textGhost, lineHeight: 1.5, marginTop: 12.5 }}>
+                  Counts hidden engagements too — a percentage over a total nobody sees reveals nothing about which projects exist.
+                </p>
+              </Card>
+            )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.borderFaint}` }}>
-            <Link href="/me/briefs" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
-              Project ideas →
-            </Link>
-            <Link href="/me/file" style={{ fontSize: 12, fontFamily: F.mono, color: C.accent, textDecoration: 'none' }}>
-              Your file &amp; disputes →
-            </Link>
-          </div>
-        </Card>
+            <Card hoverable={false} padding={19.5}>
+              <Kicker style={{ marginBottom: 9 }}>Public profile</Kicker>
+              <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, marginBottom: 13 }}>
+                {student.handle
+                  ? 'Anyone with this link sees your verified skills and the work you chose to show.'
+                  : 'Claim a handle for a shareable link. Until then, your record is private.'}
+              </p>
 
-        {/* Track record */}
-        {trackRecord.closeOutRate !== null && (
-          <Card hoverable={false} padding={20}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 28, flexWrap: 'wrap' }}>
-              <div>
-                <p style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: F.mono }}>{Math.round(trackRecord.closeOutRate * 100)}%</p>
-                <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>close-out rate</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 22, fontWeight: 700, color: C.text, fontFamily: F.mono }}>{trackRecord.closed}</p>
-                <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>completed</p>
-              </div>
-              {trackRecord.abandoned > 0 && (
-                <div>
-                  <p style={{ fontSize: 22, fontWeight: 700, color: C.textMuted, fontFamily: F.mono }}>{trackRecord.abandoned}</p>
-                  <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>abandoned</p>
+              {student.handle && profileUrl && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8.5, marginBottom: 13, flexWrap: 'wrap' }}>
+                  <Link href={`/p/${student.handle}`} style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 600 }}>
+                    /p/{student.handle}
+                  </Link>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(profileUrl); toast('Link copied.', 'success') }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 12, color: C.textMuted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                  >
+                    <Icon name="link" size={11.5} /> Copy
+                  </button>
                 </div>
               )}
-            </div>
-            <p style={{ fontSize: 11, color: C.textFaint, marginTop: 12, lineHeight: 1.5 }}>
-              Your rate counts hidden engagements too — a percentage over a total nobody sees reveals nothing about which projects exist.
-            </p>
-          </Card>
-        )}
 
-        {/* Verified skills */}
-        <section>
-          <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Verified Skills ({skills.length})</h2>
-          <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
-            Click one to see which projects it came from. Levels above Strong need attestation from faculty or an employer, which isn&apos;t live yet.
-          </p>
-          {skills.length === 0 ? (
-            <Card hoverable={false} padding={20}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <p style={{ fontSize: 13, color: C.textFaint }}>Nothing yet — link your repos and scan.</p>
-                <Link href="/student/github" className="wm-btn wm-btn-secondary wm-btn-sm" style={{ display: 'inline-flex' }}>
-                  <Icon name="github" size={12} /> Link repos
-                </Link>
+              <div style={{ display: 'flex', gap: 7.5, alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: C.textGhost }}>/p/</span>
+                <input
+                  value={handle}
+                  onChange={(e) => setHandle(e.target.value)}
+                  className="dk-input"
+                  style={{ flex: 1, minWidth: 0 }}
+                  placeholder="your-handle"
+                  aria-label="Profile handle"
+                />
+              </div>
+              <div style={{ marginTop: 9.5 }}>
+                <Button
+                  variant="ink" size="sm" fullWidth
+                  onClick={saveHandle}
+                  disabled={!handle.trim() || handle === student.handle}
+                  busyLabel={savingHandle ? 'Saving…' : null}
+                >
+                  {student.handle ? 'Change' : 'Claim'}
+                </Button>
+              </div>
+              {student.handle && (
+                <p style={{ fontSize: 12, color: state.caution, marginTop: 9.5, lineHeight: 1.5 }}>
+                  Changing your handle breaks every link you&apos;ve already shared.
+                </p>
+              )}
+            </Card>
+
+            <Card hoverable={false} padding={16}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8.5 }}>
+                <Link href="/me/briefs" style={{ fontSize: 13.5, color: C.textSub, textDecoration: 'none' }}>Project ideas →</Link>
+                <Link href="/me/file" style={{ fontSize: 13.5, color: C.textSub, textDecoration: 'none' }}>Your file &amp; disputes →</Link>
+                <Link href="/student/github" style={{ fontSize: 13.5, color: C.textSub, textDecoration: 'none' }}>Evidence source &amp; rescan →</Link>
               </div>
             </Card>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {skills.map((s) => {
-                const c = tagColor(s.name)
-                const expanded = expandedSkill === s.skillId
-                const from = sources.filter((src) => src.skillId === s.skillId)
-                return (
-                  <Card key={s.skillId} hoverable={false} padding={14}>
-                    <button
-                      onClick={() => setExpandedSkill(expanded ? null : s.skillId)}
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left', flexWrap: 'wrap' }}
-                      aria-expanded={expanded}
-                    >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 13, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}>
-                          {s.name}
-                        </span>
-                        <span style={{ fontSize: 12, color: C.textMuted }}>{LEVEL_NAMES[s.bestLevel] ?? s.bestLevel}</span>
-                      </span>
-                      <span style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                        {s.artifactCount} project{s.artifactCount === 1 ? '' : 's'} {expanded ? '▲' : '▼'}
-                      </span>
-                    </button>
+          </div>
 
-                    {expanded && (
-                      <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${C.border}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {from.map((src, i) => (
-                          <div key={`${src.repoFullName}-${i}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 12, color: C.textSub, fontFamily: F.mono }}>
-                              {src.repoFullName ?? 'Non-code work'}
-                            </span>
-                            <span style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                              {[TIER_LABEL[src.tier ?? ''] ?? src.tier, LEVEL_NAMES[src.level], src.verificationMethod].filter(Boolean).join(' · ')}
-                            </span>
+          <div>
+            {/* Verified skills */}
+            <div style={{ marginBottom: 32 }}>
+              <Kicker style={{ marginBottom: 5.5 }}>Verified skills · {skills.length}</Kicker>
+              <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 12 }}>
+                Open one to see which projects it came from. Levels above Strong need attestation, which isn&apos;t live yet.
+              </p>
+              {skills.length === 0 ? (
+                <Card hoverable={false} padding={19.5}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+                    <p style={{ fontSize: 14, color: C.textMuted }}>Nothing yet — link your repositories and scan.</p>
+                    <Button href="/student/github" variant="outline" size="sm">Link repos</Button>
+                  </div>
+                </Card>
+              ) : (
+                <Card hoverable={false} padding="3.5px 20px 7px">
+                  {skills.map((s, i) => {
+                    const expanded = expandedSkill === s.skillId
+                    const from = sources.filter((src) => src.skillId === s.skillId)
+                    return (
+                      <div key={s.skillId} style={{ borderBottom: i < skills.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
+                        <button
+                          onClick={() => setExpandedSkill(expanded ? null : s.skillId)}
+                          style={{ display: 'flex', alignItems: 'center', gap: 15, width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '13.5px 0', textAlign: 'left', font: 'inherit' }}
+                          aria-expanded={expanded}
+                        >
+                          <span style={{ flexGrow: 1, minWidth: 0 }}>
+                            <span style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>{s.name}</span>
+                          </span>
+                          <span style={{ fontSize: 13, color: C.textMuted, width: 84, flexShrink: 0 }}>{LEVEL_NAMES[s.bestLevel] ?? s.bestLevel}</span>
+                          <span style={{ fontSize: 13, color: C.textGhost, width: 74, flexShrink: 0, textAlign: 'right' }}>{s.artifactCount} project{s.artifactCount === 1 ? '' : 's'}</span>
+                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, transform: expanded ? 'rotate(180deg)' : undefined }}>
+                            <path d="M4 6l4 4 4-4" stroke={C.textGhost} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+
+                        {expanded && (
+                          <div style={{ paddingBottom: 14.5, display: 'flex', flexDirection: 'column', gap: 6.5 }}>
+                            {from.map((src, j) => (
+                              <div key={`${src.repoFullName}-${j}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9.5px 13px', background: C.bg, borderRadius: R.md, flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: 13.5, color: C.textSub }}>{src.repoFullName ?? 'Non-code work'}</span>
+                                <span style={{ fontSize: 12, color: C.textGhost }}>
+                                  {[TIER_LABEL[src.tier ?? ''] ?? src.tier, LEVEL_NAMES[src.level], src.verificationMethod].filter(Boolean).join(' · ')}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
-                    )}
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-        </section>
-
-        {/* Projects behind the record */}
-        {byRepo.size > 0 && (
-          <section>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 12 }}>Projects ({byRepo.size})</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {Array.from(byRepo.entries()).map(([repo, entries]) => (
-                <Card key={repo} hoverable={false} padding={16}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: F.mono }}>{repo}</span>
-                    <span style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                      {TIER_LABEL[entries[0]?.tier ?? ''] ?? entries[0]?.tier}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                    {entries.map((e, i) => {
-                      const c = tagColor(e.skillName)
-                      return (
-                        <span key={`${e.skillId}-${i}`} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}>
-                          {e.skillName}
-                        </span>
-                      )
-                    })}
-                  </div>
+                    )
+                  })}
                 </Card>
-              ))}
+              )}
             </div>
-          </section>
-        )}
 
-        {/* Engagements, including hidden — this is the private view */}
-        {engagements.length > 0 && (
-          <section>
-            <h2 style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>Collaborations ({engagements.length})</h2>
-            <p style={{ fontSize: 12, color: C.textFaint, marginBottom: 12, lineHeight: 1.5 }}>
-              Change what each one shows publicly from the engagement page.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {engagements.map((e) => (
-                <Card key={e.id} href={`/engagements/${e.id}`} padding={16}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                    <div>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: C.text }}>{e.listingTitle ?? 'Untitled project'}</p>
-                      <p style={{ fontSize: 11, color: C.textFaint, fontFamily: F.mono }}>
-                        {[e.posterDisplayName, STAGE_LABEL[e.stage as Stage] ?? e.stage].filter(Boolean).join(' · ')}
+            {/* Projects behind the record */}
+            {byRepo.size > 0 && (
+              <div style={{ marginBottom: 32 }}>
+                <Kicker style={{ marginBottom: 12 }}>Projects · {byRepo.size}</Kicker>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 11 }} className="mob-1col">
+                  {Array.from(byRepo.entries()).map(([repo, entries]) => (
+                    <Card key={repo} hoverable={false} padding={16}>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3, wordBreak: 'break-word' }}>{repo}</p>
+                      <p style={{ fontSize: 12, color: C.textGhost, marginBottom: 10 }}>
+                        {TIER_LABEL[entries[0]?.tier ?? ''] ?? entries[0]?.tier}
                       </p>
-                    </div>
-                    <span style={{ fontSize: 10, fontWeight: 600, padding: '3px 9px', borderRadius: 999, background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textFaint, fontFamily: F.mono, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                      {e.visibility}
-                    </span>
-                  </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                        {entries.map((e, i) => {
+                          const c = tagColor(e.skillName)
+                          return (
+                            <span key={`${e.skillId}-${i}`} style={{ fontSize: 12, padding: '3px 8.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                              {e.skillName}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Engagements, including hidden — this is the private view */}
+            {engagements.length > 0 && (
+              <div>
+                <Kicker style={{ marginBottom: 5.5 }}>Collaborations · {engagements.length}</Kicker>
+                <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 12 }}>
+                  Change what each one shows publicly from the engagement page.
+                </p>
+                <Card hoverable={false} padding="3.5px 20px 7px">
+                  {engagements.map((e, i) => (
+                    <Link
+                      key={e.id} href={`/engagements/${e.id}`}
+                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '13px 0', borderBottom: i < engagements.length - 1 ? `1px solid ${C.borderFaint}` : 'none', textDecoration: 'none' }}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontSize: 14.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{e.listingTitle ?? 'Untitled project'}</p>
+                        <p style={{ fontSize: 13, color: C.textGhost }}>
+                          {[e.posterDisplayName, STAGE_LABEL[e.stage as Stage] ?? e.stage].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <Badge>{e.visibility}</Badge>
+                    </Link>
+                  ))}
                 </Card>
-              ))}
-            </div>
-          </section>
-        )}
+              </div>
+            )}
+          </div>
+        </div>
       </main>
     </div>
   )
