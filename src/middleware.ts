@@ -44,6 +44,7 @@ export async function middleware(request: NextRequest) {
 
   const requiresAuth =
     pathname.startsWith('/student/') ||
+    pathname.startsWith('/faculty') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/listings/new') ||
     pathname.startsWith('/onboarding')
@@ -61,14 +62,20 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && pathname === '/login') {
-    const { data: student } = await supabase
-      .from('students')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle()
+    const [{ data: student }, { data: account }] = await Promise.all([
+      supabase.from('students').select('id').eq('id', user.id).maybeSingle(),
+      supabase.from('accounts').select('roles').eq('id', user.id).maybeSingle(),
+    ])
+
+    // Faculty land on their own home. The student dashboard asks about
+    // skills, a record and a GitHub connection, none of which a professor
+    // has — and someone who also holds the student role is a student first,
+    // since that's the side of the product they're being scored on.
+    const roles = (account?.roles ?? []) as string[]
+    const facultyOnly = roles.includes('faculty') && !roles.includes('student')
 
     const url = request.nextUrl.clone()
-    url.pathname = student ? '/student/dashboard' : '/onboarding'
+    url.pathname = !student ? '/onboarding' : facultyOnly ? '/faculty' : '/student/dashboard'
     return NextResponse.redirect(url)
   }
 

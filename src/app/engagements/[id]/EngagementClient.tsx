@@ -12,6 +12,7 @@ import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { allowedTransitions, canCloseOut, isTerminal, STAGE_LABEL, type Stage } from '@/lib/engagements/lifecycle'
+import { LEVEL_NAMES } from '@/lib/skills/level-names'
 
 export interface EngagementData {
   id: string
@@ -37,7 +38,7 @@ export interface EngagementData {
   outcome: { posterSatisfaction: number | null; wouldRehire: boolean | null; hiredBeyondEngagement: boolean } | null
 }
 
-const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
+
 const STAGE_ORDER: Stage[] = ['accepted', 'in_progress', 'submitted', 'closed']
 const SHORT_STAGE: Record<string, string> = {
   accepted: 'Accepted',

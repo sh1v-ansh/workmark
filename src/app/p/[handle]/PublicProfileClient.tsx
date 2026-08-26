@@ -9,8 +9,8 @@ import { C, F, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 import type { PublicEngagement } from '@/lib/profile/visibility'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
+import { LEVEL_NAMES, SELF_EVIDENCED_CAP } from '@/lib/skills/level-names'
 
-const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
 
 interface PublicStudent {
   fullName: string | null
@@ -120,8 +120,14 @@ export default function PublicProfileClient({
                           {LEVEL_NAMES[s.bestLevel] ?? s.bestLevel} · {s.artifactCount} project{s.artifactCount === 1 ? '' : 's'}
                         </span>
                       </div>
+                      {/* Only the levels anyone can currently reach are drawn.
+                          A five-segment bar that stops at three reads as "3
+                          out of 5" — mediocre — when three is the maximum
+                          every record on the platform tops out at. Showing a
+                          ceiling nobody can pass makes everyone look worse
+                          than they are, to the exact audience that matters. */}
                       <div style={{ display: 'flex', gap: 3 }}>
-                        {[1, 2, 3, 4, 5].map((i) => (
+                        {Array.from({ length: SELF_EVIDENCED_CAP }, (_, k) => k + 1).map((i) => (
                           <span key={i} style={{ flexGrow: 1, height: 5.5, borderRadius: 3, background: i <= s.bestLevel ? C.accent : C.border }} />
                         ))}
                       </div>

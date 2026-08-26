@@ -280,7 +280,11 @@ export default function OnboardingPage() {
           : 'Profile saved. Welcome to Workmark.',
         'success',
       )
-      router.push('/student/dashboard'); router.refresh()
+      // Faculty go to their own home. Sending them to the student dashboard
+      // would ask about their skills, their record and their GitHub — none
+      // of which they have.
+      router.push(role === 'faculty' ? '/faculty' : '/student/dashboard')
+      router.refresh()
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Failed to save profile.', 'error')
     } finally {

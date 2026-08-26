@@ -140,3 +140,21 @@ export function engagementClosed(args: { studentEmail: string; listingTitle: str
     linkLabel: 'See your record',
   })
 }
+
+/**
+ * The one nobody wants to send, and the one most worth sending.
+ *
+ * A rejection that never arrives leaves someone refreshing a page for weeks
+ * and holding one of their five application slots against a decision that
+ * was already made. No invented reason and no false comfort — the useful
+ * fact is that the slot is free again.
+ */
+export function applicationRejected(args: { studentEmail: string; listingTitle: string }) {
+  return sendEmail({
+    to: args.studentEmail,
+    subject: `Update on your application to ${args.listingTitle}`,
+    body: `Your application to "${args.listingTitle}" wasn't taken forward.\n\nThat frees up one of your active applications, so you can apply elsewhere whenever you're ready.`,
+    linkPath: '/listings',
+    linkLabel: 'Find other projects',
+  })
+}

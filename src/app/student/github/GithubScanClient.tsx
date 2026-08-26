@@ -12,6 +12,7 @@ import { useToast } from '@/components/Toast'
 import { createClient } from '@/lib/supabase/client'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
+import { levelName as levelLabel } from '@/lib/skills/level-names'
 
 // Local types — deliberately not sourced from src/lib/types.ts, which is
 // still the pre-rebuild shape (Phase 1 task #16 rewrites it). This page
@@ -50,11 +51,7 @@ interface SkillEvidenceRow {
   artifacts: { repo_full_name: string | null; deployment_url: string | null } | null
 }
 
-const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
 
-function levelLabel(n: number) {
-  return LEVEL_NAMES[n] ?? `Level ${n}`
-}
 
 interface ReviewRequest {
   id: string

@@ -1,6 +1,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { kickJob } from '@/lib/jobs/queue'
+import { recomputeCalibration } from '@/lib/skills/calibration'
 
 export const maxDuration = 60
 
@@ -84,5 +85,26 @@ export async function GET(request: Request) {
     console.error('[cron/jobs] purge of finished jobs failed:', purgeError)
   }
 
-  return NextResponse.json({ ok: true, kicked: (stalled ?? []).length })
+  // Recalibration used to be a script somebody had to remember to run, so a
+  // skill could sit past its threshold indefinitely being scored against
+  // bands that no longer described anyone. It runs here because this is
+  // already the once-a-tick tidy-up, and because it's cheap when there's
+  // nothing to do — the common case is a single query that finds no skill
+  // over the line.
+  let calibration = null
+  try {
+    calibration = await recomputeCalibration(admin)
+    if (calibration.skillsSwitched.length > 0) {
+      console.info('[cron/jobs] calibration switched:', calibration.skillsSwitched.join(', '))
+    }
+  } catch (err) {
+    // Never at the cost of the sweep above, which is what keeps scans moving.
+    console.error('[cron/jobs] calibration failed:', err)
+  }
+
+  return NextResponse.json({
+    ok: true,
+    kicked: (stalled ?? []).length,
+    calibrated: calibration?.skillsSwitched.length ?? 0,
+  })
 }

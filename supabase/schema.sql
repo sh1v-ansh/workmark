@@ -171,7 +171,10 @@ create table skill_priors (
 create table listings (
   id                      uuid default gen_random_uuid() primary key,
   poster_id               uuid not null,
-  poster_type             text not null default 'student' check (poster_type in ('student')),
+  -- 'company' is deliberately absent: businesses need domain verification,
+  -- permissible-purpose certification and payments before their first
+  -- listing, and having the value would let one exist before any of that.
+  poster_type             text not null default 'student' check (poster_type in ('student', 'faculty')),
   poster_display_name     text,
   title                   text,
   brief                   text,
@@ -183,7 +186,7 @@ create table listings (
   declared_difficulty     int check (declared_difficulty between 1 and 10),
   requires_prior_evidence boolean default false not null,
   is_paid                 boolean default false not null check (is_paid = false), -- MVP: no payments infra exists yet
-  tier                    text not null default 'listing_driven' check (tier in ('listing_driven')),
+  tier                    text not null default 'listing_driven' check (tier in ('listing_driven', 'faculty_project')),
   status                  text not null default 'open' check (status in ('draft', 'open', 'filled', 'closed')),
   view_count              int default 0 not null,
   created_at              timestamptz default now()

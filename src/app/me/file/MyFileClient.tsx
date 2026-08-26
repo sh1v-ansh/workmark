@@ -11,6 +11,7 @@ import { Kicker, Stat } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
+import { LEVEL_NAMES } from '@/lib/skills/level-names'
 import {
   DISPUTE_CATEGORIES, STATUS_LABEL, isResolved, daysRemaining,
   type DisputeCategory, type DisputeStatus,
@@ -57,7 +58,7 @@ export interface FileData {
   }[]
 }
 
-const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
+
 
 // Deliberately plain. This is the one page in the app that earns its calm
 // by being boring: no accent colour, no focal card, no personality — a
