@@ -2,14 +2,14 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
+import AdminShell from '../AdminShell'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Drawer from '@/components/ui/Drawer'
 import { Kicker } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
-import { C, R, T, state } from '@/lib/theme/dark-tokens'
+import { C, R, state } from '@/lib/theme/dark-tokens'
 import type { QueueItem, QueueKind } from '@/lib/admin/queue'
 
 const KIND_LABEL: Record<QueueKind, string> = {
@@ -101,22 +101,14 @@ export default function AdminQueueClient({ items, counts, failedSources, taxonom
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar isAdmin />
-
-      <main id="main-content" style={{ maxWidth: 1000, margin: '0 auto', padding: '30px 28px 72px' }}>
-        <div style={{ marginBottom: 24 }}>
-          <Kicker style={{ marginBottom: 7 }}>Staff</Kicker>
-          <h1 style={{ fontSize: T.h1, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
-            {items.length === 0 ? 'Nothing waiting' : `${items.length} waiting on a person`}
-          </h1>
-          <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.6, maxWidth: '60ch' }}>
-            {overdue > 0
-              ? `${overdue} past its deadline. Disputes carry a 30-day legal clock — those come first.`
-              : 'Sorted by deadline, then by how many people each affects.'}
-          </p>
-        </div>
-
+    <AdminShell
+      title={items.length === 0 ? 'Nothing waiting' : `${items.length} waiting on a person`}
+      lede={overdue > 0
+        ? `${overdue} past its deadline. Disputes carry a 30-day legal clock — those come first.`
+        : 'Sorted by deadline, then by how many people each affects.'}
+      queueCount={items.length}
+      overdueCount={overdue}
+    >
         {/* A source that failed is called out rather than silently showing
             fewer items — an empty dispute list because the query broke looks
             exactly like an empty dispute list because there's nothing to do. */}
@@ -210,8 +202,6 @@ export default function AdminQueueClient({ items, counts, failedSources, taxonom
             })}
           </div>
         )}
-      </main>
-
       <Drawer
         open={!!open}
         onClose={() => { if (!busy) setOpen(null) }}
@@ -299,7 +289,7 @@ export default function AdminQueueClient({ items, counts, failedSources, taxonom
           </div>
         )}
       </Drawer>
-    </div>
+    </AdminShell>
   )
 }
 

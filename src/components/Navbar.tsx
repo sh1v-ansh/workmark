@@ -5,13 +5,17 @@ import Link from 'next/link'
 import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
+import { useSession } from '@/components/SessionProvider'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 
+// Everything the navbar needs now comes from the session context, read once
+// in the root layout. Props are still accepted so the fourteen existing call
+// sites keep working, but nothing has to pass them — which is the point,
+// since the previous prop-based version was forgotten by twelve of them.
 interface NavbarProps {
   role?: 'student' | 'faculty'
   userName?: string
-  /** Adds the staff queue to the account menu. Off unless passed. */
   isAdmin?: boolean
 }
 
@@ -23,23 +27,37 @@ interface NavbarProps {
 // three questions a student actually arrives with: what needs me, where's
 // the work, what do I have. Everything else is reachable from inside one of
 // them or from the account menu, which is where secondary surfaces belong.
-const TABS = [
+const STUDENT_TABS = [
   { href: '/student/dashboard', label: 'Home',      also: ['/goals'] },
   { href: '/listings',          label: 'Find work', also: [] as string[] },
   { href: '/me',                label: 'My record', also: ['/me/file', '/me/briefs', '/student/github'] },
 ]
 
-const MENU = [
+// Faculty arrive with different questions. "Find work" and "My record" mean
+// nothing to a professor — they don't apply to projects and they have no
+// scanned record. Theirs are: what needs me, who applied, who's building.
+const FACULTY_TABS = [
+  { href: '/faculty', label: 'Home', also: [] as string[] },
+  { href: '/faculty/listings', label: 'My projects', also: ['/listings/new'] },
+  { href: '/students', label: 'Students', also: [] as string[] },
+]
+
+const STUDENT_MENU = [
   { href: '/student/github', label: 'Evidence source & rescan' },
   { href: '/students', label: 'Student directory' },
   { href: '/me/briefs', label: 'Project ideas' },
   { href: '/me/file', label: 'Your file & disputes' },
 ]
 
+const FACULTY_MENU = [
+  { href: '/listings/new', label: 'Post a project' },
+  { href: '/students', label: 'Student directory' },
+]
+
 // Appended for staff only. In the account menu rather than a tab: it isn't
-// one of the three questions a student arrives with, and most people who
-// see it are also using the product as themselves.
-const ADMIN_MENU = [{ href: '/admin', label: 'Staff queue' }]
+// one of the questions anyone arrives with, and most people who see it are
+// also using the product as themselves.
+const ADMIN_MENU = [{ href: '/admin', label: 'Admin console' }]
 
 function initials(name?: string) {
   if (!name) return '·'
@@ -48,7 +66,15 @@ function initials(name?: string) {
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase()
 }
 
-export default function Navbar({ role = 'student', userName, isAdmin = false }: NavbarProps) {
+export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
+  const session = useSession()
+  // Props win when passed — a page that knows better than the session, such
+  // as a public profile rendering for a signed-out visitor, keeps control.
+  const effectiveRole = role ?? (session.isFaculty && !session.roles.includes('student') ? 'faculty' : 'student')
+  const showAdmin = isAdmin ?? session.isAdmin
+  const name = userName ?? session.displayName ?? undefined
+  const TABS = effectiveRole === 'faculty' ? FACULTY_TABS : STUDENT_TABS
+  const MENU = effectiveRole === 'faculty' ? FACULTY_MENU : STUDENT_MENU
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
@@ -132,7 +158,7 @@ export default function Navbar({ role = 'student', userName, isAdmin = false }: 
                   transition: 'background 0.15s, color 0.15s',
                 }}
               >
-                {initials(userName)}
+                {initials(name)}
               </button>
               {menuOpen && (
                 <div
@@ -149,7 +175,7 @@ export default function Navbar({ role = 'student', userName, isAdmin = false }: 
                       {userName}
                     </p>
                   )}
-                  {[...MENU, ...(isAdmin ? ADMIN_MENU : [])].map((item) => (
+                  {[...MENU, ...(showAdmin ? ADMIN_MENU : [])].map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}

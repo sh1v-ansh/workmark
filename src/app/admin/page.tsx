@@ -1,45 +1,116 @@
-import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createServiceClient } from '@supabase/supabase-js'
-import { getAccount, hasRole } from '@/lib/auth/roles'
-import { loadQueue, countsByKind } from '@/lib/admin/queue'
-import AdminQueueClient from './AdminQueueClient'
+import Link from 'next/link'
+import { requireAdmin } from '@/lib/admin/guard'
+import { loadQueue } from '@/lib/admin/queue'
+import { loadOverview, loadCalibration } from '@/lib/admin/stats'
+import AdminShell from './AdminShell'
+import { StatGrid, Panel, HealthRow } from './widgets'
 
 /**
- * /admin — everything waiting on a person.
+ * /admin — what's happening, and what's wrong.
  *
- * Six features write data intended for a human to act on and none of them
- * had anywhere to be seen: work submitted for review reached a CLI script,
- * disputes needing a person reached nothing at all despite a 30-day
- * statutory clock, unmatched skills were dropped, failed scans told nobody.
- *
- * notFound() rather than a redirect for a non-admin: an admin surface
- * shouldn't confirm to a stranger that it exists.
+ * Deliberately answers those two questions and nothing else. Every number
+ * here either means someone is waiting, something is broken, or the platform
+ * is growing; anything that's merely interesting belongs on a section page.
  */
-export default async function AdminPage() {
-  const supabase = await createClient()
-  const account = await getAccount(supabase)
-  if (!hasRole(account, 'admin')) notFound()
+export default async function AdminOverviewPage() {
+  const { admin } = await requireAdmin()
 
-  // The queue reads across every student's data, which no user-scoped
-  // policy grants — correctly, since that's the whole point of the role.
-  const admin = createServiceClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
-
-  const [{ items, failedSources }, { data: taxonomy }] = await Promise.all([
+  const [overview, { items, failedSources }, calibration] = await Promise.all([
+    loadOverview(admin),
     loadQueue(admin),
-    // For the "map this name to a skill" picker.
-    admin.from('skills').select('id, canonical_name').is('deprecated_at', null).order('canonical_name'),
+    loadCalibration(admin),
   ])
 
+  const overdue = items.filter((i) => i.severity === 'overdue').length
+  const onPercentile = calibration.filter((c) => c.method === 'percentile').length
+
   return (
-    <AdminQueueClient
-      items={items}
-      counts={countsByKind(items)}
-      failedSources={failedSources}
-      taxonomy={(taxonomy ?? []).map((s) => ({ id: s.id, name: s.canonical_name }))}
-    />
+    <AdminShell
+      title="Overview"
+      lede="What's happening on the platform, and anything that needs a person."
+      queueCount={items.length}
+      overdueCount={overdue}
+    >
+      <StatGrid
+        stats={[
+          { label: 'Students', value: overview.students },
+          { label: 'Faculty', value: overview.faculty, note: overview.unverifiedFaculty > 0 ? `${overview.unverifiedFaculty} unverified` : undefined },
+          { label: 'Open projects', value: overview.openListings },
+          { label: 'Live engagements', value: overview.liveEngagements },
+        ]}
+      />
+
+      <div className="nb-split" style={{ marginTop: 22 }}>
+        <Panel
+          title="Waiting on a person"
+          action={{ href: '/admin/queue', label: items.length > 0 ? 'Open the queue' : 'View queue' }}
+        >
+          {items.length === 0 ? (
+            <HealthRow state="ok" label="Nothing waiting" detail="The queue is clear." />
+          ) : (
+            <>
+              {overdue > 0 && (
+                <HealthRow
+                  state="bad"
+                  label={`${overdue} past a deadline`}
+                  detail="Disputes carry a 30-day legal clock."
+                />
+              )}
+              <HealthRow
+                state={overdue > 0 ? 'warn' : 'info'}
+                label={`${items.length} item${items.length === 1 ? '' : 's'} in the queue`}
+                detail={summarise(items.map((i) => i.kind))}
+              />
+            </>
+          )}
+          {failedSources.length > 0 && (
+            <HealthRow
+              state="bad"
+              label="Some sources could not be read"
+              detail={`${failedSources.join(', ')} — the queue is incomplete.`}
+            />
+          )}
+        </Panel>
+
+        <Panel title="System">
+          <HealthRow
+            state={overview.failedScans > 0 ? 'warn' : 'ok'}
+            label={overview.failedScans > 0 ? `${overview.failedScans} failed scans` : 'Scans healthy'}
+            detail={`${overview.scansLast7Days} run in the last 7 days`}
+          />
+          <HealthRow
+            state="info"
+            label={`${overview.evidenceRows} evidence rows`}
+            detail={`${onPercentile} of ${calibration.length} skills scored against real peers`}
+          />
+          <HealthRow
+            state="info"
+            label="Levels capped at 3"
+            detail="Advanced and Expert need attestation, which isn't built yet."
+          />
+        </Panel>
+      </div>
+
+      <p style={{ fontSize: 13, color: '#8D94A5', marginTop: 22, lineHeight: 1.6 }}>
+        Reading someone&apos;s record from here is logged against them, the same as any other
+        access. See the <Link href="/admin/audit" style={{ color: '#4E2FD6' }}>audit log</Link>.
+      </p>
+    </AdminShell>
   )
+}
+
+/** "3 disputes, 2 unmatched skills" — what the queue is made of, in words. */
+function summarise(kinds: string[]): string {
+  const counts = new Map<string, number>()
+  for (const k of kinds) counts.set(k, (counts.get(k) ?? 0) + 1)
+  const LABEL: Record<string, [string, string]> = {
+    dispute: ['dispute', 'disputes'],
+    review_request: ['submission to review', 'submissions to review'],
+    faculty_verification: ['faculty to verify', 'faculty to verify'],
+    unresolved_skill: ['unmatched skill', 'unmatched skills'],
+    failed_job: ['failed scan', 'failed scans'],
+  }
+  return Array.from(counts.entries())
+    .map(([k, n]) => `${n} ${LABEL[k]?.[n === 1 ? 0 : 1] ?? k}`)
+    .join(', ')
 }
