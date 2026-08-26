@@ -324,8 +324,31 @@ create table github_repo_grants (
   -- before its first sync — assume private, assume not-yet-consented.
   is_private      boolean not null default true,
   scan_enabled    boolean not null default false,
+  -- The student's own word on this repo, kept separate from scan_enabled
+  -- so a sync or a ranking pass can never overwrite it. null means nobody
+  -- has expressed a preference and the ranking may decide.
+  scan_choice     text check (scan_choice is null or scan_choice in ('on', 'off')),
+  -- Facts GitHub returns in the repo listing, stored so a student with
+  -- hundreds of repos can have a sensible subset enabled by default
+  -- instead of all of them. Ranking on these costs no extra API calls —
+  -- they arrive with the listing we already fetch.
+  is_fork          boolean,
+  is_archived      boolean,
+  size_kb          integer,
+  pushed_at        timestamptz,
+  created_at_gh    timestamptz,
+  description      text,
+  primary_language text,
+  stars            integer,
+  has_pages        boolean,
+  rank_score       numeric,
+  rank_reason      text,
   unique (student_id, repo_full_name)
 );
+
+create index github_repo_grants_rank_idx
+  on github_repo_grants (student_id, rank_score desc nulls last)
+  where revoked_at is null;
 
 -- ─── Artifacts ─────────────────────────────────────────────────────────────
 -- engagement_id is nullable: Tier 0/0.5 artifacts are linked directly by a
