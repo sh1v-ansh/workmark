@@ -80,6 +80,12 @@ export async function sendEmail(args: SendArgs): Promise<boolean> {
         subject: args.subject,
         html,
         text,
+        // Automated mail goes out on a sending subdomain, which keeps its
+        // reputation separate from the domain's real mail — but that address
+        // has no inbox behind it. Without a reply-to, anyone who hits reply
+        // is writing to nobody, and they won't know. EMAIL_REPLY_TO points
+        // at a mailbox a person actually reads.
+        ...(process.env.EMAIL_REPLY_TO ? { reply_to: process.env.EMAIL_REPLY_TO } : {}),
       }),
     })
     if (!res.ok) {
