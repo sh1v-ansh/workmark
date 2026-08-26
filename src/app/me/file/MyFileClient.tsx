@@ -29,6 +29,8 @@ export interface FileData {
     repoFullName: string | null
     tier: string | null
     source: string | null
+    /** The files this skill was found in, e.g. "docker-compose.yml, prisma/schema.prisma". */
+    foundIn: string | null
     createdAt: string
     supersededByCorrection: boolean
     isCorrection: boolean
@@ -208,6 +210,16 @@ export default function MyFileClient({ data }: { data: FileData }) {
                         <p style={{ fontSize: 12, color: C.textGhost, marginTop: 6.5 }}>
                           {[e.repoFullName, e.verificationMethod, e.source, new Date(e.createdAt).toLocaleDateString()].filter(Boolean).join(' · ')}
                         </p>
+
+                        {/* The answer to "why does my record say this". Without
+                            it the row asserts a skill and gives the student
+                            nothing to check it against — which is also what a
+                            dispute needs in order to be about anything. */}
+                        {e.foundIn && (
+                          <p style={{ fontSize: 12, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
+                            <span style={{ color: C.textGhost }}>Found in: </span>{e.foundIn}
+                          </p>
+                        )}
 
                         {existing?.resolutionNote && (
                           <p style={{ fontSize: 13, color: C.textMuted, marginTop: 8.5, lineHeight: 1.5, paddingTop: 8.5, borderTop: `1px solid ${C.borderFaint}` }}>

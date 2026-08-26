@@ -22,6 +22,7 @@ import { scanRepo, type RepoScanResult } from '@/lib/github/scan'
 import { extractComplexity } from '@/lib/github/complexity'
 import { verifyDeployment } from '@/lib/github/verify-deployment'
 import { canonicalizeSkills } from '@/lib/skills/canonicalize'
+import { applyImplications } from '@/lib/skills/implications'
 import { computeDifficultyLevel } from '@/lib/skills/levels'
 
 export interface ProcessRepoResult {
@@ -55,14 +56,32 @@ export async function processRepo(
     return { repoFullName, skipped: true, skipReason: scanResult.skipReason, priorsWritten: [], evidenceWritten: [] }
   }
 
-  const rawSkillStrings = Array.from(new Set([
-    ...Object.keys(scanResult.languages),
-    ...scanResult.manifestSkills,
-  ]))
+  // Detections carry where they came from; canonicalization only deals in
+  // strings. Resolve the distinct raw strings once, then map each resolved
+  // skill back to every place it was seen, so the student can be shown why
+  // their record says what it says.
+  const rawSkillStrings = Array.from(new Set(scanResult.detections.map((d) => d.raw)))
   const canonicalized = await canonicalizeSkills(supabase, rawSkillStrings)
-  const resolvedSkillIds = Array.from(new Set(
-    Array.from(canonicalized.values()).filter((r) => r.resolved).map((r) => r.skillId as string),
-  ))
+
+  const provenance = new Map<string, string[]>()
+  for (const d of scanResult.detections) {
+    const resolved = canonicalized.get(d.raw)
+    if (!resolved?.resolved || !resolved.skillId) continue
+    const places = provenance.get(resolved.skillId) ?? []
+    if (!places.includes(d.where)) places.push(d.where)
+    provenance.set(resolved.skillId, places)
+  }
+
+  // "Using X means you used Y" — Supabase is Postgres, Postgres is SQL.
+  // Applied after canonicalization so it works off taxonomy ids rather than
+  // whichever alias happened to appear in the manifest.
+  const { all: expandedIds, causedBy } = applyImplications(provenance.keys())
+  for (const [impliedId, sourceId] of Array.from(causedBy.entries())) {
+    const cause = provenance.get(sourceId)?.[0]
+    provenance.set(impliedId, [cause ? `implied by ${sourceId} (${cause})` : `implied by ${sourceId}`])
+  }
+
+  const resolvedSkillIds = Array.from(expandedIds)
 
   if (resolvedSkillIds.length === 0) {
     return { repoFullName, skipped: false, priorsWritten: [], evidenceWritten: [] }
@@ -92,7 +111,14 @@ export async function processRepo(
     supabase, studentId, repoFullName, grantId, tier, verificationMethod, deployment.url, engagementId,
   )
 
-  const { rawComposite } = await extractComplexity(installationId, repoFullName, scanResult, resolvedSkillIds.length)
+  const { rawComposite } = extractComplexity(scanResult, resolvedSkillIds.length)
+
+  // Where each skill came from, stored so /me/file can answer "why does my
+  // record say this" without re-running a scan. artifact_signals is already
+  // the generic "a fact about this artifact" table, so this needs no new
+  // schema. Best-effort: failing to record provenance must not cost the
+  // student the evidence itself.
+  await recordProvenance(supabase, artifactId, provenance)
 
   const evidenceWritten: ProcessRepoResult['evidenceWritten'] = []
   for (const skillId of resolvedSkillIds) {
@@ -104,6 +130,38 @@ export async function processRepo(
   }
 
   return { repoFullName, skipped: false, priorsWritten: resolvedSkillIds, evidenceWritten }
+}
+
+/**
+ * Save "PostgreSQL was found in docker-compose.yml" for each skill.
+ *
+ * Rewritten rather than appended on each scan: this describes the repo as
+ * it is now, so a dependency the student removed should stop being cited.
+ * That's the opposite of skill_evidence, which is append-only because it's
+ * a claim about a moment in time — this is a lookup table for the current
+ * state, not a record of what was once true.
+ */
+async function recordProvenance(
+  supabase: SupabaseClient,
+  artifactId: string,
+  provenance: Map<string, string[]>,
+): Promise<void> {
+  if (provenance.size === 0) return
+  try {
+    const rows = Array.from(provenance.entries()).map(([skillId, places]) => ({
+      artifact_id: artifactId,
+      signal_name: `skill_source:${skillId}`,
+      value: places.slice(0, 6).join(', ').slice(0, 500),
+    }))
+    await supabase
+      .from('artifact_signals')
+      .delete()
+      .eq('artifact_id', artifactId)
+      .like('signal_name', 'skill_source:%')
+    await supabase.from('artifact_signals').insert(rows)
+  } catch (err) {
+    console.error('[skills/evidence] could not record skill provenance:', err)
+  }
 }
 
 async function writePriors(supabase: SupabaseClient, studentId: string, skillIds: string[]): Promise<void> {

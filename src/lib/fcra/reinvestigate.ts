@@ -19,6 +19,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { scanRepo } from '@/lib/github/scan'
 import { extractComplexity } from '@/lib/github/complexity'
 import { canonicalizeSkills } from '@/lib/skills/canonicalize'
+import { applyImplications } from '@/lib/skills/implications'
 import { computeDifficultyLevel } from '@/lib/skills/levels'
 import { reinvestigationOutcome, type DisputeCategory, type DisputeStatus } from './disputes'
 
@@ -96,17 +97,22 @@ export async function reinvestigate(
     if (!scan.skip) {
       hasAttributedCommits = scan.studentCommitCount > 0
 
-      const rawSkills = Array.from(new Set([...Object.keys(scan.languages), ...scan.manifestSkills]))
+      // Must mirror processRepo exactly, implications included. A skill that
+      // reached the record BY implication — PostgreSQL from Supabase, say —
+      // would otherwise come back "no longer detected" here and have the
+      // student's evidence deleted on a dispute they only filed to ask a
+      // question. Any divergence between this and the scan is a bug that
+      // costs someone real evidence.
+      const rawSkills = Array.from(new Set(scan.detections.map((d) => d.raw)))
       const canonical = await canonicalizeSkills(supabase, rawSkills)
-      const resolvedIds = new Set(
-        Array.from(canonical.values()).filter((r) => r.resolved).map((r) => r.skillId as string),
-      )
+      const detectedIds = Array.from(canonical.values())
+        .filter((r) => r.resolved)
+        .map((r) => r.skillId as string)
+      const { all: resolvedIds } = applyImplications(detectedIds)
       skillStillDetected = resolvedIds.has(evidence.skill_id)
 
       if (hasAttributedCommits && skillStillDetected) {
-        const { rawComposite } = await extractComplexity(
-          connection.installation_id, artifact.repo_full_name, scan, resolvedIds.size,
-        )
+        const { rawComposite } = extractComplexity(scan, resolvedIds.size)
         const { difficultyCleared } = await computeDifficultyLevel(supabase, evidence.skill_id, rawComposite)
         recomputedLevel = difficultyCleared
       }

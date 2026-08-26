@@ -15,9 +15,7 @@
 // implementation for zero languages. Revisit with tree-sitter or similar
 // if/when this heuristic's weaknesses actually show up in practice.
 
-import type { Octokit } from '@octokit/rest'
-import { getInstallationOctokit } from './app'
-import { getFileContent, type RepoScanResult } from './scan'
+import type { RepoScanResult } from './scan'
 
 export interface ComplexitySignals {
   filesTouched: number
@@ -39,12 +37,6 @@ export interface ComplexityExtraction {
 const CONTROL_FLOW_PATTERN = /\b(if|else if|elif|for|while|switch|case|catch|except)\b|&&|\|\|/g
 const EXPORTED_ABSTRACTION_PATTERN = /\b(export\s+(function|class|default)|export\s+const\s+\w+\s*=|def\s+\w|class\s+\w|func\s+\w|pub\s+fn|public\s+(class|interface))\b/g
 const CONCURRENCY_PATTERN = /\b(async\s+function|await|Promise|goroutine|go\s+func|Thread|Mutex|async\s+fn|threading\.|asyncio\.|concurrent\.)\b/
-const SOURCE_FILE_PATTERN = /\.(js|jsx|ts|tsx|py|go|rs|java|kt|rb|php|c|cpp|cs|swift)$/i
-
-// How many of the student's touched files get their content fetched for
-// the regex passes — each is its own API call, so this caps request
-// volume per repo rather than fetching content for every touched file.
-const SOURCE_FILE_SAMPLE_LIMIT = 15
 
 /**
  * externalSystemCount is passed in rather than computed here: counting it
@@ -53,28 +45,21 @@ const SOURCE_FILE_SAMPLE_LIMIT = 15
  * keeps complexity extraction pure GitHub-API-in, signals-out, with
  * canonicalization staying the caller's concern (evidence.ts, task #13).
  */
-export async function extractComplexity(
-  installationId: string,
-  repoFullName: string,
+export function extractComplexity(
   scanResult: RepoScanResult,
   externalSystemCount: number,
-): Promise<ComplexityExtraction> {
-  const [owner, repo] = repoFullName.split('/')
-  const octokit: Octokit = await getInstallationOctokit(installationId)
-
-  const sample = scanResult.filesTouchedByStudent
-    .filter((path) => SOURCE_FILE_PATTERN.test(path))
-    .slice(0, SOURCE_FILE_SAMPLE_LIMIT)
-
-  const contents = await Promise.all(sample.map((path) => getFileContent(octokit, owner, repo, path)))
-
+): ComplexityExtraction {
+  // Source contents now arrive on the scan result. They used to be fetched
+  // again here, one round trip per file, duplicating work scanRepo had
+  // already done for import extraction — same files, same request, twice.
+  // With them passed in, this function does no I/O at all and is directly
+  // testable.
   let controlFlowMatches = 0
   let exportedAbstractions = 0
   let hasConcurrency = false
   let totalLines = 0
 
-  for (const content of contents) {
-    if (!content) continue
+  for (const { content } of scanResult.sampledSources) {
     totalLines += content.split('\n').length
     controlFlowMatches += (content.match(CONTROL_FLOW_PATTERN) ?? []).length
     exportedAbstractions += (content.match(EXPORTED_ABSTRACTION_PATTERN) ?? []).length
