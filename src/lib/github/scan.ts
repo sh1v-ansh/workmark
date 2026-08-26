@@ -9,6 +9,7 @@ import type { Octokit } from '@octokit/rest'
 import { getInstallationOctokit } from './app'
 import { parseManifest } from './manifests'
 import { planFiles, type TreeEntry } from './file-plan'
+import { isStudentAuthored, TEST_PATH } from './code-signals'
 import {
   detection, extractImports, parseComposeServices, parseDockerfile, parseOrmConfig,
   parsePrismaSchema, parseSqlFile, parseTerraform, parseWorkflow, type Detection,
@@ -33,6 +34,21 @@ export interface RepoScanResult {
    * and reused by complexity extraction rather than fetched twice.
    */
   sampledSources: { path: string; content: string }[]
+  /**
+   * How many separate days the student committed on. A better measure of
+   * sustained work than either commit count (inflated by tiny commits) or
+   * elapsed time (inflated by a README fix two years later).
+   */
+  activeDays: number
+  /** Days between their first and last commit here. */
+  spanDays: number
+  /**
+   * Share of the student's sampled commits that changed a file one of their
+   * earlier commits had already changed — did they come back and rework
+   * things, or write once and never return. Null when there's too little
+   * history to say anything.
+   */
+  revisitRate: number | null
   studentCommitCount: number
   totalCommitCount: number | null         // null if contributor stats never became available (see getContributorStats)
   fractionAuthored: number | null         // 0-1, null under the same condition
@@ -46,7 +62,6 @@ export interface RepoScanResult {
   hasInfraConfig: boolean
 }
 
-const TEST_PATH_PATTERN = /(^|\/)(tests?|__tests__|spec)(\/|$)|\.(test|spec)\.[a-z]+$/i
 const INFRA_PATH_PATTERN = /^(docker-compose\.ya?ml|\.terraform|main\.tf|k8s\/|kubernetes\/|helm\/)/i
 
 /**
@@ -64,7 +79,9 @@ export async function scanRepo(
 
   const empty: RepoScanResult = {
     repoFullName, skip: true, defaultBranch: '', isFork: false,
-    languages: {}, detections: [], sampledSources: [], studentCommitCount: 0, totalCommitCount: null,
+    languages: {}, detections: [], sampledSources: [],
+    activeDays: 0, spanDays: 0, revisitRate: null,
+    studentCommitCount: 0, totalCommitCount: null,
     fractionAuthored: null, distinctContributors: null, firstCommitAt: null, lastCommitAt: null,
     filesTouchedByStudent: [], hasTests: false, hasCi: false, hasDockerfile: false, hasInfraConfig: false,
   }
@@ -136,7 +153,7 @@ export async function scanRepo(
   // student wrote any of it, whereas hasCi/hasDockerfile are repo-level
   // facts (checkFilePresence) since a config file's existence isn't
   // authorship-scoped the way source files are.
-  const hasTests = studentCommits.filesTouched.some((f) => TEST_PATH_PATTERN.test(f))
+  const hasTests = studentCommits.filesTouched.some((f) => TEST_PATH.test(f))
   const hasInfraConfig = studentCommits.filesTouched.some((f) => INFRA_PATH_PATTERN.test(f))
 
   return {
@@ -160,6 +177,9 @@ export async function scanRepo(
     hasCi,
     hasDockerfile,
     hasInfraConfig,
+    activeDays: studentCommits.activeDays,
+    spanDays: studentCommits.spanDays,
+    revisitRate: studentCommits.revisitRate,
   }
 }
 
@@ -207,13 +227,27 @@ async function getContributorStats(
   return null
 }
 
+interface StudentCommits {
+  commits: string[]
+  firstAt: string | null
+  lastAt: string | null
+  filesTouched: string[]
+  activeDays: number
+  spanDays: number
+  revisitRate: number | null
+}
+
 async function fetchStudentCommits(
   octokit: Octokit, owner: string, repo: string, githubLogin: string,
-): Promise<{ commits: string[]; firstAt: string | null; lastAt: string | null; filesTouched: string[] }> {
+): Promise<StudentCommits> {
   const commits: string[] = []
   const filesTouched = new Set<string>()
+  const commitDays = new Set<string>()
+  /** One entry per sampled commit, newest first — the input to revisit rate. */
+  const perCommitFiles: string[][] = []
   let firstAt: string | null = null
   let lastAt: string | null = null
+  let revisitRate: number | null = null
 
   try {
     // Capped at 3 pages (300 commits) — plenty for a student project; this
@@ -226,6 +260,9 @@ async function fetchStudentCommits(
         const date = c.commit.author?.date ?? null
         if (date && (!firstAt || date < firstAt)) firstAt = date
         if (date && (!lastAt || date > lastAt)) lastAt = date
+        // Distinct calendar days, not commit count: ten commits in one
+        // evening is one day's work however it's split up.
+        if (date) commitDays.add(date.slice(0, 10))
       }
       if (data.length < 100) break
     }
@@ -254,14 +291,55 @@ async function fetchStudentCommits(
           }
         }),
       )
-      for (const files of details) for (const f of files) filesTouched.add(f.filename)
+      for (const files of details) {
+        // Vendored and generated paths are dropped here, not later: one
+        // commit that checked in node_modules used to add a thousand files
+        // to "files this student touched" and inflate everything derived
+        // from it. listCommits returns newest first, so these accumulate in
+        // that order and get reversed for the revisit pass below.
+        const authored = files.map((f) => f.filename).filter(isStudentAuthored)
+        perCommitFiles.push(authored)
+        for (const f of authored) filesTouched.add(f)
+      }
+    }
+
+    // Did they come back to their own work? Walk oldest-first and count how
+    // many commits touched a file an earlier commit of theirs had already
+    // changed. Write-once-and-abandon sits near 0; sustained work on one
+    // codebase sits high. Costs nothing — these file lists were already
+    // fetched for filesTouched.
+    const chronological = perCommitFiles.slice().reverse().filter((f) => f.length > 0)
+    // Fewer than four commits can't say anything either way — one person's
+    // three-commit project isn't evidence of abandoning it.
+    if (chronological.length >= 4) {
+      const seen = new Set<string>()
+      let revisits = 0
+      for (let i = 0; i < chronological.length; i++) {
+        // The first commit has nothing to revisit, so it's excluded from
+        // both the numerator and the denominator.
+        if (i > 0 && chronological[i].some((f) => seen.has(f))) revisits++
+        for (const f of chronological[i]) seen.add(f)
+      }
+      revisitRate = revisits / (chronological.length - 1)
     }
   } catch {
     // No commits attributable to this login (or the API call failed) —
     // return whatever was gathered before the failure.
   }
 
-  return { commits, firstAt, lastAt, filesTouched: Array.from(filesTouched) }
+  const spanDays = firstAt && lastAt
+    ? Math.max(0, Math.round((Date.parse(lastAt) - Date.parse(firstAt)) / 86_400_000))
+    : 0
+
+  return {
+    commits,
+    firstAt,
+    lastAt,
+    filesTouched: Array.from(filesTouched),
+    activeDays: commitDays.size,
+    spanDays,
+    revisitRate,
+  }
 }
 
 /**

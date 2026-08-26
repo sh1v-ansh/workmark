@@ -21,8 +21,13 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { scanRepo, type RepoScanResult } from '@/lib/github/scan'
 import { extractComplexity } from '@/lib/github/complexity'
 import { verifyDeployment } from '@/lib/github/verify-deployment'
+import type { Detection } from '@/lib/github/detectors'
 import { canonicalizeSkills } from '@/lib/skills/canonicalize'
 import { applyImplications } from '@/lib/skills/implications'
+import {
+  computeLanguageShare, computeSkillRelevance, scaleComposite,
+  EVIDENCE_THRESHOLD, type SkillRelevance,
+} from '@/lib/skills/relevance'
 import { computeDifficultyLevel } from '@/lib/skills/levels'
 
 export interface ProcessRepoResult {
@@ -64,12 +69,16 @@ export async function processRepo(
   const canonicalized = await canonicalizeSkills(supabase, rawSkillStrings)
 
   const provenance = new Map<string, string[]>()
+  // Kept alongside provenance because relevance needs the detection's source
+  // and path, not just the human-readable place string.
+  const detectionsBySkill = new Map<string, Detection[]>()
   for (const d of scanResult.detections) {
     const resolved = canonicalized.get(d.raw)
     if (!resolved?.resolved || !resolved.skillId) continue
     const places = provenance.get(resolved.skillId) ?? []
     if (!places.includes(d.where)) places.push(d.where)
     provenance.set(resolved.skillId, places)
+    detectionsBySkill.set(resolved.skillId, [...(detectionsBySkill.get(resolved.skillId) ?? []), d])
   }
 
   // "Using X means you used Y" — Supabase is Postgres, Postgres is SQL.
@@ -113,18 +122,60 @@ export async function processRepo(
 
   const { rawComposite } = extractComplexity(scanResult, resolvedSkillIds.length)
 
+  // How much of this repo's difficulty each skill actually has a claim on.
+  // Without this, every skill in the repo got the same number — so a hard
+  // Rust project containing an unused package.json claimed the student was
+  // as good at React as at Rust.
+  const filesTouched = new Set(scanResult.filesTouchedByStudent)
+  const languageShare = computeLanguageShare(scanResult.filesTouchedByStudent)
+  const relevanceBySkill = new Map<string, SkillRelevance>()
+  // Two explicit passes, because an implied skill inherits from whatever
+  // implied it and so must be computed second. Relying on Set iteration
+  // order to get that right would work today and break silently the first
+  // time the implication table grows a chain.
+  for (const skillId of resolvedSkillIds) {
+    if (causedBy.has(skillId)) continue
+    relevanceBySkill.set(skillId, computeSkillRelevance({
+      detections: detectionsBySkill.get(skillId) ?? [],
+      filesTouched,
+      languageShare,
+    }))
+  }
+  for (const skillId of resolvedSkillIds) {
+    const impliedSource = causedBy.get(skillId)
+    if (!impliedSource) continue
+    relevanceBySkill.set(skillId, computeSkillRelevance({
+      detections: detectionsBySkill.get(skillId) ?? [],
+      filesTouched,
+      languageShare,
+      // A chain (Supabase -> Postgres -> SQL) resolves its middle link in
+      // the pass above; a link whose source is itself implied falls back to
+      // a neutral value rather than reading a half-built map.
+      impliedFrom: { skillId: impliedSource, relevance: relevanceBySkill.get(impliedSource)?.relevance ?? 0.6 },
+    }))
+  }
+
   // Where each skill came from, stored so /me/file can answer "why does my
   // record say this" without re-running a scan. artifact_signals is already
   // the generic "a fact about this artifact" table, so this needs no new
   // schema. Best-effort: failing to record provenance must not cost the
   // student the evidence itself.
-  await recordProvenance(supabase, artifactId, provenance)
+  await recordProvenance(supabase, artifactId, provenance, relevanceBySkill)
 
   const evidenceWritten: ProcessRepoResult['evidenceWritten'] = []
   for (const skillId of resolvedSkillIds) {
-    const { difficultyCleared } = await computeDifficultyLevel(supabase, skillId, rawComposite)
+    const relevance = relevanceBySkill.get(skillId)?.relevance ?? 0.5
+
+    // Below the bar this stays a prior — "we saw this in your repo" — and
+    // never becomes evidence. A React dependency in a repo where the student
+    // never touched a line of frontend is a true fact about the repo and a
+    // false claim about them; the record should only make the first.
+    if (relevance < EVIDENCE_THRESHOLD) continue
+
+    const skillComposite = scaleComposite(rawComposite, relevance)
+    const { difficultyCleared } = await computeDifficultyLevel(supabase, skillId, skillComposite)
     const changed = await writeOrCorrectEvidence(supabase, {
-      studentId, skillId, artifactId, base, rawComposite, difficultyCleared, verificationMethod, engagementId,
+      studentId, skillId, artifactId, base, rawComposite: skillComposite, difficultyCleared, verificationMethod, engagementId,
     })
     evidenceWritten.push({ skillId, difficultyCleared, changed })
   }
@@ -145,14 +196,22 @@ async function recordProvenance(
   supabase: SupabaseClient,
   artifactId: string,
   provenance: Map<string, string[]>,
+  relevanceBySkill: Map<string, SkillRelevance>,
 ): Promise<void> {
   if (provenance.size === 0) return
   try {
-    const rows = Array.from(provenance.entries()).map(([skillId, places]) => ({
-      artifact_id: artifactId,
-      signal_name: `skill_source:${skillId}`,
-      value: places.slice(0, 6).join(', ').slice(0, 500),
-    }))
+    const rows = Array.from(provenance.entries()).map(([skillId, places]) => {
+      // The relevance reason goes in the same string as the file list, so
+      // the student sees both where it was found and why it counted for as
+      // much as it did — "docker-compose.yml — you set this up there".
+      const reason = relevanceBySkill.get(skillId)?.reason
+      const found = places.slice(0, 6).join(', ')
+      return {
+        artifact_id: artifactId,
+        signal_name: `skill_source:${skillId}`,
+        value: (reason ? `${found} — ${reason}` : found).slice(0, 500),
+      }
+    })
     await supabase
       .from('artifact_signals')
       .delete()
