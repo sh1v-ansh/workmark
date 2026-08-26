@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { applicationAccepted } from '@/lib/notify/email'
+import { applicationAccepted, applicationRejected } from '@/lib/notify/email'
 
 /**
  * PATCH /api/applications/[id]/status
@@ -66,6 +66,24 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   if (statusErr) {
     console.error('[api/applications/status] update failed:', statusErr)
     return NextResponse.json({ error: 'Could not update the application.' }, { status: 500 })
+  }
+
+  // A rejection that never arrives leaves someone refreshing a page and
+  // holding one of their five application slots against a decision already
+  // made. Best-effort like every other send — a bounced notification must
+  // not fail the status change it was reporting.
+  if (status === 'rejected') {
+    try {
+      const { data: rejected } = await admin.auth.admin.getUserById(application.student_id)
+      if (rejected?.user?.email) {
+        await applicationRejected({
+          studentEmail: rejected.user.email,
+          listingTitle: listing.title ?? 'the project',
+        })
+      }
+    } catch (err) {
+      console.error('[api/applications/status] rejection notice failed:', err)
+    }
   }
 
   if (status !== 'accepted') {

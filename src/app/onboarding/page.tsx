@@ -12,9 +12,32 @@ import { Combobox } from '@/components/Combobox'
 import { UNIVERSITIES } from '@/lib/data/universities'
 import { MAJORS } from '@/lib/data/majors'
 
-// Student-only in MVP: company/faculty accounts are deferred to Tier 1+
-// and have no table in the v0.5 schema to write a profile into.
-type Role = 'student'
+// Asked before anything else, because a .edu address doesn't distinguish
+// the two — professors have university email too. Without this branch a
+// professor signs up, is asked for their graduation year, and silently
+// becomes a student record with no error anyone would notice.
+//
+// Business accounts are still deferred: they'd fail the .edu check at the
+// door and need domain ownership proof instead, which is a different
+// problem from this one.
+type Role = 'student' | 'faculty'
+
+function RoleChoice({ title, body, onClick }: { title: string; body: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'block', width: '100%', textAlign: 'left', font: 'inherit', cursor: 'pointer',
+        background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.md,
+        padding: '15px 18px',
+      }}
+    >
+      <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 3 }}>{title}</span>
+      <span style={{ display: 'block', fontSize: 13.5, color: C.textFaint, lineHeight: 1.5 }}>{body}</span>
+    </button>
+  )
+}
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -66,9 +89,16 @@ function TagInput({ label, inputId, value, onChange, placeholder }: {
 
 // ─── student form ─────────────────────────────────────────────────────────────
 
-function StudentForm({ onSubmit, loading, emailDomain }: {
-  onSubmit: (data: Record<string, unknown>) => void; loading: boolean; emailDomain: string
+function StudentForm({ onSubmit, loading, emailDomain, role }: {
+  onSubmit: (data: Record<string, unknown>) => void
+  loading: boolean
+  emailDomain: string
+  role: 'student' | 'faculty'
 }) {
+  // Faculty skip the questions that only make sense for a degree in
+  // progress. Asking a professor for their graduation year is how the
+  // previous version quietly told them they were a student.
+  const isStudent = role === 'student'
   const [fullName, setFullName] = useState('')
   const [university, setUniversity] = useState('')
   const [major, setMajor] = useState('')
@@ -111,10 +141,10 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
           <Combobox id="student-university" value={university} onChange={setUniversity} options={UNIVERSITIES} placeholder="Search universities…" required />
         </div>
         <div style={gap}>
-          <FieldLabel htmlFor="student-major">Major</FieldLabel>
-          <Combobox id="student-major" value={major} onChange={setMajor} options={MAJORS} placeholder="Search majors…" />
+          <FieldLabel htmlFor="student-major">{isStudent ? 'Major' : 'Department'}</FieldLabel>
+          <Combobox id="student-major" value={major} onChange={setMajor} options={MAJORS} placeholder={isStudent ? 'Search majors…' : 'e.g. Computer Science'} />
         </div>
-        <div style={gap}>
+        {isStudent && <div style={gap}>
           <FieldLabel htmlFor="student-degree">Degree</FieldLabel>
           <select id="student-degree" value={degreeType} onChange={(e) => setDegreeType(e.target.value)} className="dk-select">
             <option value="BS">BS</option>
@@ -123,18 +153,18 @@ function StudentForm({ onSubmit, loading, emailDomain }: {
             <option value="BA">BA</option>
             <option value="Other">Other</option>
           </select>
-        </div>
-        <div style={gap}>
+        </div>}
+        {isStudent && <div style={gap}>
           <FieldLabel htmlFor="student-grad-year">Graduation year</FieldLabel>
           <input id="student-grad-year" type="number" min={2024} max={2035} value={graduationYear} onChange={(e) => setGraduationYear(e.target.value)} className="dk-input" placeholder="2026" />
-        </div>
-        <div style={gap}>
+        </div>}
+        {isStudent && <div style={gap}>
           <FieldLabel htmlFor="student-gpa">GPA</FieldLabel>
           <input id="student-gpa" type="number" min={0} max={4} step={0.01} value={gpa} onChange={(e) => setGpa(e.target.value)} className="dk-input" placeholder="3.80" />
-        </div>
+        </div>}
       </div>
 
-      <TagInput label="Skills (press Enter to add)" inputId="student-skills" value={skills} onChange={setSkills} placeholder="e.g. Python, React, SQL" />
+      {isStudent && <TagInput label="Skills (press Enter to add)" inputId="student-skills" value={skills} onChange={setSkills} placeholder="e.g. Python, React, SQL" />}
 
       <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={gap}>
@@ -204,6 +234,10 @@ export default function OnboardingPage() {
   const [userEmail, setUserEmail] = useState('')
   const [userId, setUserId] = useState('')
   const [checking, setChecking] = useState(true)
+  // Asked before anything else. Professors have .edu addresses too, so the
+  // email check can't tell them apart — without this a professor signs up,
+  // gets asked for their graduation year, and silently becomes a student.
+  const [role, setRole] = useState<'student' | 'faculty' | null>(null)
 
   useEffect(() => {
     async function loadUser() {
@@ -227,26 +261,30 @@ export default function OnboardingPage() {
   async function handleStudentSubmit(data: Record<string, unknown>) {
     if (!userId) return
     setLoading(true)
-    const supabase = createClient()
     try {
-      // edu_domain/edu_verified_at are the permanent record of how this
-      // account was verified as a student. The login email can change
-      // later (a .edu expires at graduation); this pair does not.
-      const domain = userEmail.split('@')[1] ?? null
-      const { error } = await supabase.from('students').insert({
-        id: userId,
-        ...data,
-        edu_domain: domain,
-        edu_verified_at: new Date().toISOString(),
+      // Goes through the server rather than writing directly: `accounts` has
+      // no insert policy for users on purpose, because an account row says
+      // what someone is allowed to be. A client that could write it could
+      // grant itself admin.
+      const res = await fetch('/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role, profile: data }),
       })
-      if (error) {
-        // 23505 = primary key: a profile already exists, which is a
-        // success state for the user even though the insert failed.
-        if (error.code === '23505') { router.replace('/student/dashboard'); return }
-        throw error
-      }
-      toast('Profile saved. Welcome to Workmark.', 'success')
-      router.push('/student/dashboard'); router.refresh()
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Failed to save profile.')
+
+      toast(
+        role === 'faculty'
+          ? 'Profile saved. We\'ll confirm your faculty status shortly — you can start now.'
+          : 'Profile saved. Welcome to Workmark.',
+        'success',
+      )
+      // Faculty go to their own home. Sending them to the student dashboard
+      // would ask about their skills, their record and their GitHub — none
+      // of which they have.
+      router.push(role === 'faculty' ? '/faculty' : '/student/dashboard')
+      router.refresh()
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Failed to save profile.', 'error')
     } finally {
@@ -282,7 +320,11 @@ export default function OnboardingPage() {
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 30 }}>
           <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 7.5 }}>Welcome to Workmark</h1>
           <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 23, lineHeight: 1.6 }}>
-            Set up your student profile. Your verified skill record comes from the repos you link — this is just the basics.
+            {role === null
+              ? 'First, which are you? This changes what we ask for next.'
+              : role === 'faculty'
+                ? 'Set up your profile. You can post course and research projects straight away.'
+                : 'Set up your profile. Your verified skill record comes from the repos you link — this is just the basics.'}
           </p>
 
           {checking ? (
@@ -291,8 +333,39 @@ export default function OnboardingPage() {
             <div role="alert" style={{ background: state.cautionBg, borderRadius: R.md, padding: '13px 16.5px', fontSize: 14, color: '#6B3A0A', lineHeight: 1.6 }}>
               Your email <strong>{userEmail}</strong> is not a .edu address. Workmark accounts require a university email to verify student status. Sign out and sign up again with your university address.
             </div>
+          ) : role === null ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <RoleChoice
+                title="I'm a student"
+                body="Build a verified record from the code you write, and take on projects."
+                onClick={() => setRole('student')}
+              />
+              <RoleChoice
+                title="I teach or run a lab"
+                body="Post course and research projects, and confirm the work students did with you."
+                onClick={() => setRole('faculty')}
+              />
+              <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 4 }}>
+                Faculty accounts work right away. We confirm them separately — until then your
+                confirmations carry the same weight as a student&apos;s.
+              </p>
+            </div>
           ) : (
-            <StudentForm onSubmit={handleStudentSubmit} loading={loading} emailDomain={emailDomain} />
+            <>
+              <button
+                type="button"
+                onClick={() => setRole(null)}
+                style={{ background: 'none', border: 'none', padding: 0, marginBottom: 16, font: 'inherit', fontSize: 13, color: C.textFaint, cursor: 'pointer' }}
+              >
+                ← Not {role === 'faculty' ? 'faculty' : 'a student'}?
+              </button>
+              <StudentForm
+                onSubmit={handleStudentSubmit}
+                loading={loading}
+                emailDomain={emailDomain}
+                role={role}
+              />
+            </>
           )}
         </div>
       </div>

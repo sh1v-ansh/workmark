@@ -12,6 +12,7 @@ import { useToast } from '@/components/Toast'
 import { createClient } from '@/lib/supabase/client'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
+import { levelName as levelLabel } from '@/lib/skills/level-names'
 
 // Local types — deliberately not sourced from src/lib/types.ts, which is
 // still the pre-rebuild shape (Phase 1 task #16 rewrites it). This page
@@ -28,6 +29,9 @@ interface RepoGrant {
   granted_at: string
   is_private: boolean
   scan_enabled: boolean
+  primary_language: string | null
+  rank_reason: string | null
+  rank_score: number | null
 }
 interface SkillPrior {
   id: string
@@ -47,11 +51,7 @@ interface SkillEvidenceRow {
   artifacts: { repo_full_name: string | null; deployment_url: string | null } | null
 }
 
-const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
 
-function levelLabel(n: number) {
-  return LEVEL_NAMES[n] ?? `Level ${n}`
-}
 
 interface ReviewRequest {
   id: string
@@ -171,7 +171,10 @@ export default function GithubScanClient({ studentName, connection, grants, prio
     // silent no-op that leaves the checkbox on while the DB stays off.
     const { data, error } = await supabase
       .from('github_repo_grants')
-      .update({ scan_enabled: next })
+      // scan_choice as well as scan_enabled: the flag alone gets recomputed
+      // by the next sync, so without recording that this was a person's
+      // decision, turning a repo off lasted until the page reloaded.
+      .update({ scan_enabled: next, scan_choice: next ? 'on' : 'off' })
       .eq('id', grantId)
       .select('id')
     if (error || !data || data.length === 0) {
@@ -306,43 +309,51 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 </div>
                 <Card hoverable={false} padding="3.5px 18px 7px">
                   {grants.map((g, i) => {
-                    const enabled = g.is_private ? (overrides[g.id] ?? g.scan_enabled) : true
+                    // Every repo gets a real switch now. Public ones used to
+                    // read "Always scanned", which stopped being true when
+                    // ranking started deciding what's on by default — and
+                    // someone with 300 repos needs to be able to say which
+                    // ones matter.
+                    const enabled = overrides[g.id] ?? g.scan_enabled
                     return (
                       <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 15, padding: '12.5px 0', borderBottom: i < grants.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
                         <div style={{ flexGrow: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8.5, marginBottom: 3, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 14.5, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.repo_full_name}</span>
                             <Badge tone={g.is_private ? 'caution' : 'neutral'}>{g.is_private ? 'Private' : 'Public'}</Badge>
+                            {g.primary_language && <span style={{ fontSize: 12, color: C.textGhost }}>{g.primary_language}</span>}
                           </div>
+                          {/* Why this repo is on or off. The override is what
+                              makes a default cut fair, so the reason has to
+                              be visible rather than tucked away. */}
+                          {g.rank_reason && (
+                            <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.45 }}>{g.rank_reason}</p>
+                          )}
                         </div>
-                        {g.is_private ? (
-                          <button
-                            role="switch"
-                            aria-checked={enabled}
-                            aria-label={`Scan ${g.repo_full_name}`}
-                            disabled={togglingId === g.id}
-                            onClick={() => toggleScanEnabled(g.id, !enabled)}
-                            style={{
-                              flexShrink: 0, width: 37, height: 22, borderRadius: 999, position: 'relative', border: 'none',
-                              cursor: togglingId === g.id ? 'wait' : 'pointer',
-                              background: enabled ? C.accent : C.border,
-                              transition: 'background 0.15s',
-                            }}
-                          >
-                            <span style={{
-                              position: 'absolute', top: 3, left: enabled ? 18.5 : 3, width: 16, height: 16, borderRadius: 999,
-                              background: '#fff', transition: 'left 0.15s',
-                            }} />
-                          </button>
-                        ) : (
-                          <span style={{ flexShrink: 0, fontSize: 13, color: C.textGhost }}>Always scanned</span>
-                        )}
+                        <button
+                          role="switch"
+                          aria-checked={enabled}
+                          aria-label={`Scan ${g.repo_full_name}`}
+                          disabled={togglingId === g.id}
+                          onClick={() => toggleScanEnabled(g.id, !enabled)}
+                          style={{
+                            flexShrink: 0, width: 37, height: 22, borderRadius: 999, position: 'relative', border: 'none',
+                            cursor: togglingId === g.id ? 'wait' : 'pointer',
+                            background: enabled ? C.accent : C.border,
+                            transition: 'background 0.15s',
+                          }}
+                        >
+                          <span style={{
+                            position: 'absolute', top: 3, left: enabled ? 18.5 : 3, width: 16, height: 16, borderRadius: 999,
+                            background: '#fff', transition: 'left 0.15s',
+                          }} />
+                        </button>
                       </div>
                     )
                   })}
                 </Card>
                 <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginTop: 9.5 }}>
-                  Private repos are off by default. Only enable ones you have the right to share — not an employer&apos;s code.
+                  Private repos are always off until you say otherwise — only enable ones you have the right to share, not an employer&apos;s code. Public repos are ranked, and the ones most likely to show your work are on by default. Switch on anything we got wrong; your choice sticks.
                 </p>
               </div>
             )}

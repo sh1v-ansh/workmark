@@ -14,6 +14,7 @@ import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import type { StudentRecord } from '@/lib/profile/record'
 import { STAGE_LABEL, type Stage } from '@/lib/engagements/lifecycle'
+import { LEVEL_NAMES, CAP_EXPLANATION } from '@/lib/skills/level-names'
 
 interface EvidenceSource {
   skillId: string
@@ -26,7 +27,7 @@ interface EvidenceSource {
   fromEngagement: boolean
 }
 
-const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
+
 const TIER_LABEL: Record<string, string> = {
   tier_0: 'Solo project',
   tier_0_5: 'Multi-contributor project',
@@ -177,7 +178,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
             <div style={{ marginBottom: 32 }}>
               <Kicker style={{ marginBottom: 5.5 }}>Verified skills · {skills.length}</Kicker>
               <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 12 }}>
-                Open one to see which projects it came from. Levels above Strong need attestation, which isn&apos;t live yet.
+                Open one to see which projects it came from. {CAP_EXPLANATION}
               </p>
               {skills.length === 0 ? (
                 <Card hoverable={false} padding={19.5}>

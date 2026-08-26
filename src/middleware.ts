@@ -42,13 +42,18 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Student-only in MVP. Company and faculty accounts are deferred until
-  // Tier 1+ — their tables don't exist in the v0.5 schema at all, so
-  // there's nothing to route to.
   const requiresAuth =
     pathname.startsWith('/student/') ||
+    pathname.startsWith('/faculty') ||
+    pathname.startsWith('/admin') ||
     pathname.startsWith('/listings/new') ||
     pathname.startsWith('/onboarding')
+
+  // The admin role itself is checked in the page and the API route, against
+  // the database rather than the login token — a token claim goes stale, and
+  // admin is exactly the role where that gap matters. This only ensures a
+  // signed-out visitor is bounced to login rather than reaching a page that
+  // then has to decide whether to admit its own existence.
 
   if (!user && requiresAuth) {
     const url = request.nextUrl.clone()
@@ -57,14 +62,20 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && pathname === '/login') {
-    const { data: student } = await supabase
-      .from('students')
-      .select('id')
-      .eq('id', user.id)
-      .maybeSingle()
+    const [{ data: student }, { data: account }] = await Promise.all([
+      supabase.from('students').select('id').eq('id', user.id).maybeSingle(),
+      supabase.from('accounts').select('roles').eq('id', user.id).maybeSingle(),
+    ])
+
+    // Faculty land on their own home. The student dashboard asks about
+    // skills, a record and a GitHub connection, none of which a professor
+    // has — and someone who also holds the student role is a student first,
+    // since that's the side of the product they're being scored on.
+    const roles = (account?.roles ?? []) as string[]
+    const facultyOnly = roles.includes('faculty') && !roles.includes('student')
 
     const url = request.nextUrl.clone()
-    url.pathname = student ? '/student/dashboard' : '/onboarding'
+    url.pathname = !student ? '/onboarding' : facultyOnly ? '/faculty' : '/student/dashboard'
     return NextResponse.redirect(url)
   }
 

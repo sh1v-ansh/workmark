@@ -21,6 +21,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getInstallationOctokit } from '@/lib/github/app'
+import { rankRepos } from '@/lib/github/rank-repos'
 
 export interface SyncGrantsResult {
   /** Repos visible to the installation right now. */
@@ -39,58 +40,139 @@ export async function syncRepoGrants(
   // Explicit pagination rather than a single call: the default page size
   // is 30, which is exactly the kind of boundary that silently truncates
   // and looks like "GitHub only shared some repos" instead of a bug.
-  const repositories: { full_name: string; private: boolean }[] = []
+  // Everything the ranking needs comes back in this same listing, so
+  // capturing it costs nothing — which is the whole point. If working out a
+  // repo's rank took its own request, ranking 300 repos would cost 300
+  // requests and we would not have solved the problem we set out to solve.
+  interface LiveRepo {
+    full_name: string
+    private: boolean
+    fork: boolean
+    archived: boolean
+    size: number
+    pushed_at: string | null
+    created_at: string | null
+    description: string | null
+    language: string | null
+    stargazers_count: number
+    has_pages: boolean
+  }
+  const repositories: LiveRepo[] = []
   for (let page = 1; ; page++) {
     const { data } = await octokit.rest.apps.listReposAccessibleToInstallation({ per_page: 100, page })
-    repositories.push(...(data.repositories ?? []).map((r) => ({ full_name: r.full_name, private: !!r.private })))
+    repositories.push(...(data.repositories ?? []).map((r) => ({
+      full_name: r.full_name,
+      private: !!r.private,
+      fork: !!r.fork,
+      archived: !!r.archived,
+      size: r.size ?? 0,
+      pushed_at: r.pushed_at ?? null,
+      created_at: r.created_at ?? null,
+      description: r.description ?? null,
+      language: r.language ?? null,
+      stargazers_count: r.stargazers_count ?? 0,
+      has_pages: !!r.has_pages,
+    })))
     if ((data.repositories ?? []).length < 100) break
   }
 
   const { data: existingRows, error: readErr } = await supabase
     .from('github_repo_grants')
-    .select('id, repo_full_name, is_private, scan_enabled, revoked_at')
+    .select('id, repo_full_name, is_private, scan_enabled, scan_choice, revoked_at')
     .eq('student_id', studentId)
   if (readErr) throw readErr
+
+  // Repos a project brief points at. The student told us this is their
+  // work, which outranks anything the ranking would infer.
+  const { data: briefRepos } = await supabase
+    .from('project_briefs')
+    .select('repo_full_name')
+    .eq('student_id', studentId)
+    .not('repo_full_name', 'is', null)
+  const briefLinked = new Set((briefRepos ?? []).map((b) => b.repo_full_name as string))
 
   const existing = new Map((existingRows ?? []).map((r) => [r.repo_full_name, r]))
   const liveNames = new Set(repositories.map((r) => r.full_name))
   let changed = 0
 
+  // Rank everything first, so each row's write knows whether this repo made
+  // the default cut.
+  const ranked = rankRepos(repositories.map((repo) => {
+    const row = existing.get(repo.full_name)
+    return {
+      repoFullName: repo.full_name,
+      isPrivate: repo.private,
+      isFork: repo.fork,
+      isArchived: repo.archived,
+      sizeKb: repo.size,
+      pushedAt: repo.pushed_at,
+      createdAtGh: repo.created_at,
+      description: repo.description,
+      primaryLanguage: repo.language,
+      stars: repo.stargazers_count,
+      hasPages: repo.has_pages,
+      scanChoice: (row?.scan_choice as 'on' | 'off' | null) ?? null,
+      linkedToBrief: briefLinked.has(repo.full_name),
+    }
+  }))
+  const rankedByName = new Map(ranked.map((r) => [r.repoFullName, r]))
+
   for (const repo of repositories) {
     const row = existing.get(repo.full_name)
+    const rank = rankedByName.get(repo.full_name)!
+
+    const metadata = {
+      is_private: repo.private,
+      is_fork: repo.fork,
+      is_archived: repo.archived,
+      size_kb: repo.size,
+      pushed_at: repo.pushed_at,
+      created_at_gh: repo.created_at,
+      description: repo.description,
+      primary_language: repo.language,
+      stars: repo.stargazers_count,
+      has_pages: repo.has_pages,
+      rank_score: rank.score,
+      rank_reason: rank.reason,
+    }
 
     if (!row) {
       const { error } = await supabase.from('github_repo_grants').insert({
         student_id: studentId,
         installation_id: installationId,
         repo_full_name: repo.full_name,
-        is_private: repo.private,
-        scan_enabled: !repo.private,
+        // Private still requires an explicit yes — the ranking decides what
+        // is worth reading, never whether we're allowed to read it.
+        scan_enabled: repo.private ? false : rank.enabled,
+        ...metadata,
       })
       if (error) throw error
       changed++
       continue
     }
 
-    // Public repos are force-enabled every sync; private repos keep
-    // whatever the student chose. A repo that just flipped private→public
-    // therefore becomes scannable, and public→private keeps scanning
-    // (it was already public when the evidence was gathered) unless the
-    // student turns it off — which the picker lets them do.
-    const nextScanEnabled = repo.private ? row.scan_enabled : true
+    // The student's word wins and is never overwritten. This used to force
+    // every public repo back on at each sync, so turning one off did
+    // nothing — it came back on the next time the picker loaded.
+    const nextScanEnabled =
+      row.scan_choice === 'on' ? true
+      : row.scan_choice === 'off' ? false
+      : repo.private ? false
+      : rank.enabled
+
     const needsUpdate =
       row.is_private !== repo.private ||
       row.scan_enabled !== nextScanEnabled ||
       row.revoked_at !== null
 
-    if (needsUpdate) {
-      const { error } = await supabase
-        .from('github_repo_grants')
-        .update({ is_private: repo.private, scan_enabled: nextScanEnabled, revoked_at: null, installation_id: installationId })
-        .eq('id', row.id)
-      if (error) throw error
-      changed++
-    }
+    // Metadata is refreshed on every sync regardless, so the picker's
+    // ordering and reasons don't go stale.
+    const { error } = await supabase
+      .from('github_repo_grants')
+      .update({ ...metadata, scan_enabled: nextScanEnabled, revoked_at: null, installation_id: installationId })
+      .eq('id', row.id)
+    if (error) throw error
+    if (needsUpdate) changed++
   }
 
   // Anything we hold a live grant for that GitHub no longer shares has

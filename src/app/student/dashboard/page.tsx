@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StudentDashboardClient, { type DashboardData } from './StudentDashboardClient'
+import { getAccount, hasRole } from '@/lib/auth/roles'
 import { computeTrackRecord, type Stage } from '@/lib/engagements/lifecycle'
 
 export default async function StudentDashboardPage() {
@@ -126,5 +127,9 @@ export default async function StudentDashboardPage() {
     }),
   }
 
-  return <StudentDashboardClient data={data} />
+  // Staff land here like everyone else, so the queue has to be reachable
+  // from the page they actually arrive on — not only from itself.
+  const account = await getAccount(supabase)
+
+  return <StudentDashboardClient data={data} isAdmin={hasRole(account, 'admin')} />
 }

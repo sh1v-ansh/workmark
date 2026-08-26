@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { getAccount, hasRole } from '@/lib/auth/roles'
 
 /**
  * POST /api/listings
@@ -50,11 +51,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Add at least one required skill so applicants can be matched.' }, { status: 400 })
   }
 
+  // Read from the account rather than hardcoded. A faculty account could
+  // previously log in and post nothing, because this said 'student' and the
+  // database rejected anything else — so the account type existed and meant
+  // nothing.
+  const account = await getAccount(supabase)
+  const isFaculty = hasRole(account, 'faculty')
+
   const { data: listing, error: listingErr } = await supabase
     .from('listings')
     .insert({
       poster_id: user.id,
-      poster_type: 'student',
+      poster_type: isFaculty ? 'faculty' : 'student',
+      // A course or research project is a different kind of work from one
+      // student hiring another, and is weighted differently once
+      // attestation exists.
+      tier: isFaculty ? 'faculty_project' : 'listing_driven',
       poster_display_name: student.full_name,
       title,
       brief,

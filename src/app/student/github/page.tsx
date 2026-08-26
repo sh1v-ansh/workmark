@@ -24,7 +24,13 @@ export default async function GithubScanPage() {
     { data: evidenceRows, error: evidenceError },
   ] = await Promise.all([
     supabase.from('github_connections').select('*').eq('student_id', user.id).maybeSingle(),
-    supabase.from('github_repo_grants').select('*').eq('student_id', user.id).is('revoked_at', null).order('granted_at', { ascending: false }),
+    // Ranked order, not granted order: someone with 300 repos needs the
+    // ones most likely to show their work at the top of the list, not
+    // whichever GitHub happened to return first.
+    supabase.from('github_repo_grants').select('*').eq('student_id', user.id).is('revoked_at', null)
+      .order('scan_enabled', { ascending: false })
+      .order('rank_score', { ascending: false, nullsFirst: false })
+      .order('repo_full_name'),
     supabase.from('skill_priors').select('*, skills(canonical_name)').eq('student_id', user.id).order('extracted_at', { ascending: false }),
     // Deliberately NOT embedding skills(canonical_name) here — current_skill_evidence
     // is a VIEW, and PostgREST's embed resolution through views is unreliable (it

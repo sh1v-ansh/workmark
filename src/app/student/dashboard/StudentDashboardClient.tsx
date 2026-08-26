@@ -116,7 +116,7 @@ const ICON_BG: Record<Todo['kind'], string> = {
   github: '#EDE9FF',
 }
 
-export default function StudentDashboardClient({ data }: { data: DashboardData }) {
+export default function StudentDashboardClient({ data, isAdmin = false }: { data: DashboardData; isAdmin?: boolean }) {
   const { student, skills, applications, listings, engagements, githubConnected, trackRecord } = data
   const router = useRouter()
   const { toast } = useToast()
@@ -284,7 +284,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar role="student" userName={student.fullName ?? undefined} />
+      <Navbar role="student" userName={student.fullName ?? undefined} isAdmin={isAdmin} />
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 

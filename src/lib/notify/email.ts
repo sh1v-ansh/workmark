@@ -80,6 +80,12 @@ export async function sendEmail(args: SendArgs): Promise<boolean> {
         subject: args.subject,
         html,
         text,
+        // Automated mail goes out on a sending subdomain, which keeps its
+        // reputation separate from the domain's real mail — but that address
+        // has no inbox behind it. Without a reply-to, anyone who hits reply
+        // is writing to nobody, and they won't know. EMAIL_REPLY_TO points
+        // at a mailbox a person actually reads.
+        ...(process.env.EMAIL_REPLY_TO ? { reply_to: process.env.EMAIL_REPLY_TO } : {}),
       }),
     })
     if (!res.ok) {
@@ -138,5 +144,23 @@ export function engagementClosed(args: { studentEmail: string; listingTitle: str
       : `Your work on "${args.listingTitle}" was closed out.\n\nNo repository was linked, so this counts toward your track record but didn't add skill evidence.`,
     linkPath: '/me',
     linkLabel: 'See your record',
+  })
+}
+
+/**
+ * The one nobody wants to send, and the one most worth sending.
+ *
+ * A rejection that never arrives leaves someone refreshing a page for weeks
+ * and holding one of their five application slots against a decision that
+ * was already made. No invented reason and no false comfort — the useful
+ * fact is that the slot is free again.
+ */
+export function applicationRejected(args: { studentEmail: string; listingTitle: string }) {
+  return sendEmail({
+    to: args.studentEmail,
+    subject: `Update on your application to ${args.listingTitle}`,
+    body: `Your application to "${args.listingTitle}" wasn't taken forward.\n\nThat frees up one of your active applications, so you can apply elsewhere whenever you're ready.`,
+    linkPath: '/listings',
+    linkLabel: 'Find other projects',
   })
 }

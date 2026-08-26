@@ -66,10 +66,17 @@ export default async function MyFilePage() {
   const artifactIds = Array.from(new Set(rows.map((r) => r.artifact_id).filter((id): id is string => !!id)))
   const evidenceIds = rows.map((r) => r.id)
 
-  const [{ data: skillRows }, { data: artifactRows }, { data: auditRows }] = await Promise.all([
+  const [{ data: skillRows }, { data: artifactRows }, { data: auditRows }, { data: signalRows }] = await Promise.all([
     skillIds.length ? supabase.from('skills').select('id, canonical_name').in('id', skillIds) : Promise.resolve({ data: [] }),
     artifactIds.length ? supabase.from('artifacts').select('id, repo_full_name, tier').in('id', artifactIds) : Promise.resolve({ data: [] }),
     evidenceIds.length ? supabase.from('evidence_audit').select('evidence_id, source, raw_input, extracted_at').in('evidence_id', evidenceIds) : Promise.resolve({ data: [] }),
+    // Which files each skill was found in. §609 entitles the student to know
+    // what's in their file; "PostgreSQL, level 3" without saying where that
+    // came from is not really an answer, and it's the thing a dispute needs
+    // to be able to argue with.
+    artifactIds.length
+      ? supabase.from('artifact_signals').select('artifact_id, signal_name, value').in('artifact_id', artifactIds).like('signal_name', 'skill_source:%')
+      : Promise.resolve({ data: [] }),
   ])
 
   const nameById = new Map(((skillRows ?? []) as { id: string; canonical_name: string }[]).map((s) => [s.id, s.canonical_name]))
@@ -77,6 +84,15 @@ export default async function MyFilePage() {
   const auditByEvidence = new Map<string, { source: string | null; extracted_at: string }>()
   for (const a of (auditRows ?? []) as { evidence_id: string; source: string | null; extracted_at: string }[]) {
     if (!auditByEvidence.has(a.evidence_id)) auditByEvidence.set(a.evidence_id, { source: a.source, extracted_at: a.extracted_at })
+  }
+
+  // Keyed by artifact + skill: the same skill can be found in different
+  // places in different repos, and the citation has to match the repo the
+  // evidence row actually came from.
+  const foundIn = new Map<string, string>()
+  for (const s of (signalRows ?? []) as { artifact_id: string; signal_name: string; value: string | null }[]) {
+    if (!s.value) continue
+    foundIn.set(`${s.artifact_id}:${s.signal_name.replace('skill_source:', '')}`, s.value)
   }
 
   // Recipient names — see the note above on why this one read is elevated.
@@ -104,6 +120,7 @@ export default async function MyFilePage() {
         repoFullName: artifact?.repo_full_name ?? null,
         tier: artifact?.tier ?? null,
         source: audit?.source ?? null,
+        foundIn: r.artifact_id ? (foundIn.get(`${r.artifact_id}:${r.skill_id}`) ?? null) : null,
         createdAt: r.created_at,
         supersededByCorrection: correctedIds.has(r.id),
         isCorrection: !!r.corrects_evidence_id,

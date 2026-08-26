@@ -171,7 +171,10 @@ create table skill_priors (
 create table listings (
   id                      uuid default gen_random_uuid() primary key,
   poster_id               uuid not null,
-  poster_type             text not null default 'student' check (poster_type in ('student')),
+  -- 'company' is deliberately absent: businesses need domain verification,
+  -- permissible-purpose certification and payments before their first
+  -- listing, and having the value would let one exist before any of that.
+  poster_type             text not null default 'student' check (poster_type in ('student', 'faculty')),
   poster_display_name     text,
   title                   text,
   brief                   text,
@@ -183,7 +186,7 @@ create table listings (
   declared_difficulty     int check (declared_difficulty between 1 and 10),
   requires_prior_evidence boolean default false not null,
   is_paid                 boolean default false not null check (is_paid = false), -- MVP: no payments infra exists yet
-  tier                    text not null default 'listing_driven' check (tier in ('listing_driven')),
+  tier                    text not null default 'listing_driven' check (tier in ('listing_driven', 'faculty_project')),
   status                  text not null default 'open' check (status in ('draft', 'open', 'filled', 'closed')),
   view_count              int default 0 not null,
   created_at              timestamptz default now()
@@ -324,8 +327,31 @@ create table github_repo_grants (
   -- before its first sync — assume private, assume not-yet-consented.
   is_private      boolean not null default true,
   scan_enabled    boolean not null default false,
+  -- The student's own word on this repo, kept separate from scan_enabled
+  -- so a sync or a ranking pass can never overwrite it. null means nobody
+  -- has expressed a preference and the ranking may decide.
+  scan_choice     text check (scan_choice is null or scan_choice in ('on', 'off')),
+  -- Facts GitHub returns in the repo listing, stored so a student with
+  -- hundreds of repos can have a sensible subset enabled by default
+  -- instead of all of them. Ranking on these costs no extra API calls —
+  -- they arrive with the listing we already fetch.
+  is_fork          boolean,
+  is_archived      boolean,
+  size_kb          integer,
+  pushed_at        timestamptz,
+  created_at_gh    timestamptz,
+  description      text,
+  primary_language text,
+  stars            integer,
+  has_pages        boolean,
+  rank_score       numeric,
+  rank_reason      text,
   unique (student_id, repo_full_name)
 );
+
+create index github_repo_grants_rank_idx
+  on github_repo_grants (student_id, rank_score desc nulls last)
+  where revoked_at is null;
 
 -- ─── Artifacts ─────────────────────────────────────────────────────────────
 -- engagement_id is nullable: Tier 0/0.5 artifacts are linked directly by a
@@ -1254,3 +1280,121 @@ create policy "Students: read own fit tier impressions"
 -- ── jobs ──
 create policy "Students: read own jobs"
   on jobs for select using (auth.uid() = student_id);
+
+-- ─── Roles ───────────────────────────────────────────────────────────────
+-- One row per login, saying what kind of person this is. `students` above
+-- stays the student-specific profile and hangs off this.
+--
+-- roles is an array rather than a single column on purpose: a PhD student
+-- takes courses, TAs, and runs lab projects — genuinely a student and
+-- faculty at once, and one value forces a wrong answer.
+--
+-- Faculty is self-declared at signup and verified afterwards. Unverified
+-- faculty works; it just doesn't carry faculty weight. Verification gates
+-- the weight, not the account, so lying gains nothing and nobody is blocked
+-- waiting on a check.
+
+create table accounts (
+  id                  uuid primary key references auth.users(id) on delete cascade,
+  roles               text[] not null default '{student}',
+  status              text not null default 'active' check (status in ('active', 'suspended')),
+  faculty_verified_at timestamptz,
+  faculty_verified_by uuid references auth.users(id),
+  created_at          timestamptz default now() not null,
+  updated_at          timestamptz default now() not null,
+  constraint accounts_roles_valid check (
+    roles <@ array['student', 'faculty', 'admin']::text[] and array_length(roles, 1) >= 1
+  )
+);
+
+create index accounts_roles_idx on accounts using gin (roles);
+
+-- Read from the table, not from the login token. A token claim is faster and
+-- is the usual advice, but it goes stale — revoking admin wouldn't take
+-- effect until the session refreshed.
+create or replace function has_role(p_role text)
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce(
+    (select p_role = any(roles) and status = 'active' from accounts where id = auth.uid()),
+    false
+  );
+$$;
+
+create or replace function is_admin()
+returns boolean language sql stable security definer set search_path = public as $$
+  select has_role('admin');
+$$;
+
+-- Every staff action, and every staff read of someone's record. Reads are
+-- logged as well as writes: an admin opening a student's file is a person
+-- reading a consumer record about someone else, and "who looked at this"
+-- cannot be answered retroactively.
+create table admin_actions (
+  id            uuid default gen_random_uuid() primary key,
+  admin_id      uuid references auth.users(id) not null,
+  action        text not null,
+  subject_type  text not null,
+  subject_id    text not null,
+  student_id    uuid references students(id) on delete set null,
+  detail        jsonb,
+  created_at    timestamptz default now() not null
+);
+
+create index admin_actions_subject_idx on admin_actions (subject_type, subject_id);
+create index admin_actions_student_idx on admin_actions (student_id, created_at desc);
+create index admin_actions_admin_idx on admin_actions (admin_id, created_at desc);
+
+-- Names the matcher couldn't confidently place. These used to be dropped
+-- silently, so students lost skills with no way to find out which or how
+-- often. seen_count is the useful part — it says which unmatched strings are
+-- common enough to be worth adding to the taxonomy.
+create table unresolved_skills (
+  id              uuid default gen_random_uuid() primary key,
+  raw_string      text not null unique,
+  candidates      jsonb,
+  seen_count      int not null default 1,
+  last_seen_at    timestamptz default now() not null,
+  first_seen_at   timestamptz default now() not null,
+  example_source  text,
+  status          text not null default 'pending'
+                  check (status in ('pending', 'mapped', 'not_a_skill')),
+  resolved_by     uuid references auth.users(id),
+  resolved_at     timestamptz,
+  mapped_skill_id text references skills(id)
+);
+
+create index unresolved_skills_pending_idx
+  on unresolved_skills (seen_count desc) where status = 'pending';
+
+alter table accounts enable row level security;
+alter table admin_actions enable row level security;
+alter table unresolved_skills enable row level security;
+
+-- ── accounts ──
+-- No insert/update policy for regular users: an account row says what
+-- someone is allowed to be, so letting them write it would let anyone grant
+-- themselves admin. Written by onboarding under the service role.
+create policy "Users: read own account"
+  on accounts for select using (auth.uid() = id);
+create policy "Admins: read all accounts"
+  on accounts for select using (is_admin());
+
+-- ── admin_actions ──
+-- No insert policy: written server-side so a client can't forge or suppress
+-- an entry about itself.
+create policy "Admins: read admin actions"
+  on admin_actions for select using (is_admin());
+
+-- ── unresolved_skills ──
+create policy "Admins: read unresolved skills"
+  on unresolved_skills for select using (is_admin());
+
+-- Increment the seen count for unmatched names already on file. Called after
+-- an insert-ignoring-duplicates, because the count must increment rather
+-- than be overwritten.
+create or replace function bump_unresolved_skills(p_raw_strings text[])
+returns void language sql security definer set search_path = public as $$
+  update unresolved_skills
+     set seen_count = seen_count + 1, last_seen_at = now()
+   where raw_string = any(p_raw_strings) and status = 'pending';
+$$;

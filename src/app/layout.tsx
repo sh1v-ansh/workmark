@@ -2,6 +2,9 @@ import type { Metadata } from 'next'
 import { Playfair_Display, Inter, IBM_Plex_Mono, Schibsted_Grotesk, Hanken_Grotesk } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/components/Toast'
+import { SessionProvider, type SessionValue } from '@/components/SessionProvider'
+import { createClient } from '@/lib/supabase/server'
+import { getAccount, hasRole, isVerifiedFaculty } from '@/lib/auth/roles'
 
 // Marketing faces. The landing pages keep the identity they were designed
 // with; only the logged-in app moves to the new one below.
@@ -44,18 +47,56 @@ const hanken = Hanken_Grotesk({
 })
 
 
-export default function RootLayout({
+/**
+ * Read once here rather than per page.
+ *
+ * The previous approach passed the account down as a prop, and only two of
+ * the fourteen pages that render the navbar remembered to pass it — so an
+ * admin was correctly granted the role and saw no evidence of it anywhere.
+ * One read at the root can't be forgotten by the next page someone adds.
+ */
+async function loadSession(): Promise<SessionValue> {
+  try {
+    const supabase = await createClient()
+    const account = await getAccount(supabase)
+    if (!account) return { signedIn: false, roles: [], isAdmin: false, isFaculty: false, isVerifiedFaculty: false, displayName: null }
+
+    const { data: profile } = await supabase
+      .from('students')
+      .select('full_name')
+      .eq('id', account.id)
+      .maybeSingle()
+
+    return {
+      signedIn: true,
+      roles: account.roles,
+      isAdmin: hasRole(account, 'admin'),
+      isFaculty: hasRole(account, 'faculty'),
+      isVerifiedFaculty: isVerifiedFaculty(account),
+      displayName: profile?.full_name ?? null,
+    }
+  } catch {
+    // The layout wraps every page including the marketing site. A failed
+    // session read must render a signed-out shell, never a blank site.
+    return { signedIn: false, roles: [], isAdmin: false, isFaculty: false, isVerifiedFaculty: false, displayName: null }
+  }
+}
+
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await loadSession()
   return (
     <html lang="en" className={`${playfair.variable} ${inter.variable} ${plexMono.variable} ${schibsted.variable} ${hanken.variable}`}>
       <body>
         <a href="#main-content" className="skip-to-content">
           Skip to main content
         </a>
-        <ToastProvider>{children}</ToastProvider>
+        <SessionProvider value={session}>
+          <ToastProvider>{children}</ToastProvider>
+        </SessionProvider>
       </body>
     </html>
   )
