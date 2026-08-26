@@ -42,13 +42,17 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Student-only in MVP. Company and faculty accounts are deferred until
-  // Tier 1+ — their tables don't exist in the v0.5 schema at all, so
-  // there's nothing to route to.
   const requiresAuth =
     pathname.startsWith('/student/') ||
+    pathname.startsWith('/admin') ||
     pathname.startsWith('/listings/new') ||
     pathname.startsWith('/onboarding')
+
+  // The admin role itself is checked in the page and the API route, against
+  // the database rather than the login token — a token claim goes stale, and
+  // admin is exactly the role where that gap matters. This only ensures a
+  // signed-out visitor is bounced to login rather than reaching a page that
+  // then has to decide whether to admit its own existence.
 
   if (!user && requiresAuth) {
     const url = request.nextUrl.clone()

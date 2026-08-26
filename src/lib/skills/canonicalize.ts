@@ -157,6 +157,7 @@ export async function canonicalizeSkills(
   )
 
   const newAliases: { raw_string: string; skill_id: string }[] = []
+  const unresolved: { raw: string; candidates: CanonicalizeResult['candidates'] }[] = []
   for (const { raw, candidates } of looked) {
     const top = candidates[0]
     if (top && top.similarity >= CONFIDENCE_THRESHOLD) {
@@ -164,8 +165,16 @@ export async function canonicalizeSkills(
       newAliases.push({ raw_string: raw, skill_id: top.skillId })
     } else {
       results.set(raw, { resolved: false, skillId: null, source: 'unresolved', candidates })
+      unresolved.push({ raw, candidates })
     }
   }
+
+  // Anything that didn't clear the bar used to be returned to the caller and
+  // then dropped on the floor — so students lost skills and there was no way
+  // to find out which, or how often. Recording them makes the misses
+  // reviewable, and the seen count says which are common enough to be worth
+  // adding to the taxonomy.
+  if (unresolved.length > 0) await recordUnresolved(supabase, unresolved)
 
   if (newAliases.length > 0) {
     // ignoreDuplicates: a concurrent scan resolving the same alias is a
@@ -177,4 +186,40 @@ export async function canonicalizeSkills(
   }
 
   return results
+}
+
+/**
+ * Record names the matcher couldn't place.
+ *
+ * Upsert-with-increment rather than plain insert: the same unmatched string
+ * shows up in every repo that uses it, and one row per occurrence would bury
+ * the signal that matters — how many students hit this. The count is what
+ * says whether a missing name is a one-off typo or a gap in the taxonomy.
+ *
+ * Best-effort. Failing to file a miss must never fail the scan that found
+ * it; the student's other skills are still worth writing.
+ */
+async function recordUnresolved(
+  supabase: SupabaseClient,
+  items: { raw: string; candidates: CanonicalizeResult['candidates'] }[],
+): Promise<void> {
+  try {
+    const now = new Date().toISOString()
+    // Insert first, ignoring rows that already exist, then bump the counters
+    // for whatever was already there. Two statements rather than a bulk
+    // upsert because the count has to increment, not be overwritten.
+    await supabase.from('unresolved_skills').upsert(
+      items.map((i) => ({
+        raw_string: i.raw,
+        candidates: i.candidates ?? [],
+        seen_count: 1,
+        first_seen_at: now,
+        last_seen_at: now,
+      })),
+      { onConflict: 'raw_string', ignoreDuplicates: true },
+    )
+    await supabase.rpc('bump_unresolved_skills', { p_raw_strings: items.map((i) => i.raw) })
+  } catch (err) {
+    console.error('[canonicalize] could not record unresolved skills:', err)
+  }
 }

@@ -8,12 +8,11 @@ import { useToast } from '@/components/Toast'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 
-// Student-only in MVP. The role prop is kept (rather than removed) so
-// company/faculty navs can be reintroduced at Tier 1+ without touching
-// every call site again.
 interface NavbarProps {
-  role?: 'student'
+  role?: 'student' | 'faculty'
   userName?: string
+  /** Adds the staff queue to the account menu. Off unless passed. */
+  isAdmin?: boolean
 }
 
 // Three tabs, down from five.
@@ -37,6 +36,11 @@ const MENU = [
   { href: '/me/file', label: 'Your file & disputes' },
 ]
 
+// Appended for staff only. In the account menu rather than a tab: it isn't
+// one of the three questions a student arrives with, and most people who
+// see it are also using the product as themselves.
+const ADMIN_MENU = [{ href: '/admin', label: 'Staff queue' }]
+
 function initials(name?: string) {
   if (!name) return '·'
   const parts = name.trim().split(/\s+/).filter(Boolean)
@@ -44,7 +48,7 @@ function initials(name?: string) {
   return (parts[0][0] + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase()
 }
 
-export default function Navbar({ role = 'student', userName }: NavbarProps) {
+export default function Navbar({ role = 'student', userName, isAdmin = false }: NavbarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const { toast } = useToast()
@@ -145,7 +149,7 @@ export default function Navbar({ role = 'student', userName }: NavbarProps) {
                       {userName}
                     </p>
                   )}
-                  {MENU.map((item) => (
+                  {[...MENU, ...(isAdmin ? ADMIN_MENU : [])].map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
