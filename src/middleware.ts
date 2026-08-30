@@ -43,6 +43,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   const requiresAuth =
+    pathname.startsWith('/account/') ||
     pathname.startsWith('/student/') ||
     pathname.startsWith('/faculty') ||
     pathname.startsWith('/admin') ||
@@ -61,10 +62,33 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // An account that exists but isn't active — suspended, or a declined
+  // faculty claim. Every protected page calls getAccount(), which returns
+  // nothing for these, so the page bounces them to /login, which sees a
+  // valid session and bounces them back. They loop until they give up.
+  //
+  // This predates the faculty work: suspending anyone already did it. One
+  // page that says what happened ends the loop for every reason at once.
+  const STATUS_PAGE = '/account/status'
+
+  if (user && requiresAuth && pathname !== STATUS_PAGE) {
+    const { data: current } = await supabase
+      .from('accounts')
+      .select('status')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (current && current.status !== 'active') {
+      const url = request.nextUrl.clone()
+      url.pathname = STATUS_PAGE
+      return NextResponse.redirect(url)
+    }
+  }
+
   if (user && pathname === '/login') {
     const [{ data: student }, { data: account }] = await Promise.all([
       supabase.from('students').select('id').eq('id', user.id).maybeSingle(),
-      supabase.from('accounts').select('roles').eq('id', user.id).maybeSingle(),
+      supabase.from('accounts').select('roles, status').eq('id', user.id).maybeSingle(),
     ])
 
     // Faculty land on their own home. The student dashboard asks about
@@ -74,8 +98,22 @@ export async function middleware(request: NextRequest) {
     const roles = (account?.roles ?? []) as string[]
     const facultyOnly = roles.includes('faculty') && !roles.includes('student')
 
+    // "Has an account row" is what finished onboarding means, not "has a
+    // student row". Faculty have no student row by design, so keying off
+    // `students` sent every professor back to the signup form forever.
     const url = request.nextUrl.clone()
-    url.pathname = !student ? '/onboarding' : facultyOnly ? '/faculty' : '/student/dashboard'
+    url.pathname = !account
+      ? '/onboarding'
+      : account.status !== 'active'
+        ? STATUS_PAGE
+        : facultyOnly
+          ? '/faculty'
+          : student
+            ? '/student/dashboard'
+            // An account with the student role but no profile is a signup
+            // that stopped halfway. Finish it rather than landing on a
+            // dashboard with nothing behind it.
+            : '/onboarding'
     return NextResponse.redirect(url)
   }
 

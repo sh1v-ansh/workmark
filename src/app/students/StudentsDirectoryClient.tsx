@@ -3,7 +3,6 @@
 import Link from 'next/link'
 
 import { useMemo, useState } from 'react'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import { Icon } from '@/components/Icon'
@@ -48,7 +47,6 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar role="student" userName={student.full_name ?? undefined} />
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 

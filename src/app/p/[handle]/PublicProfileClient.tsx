@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import { Kicker, Stat } from '@/components/ui/Section'
 import { Icon } from '@/components/Icon'
@@ -43,9 +42,10 @@ export default function PublicProfileClient({
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      {signedIn ? (
-        <Navbar userName={undefined} />
-      ) : (
+      {/* Signed-in visitors get the app navbar from the section layout. A
+          recruiter opening this link has no account and no use for a nav
+          full of "My record" — they get the wordmark and nothing else. */}
+      {!signedIn && (
         <header style={{ borderBottom: `1px solid ${C.border}`, padding: '0 28px', height: 60, display: 'flex', alignItems: 'center' }}>
           <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
             <Wordmark height={22} />

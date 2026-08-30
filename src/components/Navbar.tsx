@@ -122,7 +122,7 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
             <Link href="/student/dashboard" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', paddingBottom: 8.5 }}>
               <Wordmark height={20} />
             </Link>
-            {role === 'student' && (
+            {(
               <div className="mob-hide" style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
                 {TABS.map((tab) => (
                   <Link
@@ -170,9 +170,9 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     padding: 5.5,
                   }}
                 >
-                  {userName && (
+                  {name && (
                     <p style={{ fontSize: 12.5, color: C.textFaint, padding: '7.5px 11.5px 9.5px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 3.5 }}>
-                      {userName}
+                      {name}
                     </p>
                   )}
                   {[...MENU, ...(showAdmin ? ADMIN_MENU : [])].map((item) => (
@@ -225,12 +225,12 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
       {/* Mobile dropdown */}
       {mobileOpen && (
         <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '4px 28px 20px' }}>
-          {userName && (
-            <p style={{ fontSize: 13, color: C.textFaint, padding: '14px 0 10px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 4 }}>{userName}</p>
+          {name && (
+            <p style={{ fontSize: 13, color: C.textFaint, padding: '14px 0 10px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 4 }}>{name}</p>
           )}
           {[
-            ...(role === 'student' ? TABS.map((t) => ({ href: t.href, label: t.label })) : []),
-            { href: '/listings/new', label: 'Post a project' },
+            ...TABS.map((t) => ({ href: t.href, label: t.label })),
+            ...(effectiveRole === 'student' ? [{ href: '/listings/new', label: 'Post a project' }] : []),
             ...MENU,
           ].map(({ href, label }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={pathname === href ? 'page' : undefined}

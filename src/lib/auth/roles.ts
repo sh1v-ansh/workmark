@@ -15,10 +15,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export const ROLES = ['student', 'faculty', 'admin'] as const
 export type Role = (typeof ROLES)[number]
 
+export type AccountStatus = 'active' | 'suspended' | 'declined'
+
 export interface Account {
   id: string
   roles: Role[]
-  status: 'active' | 'suspended'
+  status: AccountStatus
   facultyVerifiedAt: string | null
 }
 
@@ -49,6 +51,39 @@ export async function getAccount(supabase: SupabaseClient): Promise<Account | nu
     id: data.id,
     roles: (data.roles ?? []).filter(isRole),
     status: data.status,
+    facultyVerifiedAt: data.faculty_verified_at,
+  }
+}
+
+/**
+ * The account row as it actually is, including inactive ones.
+ *
+ * `getAccount` deliberately returns null for anything that isn't active, so
+ * every authorization path fails closed without having to know why. That is
+ * the right default and it stays. But a few places need the distinction:
+ * someone whose faculty claim is awaiting approval is not the same as
+ * someone who is signed out, and treating them the same bounces them
+ * between /login and /faculty forever.
+ *
+ * Use this only for routing and for telling someone what's happening. Never
+ * for deciding what they may do — that is `getAccount` and `hasRole`.
+ */
+export async function getAccountRecord(supabase: SupabaseClient): Promise<Account | null> {
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  const { data } = await supabase
+    .from('accounts')
+    .select('id, roles, status, faculty_verified_at')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (!data) return null
+
+  return {
+    id: data.id,
+    roles: (data.roles ?? []).filter(isRole),
+    status: data.status as AccountStatus,
     facultyVerifiedAt: data.faculty_verified_at,
   }
 }

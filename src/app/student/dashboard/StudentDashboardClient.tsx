@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 import { createClient } from '@/lib/supabase/client'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import { type BadgeTone } from '@/components/ui/Badge'
@@ -284,7 +283,6 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar role="student" userName={student.fullName ?? undefined} isAdmin={isAdmin} />
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -275,7 +274,6 @@ export default function GithubScanClient({ studentName, connection, grants, prio
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar role="student" userName={studentName ?? undefined} />
 
       <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
 

@@ -116,6 +116,14 @@ GITHUB_APP_PRIVATE_KEY=                      # full .pem; escaped \n between lin
 GITHUB_APP_WEBHOOK_SECRET=
 GITHUB_APP_SLUG=
 
+# Background worker + cron (required)
+# Without this, GitHub scans are queued but never run: kickJob() refuses to
+# fire, and /api/jobs/step and /api/cron/jobs both return 500 "not configured".
+# Generate with: openssl rand -hex 32
+# On Vercel, set it in project env vars — Vercel Cron sends it automatically
+# as `Authorization: Bearer $CRON_SECRET`.
+CRON_SECRET=
+
 # Optional
 ANTHROPIC_API_KEY=
 RESEND_API_KEY=

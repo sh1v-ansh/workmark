@@ -224,37 +224,42 @@ export async function retryJob(
 // ─── Faculty ─────────────────────────────────────────────────────────────────
 
 /**
- * Confirm someone really is faculty.
+ * Decide whether someone really is faculty.
  *
- * Verification gates the *weight* their attestations will carry, not access
- * to the account — an unverified faculty account already works. That's what
- * makes claiming it falsely pointless, and it's why nobody is blocked while
- * this sits in the queue.
+ * The account already works — this doesn't open it. What it changes is what
+ * everyone sees: until it runs, the claim is displayed as pending, to the
+ * professor and to any student looking at their projects. Confirming it is
+ * what turns "says they teach" into "we checked".
+ *
+ * Declining does not convert them into a student. They asked to be faculty
+ * and were told no; quietly making them something else would give them an
+ * account they never asked for, with a student record and a place in the
+ * matching pool. They keep the login and nothing else.
  */
 export async function verifyFaculty(
   admin: SupabaseClient,
   args: { accountId: string; adminId: string; approve: boolean },
 ): Promise<ActionResult> {
+  const now = new Date().toISOString()
+
   if (!args.approve) {
-    // Not faculty: drop the role rather than leaving it unverified forever,
-    // so the queue doesn't accumulate items nobody will ever action.
     const { error } = await admin
       .from('accounts')
-      .update({ roles: ['student'], updated_at: new Date().toISOString() })
+      .update({ status: 'declined', updated_at: now })
       .eq('id', args.accountId)
     if (error) return { ok: false, message: 'Could not update the account.' }
-    return { ok: true, message: 'Faculty claim declined — account is a student account.' }
+    return { ok: true, message: 'Declined. The account is closed and they are not made a student.' }
   }
 
   const { error } = await admin
     .from('accounts')
     .update({
-      faculty_verified_at: new Date().toISOString(),
+      faculty_verified_at: now,
       faculty_verified_by: args.adminId,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
     })
     .eq('id', args.accountId)
 
-  if (error) return { ok: false, message: 'Could not verify.' }
-  return { ok: true, message: 'Verified. Their attestations now carry faculty weight.' }
+  if (error) return { ok: false, message: 'Could not confirm.' }
+  return { ok: true, message: 'Confirmed. Their projects now show as verified faculty.' }
 }

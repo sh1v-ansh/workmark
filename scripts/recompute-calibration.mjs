@@ -12,8 +12,8 @@
 // itself writes correction rows rather than mutating anything.
 //
 // Usage:
-//   node --env-file=.env scripts/recompute-calibration.mjs
-//   node --env-file=.env scripts/recompute-calibration.mjs --dry-run
+//   node --env-file=.env.local scripts/recompute-calibration.mjs
+//   node --env-file=.env.local scripts/recompute-calibration.mjs --dry-run
 
 import { createClient } from '@supabase/supabase-js'
 

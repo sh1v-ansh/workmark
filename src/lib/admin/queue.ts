@@ -199,39 +199,35 @@ async function failedJobs(admin: SupabaseClient): Promise<QueueItem[]> {
 }
 
 async function facultyVerifications(admin: SupabaseClient): Promise<QueueItem[]> {
+  // Faculty accounts nobody has confirmed yet. They are open and working —
+  // the account isn't gated on this — but until it's actioned their claim
+  // shows as pending everywhere it's displayed, including to students.
   const { data } = await admin
     .from('accounts')
-    .select('id, created_at, roles')
+    .select('id, created_at, faculty_requested_at, display_name, institution')
     .contains('roles', ['faculty'])
     .is('faculty_verified_at', null)
-    .order('created_at')
+    .eq('status', 'active')
+    .order('faculty_requested_at', { nullsFirst: false })
 
   if (!data || data.length === 0) return []
 
-  // Names live on the student profile when there is one; a faculty-only
-  // account has none yet, so the email is the only thing to show.
-  const { data: profiles } = await admin
-    .from('students')
-    .select('id, full_name, university')
-    .in('id', data.map((a) => a.id))
-  const byId = new Map((profiles ?? []).map((p) => [p.id, p]))
-
   return data.map((a) => {
-    const p = byId.get(a.id)
+    const requestedAt = a.faculty_requested_at ?? a.created_at
     return {
       kind: 'faculty_verification' as const,
       id: a.id,
-      title: p?.full_name ? `Verify ${p.full_name}` : 'Verify a faculty account',
-      detail: p?.university ? `Claims faculty at ${p.university}` : 'Claims to be faculty',
-      subjectName: p?.full_name ?? null,
+      title: a.display_name ? `Confirm ${a.display_name}` : 'Confirm a faculty account',
+      detail: a.institution ? `Claims faculty at ${a.institution}` : 'Claims to be faculty',
+      subjectName: a.display_name ?? null,
       subjectId: a.id,
-      createdAt: a.created_at,
+      createdAt: requestedAt,
       dueAt: null,
       severity: 'normal' as const,
-      // Nobody is blocked by this — an unverified faculty account works, it
-      // just doesn't carry faculty weight — so it sits below the items where
-      // someone is actually waiting.
-      weight: 40,
+      // Middling. Nobody is blocked — the account works — but their claim
+      // reads "pending" to every student who sees it, so leaving it sitting
+      // costs a real professor credibility they may well be owed.
+      weight: 55,
     }
   })
 }

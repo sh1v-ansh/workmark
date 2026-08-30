@@ -3,7 +3,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Drawer from '@/components/ui/Drawer'
@@ -305,7 +304,6 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar userName={studentName ?? undefined} />
 
       <main id="main-content" style={{ maxWidth: 680, margin: '0 auto', padding: '30px 28px 72px' }}>
         <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>

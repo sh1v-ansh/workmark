@@ -1297,9 +1297,19 @@ create policy "Students: read own jobs"
 create table accounts (
   id                  uuid primary key references auth.users(id) on delete cascade,
   roles               text[] not null default '{student}',
-  status              text not null default 'active' check (status in ('active', 'suspended')),
+  -- 'declined' is a refused faculty claim. Like 'suspended' it is simply
+  -- "not active", so has_role() and getAccount() refuse it without either
+  -- needing to learn a new value.
+  status              text not null default 'active'
+                        check (status in ('active', 'suspended', 'declined')),
+  faculty_requested_at timestamptz,
   faculty_verified_at timestamptz,
   faculty_verified_by uuid references auth.users(id),
+  -- Name and institution live here rather than in `students`, because this
+  -- is the one row every login has regardless of what kind of person it is.
+  -- Faculty have no student profile to hold them.
+  display_name        text,
+  institution         text,
   created_at          timestamptz default now() not null,
   updated_at          timestamptz default now() not null,
   constraint accounts_roles_valid check (

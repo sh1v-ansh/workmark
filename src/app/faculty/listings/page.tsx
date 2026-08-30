@@ -2,7 +2,6 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { getAccount, hasRole } from '@/lib/auth/roles'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -17,7 +16,8 @@ export default async function FacultyListingsPage() {
   if (!hasRole(account, 'faculty')) redirect('/student/dashboard')
 
   const [{ data: profile }, { data: listings }] = await Promise.all([
-    supabase.from('students').select('full_name').eq('id', account.id).maybeSingle(),
+    // Faculty have no student profile; the name is on the account row.
+    supabase.from('accounts').select('display_name').eq('id', account.id).maybeSingle(),
     supabase
       .from('listings')
       .select('id, title, status, created_at, est_hours, duration')
@@ -48,7 +48,6 @@ export default async function FacultyListingsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar role="faculty" userName={profile?.full_name ?? undefined} />
 
       <main id="main-content" style={{ maxWidth: 880, margin: '0 auto', padding: '30px 28px 72px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
