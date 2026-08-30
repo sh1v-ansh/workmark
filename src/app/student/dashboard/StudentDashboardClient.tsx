@@ -12,6 +12,8 @@ import { Kicker, Stat } from '@/components/ui/Section'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
+import { LAYOUT } from '@/lib/theme/layout'
+import LevelTag from '@/components/ui/LevelTag'
 
 export interface DashboardData {
   student: {
@@ -39,7 +41,6 @@ export interface DashboardData {
   engagements: { id: string; listingId: string; title: string; stage: string; asPoster: boolean; openedAt: string }[]
 }
 
-const LEVEL_NAMES: Record<number, string> = { 1: 'Familiar', 2: 'Practiced', 3: 'Strong', 4: 'Advanced', 5: 'Expert' }
 const MAX_ACTIVE_APPLICATIONS = 5
 
 const APPLICATION_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
@@ -272,7 +273,8 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
           Not sure what to build next?
         </p>
         <p style={{ fontSize: 13.5, color: '#A9B0C2', lineHeight: 1.55 }}>
-          We&apos;ll compare what open projects ask for against your record and hand you something small.
+          We&apos;ll show you which skills open projects keep asking for that your record
+          doesn&apos;t cover yet — and give you a project worth building to close one.
         </p>
       </div>
       <div style={{ marginTop: 16 }}>
@@ -284,7 +286,7 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         {/* Header — the answer, not a greeting */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -374,15 +376,15 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
         )}
 
         {/* Second band — the record at two thirds against the accent panel */}
-        <div className="nb-g3" style={{ marginBottom: 18 }}>
-          <Card ruled hoverable={false} padding={23} className={lead && rail.length === 0 ? 'nb-s3' : 'nb-s2'}>
+        <div className={lead && rail.length === 0 ? undefined : 'nb-g2'} style={{ marginBottom: 18 }}>
+          <Card ruled hoverable={false} padding={23}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 19, marginBottom: 18, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 35, flexWrap: 'wrap' }}>
-                <Stat value={skills.length} label={skills.length === 1 ? 'skill proven' : 'skills proven'} />
+                <Stat value={skills.length} label={skills.length === 1 ? 'Skill proven' : 'Skills proven'} />
                 {trackRecord.closeOutRate !== null && (
-                  <Stat value={trackRecord.closed} suffix={`/${trackRecord.closed + trackRecord.abandoned}`} label="projects finished" />
+                  <Stat value={trackRecord.closed} suffix={`/${trackRecord.closed + trackRecord.abandoned}`} label="Projects finished" />
                 )}
-                {trackRecord.active > 0 && <Stat value={trackRecord.active} label="in flight" />}
+                {trackRecord.active > 0 && <Stat value={trackRecord.active} label="In flight" />}
               </div>
               <Link href="/me" style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
                 See it all →
@@ -409,7 +411,7 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
                         borderRadius: R.sm, padding: '5.5px 11px',
                       }}
                     >
-                      {s.name} · {LEVEL_NAMES[s.bestLevel] ?? s.bestLevel}
+                      {s.name} · <LevelTag level={s.bestLevel} />
                     </span>
                   )
                 })}
@@ -423,15 +425,15 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
         {/* Closing strip — everything that isn't the reader's move */}
         {waiting.length > 0 && (
           <Card hoverable={false} padding="14.5px 22px 16.5px">
-            <Kicker style={{ marginBottom: 5.5 }}>Waiting on someone else — nothing here needs you</Kicker>
-            <div className="nb-g3" style={{ gap: 30 }}>
+            <Kicker style={{ marginBottom: 5.5 }}>Your postings</Kicker>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {waiting.map((w) => (
                 <div key={w.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 13, padding: '10px 0' }}>
                   <Link href={w.href} style={{ minWidth: 0, textDecoration: 'none' }}>
                     <p style={{ fontSize: 14, color: C.textSub }}>{w.title}</p>
                     <p style={{ fontSize: 13, color: C.textGhost }}>{w.meta}</p>
                   </Link>
-                  <span style={{ whiteSpace: 'nowrap' }}>{w.right}</span>
+                  <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>{w.right}</span>
                 </div>
               ))}
             </div>

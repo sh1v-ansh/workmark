@@ -1335,6 +1335,28 @@ returns boolean language sql stable security definer set search_path = public as
   select has_role('admin');
 $$;
 
+-- "Is this poster confirmed faculty?" — and nothing else.
+--
+-- Listings show a verified-faculty badge, which means a reader needs one bit
+-- about someone else's account. `accounts` is behind RLS that grants your own
+-- row and nothing more, and RLS grants rows rather than columns, so there is
+-- no policy that exposes just this. This answers the single question about
+-- ids the caller already has, and leaks nothing about roles, status, or who
+-- did the confirming. Confirmed ids only: a pending claim is simply absent,
+-- so the listing carries no claim rather than an unchecked one.
+create or replace function verified_faculty_ids(p_ids uuid[])
+returns setof uuid language sql stable security definer set search_path = public as $$
+  select id
+    from accounts
+   where id = any(p_ids)
+     and status = 'active'
+     and 'faculty' = any(roles)
+     and faculty_verified_at is not null;
+$$;
+
+revoke all on function verified_faculty_ids(uuid[]) from public;
+grant execute on function verified_faculty_ids(uuid[]) to anon, authenticated;
+
 -- Every staff action, and every staff read of someone's record. Reads are
 -- logged as well as writes: an admin opening a student's file is a person
 -- reading a consumer record about someone else, and "who looked at this"

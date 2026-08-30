@@ -13,7 +13,8 @@ import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import type { StudentRecord } from '@/lib/profile/record'
 import { STAGE_LABEL, type Stage } from '@/lib/engagements/lifecycle'
-import { LEVEL_NAMES, CAP_EXPLANATION } from '@/lib/skills/level-names'
+import LevelTag from '@/components/ui/LevelTag'
+import { LAYOUT } from '@/lib/theme/layout'
 
 interface EvidenceSource {
   skillId: string
@@ -33,6 +34,20 @@ const TIER_LABEL: Record<string, string> = {
   listing_driven: 'Collaboration on Workmark',
 }
 
+/**
+ * Verification methods were rendering as their raw database values —
+ * 'repo_link', 'human_review'. These are read by students disputing their
+ * own record, so they have to be words.
+ */
+const VERIFICATION_LABEL: Record<string, string> = {
+  repo_link: 'Link',
+  deployment: 'Deployed',
+  package: 'Published package',
+  ci: 'CI',
+  human_review: 'Reviewed by a person',
+  attested: 'Confirmed by a collaborator',
+}
+
 export default function MyRecordClient({ record, sources, suggestedHandle }: {
   record: StudentRecord
   sources: EvidenceSource[]
@@ -43,6 +58,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
   const { student, skills, engagements, trackRecord } = record
 
   const [handle, setHandle] = useState(student.handle ?? suggestedHandle)
+  const [editingHandle, setEditingHandle] = useState(false)
   const [savingHandle, setSavingHandle] = useState(false)
   const [expandedSkill, setExpandedSkill] = useState<string | null>(null)
 
@@ -81,7 +97,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         {/* Left third: the anchor — who, how much, and the controls you set
             once. Right two thirds: the content those numbers summarize. */}
@@ -127,42 +143,64 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
                   </Link>
                   <button
                     onClick={() => { navigator.clipboard.writeText(profileUrl); toast('Link copied.', 'success') }}
+                    aria-label="Copy profile link"
+                    title="Copy link"
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 12, color: C.textMuted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
                   >
-                    <Icon name="link" size={11.5} /> Copy
+                    <Icon name="link" size={11.5} />
                   </button>
+                  {!editingHandle && (
+                    <button
+                      onClick={() => setEditingHandle(true)}
+                      style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                    >
+                      Edit handle
+                    </button>
+                  )}
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: 7.5, alignItems: 'center' }}>
-                <span style={{ fontSize: 13, color: C.textGhost }}>/p/</span>
-                <input
-                  value={handle}
-                  onChange={(e) => setHandle(e.target.value)}
-                  className="dk-input"
-                  style={{ flex: 1, minWidth: 0 }}
-                  placeholder="your-handle"
-                  aria-label="Profile handle"
-                />
-              </div>
-              <div style={{ marginTop: 9.5 }}>
-                <Button
-                  variant="ink" size="sm" fullWidth
-                  onClick={saveHandle}
-                  disabled={!handle.trim() || handle === student.handle}
-                  busyLabel={savingHandle ? 'Saving…' : null}
-                >
-                  {student.handle ? 'Change' : 'Claim'}
-                </Button>
-              </div>
-              {student.handle && (
-                <p style={{ fontSize: 12, color: state.caution, marginTop: 9.5, lineHeight: 1.5 }}>
-                  Changing your handle breaks every link you&apos;ve already shared.
-                </p>
+              {(!student.handle || editingHandle) && (
+                <>
+                  <div style={{ display: 'flex', gap: 7.5, alignItems: 'center' }}>
+                    <span style={{ fontSize: 13, color: C.textGhost }}>/p/</span>
+                    <input
+                      value={handle}
+                      onChange={(e) => setHandle(e.target.value)}
+                      className="dk-input"
+                      style={{ flex: 1, minWidth: 0 }}
+                      placeholder="your-handle"
+                      aria-label="Profile handle"
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 7.5, marginTop: 9.5 }}>
+                    <Button
+                      variant="ink" size="sm" fullWidth
+                      onClick={saveHandle}
+                      disabled={!handle.trim() || handle === student.handle}
+                      busyLabel={savingHandle ? 'Saving…' : null}
+                    >
+                      {student.handle ? 'Change' : 'Claim'}
+                    </Button>
+                    {student.handle && (
+                      <Button
+                        variant="outline" size="sm"
+                        onClick={() => { setEditingHandle(false); setHandle(student.handle ?? '') }}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                  {student.handle && (
+                    <p style={{ fontSize: 12, color: state.caution, marginTop: 9.5, lineHeight: 1.5 }}>
+                      Changing your handle breaks every link you&apos;ve already shared.
+                    </p>
+                  )}
+                </>
               )}
             </Card>
 
-            <Card hoverable={false} padding={16}>
+            <Card hoverable={false} padding={19.5}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8.5 }}>
                 <Link href="/me/briefs" style={{ fontSize: 13.5, color: C.textSub, textDecoration: 'none' }}>Project ideas →</Link>
                 <Link href="/me/file" style={{ fontSize: 13.5, color: C.textSub, textDecoration: 'none' }}>Your file &amp; disputes →</Link>
@@ -174,10 +212,12 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
           <div>
             {/* Verified skills */}
             <div style={{ marginBottom: 32 }}>
-              <Kicker style={{ marginBottom: 5.5 }}>Verified skills · {skills.length}</Kicker>
-              <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 12 }}>
-                Open one to see which projects it came from. {CAP_EXPLANATION}
-              </p>
+              <Kicker style={{ marginBottom: 5.5, paddingLeft: 20.5 }}>Verified skills · {skills.length}</Kicker>
+              {/* No standing explanation here any more. Every level name is a
+                  LevelTag that explains itself on hover and links to /levels,
+                  so the answer sits at the point of the question instead of
+                  above the list everyone came to read. */}
+              <div style={{ marginBottom: 12 }} />
               {skills.length === 0 ? (
                 <Card hoverable={false} padding={19.5}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
@@ -200,7 +240,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
                           <span style={{ flexGrow: 1, minWidth: 0 }}>
                             <span style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>{s.name}</span>
                           </span>
-                          <span style={{ fontSize: 13, color: C.textMuted, width: 84, flexShrink: 0 }}>{LEVEL_NAMES[s.bestLevel] ?? s.bestLevel}</span>
+                          <LevelTag level={s.bestLevel} style={{ fontSize: 13, color: C.textMuted, width: 84, flexShrink: 0 }} />
                           <span style={{ fontSize: 13, color: C.textGhost, width: 74, flexShrink: 0, textAlign: 'right' }}>{s.artifactCount} project{s.artifactCount === 1 ? '' : 's'}</span>
                           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, transform: expanded ? 'rotate(180deg)' : undefined }}>
                             <path d="M4 6l4 4 4-4" stroke={C.textGhost} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -212,8 +252,23 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
                             {from.map((src, j) => (
                               <div key={`${src.repoFullName}-${j}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9.5px 13px', background: C.bg, borderRadius: R.md, flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: 13.5, color: C.textSub }}>{src.repoFullName ?? 'Non-code work'}</span>
-                                <span style={{ fontSize: 12, color: C.textGhost }}>
-                                  {[TIER_LABEL[src.tier ?? ''] ?? src.tier, LEVEL_NAMES[src.level], src.verificationMethod].filter(Boolean).join(' · ')}
+                                <span style={{ fontSize: 12, color: C.textGhost, display: 'inline-flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                                  <span>{TIER_LABEL[src.tier ?? ''] ?? src.tier}</span>
+                                  <span aria-hidden="true">·</span>
+                                  <LevelTag level={src.level} style={{ fontSize: 12, color: C.textGhost }} />
+                                  <span aria-hidden="true">·</span>
+                                  {src.verificationMethod === 'repo_link' && src.repoFullName ? (
+                                    <a
+                                      href={`https://github.com/${src.repoFullName}`}
+                                      target="_blank"
+                                      rel="noreferrer noopener"
+                                      style={{ color: C.accent, textDecoration: 'none', fontWeight: 600 }}
+                                    >
+                                      Link ↗
+                                    </a>
+                                  ) : (
+                                    <span>{VERIFICATION_LABEL[src.verificationMethod] ?? src.verificationMethod}</span>
+                                  )}
                                 </span>
                               </div>
                             ))}
@@ -229,10 +284,10 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
             {/* Projects behind the record */}
             {byRepo.size > 0 && (
               <div style={{ marginBottom: 32 }}>
-                <Kicker style={{ marginBottom: 12 }}>Projects · {byRepo.size}</Kicker>
+                <Kicker style={{ marginBottom: 12, paddingLeft: 20.5 }}>Projects · {byRepo.size}</Kicker>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 11 }} className="mob-1col">
                   {Array.from(byRepo.entries()).map(([repo, entries]) => (
-                    <Card key={repo} hoverable={false} padding={16}>
+                    <Card key={repo} hoverable={false} padding={19.5}>
                       <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3, wordBreak: 'break-word' }}>{repo}</p>
                       <p style={{ fontSize: 12, color: C.textGhost, marginBottom: 10 }}>
                         {TIER_LABEL[entries[0]?.tier ?? ''] ?? entries[0]?.tier}
@@ -256,7 +311,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
             {/* Engagements, including hidden — this is the private view */}
             {engagements.length > 0 && (
               <div>
-                <Kicker style={{ marginBottom: 5.5 }}>Collaborations · {engagements.length}</Kicker>
+                <Kicker style={{ marginBottom: 5.5, paddingLeft: 20.5 }}>Collaborations · {engagements.length}</Kicker>
                 <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 12 }}>
                   Change what each one shows publicly from the engagement page.
                 </p>

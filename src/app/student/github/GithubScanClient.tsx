@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/client'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import { levelName as levelLabel } from '@/lib/skills/level-names'
+import { LAYOUT } from '@/lib/theme/layout'
 
 // Local types — deliberately not sourced from src/lib/types.ts, which is
 // still the pre-rebuild shape (Phase 1 task #16 rewrites it). This page
@@ -275,7 +276,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <div style={{ marginBottom: 23 }}>
           <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 9 }}>

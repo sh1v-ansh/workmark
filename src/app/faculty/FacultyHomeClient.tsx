@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge'
 import { Kicker } from '@/components/ui/Section'
 import { C, R, T, state } from '@/lib/theme/dark-tokens'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
+import { LAYOUT } from '@/lib/theme/layout'
 
 export interface FacultyData {
   name: string | null
@@ -58,7 +59,7 @@ export default function FacultyHomeClient({ data }: { data: FacultyData }) {
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
 
-      <main id="main-content" style={{ maxWidth: 1000, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
         <div style={{ marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7 }}>
             <Kicker>Faculty</Kicker>

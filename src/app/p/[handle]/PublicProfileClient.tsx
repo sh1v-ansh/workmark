@@ -9,6 +9,7 @@ import { Wordmark } from '@/app/landing/Wordmark'
 import type { PublicEngagement } from '@/lib/profile/visibility'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
 import { LEVEL_NAMES, SELF_EVIDENCED_CAP } from '@/lib/skills/level-names'
+import { LAYOUT } from '@/lib/theme/layout'
 
 
 interface PublicStudent {
@@ -53,7 +54,7 @@ export default function PublicProfileClient({
         </header>
       )}
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         {isOwner && (
           <Card hoverable={false} padding="11px 16.5px" style={{ marginBottom: 20 }}>

@@ -14,6 +14,7 @@ import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
 import { tagColor } from '@/lib/theme/tagColors'
 import { FIT_TIER_LABEL, FIT_TIER_BLURB, type FitTier } from '@/lib/matching/fit'
+import { LAYOUT } from '@/lib/theme/layout'
 
 const MAX_ACTIVE_APPLICATIONS = 5
 // Must match MIN/MAX_RESPONSE_WORDS in the apply route — the server is
@@ -27,6 +28,8 @@ interface Listing {
   brief: string | null
   posterId: string
   posterDisplayName: string | null
+  /** Only true once a person has confirmed the claim. Never set for pending. */
+  posterIsVerifiedFaculty: boolean
   status: string
   estHours: number | null
   hoursPerWeek: number | null
@@ -127,7 +130,7 @@ export default function ListingDetailClient({
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: `30px 28px ${applyState === 'apply' ? 99 : 66}px` }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: `30px 28px ${applyState === 'apply' ? 99 : 66}px` }}>
 
         <Link href="/listings" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Find work</Link>
 
@@ -140,6 +143,7 @@ export default function ListingDetailClient({
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 11, fontSize: 14, color: C.textMuted }}>
             {listing.posterDisplayName && <span>{listing.posterDisplayName}</span>}
+            {listing.posterIsVerifiedFaculty && <Badge tone="info">Verified faculty</Badge>}
             {[listing.hoursPerWeek != null ? `${listing.hoursPerWeek} hrs/wk` : null, listing.duration, listing.workMode, listing.teamSize != null ? `team of ${listing.teamSize}` : null, listing.estHours != null ? `~${listing.estHours} hrs total` : null, listing.declaredDifficulty != null ? `difficulty ${listing.declaredDifficulty}/10` : null]
               .filter(Boolean).map((t, i) => (
                 <span key={i} style={{ fontSize: 13, fontWeight: 500, color: C.textMuted, background: C.surfaceAlt, borderRadius: R.sm, padding: '4.5px 10px' }}>{t}</span>
@@ -333,7 +337,7 @@ export default function ListingDetailClient({
           competing with the brief for attention. */}
       {applyState === 'apply' && fit && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'rgba(250,247,240,0.94)', backdropFilter: 'blur(6px)', borderTop: `1px solid ${C.border}`, padding: '14.5px 28px', zIndex: 30 }}>
-          <div style={{ maxWidth: 1180, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
+          <div style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 14, color: C.textMuted }}>Four checkboxes and one short answer. About five minutes.</span>
             <Button variant="accent" onClick={() => setShowApply(true)}>Apply to this project</Button>
           </div>
@@ -341,7 +345,7 @@ export default function ListingDetailClient({
       )}
       {applyState === 'capped' && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'rgba(250,247,240,0.94)', backdropFilter: 'blur(6px)', borderTop: `1px solid ${C.border}`, padding: '14.5px 28px', zIndex: 30 }}>
-          <div style={{ maxWidth: 1180, margin: '0 auto' }}>
+          <div style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto' }}>
             <p style={{ fontSize: 14, color: state.caution }}>
               You have {activeApplicationCount} active applications, the maximum of {MAX_ACTIVE_APPLICATIONS}. Withdraw one or wait for a response before applying to more.
             </p>

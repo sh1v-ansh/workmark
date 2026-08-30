@@ -10,12 +10,16 @@ import { C, F, R } from '@/lib/theme/dark-tokens'
 import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
 import { tagColor } from '@/lib/theme/tagColors'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
+import { LAYOUT } from '@/lib/theme/layout'
+import MultiSelect from '@/components/ui/MultiSelect'
 
 export interface ListingCardData {
   id: string
   title: string | null
   brief: string | null
   posterDisplayName: string | null
+  /** Only true once a person has confirmed the claim. Never set for pending. */
+  posterIsVerifiedFaculty: boolean
   isOwn: boolean
   estHours: number | null
   hoursPerWeek: number | null
@@ -83,6 +87,11 @@ function FilterGroup({ label, children }: { label: string; children: React.React
   )
 }
 
+/** Tags are stored lowercase ('remote', 'hybrid') but read as labels. */
+function sentenceCase(v: string): string {
+  return v.charAt(0).toUpperCase() + v.slice(1)
+}
+
 export default function ListingsClient({ listings, signedIn, studentName }: {
   listings: ListingCardData[]
   signedIn: boolean
@@ -145,19 +154,24 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div>
             <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
-              Find work
+              Find Work
             </h1>
-            <p style={{ fontSize: 15, color: C.textMuted }}>
-              {listings.length} project{listings.length === 1 ? '' : 's'} open.
-              {signedIn && ' Sorted by how much of each one your record already covers.'}
-            </p>
           </div>
-          {signedIn && <Button href="/listings/new" variant="outline" size="sm">Post a project</Button>}
+          {/* A link, not a button. Posting is a secondary action here and an
+              outlined button gave it the same weight as the page itself. */}
+          {signedIn && (
+            <Link
+              href="/listings/new"
+              style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}
+            >
+              Post a project →
+            </Link>
+          )}
         </div>
 
         {listings.length === 0 ? (
@@ -186,11 +200,13 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
                 </div>
 
                 {skillOptions.length > 0 && (
-                  <FilterGroup label="Skills">
-                    {skillOptions.map((s) => (
-                      <FilterChip key={s} label={s} active={skills.has(s)} onClick={() => toggle(setSkills, s)} />
-                    ))}
-                  </FilterGroup>
+                  <MultiSelect
+                    label="Skills"
+                    options={skillOptions}
+                    selected={skills}
+                    onToggle={(v) => toggle(setSkills, v)}
+                    onClear={() => setSkills(new Set())}
+                  />
                 )}
 
                 {workModeOptions.length > 0 && (
@@ -273,10 +289,11 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 11, fontSize: 13, color: C.textGhost }}>
                         {l.posterDisplayName && <span>{l.posterDisplayName}</span>}
+                        {l.posterIsVerifiedFaculty && <Badge tone="info">Verified faculty</Badge>}
                         {l.hoursPerWeek != null && <span>{l.hoursPerWeek} hrs/wk</span>}
-                        {l.duration && <span>{l.duration}</span>}
-                        {l.workMode && <span>{l.workMode}</span>}
-                        {l.teamSize != null && <span>team of {l.teamSize}</span>}
+                        {l.duration && <span>{sentenceCase(l.duration)}</span>}
+                        {l.workMode && <span>{sentenceCase(l.workMode)}</span>}
+                        {l.teamSize != null && <span>Team of {l.teamSize}</span>}
                       </div>
                     </Card>
                   ))}
