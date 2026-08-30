@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getFitForListings } from '@/lib/matching/listing'
 import type { FitTier } from '@/lib/matching/fit'
 import ListingsClient, { type ListingCardData } from './ListingsClient'
+import { verifiedFacultyPosterIds } from '@/lib/listings/verified-faculty'
 
 /**
  * Open listings. Visible to everyone including logged-out visitors —
@@ -28,6 +29,10 @@ export default async function ListingsPage() {
 
   const rows = listings ?? []
   const listingIds = rows.map((l) => l.id)
+
+  // Which posters are faculty we've actually confirmed. Unconfirmed claims
+  // aren't in this set and get no badge — see lib/listings/verified-faculty.
+  const verifiedFaculty = await verifiedFacultyPosterIds(supabase, rows.map((l) => l.poster_id))
 
   let student: { full_name: string | null } | null = null
   let fitByListing = new Map<string, { missingSkillIds: string[] }>()
@@ -59,6 +64,7 @@ export default async function ListingsPage() {
       title: l.title,
       brief: l.brief,
       posterDisplayName: l.poster_display_name,
+      posterIsVerifiedFaculty: verifiedFaculty.has(l.poster_id),
       isOwn: !!user && l.poster_id === user.id,
       estHours: l.est_hours,
       hoursPerWeek: l.hours_per_week,

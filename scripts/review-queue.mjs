@@ -13,9 +13,9 @@
 // with the scanner, and non-code work simply has none.
 //
 // Usage:
-//   node --env-file=.env scripts/review-queue.mjs            # list pending
-//   node --env-file=.env scripts/review-queue.mjs approve <id> "note"
-//   node --env-file=.env scripts/review-queue.mjs reject  <id> "reason"
+//   node --env-file=.env.local scripts/review-queue.mjs            # list pending
+//   node --env-file=.env.local scripts/review-queue.mjs approve <id> "note"
+//   node --env-file=.env.local scripts/review-queue.mjs reject  <id> "reason"
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -62,8 +62,8 @@ async function list() {
     console.log(`  ${r.url}`)
     console.log(`  ${r.note.replace(/\n/g, ' ')}\n`)
   }
-  console.log('Approve:  node --env-file=.env scripts/review-queue.mjs approve <id> "note"')
-  console.log('Reject:   node --env-file=.env scripts/review-queue.mjs reject  <id> "reason"')
+  console.log('Approve:  node --env-file=.env.local scripts/review-queue.mjs approve <id> "note"')
+  console.log('Reject:   node --env-file=.env.local scripts/review-queue.mjs reject  <id> "reason"')
 }
 
 async function resolve(status) {

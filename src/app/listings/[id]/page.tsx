@@ -5,6 +5,7 @@ import { getStudentDepth } from '@/lib/matching/depth'
 import { getListingRequirements, getApplicantPools } from '@/lib/matching/listing'
 import { computeFit, assignTier } from '@/lib/matching/fit'
 import ListingDetailClient from './ListingDetailClient'
+import { verifiedFacultyPosterIds } from '@/lib/listings/verified-faculty'
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -102,6 +103,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         brief: listing.brief,
         posterId: listing.poster_id,
         posterDisplayName: listing.poster_display_name,
+        // Confirmed faculty only. A pending claim shows nothing at all —
+        // "faculty, unverified" would still say professor, which is the
+        // part nobody has checked.
+        posterIsVerifiedFaculty: (
+          await verifiedFacultyPosterIds(supabase, [listing.poster_id])
+        ).has(listing.poster_id),
         status: listing.status,
         estHours: listing.est_hours,
         hoursPerWeek: listing.hours_per_week,

@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast'
 import { useSession } from '@/components/SessionProvider'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
+import { LAYOUT } from '@/lib/theme/layout'
 
 // Everything the navbar needs now comes from the session context, read once
 // in the root layout. Props are still accepted so the fourteen existing call
@@ -43,10 +44,10 @@ const FACULTY_TABS = [
 ]
 
 const STUDENT_MENU = [
-  { href: '/student/github', label: 'Evidence source & rescan' },
+  { href: '/student/github', label: 'Evidence source & Rescan' },
   { href: '/students', label: 'Student directory' },
   { href: '/me/briefs', label: 'Project ideas' },
-  { href: '/me/file', label: 'Your file & disputes' },
+  { href: '/me/file', label: 'Your file & Disputes' },
 ]
 
 const FACULTY_MENU = [
@@ -115,14 +116,18 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
 
   return (
     <header style={{ background: C.bg, position: 'sticky', top: 0, zIndex: 40 }}>
-      <nav aria-label="Main navigation" style={{ maxWidth: 1100, margin: '0 auto', padding: '18px 28px 0' }}>
+      {/* 1180 and 28px side padding, matching the page containers below.
+          It was 1100, so content overhung the nav by 40px a side on every
+          page that used the standard width — the nav and the page it framed
+          were never on the same grid. */}
+      <nav aria-label="Main navigation" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '18px 28px 0' }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
           {/* Logo + tabs */}
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 26, minWidth: 0 }}>
             <Link href="/student/dashboard" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', paddingBottom: 8.5 }}>
               <Wordmark height={20} />
             </Link>
-            {role === 'student' && (
+            {(
               <div className="mob-hide" style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
                 {TABS.map((tab) => (
                   <Link
@@ -170,9 +175,9 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     padding: 5.5,
                   }}
                 >
-                  {userName && (
+                  {name && (
                     <p style={{ fontSize: 12.5, color: C.textFaint, padding: '7.5px 11.5px 9.5px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 3.5 }}>
-                      {userName}
+                      {name}
                     </p>
                   )}
                   {[...MENU, ...(showAdmin ? ADMIN_MENU : [])].map((item) => (
@@ -225,12 +230,12 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
       {/* Mobile dropdown */}
       {mobileOpen && (
         <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: '4px 28px 20px' }}>
-          {userName && (
-            <p style={{ fontSize: 13, color: C.textFaint, padding: '14px 0 10px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 4 }}>{userName}</p>
+          {name && (
+            <p style={{ fontSize: 13, color: C.textFaint, padding: '14px 0 10px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 4 }}>{name}</p>
           )}
           {[
-            ...(role === 'student' ? TABS.map((t) => ({ href: t.href, label: t.label })) : []),
-            { href: '/listings/new', label: 'Post a project' },
+            ...TABS.map((t) => ({ href: t.href, label: t.label })),
+            ...(effectiveRole === 'student' ? [{ href: '/listings/new', label: 'Post a project' }] : []),
             ...MENU,
           ].map(({ href, label }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={pathname === href ? 'page' : undefined}

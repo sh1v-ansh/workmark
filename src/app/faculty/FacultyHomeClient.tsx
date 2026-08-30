@@ -1,13 +1,13 @@
 'use client'
 
 import Link from 'next/link'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { Kicker } from '@/components/ui/Section'
 import { C, R, T, state } from '@/lib/theme/dark-tokens'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
+import { LAYOUT } from '@/lib/theme/layout'
 
 export interface FacultyData {
   name: string | null
@@ -58,11 +58,18 @@ export default function FacultyHomeClient({ data }: { data: FacultyData }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar role="faculty" userName={data.name ?? undefined} />
 
-      <main id="main-content" style={{ maxWidth: 1000, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
         <div style={{ marginBottom: 24 }}>
-          <Kicker style={{ marginBottom: 7 }}>Faculty</Kicker>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 7 }}>
+            <Kicker>Faculty</Kicker>
+            {/* Shown in both states on purpose. A badge that appears only
+                when something is unconfirmed teaches people to read its
+                absence as nothing, when absence is the meaningful half. */}
+            <Badge tone={data.verified ? 'positive' : 'caution'}>
+              {data.verified ? 'Verified faculty' : 'Verification pending'}
+            </Badge>
+          </div>
           <h1 style={{ fontSize: T.h1, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
             {waiting.length + needsReview.length > 0
               ? `${waiting.length + needsReview.length} thing${waiting.length + needsReview.length === 1 ? '' : 's'} need you`
@@ -75,15 +82,16 @@ export default function FacultyHomeClient({ data }: { data: FacultyData }) {
           </p>
         </div>
 
-        {/* Said plainly rather than hidden. Unverified faculty works fully —
-            what it doesn't do is carry faculty weight — and someone should
-            know which state they're in without having to ask. */}
+        {/* Said plainly rather than hidden. An unconfirmed faculty account
+            works fully — someone should know which state they're in without
+            having to ask, and what it costs them until it changes. */}
         {!data.verified && (
-          <div style={{ background: state.infoBg, borderRadius: R.md, padding: '13px 17px', marginBottom: 22 }}>
-            <p style={{ fontSize: 13.5, color: state.info, lineHeight: 1.6 }}>
+          <div style={{ background: state.cautionBg, borderRadius: R.md, padding: '13px 17px', marginBottom: 22 }}>
+            <p style={{ fontSize: 13.5, color: state.caution, lineHeight: 1.6 }}>
               We haven&apos;t confirmed your faculty status yet. Everything works meanwhile —
-              post projects, review applicants, run engagements. Confirmation only affects how
-              much your sign-off will be worth once that feature ships.
+              post projects, review applicants, run engagements. Until we do, your account
+              reads as unconfirmed rather than verified faculty. It usually takes a day or two
+              and there&apos;s nothing you need to do.
             </p>
           </div>
         )}

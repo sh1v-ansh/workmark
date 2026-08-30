@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import { Kicker, Stat } from '@/components/ui/Section'
 import { Icon } from '@/components/Icon'
@@ -10,6 +9,7 @@ import { Wordmark } from '@/app/landing/Wordmark'
 import type { PublicEngagement } from '@/lib/profile/visibility'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
 import { LEVEL_NAMES, SELF_EVIDENCED_CAP } from '@/lib/skills/level-names'
+import { LAYOUT } from '@/lib/theme/layout'
 
 
 interface PublicStudent {
@@ -43,9 +43,10 @@ export default function PublicProfileClient({
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      {signedIn ? (
-        <Navbar userName={undefined} />
-      ) : (
+      {/* Signed-in visitors get the app navbar from the section layout. A
+          recruiter opening this link has no account and no use for a nav
+          full of "My record" — they get the wordmark and nothing else. */}
+      {!signedIn && (
         <header style={{ borderBottom: `1px solid ${C.border}`, padding: '0 28px', height: 60, display: 'flex', alignItems: 'center' }}>
           <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
             <Wordmark height={22} />
@@ -53,7 +54,7 @@ export default function PublicProfileClient({
         </header>
       )}
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         {isOwner && (
           <Card hoverable={false} padding="11px 16.5px" style={{ marginBottom: 20 }}>

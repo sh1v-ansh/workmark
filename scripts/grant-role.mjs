@@ -9,9 +9,9 @@
 // there is nobody who could grant the first one through the product.
 //
 // Usage:
-//   node --env-file=.env scripts/grant-role.mjs list
-//   node --env-file=.env scripts/grant-role.mjs grant  someone@university.edu admin
-//   node --env-file=.env scripts/grant-role.mjs revoke someone@university.edu admin
+//   node --env-file=.env.local scripts/grant-role.mjs list
+//   node --env-file=.env.local scripts/grant-role.mjs grant  someone@university.edu admin
+//   node --env-file=.env.local scripts/grant-role.mjs revoke someone@university.edu admin
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -95,7 +95,19 @@ async function change(email, role, add) {
 
   const { error } = await admin
     .from('accounts')
-    .upsert({ id: user.id, roles: next, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+    .upsert(
+      {
+        id: user.id,
+        roles: next,
+        // Granting a role to an account that is switched off has to switch it
+        // on, or the grant does nothing visible and looks like a bug. This is
+        // the escape hatch for a faculty signup waiting on approval, and for
+        // anyone locked out who needs to be let back in.
+        ...(add ? { status: 'active' } : {}),
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' },
+    )
   if (error) throw error
 
   // The trail covers itself: a role granted from a terminal is exactly the
@@ -108,7 +120,7 @@ async function change(email, role, add) {
     detail: { email, from: current, to: next, via: 'cli' },
   })
 
-  console.log(`${email} is now: ${next.join(', ')}`)
+  console.log(`${email} is now: ${next.join(', ')}${add ? ' (account active)' : ''}`)
 }
 
 const [command, email, role] = process.argv.slice(2)

@@ -19,11 +19,18 @@ export default async function FacultyHomePage() {
   // an empty page about projects they never posted.
   if (!hasRole(account, 'faculty')) redirect('/student/dashboard')
 
-  const { data: profile } = await supabase
-    .from('students')
-    .select('full_name, university')
+  // A professor's name lives on their account row, not in `students` —
+  // they don't have a student profile, and reading one here is what used to
+  // leave the faculty dashboard greeting nobody.
+  const { data: profileRow } = await supabase
+    .from('accounts')
+    .select('display_name, institution')
     .eq('id', account.id)
     .maybeSingle()
+
+  const profile = profileRow
+    ? { full_name: profileRow.display_name, university: profileRow.institution }
+    : null
 
   const { data: listings } = await supabase
     .from('listings')

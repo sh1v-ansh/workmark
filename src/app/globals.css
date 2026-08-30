@@ -368,6 +368,14 @@
   gap: 18px;
   align-items: start;
 }
+/* Two equal halves, for a pair of cards that carry the same weight. */
+.nb-g2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
 .nb-s2 { grid-column: span 2; }
 .nb-s3 { grid-column: span 3; }
 
@@ -381,6 +389,7 @@
 
 @media (max-width: 900px) {
   .nb-g3 { grid-template-columns: 1fr; }
+  .nb-g2 { grid-template-columns: 1fr; }
   .nb-s2, .nb-s3 { grid-column: span 1; }
   .nb-g3 > * { grid-row: auto !important; }
   .nb-split { grid-template-columns: 1fr; }
@@ -436,4 +445,50 @@
 
   .mob-text-hero { font-size: 38px !important; line-height: 1.1 !important; }
   .mob-text-h1   { font-size: 28px !important; }
+}
+
+/* ── Level tag hover card ────────────────────────────────────────────────
+   The level names carry the whole record and neither "Familiar" nor
+   "Practiced" says what it means. The answer used to be a paragraph standing
+   above the list; this puts it at the point of the question instead.
+
+   Opened by :focus-within as well as :hover — the card holds a link, and a
+   link only reachable by mouseover is not reachable at all. */
+.nb-leveltag { position: relative; display: inline-flex; }
+
+.nb-leveltag-label {
+  cursor: help;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  text-decoration-color: #C9C2B2;
+  border-radius: 3px;
+}
+.nb-leveltag-label:focus-visible { outline: 2px solid #6B4EFF; outline-offset: 2px; }
+
+.nb-leveltag-card {
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 0;
+  z-index: 50;
+  width: 264px;
+  padding: 11px 13px;
+  background: #FFFFFF;
+  border: 1px solid #E7E2D6;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(25, 30, 46, 0.04), 0 12px 32px rgba(25, 30, 46, 0.12);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+  text-align: left;
+  white-space: normal;
+}
+
+.nb-leveltag:hover .nb-leveltag-card,
+.nb-leveltag:focus-within .nb-leveltag-card {
+  opacity: 1;
+  visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nb-leveltag-card { transition: none; }
 }

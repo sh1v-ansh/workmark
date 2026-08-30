@@ -17,7 +17,18 @@ export default async function StudentsDirectoryPage() {
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!student) redirect('/onboarding')
+  // No student profile is two different situations. A professor browsing
+  // the directory is fine and belongs on their own home; a half-finished
+  // signup needs the form. Sending faculty to /onboarding was a loop.
+  if (!student) {
+    const { data: account } = await supabase
+      .from('accounts')
+      .select('roles')
+      .eq('id', user.id)
+      .maybeSingle()
+    const roles = (account?.roles ?? []) as string[]
+    redirect(roles.includes('faculty') ? '/faculty' : '/onboarding')
+  }
 
   const { data: directory } = await supabase
     .from('students')

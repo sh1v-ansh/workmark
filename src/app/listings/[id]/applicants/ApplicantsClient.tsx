@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge, { type BadgeTone } from '@/components/ui/Badge'
@@ -15,6 +14,7 @@ import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import MessageThread from './MessageThread'
+import { LAYOUT } from '@/lib/theme/layout'
 
 export interface ApplicantRow {
   id: string
@@ -118,9 +118,8 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar role="student" userName={posterName ?? undefined} />
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <Link href={`/listings/${listing.id}`} style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>
           ← {listing.title ?? 'Untitled project'}

@@ -1297,9 +1297,19 @@ create policy "Students: read own jobs"
 create table accounts (
   id                  uuid primary key references auth.users(id) on delete cascade,
   roles               text[] not null default '{student}',
-  status              text not null default 'active' check (status in ('active', 'suspended')),
+  -- 'declined' is a refused faculty claim. Like 'suspended' it is simply
+  -- "not active", so has_role() and getAccount() refuse it without either
+  -- needing to learn a new value.
+  status              text not null default 'active'
+                        check (status in ('active', 'suspended', 'declined')),
+  faculty_requested_at timestamptz,
   faculty_verified_at timestamptz,
   faculty_verified_by uuid references auth.users(id),
+  -- Name and institution live here rather than in `students`, because this
+  -- is the one row every login has regardless of what kind of person it is.
+  -- Faculty have no student profile to hold them.
+  display_name        text,
+  institution         text,
   created_at          timestamptz default now() not null,
   updated_at          timestamptz default now() not null,
   constraint accounts_roles_valid check (
@@ -1324,6 +1334,28 @@ create or replace function is_admin()
 returns boolean language sql stable security definer set search_path = public as $$
   select has_role('admin');
 $$;
+
+-- "Is this poster confirmed faculty?" — and nothing else.
+--
+-- Listings show a verified-faculty badge, which means a reader needs one bit
+-- about someone else's account. `accounts` is behind RLS that grants your own
+-- row and nothing more, and RLS grants rows rather than columns, so there is
+-- no policy that exposes just this. This answers the single question about
+-- ids the caller already has, and leaks nothing about roles, status, or who
+-- did the confirming. Confirmed ids only: a pending claim is simply absent,
+-- so the listing carries no claim rather than an unchecked one.
+create or replace function verified_faculty_ids(p_ids uuid[])
+returns setof uuid language sql stable security definer set search_path = public as $$
+  select id
+    from accounts
+   where id = any(p_ids)
+     and status = 'active'
+     and 'faculty' = any(roles)
+     and faculty_verified_at is not null;
+$$;
+
+revoke all on function verified_faculty_ids(uuid[]) from public;
+grant execute on function verified_faculty_ids(uuid[]) to anon, authenticated;
 
 -- Every staff action, and every staff read of someone's record. Reads are
 -- logged as well as writes: an admin opening a student's file is a person

@@ -3,7 +3,6 @@
 import Link from 'next/link'
 
 import { useMemo, useState } from 'react'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import { Icon } from '@/components/Icon'
@@ -12,6 +11,7 @@ import { useToast } from '@/components/Toast'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import type { Student } from '@/lib/types'
+import { LAYOUT } from '@/lib/theme/layout'
 
 type DirectoryEntry = Pick<Student, 'id' | 'full_name' | 'university' | 'major' | 'degree_type' | 'graduation_year' | 'skills' | 'availability' | 'github_url' | 'linkedin_url' | 'handle'>
 
@@ -48,9 +48,8 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar role="student" userName={student.full_name ?? undefined} />
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>

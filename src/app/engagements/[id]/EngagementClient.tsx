@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -12,7 +11,8 @@ import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { allowedTransitions, canCloseOut, isTerminal, STAGE_LABEL, type Stage } from '@/lib/engagements/lifecycle'
-import { LEVEL_NAMES } from '@/lib/skills/level-names'
+import { LAYOUT } from '@/lib/theme/layout'
+import LevelTag from '@/components/ui/LevelTag'
 
 export interface EngagementData {
   id: string
@@ -191,9 +191,8 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar userName={data.myName ?? undefined} />
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <Link href="/student/dashboard" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Home</Link>
 
@@ -384,7 +383,7 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {data.evidence.map((e) => (
                     <span key={e.skillId} style={{ fontSize: 13, fontWeight: 600, color: C.accentInk, background: '#EDE9FF', borderRadius: R.sm, padding: '5.5px 11px' }}>
-                      {e.name} · {LEVEL_NAMES[e.level] ?? e.level}
+                      {e.name} · <LevelTag level={e.level} />
                     </span>
                   ))}
                 </div>

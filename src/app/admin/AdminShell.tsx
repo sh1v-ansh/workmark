@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import { Kicker } from '@/components/ui/Section'
 import { C, R, T } from '@/lib/theme/dark-tokens'
+import { LAYOUT } from '@/lib/theme/layout'
 
 const SECTIONS = [
   { href: '/admin', label: 'Overview' },
@@ -39,7 +40,7 @@ export default function AdminShell({ title, lede, queueCount = 0, overdueCount =
     <div style={{ minHeight: '100vh', background: C.bg }}>
       <Navbar isAdmin />
 
-      <main id="main-content" style={{ maxWidth: 1060, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
         <Kicker style={{ marginBottom: 7 }}>Admin</Kicker>
         <h1 style={{ fontSize: T.h1, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, marginBottom: lede ? 7 : 20 }}>
           {title}

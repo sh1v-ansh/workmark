@@ -61,11 +61,25 @@ async function loadSession(): Promise<SessionValue> {
     const account = await getAccount(supabase)
     if (!account) return { signedIn: false, roles: [], isAdmin: false, isFaculty: false, isVerifiedFaculty: false, displayName: null }
 
-    const { data: profile } = await supabase
-      .from('students')
-      .select('full_name')
+    // The account row carries the name for everyone. The student profile is
+    // only a fallback, for accounts created before the name moved — and
+    // faculty have no student profile to fall back to at all.
+    const { data: named } = await supabase
+      .from('accounts')
+      .select('display_name')
       .eq('id', account.id)
       .maybeSingle()
+
+    let displayName = named?.display_name ?? null
+
+    if (!displayName) {
+      const { data: profile } = await supabase
+        .from('students')
+        .select('full_name')
+        .eq('id', account.id)
+        .maybeSingle()
+      displayName = profile?.full_name ?? null
+    }
 
     return {
       signedIn: true,
@@ -73,7 +87,7 @@ async function loadSession(): Promise<SessionValue> {
       isAdmin: hasRole(account, 'admin'),
       isFaculty: hasRole(account, 'faculty'),
       isVerifiedFaculty: isVerifiedFaculty(account),
-      displayName: profile?.full_name ?? null,
+      displayName,
     }
   } catch {
     // The layout wraps every page including the marketing site. A failed

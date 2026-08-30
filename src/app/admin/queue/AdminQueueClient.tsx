@@ -15,7 +15,7 @@ import type { QueueItem, QueueKind } from '@/lib/admin/queue'
 const KIND_LABEL: Record<QueueKind, string> = {
   dispute: 'Disputes',
   review_request: 'Work to review',
-  faculty_verification: 'Faculty to verify',
+  faculty_verification: 'Faculty to confirm',
   unresolved_skill: 'Unmatched skills',
   failed_job: 'Failed scans',
 }
@@ -24,7 +24,7 @@ const KIND_LABEL: Record<QueueKind, string> = {
 const KIND_BLURB: Record<QueueKind, string> = {
   dispute: 'A student challenged something on their record. These have a 30-day legal deadline.',
   review_request: 'Work with no scannable repo, submitted for a person to confirm.',
-  faculty_verification: 'Someone says they teach. Until confirmed, their attestations carry student weight.',
+  faculty_verification: 'Someone signed up as faculty. Their account works, but their claim reads as unconfirmed to every student who sees it until you check.',
   unresolved_skill: 'Names the scanner couldn\'t place. Mapping one fixes it for every future scan.',
   failed_job: 'A scan that stopped. Retrying resumes from where it left off.',
 }
@@ -343,7 +343,7 @@ function Actions({ item, act, busy, skillId, note }: {
       return (
         <div style={row}>
           <Button variant="accent" onClick={() => act('approve')} disabled={busy}>Confirm faculty</Button>
-          <Button variant="outline" onClick={() => act('decline')} disabled={busy}>Not faculty</Button>
+          <Button variant="outline" onClick={() => act('decline')} disabled={busy}>Couldn&apos;t confirm</Button>
         </div>
       )
   }

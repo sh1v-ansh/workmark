@@ -3,25 +3,59 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 
 /**
- * POST /api/onboarding
+ * The domains that count as proof of being at a university.
  *
- * Creates the account row and the profile together.
+ * The same rule the signup form applies, enforced here as well. The form
+ * check is a courtesy that tells someone early; this one is what actually
+ * decides, because a form check protects nobody — the route is reachable
+ * directly, and "students only" is the claim the whole product rests on.
  *
- * This has to be server-side because `accounts` has no insert policy for
- * regular users — an account row says what someone is allowed to be, so
- * letting the client write it would let anyone grant themselves admin. The
- * role is taken from the form but narrowed here: 'admin' is never accepted
- * from a request, at any point, ever.
+ * Kept as a list so widening it later (.ac.uk, .edu.au) is a one-line
+ * change in one place rather than a hunt through the codebase.
+ */
+const ACADEMIC_SUFFIXES = ['.edu']
+
+function isAcademicEmail(email: string | undefined): boolean {
+  if (!email) return false
+  const addr = email.toLowerCase().trim()
+  return ACADEMIC_SUFFIXES.some((suffix) => addr.endsWith(suffix))
+}
+
+/**
+ * POST /api/onboarding  { role, profile }
  *
- * Faculty is self-declared and starts unverified. That's deliberate: an
- * unverified faculty account works fully, it just doesn't carry faculty
- * weight when attestation lands. Verification gates the weight, not the
- * account — so claiming it falsely gains nothing, and nobody waits on us.
+ * Creates the account row, and — for students — the profile that hangs off
+ * it. Runs under the service role because `accounts` deliberately has no
+ * insert policy for users: an account row says what someone is allowed to
+ * be, so a client that could write it could grant itself admin.
+ *
+ * Three rules this enforces that the form alone cannot:
+ *
+ *  1. The email has to be academic. See above.
+ *  2. It runs once per account. Onboarding used to upsert, which meant
+ *     hitting it a second time overwrote `roles` — an admin who revisited
+ *     the page was silently demoted to a plain student, and anyone could
+ *     re-declare themselves faculty at any point by calling it again.
+ *     Refusing a second run makes the declared role a signup-time decision,
+ *     which is the only point at which self-declaration is defensible.
+ *  3. Faculty get no student record. A professor is not a student row with
+ *     a different label on it.
+ *  4. A faculty claim is recorded as unconfirmed. The account opens
+ *     immediately — nobody waits on us — but `faculty_requested_at` is set
+ *     and `faculty_verified_at` stays null until a person confirms it, and
+ *     the UI shows the difference. See v05_0014.
  */
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  if (!isAcademicEmail(user.email)) {
+    return NextResponse.json(
+      { error: 'Workmark accounts require a university (.edu) email address.' },
+      { status: 403 },
+    )
+  }
 
   let body: { role?: string; profile?: Record<string, unknown> }
   try {
@@ -30,8 +64,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid body.' }, { status: 400 })
   }
 
-  // Only these two are self-selectable. Admin is granted out of band and a
-  // signup path must never be able to produce one.
+  // Narrowed rather than trusted. 'admin' can never arrive this way — the
+  // only route to it is somebody running scripts/grant-role.mjs with the
+  // service key.
   const role = body.role === 'faculty' ? 'faculty' : 'student'
   const profile = body.profile ?? {}
 
@@ -40,36 +75,68 @@ export async function POST(request: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  const domain = user.email?.split('@')[1] ?? null
-
-  // The account first. If the profile insert fails afterwards the account is
-  // harmless on its own — it carries no data and onboarding is idempotent —
-  // whereas a profile with no account would be a person with no role, which
-  // is the state every permission check reads as "nothing allowed".
-  const { error: accountErr } = await admin
+  // Already set up? Say so and stop, without touching the roles that are
+  // already there.
+  const { data: existing } = await admin
     .from('accounts')
-    .upsert({ id: user.id, roles: [role], updated_at: new Date().toISOString() }, { onConflict: 'id' })
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle()
+
+  if (existing) {
+    return NextResponse.json(
+      { error: 'This account has already been set up.', alreadyOnboarded: true },
+      { status: 409 },
+    )
+  }
+
+  const displayName = typeof profile.full_name === 'string' ? profile.full_name : null
+  const institution = typeof profile.university === 'string' ? profile.university : null
+
+  // Insert, not upsert. A duplicate here means two requests raced, and the
+  // loser must not overwrite the winner's roles.
+  //
+  // A faculty account opens straight away. `faculty_requested_at` records
+  // that the claim is waiting on a person, and `faculty_verified_at` stays
+  // null until one confirms it — which is what the pending badge reads.
+  const { error: accountErr } = await admin.from('accounts').insert({
+    id: user.id,
+    roles: [role],
+    faculty_requested_at: role === 'faculty' ? new Date().toISOString() : null,
+    display_name: displayName,
+    institution,
+  })
+
   if (accountErr) {
+    if (accountErr.code === '23505') {
+      return NextResponse.json(
+        { error: 'This account has already been set up.', alreadyOnboarded: true },
+        { status: 409 },
+      )
+    }
     console.error('[api/onboarding] account write failed:', accountErr)
     return NextResponse.json({ error: 'Could not create your account.' }, { status: 500 })
   }
 
-  const { error: profileErr } = await admin.from('students').insert({
-    id: user.id,
-    ...profile,
-    // The permanent record of how this account was verified. The login email
-    // can change later — a .edu expires at graduation — but this pair
-    // doesn't.
-    edu_domain: domain,
-    edu_verified_at: new Date().toISOString(),
-  })
+  // Students get the profile the scanner, the matcher and the public record
+  // all read. Faculty get nothing here on purpose — their name and
+  // institution are on the account row above, and a professor in `students`
+  // is a professor in the student directory and the matching pool.
+  if (role === 'student') {
+    const { error: profileErr } = await admin.from('students').insert({
+      id: user.id,
+      ...profile,
+      edu_domain: user.email?.split('@')[1] ?? null,
+      edu_verified_at: new Date().toISOString(),
+    })
 
-  // 23505 is the primary key: a profile already exists, which is a success
-  // state for the person even though the insert failed.
-  if (profileErr && profileErr.code !== '23505') {
-    console.error('[api/onboarding] profile write failed:', profileErr)
-    return NextResponse.json({ error: 'Could not save your profile.' }, { status: 500 })
+    // 23505 means the profile was already there — an earlier partial signup,
+    // or a retry. Not a failure: the account row is what this route is for.
+    if (profileErr && profileErr.code !== '23505') {
+      console.error('[api/onboarding] profile write failed:', profileErr)
+      return NextResponse.json({ error: 'Could not save your profile.' }, { status: 500 })
+    }
   }
 
-  return NextResponse.json({ ok: true, role })
+  return NextResponse.json({ ok: true, role, verificationPending: role === 'faculty' })
 }

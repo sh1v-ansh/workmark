@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -12,6 +11,8 @@ import { useToast } from '@/components/Toast'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import { LEVEL_NAMES } from '@/lib/skills/level-names'
+import { LAYOUT } from '@/lib/theme/layout'
+import LevelTag from '@/components/ui/LevelTag'
 import {
   DISPUTE_CATEGORIES, STATUS_LABEL, isResolved, daysRemaining,
   type DisputeCategory, type DisputeStatus,
@@ -140,9 +141,8 @@ export default function MyFileClient({ data }: { data: FileData }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg }}>
-      <Navbar userName={data.studentName ?? undefined} />
 
-      <main id="main-content" style={{ maxWidth: 1180, margin: '0 auto', padding: '30px 28px 72px' }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
@@ -196,7 +196,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                             <span style={{ fontSize: 13, fontWeight: 600, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
                               {e.skillName}
                             </span>
-                            <span style={{ fontSize: 13, color: C.textMuted }}>{LEVEL_NAMES[e.level] ?? e.level}</span>
+                            <LevelTag level={e.level} style={{ fontSize: 13, color: C.textMuted }} />
                             {e.isCorrection && <Badge>corrected</Badge>}
                           </div>
                           {existing ? (

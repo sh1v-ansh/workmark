@@ -246,10 +246,24 @@ export default function OnboardingPage() {
       if (!user) { router.push('/login'); return }
 
       // Already onboarded — landing here again (back button, a second
-      // tab, a retried signup) should reach the dashboard, not a form
-      // whose insert would fail on the primary key.
-      const { data: existing } = await supabase.from('students').select('id').eq('id', user.id).maybeSingle()
-      if (existing) { router.replace('/student/dashboard'); return }
+      // tab, a retried signup) should reach the dashboard, not a form the
+      // server will refuse.
+      //
+      // The account row is the signal, not the student row: faculty don't
+      // get a student row at all, so checking `students` would show a
+      // professor the signup form again every time they came back.
+      const { data: account } = await supabase
+        .from('accounts')
+        .select('roles')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (account) {
+        const roles = (account.roles ?? []) as string[]
+        const facultyOnly = roles.includes('faculty') && !roles.includes('student')
+        router.replace(facultyOnly ? '/faculty' : '/student/dashboard')
+        return
+      }
 
       setUserId(user.id)
       setUserEmail(user.email ?? '')
@@ -272,11 +286,20 @@ export default function OnboardingPage() {
         body: JSON.stringify({ role, profile: data }),
       })
       const json = await res.json()
+
+      // Already set up — two tabs, a double submit, a stale form. Nothing
+      // went wrong for the person, so send them on rather than showing an
+      // error for a state that is actually success.
+      if (res.status === 409 && json.alreadyOnboarded) {
+        router.replace(role === 'faculty' ? '/faculty' : '/student/dashboard')
+        return
+      }
+
       if (!res.ok) throw new Error(json.error ?? 'Failed to save profile.')
 
       toast(
         role === 'faculty'
-          ? 'Profile saved. We\'ll confirm your faculty status shortly — you can start now.'
+          ? 'Profile saved. You can start now — we\'ll confirm your faculty status shortly.'
           : 'Profile saved. Welcome to Workmark.',
         'success',
       )
@@ -342,7 +365,7 @@ export default function OnboardingPage() {
               />
               <RoleChoice
                 title="I teach or run a lab"
-                body="Post course and research projects, and confirm the work students did with you."
+                body="Post course and research projects, and confirm the work students did with you. We'll confirm your faculty status afterwards."
                 onClick={() => setRole('faculty')}
               />
               <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 4 }}>
