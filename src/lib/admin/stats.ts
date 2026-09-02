@@ -180,3 +180,129 @@ export async function loadCalibration(admin: SupabaseClient): Promise<Calibratio
     })
     .sort((a, b) => b.evidenceCount - a.evidenceCount)
 }
+
+// ─── Is the product working? ─────────────────────────────────────────────────
+
+export interface FunnelStep {
+  label: string
+  count: number
+  /** Share of the step above. Null for the first. */
+  conversion: number | null
+  /** What it means when this is where people stop. */
+  meaning: string
+}
+
+export interface Health {
+  /** Applications that ever got any answer. Ghosting kills these markets. */
+  decisionRate: number | null
+  ghosted: number
+  medianDaysToDecision: number | null
+  /** Did the work, can't get looked at — the leak that matters at this size. */
+  readyButNotApplying: number
+  listingsWithNoApplicants: number
+  openListings: number
+}
+
+function median(xs: number[]): number | null {
+  if (xs.length === 0) return null
+  const s = xs.slice().sort((a, b) => a - b)
+  const mid = Math.floor(s.length / 2)
+  return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
+}
+
+/**
+ * The funnel, and the two numbers that say whether it's working.
+ *
+ * Everything is derived from timestamps already stored — no snapshots, no new
+ * tables, nothing to keep in sync. The cost is that history only reaches as
+ * far back as the rows do, which is fine because the rows are the history.
+ *
+ * The headline pair is deliberate. Most funnel dashboards get built once and
+ * never opened again because every number is the same size and none of them
+ * imply an action. Two do: whether anyone is getting matched at all, and
+ * whether the loop repeats. The rest is context for those.
+ */
+export async function loadFunnel(admin: SupabaseClient): Promise<{
+  funnel: FunnelStep[]
+  health: Health
+  enoughData: boolean
+}> {
+  const [
+    { data: students },
+    { data: connections },
+    { data: evidence },
+    { data: applications },
+    { data: engagements },
+    { data: listings },
+  ] = await Promise.all([
+    admin.from('students').select('id'),
+    admin.from('github_connections').select('student_id'),
+    admin.from('current_skill_evidence').select('student_id'),
+    admin.from('applications').select('id, student_id, listing_id, status, created_at, decided_at'),
+    admin.from('engagements').select('id, student_id, stage, opened_at'),
+    admin.from('listings').select('id, status'),
+  ])
+
+  const total = (students ?? []).length
+  const connected = new Set((connections ?? []).map((c) => c.student_id))
+  const withEvidence = new Set((evidence ?? []).map((e) => e.student_id))
+  const applied = new Set((applications ?? []).map((a) => a.student_id))
+
+  const engagementsByStudent = new Map<string, number>()
+  for (const e of engagements ?? []) {
+    engagementsByStudent.set(e.student_id, (engagementsByStudent.get(e.student_id) ?? 0) + 1)
+  }
+  const accepted = engagementsByStudent.size
+  const completed = new Set(
+    (engagements ?? []).filter((e) => e.stage === 'closed').map((e) => e.student_id),
+  )
+  const repeated = Array.from(engagementsByStudent.values()).filter((n) => n >= 2).length
+
+  const step = (label: string, count: number, prev: number | null, meaning: string): FunnelStep => ({
+    label, count, conversion: prev && prev > 0 ? count / prev : null, meaning,
+  })
+
+  const funnel: FunnelStep[] = [
+    step('Signed up', total, null, 'Everyone with an account.'),
+    step('Connected GitHub', connected.size, total, 'Stopping here means onboarding didn\'t explain why to connect.'),
+    step('Has a verified skill', withEvidence.size, connected.size, 'Stopping here means the scan found nothing worth recording.'),
+    step('Applied to something', applied.size, withEvidence.size, 'Stopping here is the real leak: they did the work and never used it.'),
+    step('Got accepted', accepted, applied.size, 'Stopping here means posters aren\'t choosing anyone.'),
+    step('Finished a project', completed.size, accepted, 'Stopping here means engagements start and die.'),
+    step('Did a second', repeated, completed.size, 'This one is the whole thesis. If people come back, it works.'),
+  ]
+
+  // Ghosting: an application that was never answered either way. Counted
+  // only once it's had a fair chance to be answered, so a listing posted
+  // this morning doesn't read as neglect.
+  const FAIR_CHANCE_DAYS = 14
+  const cutoff = Date.now() - FAIR_CHANCE_DAYS * 86_400_000
+  const decidable = (applications ?? []).filter((a) => Date.parse(a.created_at) < cutoff)
+  const answered = decidable.filter((a) => a.status !== 'submitted')
+  const ghosted = decidable.length - answered.length
+
+  const daysToDecision = (applications ?? [])
+    .filter((a) => a.decided_at)
+    .map((a) => (Date.parse(a.decided_at) - Date.parse(a.created_at)) / 86_400_000)
+    .filter((d) => d >= 0)
+
+  const listingIdsWithApps = new Set((applications ?? []).map((a) => a.listing_id))
+  const open = (listings ?? []).filter((l) => l.status === 'open')
+
+  return {
+    funnel,
+    health: {
+      decisionRate: decidable.length > 0 ? answered.length / decidable.length : null,
+      ghosted,
+      medianDaysToDecision: median(daysToDecision),
+      // Has evidence, has never applied. They cleared the hard part and
+      // stalled — at this scale this is the number most worth acting on.
+      readyButNotApplying: Array.from(withEvidence).filter((id) => !applied.has(id)).length,
+      listingsWithNoApplicants: open.filter((l) => !listingIdsWithApps.has(l.id)).length,
+      openListings: open.length,
+    },
+    // Below this the percentages are noise dressed as insight, and the page
+    // says so rather than drawing a confident line through four points.
+    enoughData: total >= 20,
+  }
+}

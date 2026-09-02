@@ -28,7 +28,7 @@ export const AGENT_MODEL = 'claude-sonnet-5'
 // caps only the JSON output and a structured response is never truncated.
 const MAX_TOKENS = 16000
 
-export type AgentType = 'posting' | 'brief' | 'goals' | 'application_scoring'
+export type AgentType = 'posting' | 'brief' | 'goals' | 'application_scoring' | 'taxonomy'
 
 let cached: Anthropic | null = null
 

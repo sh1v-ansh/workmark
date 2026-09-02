@@ -13,6 +13,7 @@
 // Skill attribution stays with the scanner.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { embedText } from '@/lib/embeddings/voyage'
 
 export interface ActionResult {
   ok: boolean
@@ -156,10 +157,10 @@ export async function resolveUnresolvedSkill(
   if (args.mapToSkillId) {
     const { error: aliasErr } = await admin
       .from('skill_aliases')
-      .upsert(
-        { raw_string: row.raw_string, skill_id: args.mapToSkillId },
-        { onConflict: 'raw_string', ignoreDuplicates: true },
-      )
+      .upsert({
+        raw_string: row.raw_string,
+        skill_id: args.mapToSkillId,
+      }, { onConflict: 'raw_string', ignoreDuplicates: true })
     if (aliasErr) return { ok: false, message: 'Could not save the mapping.' }
   }
 
@@ -262,4 +263,105 @@ export async function verifyFaculty(
 
   if (error) return { ok: false, message: 'Could not confirm.' }
   return { ok: true, message: 'Confirmed. Their projects now show as verified faculty.' }
+}
+
+// ─── Creating a taxonomy node ────────────────────────────────────────────────
+
+/**
+ * Add a skill the taxonomy doesn't have, and alias the name onto it.
+ *
+ * The embedding matters more than it looks: without one the node is invisible
+ * to similarity matching forever, so every future spelling of it would come
+ * back to this queue. Generating it here is what makes the fix permanent
+ * rather than a fix for one exact string.
+ *
+ * Deliberately gated on a person clicking. Free node creation is how a
+ * taxonomy rots — the same skill splits across three near-duplicate nodes and
+ * then matches none of them well. Aliasing to something that exists is almost
+ * always the better answer, and the UI says so.
+ */
+export async function createSkillNode(
+  admin: SupabaseClient,
+  args: {
+    unresolvedId: string
+    adminId: string
+    skillId: string
+    canonicalName: string
+    parentId: string | null
+  },
+): Promise<ActionResult> {
+  const { data: row } = await admin
+    .from('unresolved_skills')
+    .select('id, raw_string, status')
+    .eq('id', args.unresolvedId)
+    .maybeSingle()
+  if (!row) return { ok: false, message: 'That entry no longer exists.' }
+  if (row.status !== 'pending') return { ok: false, message: 'Already handled.' }
+
+  const { data: existing } = await admin
+    .from('skills').select('id').eq('id', args.skillId).maybeSingle()
+  if (existing) {
+    return { ok: false, message: `A skill with id "${args.skillId}" already exists — map to it instead.` }
+  }
+
+  let embedding: number[] | null = null
+  try {
+    embedding = await embedText(args.canonicalName)
+  } catch (err) {
+    console.error('[admin/actions] embedding for new skill failed:', err)
+    return {
+      ok: false,
+      message: 'Could not generate the skill\'s embedding, so it would be invisible to matching. Nothing was created — try again.',
+    }
+  }
+
+  const { error: skillErr } = await admin.from('skills').insert({
+    id: args.skillId,
+    canonical_name: args.canonicalName,
+    parent_id: args.parentId,
+    embedding,
+  })
+  if (skillErr) {
+    console.error('[admin/actions] skill insert failed:', skillErr)
+    return { ok: false, message: 'Could not create the skill.' }
+  }
+
+  await admin.from('skill_aliases').upsert({
+    raw_string: row.raw_string,
+    skill_id: args.skillId,
+  }, { onConflict: 'raw_string', ignoreDuplicates: true })
+
+  const { error } = await admin.from('unresolved_skills').update({
+    status: 'mapped',
+    mapped_skill_id: args.skillId,
+    resolved_by: args.adminId,
+    resolved_at: new Date().toISOString(),
+  }).eq('id', args.unresolvedId)
+  if (error) return { ok: false, message: 'Skill created, but the queue entry could not be closed.' }
+
+  return {
+    ok: true,
+    message: `Created "${args.canonicalName}". Future scans will match it directly.`,
+  }
+}
+
+// ─── Feedback ────────────────────────────────────────────────────────────────
+
+export async function resolveFeedback(
+  admin: SupabaseClient,
+  args: { id: string; adminId: string; status: 'triaged' | 'done' | 'declined'; note: string | null },
+): Promise<ActionResult> {
+  const { error } = await admin
+    .from('feedback')
+    .update({
+      status: args.status,
+      admin_note: args.note,
+      // Triage is a staging state, not a resolution — stamping it resolved
+      // would make an item look finished the moment someone looked at it.
+      resolved_by: args.status === 'triaged' ? null : args.adminId,
+      resolved_at: args.status === 'triaged' ? null : new Date().toISOString(),
+    })
+    .eq('id', args.id)
+  if (error) return { ok: false, message: 'Could not update.' }
+  return { ok: true, message: `Marked ${args.status}.` }
 }

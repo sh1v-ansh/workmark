@@ -102,9 +102,21 @@ export async function canonicalizeSkill(
  *
  * Alias writes are one bulk insert at the end rather than one per hit.
  */
+export interface ScanContext {
+  studentId: string
+  repoFullName: string
+}
+
 export async function canonicalizeSkills(
   supabase: SupabaseClient,
   rawTexts: string[],
+  /**
+   * Whose scan this is. Optional because the dispute path re-derives skills
+   * without wanting to record sightings, but when present it's what lets the
+   * review queue say a miss cost three students rather than just that it
+   * happened.
+   */
+  context?: ScanContext,
 ): Promise<Map<string, CanonicalizeResult>> {
   const results = new Map<string, CanonicalizeResult>()
 
@@ -207,7 +219,7 @@ export async function canonicalizeSkills(
   // to find out which, or how often. Recording them makes the misses
   // reviewable, and the seen count says which are common enough to be worth
   // adding to the taxonomy.
-  if (unresolved.length > 0) await recordUnresolved(supabase, unresolved)
+  if (unresolved.length > 0) await recordUnresolved(supabase, unresolved, context)
 
   await writeAliases(supabase, newAliases)
 
@@ -288,6 +300,7 @@ async function writeAliases(
 async function recordUnresolved(
   supabase: SupabaseClient,
   items: { raw: string; candidates: CanonicalizeResult['candidates'] }[],
+  context?: ScanContext,
 ): Promise<void> {
   try {
     const now = new Date().toISOString()
@@ -304,7 +317,20 @@ async function recordUnresolved(
       })),
       { onConflict: 'raw_string', ignoreDuplicates: true },
     )
-    await supabase.rpc('bump_unresolved_skills', { p_raw_strings: items.map((i) => i.raw) })
+    if (context) {
+      // Per-row rather than bulk: each call also folds this student and repo
+      // into the row's affected list, deduped in SQL so two students'
+      // concurrent scans can't overwrite each other.
+      await Promise.all(items.map((i) =>
+        supabase.rpc('record_unresolved_sighting', {
+          p_raw_string: i.raw,
+          p_student_id: context.studentId,
+          p_repo: context.repoFullName,
+        }),
+      ))
+    } else {
+      await supabase.rpc('bump_unresolved_skills', { p_raw_strings: items.map((i) => i.raw) })
+    }
   } catch (err) {
     console.error('[canonicalize] could not record unresolved skills:', err)
   }

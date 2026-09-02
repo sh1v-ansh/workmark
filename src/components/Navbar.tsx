@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import { useSession } from '@/components/SessionProvider'
+import FeedbackLink from '@/components/FeedbackLink'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 import { LAYOUT } from '@/lib/theme/layout'
@@ -191,7 +192,14 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                       {item.label}
                     </Link>
                   ))}
-                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, marginTop: 3.5, paddingTop: 3.5 }}>
+                  {/* Reporting a bug shouldn't cost you the page you're
+                      reporting on, so this opens a drawer rather than
+                      navigating. Sits above sign out because it's the more
+                      likely of the two to be wanted. */}
+                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, marginTop: 3.5, paddingTop: 3.5, padding: '8.5px 11.5px' }}>
+                    <FeedbackLink />
+                  </div>
+                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, paddingTop: 3.5 }}>
                     <button
                       onClick={handleSignOut}
                       disabled={signing}

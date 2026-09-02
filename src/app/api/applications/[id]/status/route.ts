@@ -62,7 +62,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  const { error: statusErr } = await admin.from('applications').update({ status }).eq('id', applicationId)
+  const { error: statusErr } = await admin.from('applications').update({
+    status,
+    // Stamped for any decision, not just acceptance — the waiting is the
+    // part worth measuring, and a rejection previously left no trace of when.
+    decided_at: status === 'submitted' ? null : new Date().toISOString(),
+  }).eq('id', applicationId)
   if (statusErr) {
     console.error('[api/applications/status] update failed:', statusErr)
     return NextResponse.json({ error: 'Could not update the application.' }, { status: 500 })

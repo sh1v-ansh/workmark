@@ -30,6 +30,10 @@ export const AGENT_LIMITS: Record<AgentType, RateLimit> = {
   brief: { max: 10, windowHours: 24 },
   goals: { max: 20, windowHours: 24 },
   application_scoring: { max: 50, windowHours: 1 },
+  // Staff-only and batched — twenty names per call, and the queue rarely
+  // holds more than a few dozen. Generous because the person hitting it is
+  // an admin clearing a backlog, not a user in a loop.
+  taxonomy: { max: 40, windowHours: 1 },
 }
 
 export interface RateLimitResult {

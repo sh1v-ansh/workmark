@@ -66,7 +66,9 @@ export async function processRepo(
   // skill back to every place it was seen, so the student can be shown why
   // their record says what it says.
   const rawSkillStrings = Array.from(new Set(scanResult.detections.map((d) => d.raw)))
-  const canonicalized = await canonicalizeSkills(supabase, rawSkillStrings)
+  const canonicalized = await canonicalizeSkills(supabase, rawSkillStrings, {
+    studentId, repoFullName,
+  })
 
   const provenance = new Map<string, string[]>()
   // Kept alongside provenance because relevance needs the detection's source

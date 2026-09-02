@@ -166,6 +166,53 @@ export function nextPendingStep(job: Job): JobStep | null {
  * always correct on Vercel; NEXT_PUBLIC_SITE_URL is the configured public
  * origin and is what a self-hosted or local run has.
  */
+/**
+ * Whether a job created right now could actually be run.
+ *
+ * The enqueue route used to create the job and report success even when it
+ * knew the worker was unreachable — the kick failed, logged to a server
+ * console nobody reads, and the student watched 0/25 forever. A job nothing
+ * can drive should never be created in the first place.
+ */
+export function workerReachable(): { ok: true } | { ok: false; reason: string } {
+  if (!process.env.CRON_SECRET) {
+    return { ok: false, reason: 'CRON_SECRET is not set on this deployment.' }
+  }
+  if (!selfOrigin()) {
+    return { ok: false, reason: 'Neither VERCEL_URL nor NEXT_PUBLIC_SITE_URL is set.' }
+  }
+  return { ok: true }
+}
+
+/**
+ * Stop a job and throw away what's left.
+ *
+ * Steps already finished keep their evidence — that work really happened and
+ * deleting it would be a lie about the past. What cancelling discards is the
+ * remaining plan.
+ */
+export async function cancelJob(
+  admin: SupabaseClient,
+  jobId: string,
+  studentId: string,
+): Promise<boolean> {
+  const { data } = await admin
+    .from('jobs')
+    .update({
+      status: 'cancelled',
+      finished_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      locked_at: null,
+    })
+    .eq('id', jobId)
+    // Scoped to the owner: a job id is a uuid, but "hard to guess" is not
+    // an access rule.
+    .eq('student_id', studentId)
+    .in('status', ['queued', 'running'])
+    .select('id')
+  return !!data && data.length > 0
+}
+
 export function selfOrigin(): string | null {
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`
   return process.env.NEXT_PUBLIC_SITE_URL ?? null

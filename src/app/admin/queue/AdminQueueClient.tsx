@@ -18,6 +18,7 @@ const KIND_LABEL: Record<QueueKind, string> = {
   faculty_verification: 'Faculty to confirm',
   unresolved_skill: 'Unmatched skills',
   failed_job: 'Failed scans',
+  feedback: 'Bugs & ideas',
 }
 
 /** Why each kind is here — shown once per group rather than on every row. */
@@ -27,9 +28,10 @@ const KIND_BLURB: Record<QueueKind, string> = {
   faculty_verification: 'Someone signed up as faculty. Their account works, but their claim reads as unconfirmed to every student who sees it until you check.',
   unresolved_skill: 'Names the scanner couldn\'t place. Mapping one fixes it for every future scan.',
   failed_job: 'A scan that stopped. Retrying resumes from where it left off.',
+  feedback: 'Reported by someone using the product. The page and browser were captured automatically.',
 }
 
-const ORDER: QueueKind[] = ['dispute', 'review_request', 'faculty_verification', 'unresolved_skill', 'failed_job']
+const ORDER: QueueKind[] = ['dispute', 'review_request', 'feedback', 'faculty_verification', 'unresolved_skill', 'failed_job']
 
 function relativeDays(iso: string): string {
   const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000)
@@ -264,7 +266,7 @@ export default function AdminQueueClient({ items, counts, failedSources, taxonom
               </div>
             )}
 
-            {(open.kind === 'dispute' || open.kind === 'review_request') && (
+            {(open.kind === 'dispute' || open.kind === 'review_request' || open.kind === 'feedback') && (
               <div>
                 <Kicker style={{ marginBottom: 6 }}>
                   {open.kind === 'dispute' ? 'Your decision (the student reads this)' : 'Note (optional)'}
@@ -329,6 +331,9 @@ function Actions({ item, act, busy, skillId, note }: {
         <div style={row}>
           <Button variant="accent" onClick={() => act('map', { skillId })} disabled={busy || !skillId}>
             Map it
+          </Button>
+          <Button variant="outline" onClick={() => act('suggest')} disabled={busy}>
+            What is this?
           </Button>
           <Button variant="quiet" onClick={() => act('not_a_skill')} disabled={busy}>Not a skill</Button>
         </div>

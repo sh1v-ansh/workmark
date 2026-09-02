@@ -10,6 +10,7 @@ import { LAYOUT } from '@/lib/theme/layout'
 const SECTIONS = [
   { href: '/admin', label: 'Overview' },
   { href: '/admin/queue', label: 'Queue' },
+  { href: '/admin/growth', label: 'Growth' },
   { href: '/admin/people', label: 'People' },
   { href: '/admin/fairness', label: 'Fairness' },
   { href: '/admin/audit', label: 'Audit log' },
