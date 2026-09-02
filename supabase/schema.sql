@@ -1304,8 +1304,15 @@ create table accounts (
   -- 'declined' is a refused faculty claim. Like 'suspended' it is simply
   -- "not active", so has_role() and getAccount() refuse it without either
   -- needing to learn a new value.
+  -- 'waitlisted' is an under-18 signup. The profile is saved and the account
+  -- exists, but nothing about their record is built or shown until their
+  -- eighteenth birthday, at which point it opens by itself. See v05_0017.
   status              text not null default 'active'
-                        check (status in ('active', 'suspended', 'declined')),
+                        check (status in ('active', 'suspended', 'declined', 'waitlisted')),
+  -- Why we ask: an account creates a binding agreement, and a student's
+  -- account creates a consumer report about a real person. Stored as the
+  -- date rather than an "is adult" flag, which would be wrong the next day.
+  date_of_birth       date,
   faculty_requested_at timestamptz,
   faculty_verified_at timestamptz,
   faculty_verified_by uuid references auth.users(id),

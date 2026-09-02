@@ -15,7 +15,11 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 export const ROLES = ['student', 'faculty', 'admin'] as const
 export type Role = (typeof ROLES)[number]
 
-export type AccountStatus = 'active' | 'suspended' | 'declined'
+// 'waitlisted' is an under-18 signup being held until their birthday. Like
+// the other two non-active statuses it simply means "not active", so
+// getAccount() refuses it without needing to know why — only the routing in
+// /waitlist cares about the difference.
+export type AccountStatus = 'active' | 'suspended' | 'declined' | 'waitlisted'
 
 export interface Account {
   id: string

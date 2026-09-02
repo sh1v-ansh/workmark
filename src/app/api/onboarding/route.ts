@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { ageOn, eligibleOn, parseDob, MINIMUM_AGE, MINIMUM_SIGNUP_AGE } from '@/lib/auth/age'
 
 /**
  * The domains that count as proof of being at a university.
@@ -44,6 +45,7 @@ function isAcademicEmail(email: string | undefined): boolean {
  *     immediately — nobody waits on us — but `faculty_requested_at` is set
  *     and `faculty_verified_at` stays null until a person confirms it, and
  *     the UI shows the difference. See v05_0014.
+ *  5. An under-18 signup is held, not opened. See the age block below.
  */
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -93,6 +95,30 @@ export async function POST(request: Request) {
   const displayName = typeof profile.full_name === 'string' ? profile.full_name : null
   const institution = typeof profile.university === 'string' ? profile.university : null
 
+  // ─── Age ───────────────────────────────────────────────────────────────
+  // Required, and checked here rather than only in the form, for the same
+  // reason as the .edu rule: the route is reachable directly.
+  //
+  // Under 18 is held, not refused. An incoming freshman who turns eighteen
+  // in October is the exact person this is built for, and locking them out
+  // permanently over a birthday six weeks away would be absurd. The account
+  // and profile are saved; nothing about their record is built or shown
+  // until the day it opens. Under 13 is refused outright — that isn't a
+  // university student, it's a typo.
+  const dobRaw = typeof profile.date_of_birth === 'string' ? profile.date_of_birth : ''
+  const dob = parseDob(dobRaw)
+  if (!dob) {
+    return NextResponse.json({ error: 'Enter your date of birth.' }, { status: 400 })
+  }
+
+  const age = ageOn(dob)
+  if (age < MINIMUM_SIGNUP_AGE || age > 120) {
+    return NextResponse.json({ error: 'That date of birth doesn\'t look right.' }, { status: 400 })
+  }
+
+  const held = age < MINIMUM_AGE
+  const opensOn = held ? eligibleOn(dob) : null
+
   // Insert, not upsert. A duplicate here means two requests raced, and the
   // loser must not overwrite the winner's roles.
   //
@@ -105,6 +131,8 @@ export async function POST(request: Request) {
     faculty_requested_at: role === 'faculty' ? new Date().toISOString() : null,
     display_name: displayName,
     institution,
+    date_of_birth: dobRaw,
+    status: held ? 'waitlisted' : 'active',
   })
 
   if (accountErr) {
@@ -123,9 +151,14 @@ export async function POST(request: Request) {
   // institution are on the account row above, and a professor in `students`
   // is a professor in the student directory and the matching pool.
   if (role === 'student') {
+    // Date of birth lives on the account and nowhere else. `students` is the
+    // row the scanner, the matcher and the public record all read, and a
+    // birthday has no business being in any of them.
+    const { date_of_birth: _dob, ...studentProfile } = profile
+
     const { error: profileErr } = await admin.from('students').insert({
       id: user.id,
-      ...profile,
+      ...studentProfile,
       edu_domain: user.email?.split('@')[1] ?? null,
       edu_verified_at: new Date().toISOString(),
     })
@@ -138,5 +171,11 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ ok: true, role, verificationPending: role === 'faculty' })
+  return NextResponse.json({
+    ok: true,
+    role,
+    verificationPending: role === 'faculty',
+    held,
+    opensOn,
+  })
 }

@@ -11,6 +11,7 @@ import { Wordmark } from '@/app/landing/Wordmark'
 import { Combobox } from '@/components/Combobox'
 import { UNIVERSITIES } from '@/lib/data/universities'
 import { MAJORS } from '@/lib/data/majors'
+import { ageOn, eligibleOn, formatDay, parseDob, MINIMUM_AGE, MINIMUM_SIGNUP_AGE } from '@/lib/auth/age'
 
 // Asked before anything else, because a .edu address doesn't distinguish
 // the two — professors have university email too. Without this branch a
@@ -100,6 +101,7 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
   // previous version quietly told them they were a student.
   const isStudent = role === 'student'
   const [fullName, setFullName] = useState('')
+  const [dateOfBirth, setDateOfBirth] = useState('')
   const [university, setUniversity] = useState('')
   const [major, setMajor] = useState('')
   const [degreeType, setDegreeType] = useState('BS')
@@ -117,7 +119,7 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSubmit({
-      full_name: fullName, university, major, degree_type: degreeType,
+      full_name: fullName, date_of_birth: dateOfBirth, university, major, degree_type: degreeType,
       graduation_year: graduationYear ? parseInt(graduationYear) : null,
       gpa: gpa ? parseFloat(gpa) : null,
       is_international: isInternational, visa_type: isInternational ? visaType : null,
@@ -129,12 +131,49 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
 
   const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column' }
 
+  // Shown as they type, not after they submit. Someone who is seventeen
+  // should find out what happens before they fill in the rest of the form,
+  // and should be told the account is being held rather than refused —
+  // there is a real difference and the wrong impression loses the person.
+  const dob = dateOfBirth ? parseDob(dateOfBirth) : null
+  const age = dob ? ageOn(dob) : null
+  const held = age !== null && age >= MINIMUM_SIGNUP_AGE && age < MINIMUM_AGE
+  const tooYoung = age !== null && age < MINIMUM_SIGNUP_AGE
+
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-full-name">Full name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
           <input id="student-full-name" required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="dk-input" placeholder="Jane Smith" />
+        </div>
+        <div style={{ ...gap, gridColumn: '1 / -1' }}>
+          <FieldLabel htmlFor="student-dob">Date of birth <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
+          <input
+            id="student-dob" type="date" required autoComplete="bday"
+            value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)}
+            max={new Date().toISOString().slice(0, 10)}
+            aria-describedby="dob-why"
+            className="dk-input"
+          />
+          <p id="dob-why" style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 7 }}>
+            An account is an agreement, and a student account builds a record about you that
+            other people get shown — so Workmark is for adults. We ask once and never display it.
+          </p>
+          {held && (
+            <div role="status" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 9 }}>
+              You&apos;re under 18, so we&apos;ll hold your account until your 18th birthday
+              {dob ? <> — <strong>{formatDay(eligibleOn(dob))}</strong></> : null}. Finish signing up
+              now: your profile is saved and the account opens by itself on the day. Nothing is
+              scanned or shown to anyone before then.
+            </div>
+          )}
+          {tooYoung && (
+            <div role="alert" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 9 }}>
+              That date would make you under 13. Check it — Workmark can&apos;t create an account
+              from it.
+            </div>
+          )}
         </div>
         <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-university">University <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
@@ -217,8 +256,8 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
         <p style={{ fontSize: 13, color: C.textGhost }}>Signing up with <strong style={{ color: C.textMuted }}>{emailDomain}</strong></p>
       )}
 
-      <Button type="submit" variant="accent" fullWidth disabled={loading} busyLabel={loading ? 'Saving profile…' : null}>
-        Complete profile
+      <Button type="submit" variant="accent" fullWidth disabled={loading || tooYoung} busyLabel={loading ? 'Saving profile…' : null}>
+        {held ? 'Save my profile' : 'Complete profile'}
       </Button>
     </form>
   )
@@ -254,11 +293,12 @@ export default function OnboardingPage() {
       // professor the signup form again every time they came back.
       const { data: account } = await supabase
         .from('accounts')
-        .select('roles')
+        .select('roles, status')
         .eq('id', user.id)
         .maybeSingle()
 
       if (account) {
+        if (account.status === 'waitlisted') { router.replace('/waitlist'); return }
         const roles = (account.roles ?? []) as string[]
         const facultyOnly = roles.includes('faculty') && !roles.includes('student')
         router.replace(facultyOnly ? '/faculty' : '/student/dashboard')
@@ -296,6 +336,15 @@ export default function OnboardingPage() {
       }
 
       if (!res.ok) throw new Error(json.error ?? 'Failed to save profile.')
+
+      // Under 18: the profile is saved and the account exists, but it is
+      // held. Sending them to a dashboard they can't use would read as the
+      // site being broken.
+      if (json.held) {
+        router.replace('/waitlist')
+        router.refresh()
+        return
+      }
 
       toast(
         role === 'faculty'
