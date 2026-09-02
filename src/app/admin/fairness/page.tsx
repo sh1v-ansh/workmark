@@ -2,8 +2,9 @@ import { requireAdmin } from '@/lib/admin/guard'
 import { loadQueue } from '@/lib/admin/queue'
 import { loadFairness, loadCalibration } from '@/lib/admin/stats'
 import AdminShell from '../AdminShell'
-import { Panel, Bar, EmptyState, tableStyles as ts } from '../widgets'
+import { Panel, Bar, EmptyState } from '../widgets'
 import { C, state } from '@/lib/theme/dark-tokens'
+import { tableStyles as ts } from '../table-styles'
 
 const TIER_LABEL: Record<string, string> = {
   strong_fit: 'Strong fit',

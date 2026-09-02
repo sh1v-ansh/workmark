@@ -110,18 +110,4 @@ export function EmptyState({ children }: { children: React.ReactNode }) {
   )
 }
 
-export const tableStyles = {
-  table: { width: '100%', borderCollapse: 'collapse' as const, fontSize: 14 },
-  th: {
-    textAlign: 'left' as const, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em',
-    textTransform: 'uppercase' as const, color: C.textGhost, padding: '0 14px 9px 0',
-    borderBottom: `1px solid ${C.border}`, whiteSpace: 'nowrap' as const,
-  },
-  td: {
-    padding: '11px 14px 11px 0', borderBottom: `1px solid ${C.borderFaint}`,
-    color: C.textSub, verticalAlign: 'top' as const,
-  },
-  num: { fontVariantNumeric: 'tabular-nums' as const },
-} satisfies Record<string, React.CSSProperties | object>
 
-export { T }
