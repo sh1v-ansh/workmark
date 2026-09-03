@@ -76,9 +76,15 @@ export async function middleware(request: NextRequest) {
   // suspended and declined accounts would tell them something untrue about
   // themselves, so held accounts get their own destination.
   const HOLD_PAGE = '/waitlist'
-  const landingFor = (status: string) => (status === 'waitlisted' ? HOLD_PAGE : STATUS_PAGE)
+  // A deletion inside its grace period is also "not active", but the page it
+  // needs is the one with the Restore button on it.
+  const DELETED_PAGE = '/account/deleted'
+  const landingFor = (status: string) =>
+    status === 'waitlisted' ? HOLD_PAGE : status === 'deleting' ? DELETED_PAGE : STATUS_PAGE
 
-  if (user && requiresAuth && pathname !== STATUS_PAGE && pathname !== HOLD_PAGE) {
+  const EXEMPT = new Set([STATUS_PAGE, HOLD_PAGE, DELETED_PAGE])
+
+  if (user && requiresAuth && !EXEMPT.has(pathname)) {
     const { data: current } = await supabase
       .from('accounts')
       .select('status')

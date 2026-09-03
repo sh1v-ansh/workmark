@@ -16,6 +16,16 @@ import { ageOn, eligibleOn, parseDob, MINIMUM_AGE, MINIMUM_SIGNUP_AGE } from '@/
  */
 const ACADEMIC_SUFFIXES = ['.edu']
 
+/**
+ * Which version of the terms this signup accepted.
+ *
+ * Bump it whenever the documents materially change. Existing rows keep the
+ * version they agreed to rather than being rewritten — someone who accepted
+ * v1 has not accepted v2, and a re-acceptance prompt needs to be able to
+ * tell the difference.
+ */
+const TERMS_VERSION = 'terms_v1'
+
 function isAcademicEmail(email: string | undefined): boolean {
   if (!email) return false
   const addr = email.toLowerCase().trim()
@@ -95,29 +105,47 @@ export async function POST(request: Request) {
   const displayName = typeof profile.full_name === 'string' ? profile.full_name : null
   const institution = typeof profile.university === 'string' ? profile.university : null
 
-  // ─── Age ───────────────────────────────────────────────────────────────
-  // Required, and checked here rather than only in the form, for the same
-  // reason as the .edu rule: the route is reachable directly.
+  // ─── Age and terms ─────────────────────────────────────────────────────
+  // Two accepted answers, and one of them has to be given. Either they tick
+  // the box saying they're 18 and agree to the terms — the same
+  // representation LinkedIn, OpenAI and Handshake take, and the reason we
+  // don't ask everybody for a birthday: a date of birth on every account is
+  // sensitive data collected to answer one yes/no question, and knowing an
+  // age is what creates the duty around minors in the first place.
   //
-  // Under 18 is held, not refused. An incoming freshman who turns eighteen
-  // in October is the exact person this is built for, and locking them out
-  // permanently over a birthday six weeks away would be absurd. The account
-  // and profile are saved; nothing about their record is built or shown
-  // until the day it opens. Under 13 is refused outright — that isn't a
-  // university student, it's a typo.
+  // Or they tell us they're not 18 yet, and give a date so the account can
+  // be held until they are. Under 18 is held, not refused: an incoming
+  // freshman who turns eighteen in October is the exact person this is
+  // built for. Under 13 is refused — that isn't a university student.
+  //
+  // Checked here rather than only in the form, for the same reason as the
+  // .edu rule: the route is reachable directly.
+  const attested = profile.age_attested === true
   const dobRaw = typeof profile.date_of_birth === 'string' ? profile.date_of_birth : ''
-  const dob = parseDob(dobRaw)
-  if (!dob) {
-    return NextResponse.json({ error: 'Enter your date of birth.' }, { status: 400 })
+  const dob = dobRaw ? parseDob(dobRaw) : null
+
+  if (!attested && !dob) {
+    return NextResponse.json(
+      { error: 'Confirm you\'re 18 or over, or tell us your date of birth so we can hold your place.' },
+      { status: 400 },
+    )
   }
 
-  const age = ageOn(dob)
-  if (age < MINIMUM_SIGNUP_AGE || age > 120) {
-    return NextResponse.json({ error: 'That date of birth doesn\'t look right.' }, { status: 400 })
+  let held = false
+  let opensOn: string | null = null
+
+  if (dob) {
+    const age = ageOn(dob)
+    if (age < MINIMUM_SIGNUP_AGE || age > 120) {
+      return NextResponse.json({ error: 'That date of birth doesn\'t look right.' }, { status: 400 })
+    }
+    // A date that makes them an adult is treated as one, whichever box they
+    // ticked. The date is the fact; the checkbox is a claim about it.
+    held = age < MINIMUM_AGE
+    opensOn = held ? eligibleOn(dob) : null
   }
 
-  const held = age < MINIMUM_AGE
-  const opensOn = held ? eligibleOn(dob) : null
+  const now = new Date().toISOString()
 
   // Insert, not upsert. A duplicate here means two requests raced, and the
   // loser must not overwrite the winner's roles.
@@ -128,10 +156,17 @@ export async function POST(request: Request) {
   const { error: accountErr } = await admin.from('accounts').insert({
     id: user.id,
     roles: [role],
-    faculty_requested_at: role === 'faculty' ? new Date().toISOString() : null,
+    faculty_requested_at: role === 'faculty' ? now : null,
     display_name: displayName,
     institution,
-    date_of_birth: dobRaw,
+    // Null for almost everybody, which is the point.
+    date_of_birth: dob ? dobRaw : null,
+    // Recorded separately from the terms: if the terms are amended and
+    // re-accepted later, when they told us they were an adult must not
+    // silently move to the new date.
+    age_attested_at: attested && !held ? now : null,
+    terms_accepted_at: now,
+    terms_version: TERMS_VERSION,
     status: held ? 'waitlisted' : 'active',
   })
 
@@ -154,13 +189,13 @@ export async function POST(request: Request) {
     // Date of birth lives on the account and nowhere else. `students` is the
     // row the scanner, the matcher and the public record all read, and a
     // birthday has no business being in any of them.
-    const { date_of_birth: _dob, ...studentProfile } = profile
+    const { date_of_birth: _dob, age_attested: _attested, ...studentProfile } = profile
 
     const { error: profileErr } = await admin.from('students').insert({
       id: user.id,
       ...studentProfile,
       edu_domain: user.email?.split('@')[1] ?? null,
-      edu_verified_at: new Date().toISOString(),
+      edu_verified_at: now,
     })
 
     // 23505 means the profile was already there — an earlier partial signup,

@@ -102,6 +102,10 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
   const isStudent = role === 'student'
   const [fullName, setFullName] = useState('')
   const [dateOfBirth, setDateOfBirth] = useState('')
+  // Two ways to say how old you are: tick the box, or (if you can't) tell
+  // us the date so we can hold the account until you can.
+  const [agreed, setAgreed] = useState(false)
+  const [underAge, setUnderAge] = useState(false)
   const [university, setUniversity] = useState('')
   const [major, setMajor] = useState('')
   const [degreeType, setDegreeType] = useState('BS')
@@ -119,7 +123,11 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     onSubmit({
-      full_name: fullName, date_of_birth: dateOfBirth, university, major, degree_type: degreeType,
+      full_name: fullName,
+      // Only sent when they told us — an adult signup stores no birthday.
+      date_of_birth: underAge ? dateOfBirth : null,
+      age_attested: agreed,
+      university, major, degree_type: degreeType,
       graduation_year: graduationYear ? parseInt(graduationYear) : null,
       gpa: gpa ? parseFloat(gpa) : null,
       is_international: isInternational, visa_type: isInternational ? visaType : null,
@@ -132,13 +140,14 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
   const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column' }
 
   // Shown as they type, not after they submit. Someone who is seventeen
-  // should find out what happens before they fill in the rest of the form,
-  // and should be told the account is being held rather than refused —
-  // there is a real difference and the wrong impression loses the person.
+  // should be told their account is being held rather than refused — there
+  // is a real difference and the wrong impression loses the person.
   const dob = dateOfBirth ? parseDob(dateOfBirth) : null
   const age = dob ? ageOn(dob) : null
   const held = age !== null && age >= MINIMUM_SIGNUP_AGE && age < MINIMUM_AGE
   const tooYoung = age !== null && age < MINIMUM_SIGNUP_AGE
+  const alreadyAdult = age !== null && age >= MINIMUM_AGE
+  const canSubmit = agreed || held
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -146,34 +155,6 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
         <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-full-name">Full name <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
           <input id="student-full-name" required autoComplete="name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="dk-input" placeholder="Jane Smith" />
-        </div>
-        <div style={{ ...gap, gridColumn: '1 / -1' }}>
-          <FieldLabel htmlFor="student-dob">Date of birth <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
-          <input
-            id="student-dob" type="date" required autoComplete="bday"
-            value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)}
-            max={new Date().toISOString().slice(0, 10)}
-            aria-describedby="dob-why"
-            className="dk-input"
-          />
-          <p id="dob-why" style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 7 }}>
-            An account is an agreement, and a student account builds a record about you that
-            other people get shown — so Workmark is for adults. We ask once and never display it.
-          </p>
-          {held && (
-            <div role="status" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 9 }}>
-              You&apos;re under 18, so we&apos;ll hold your account until your 18th birthday
-              {dob ? <> — <strong>{formatDay(eligibleOn(dob))}</strong></> : null}. Finish signing up
-              now: your profile is saved and the account opens by itself on the day. Nothing is
-              scanned or shown to anyone before then.
-            </div>
-          )}
-          {tooYoung && (
-            <div role="alert" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 9 }}>
-              That date would make you under 13. Check it — Workmark can&apos;t create an account
-              from it.
-            </div>
-          )}
         </div>
         <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-university">University <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
@@ -256,8 +237,77 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
         <p style={{ fontSize: 13, color: C.textGhost }}>Signing up with <strong style={{ color: C.textMuted }}>{emailDomain}</strong></p>
       )}
 
-      <Button type="submit" variant="accent" fullWidth disabled={loading || tooYoung} busyLabel={loading ? 'Saving profile…' : null}>
-        {held ? 'Save my profile' : 'Complete profile'}
+      {/* Age and terms, as a statement rather than a birthday.
+          Asking every account for a date of birth is the thorough-looking
+          option and the worse one: it puts sensitive data in the database
+          for everybody in order to answer one yes/no question, and knowing
+          an age is what creates the duty around minors in the first place.
+          Every comparable platform states the minimum in the terms and
+          takes signup as the representation.
+          What they don't do is offer the honest 17-year-old anything at
+          all, which is the gap below. */}
+      <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+          <input
+            id="student-terms" type="checkbox" checked={agreed}
+            onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setUnderAge(false) }}
+            className="dk-checkbox" style={{ marginTop: 2 }}
+          />
+          <span style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6 }}>
+            I&apos;m 18 or over, and I agree to the{' '}
+            <Link href="/legal/terms" target="_blank" style={{ color: C.text }}>Terms</Link>,{' '}
+            <Link href="/legal/privacy" target="_blank" style={{ color: C.text }}>Privacy Policy</Link>{' '}
+            and{' '}
+            <Link href="/legal/acceptable-use" target="_blank" style={{ color: C.text }}>Acceptable Use</Link>.
+          </span>
+        </label>
+
+        {!agreed && !underAge && (
+          <button
+            type="button" onClick={() => setUnderAge(true)}
+            style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 13, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer' }}
+          >
+            Not 18 yet?
+          </button>
+        )}
+
+        {underAge && (
+          <div style={{ ...gap }}>
+            <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginBottom: 9 }}>
+              Then we&apos;ll hold your place instead of turning you away. Tell us your birthday
+              and the account opens by itself on the day you turn 18.
+            </p>
+            <FieldLabel htmlFor="student-dob">Date of birth</FieldLabel>
+            <input
+              id="student-dob" type="date" autoComplete="bday" required
+              value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)}
+              max={new Date().toISOString().slice(0, 10)}
+              className="dk-input" style={{ maxWidth: 220 }}
+            />
+            {held && dob && (
+              <div role="status" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 10 }}>
+                Your account will open on <strong>{formatDay(eligibleOn(dob))}</strong>. Finish
+                signing up now — your profile is saved, and nothing is scanned or shown to anyone
+                before then.
+              </div>
+            )}
+            {tooYoung && (
+              <div role="alert" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 10 }}>
+                That date would make you under 13, so we can&apos;t create an account. Check it.
+              </div>
+            )}
+            {alreadyAdult && (
+              <div role="status" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 10 }}>
+                That makes you 18 already — tick the box above instead and your account opens
+                straight away.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <Button type="submit" variant="accent" fullWidth disabled={loading || !canSubmit} busyLabel={loading ? 'Saving profile…' : null}>
+        {held ? 'Save my profile and hold my place' : 'Complete profile'}
       </Button>
     </form>
   )

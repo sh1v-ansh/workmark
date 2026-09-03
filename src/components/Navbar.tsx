@@ -200,6 +200,16 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     <FeedbackLink />
                   </div>
                   <div style={{ borderTop: `1px solid ${C.borderFaint}`, paddingTop: 3.5 }}>
+                    {/* Findable rather than buried. A product that builds a
+                        record about someone and hides the way out of it has
+                        no business claiming to be honest with them. */}
+                    <Link
+                      href="/account/delete"
+                      role="menuitem"
+                      style={{ display: 'block', fontSize: 13.5, color: C.textFaint, textDecoration: 'none', padding: '8.5px 11.5px', borderRadius: 7.5 }}
+                    >
+                      Delete account
+                    </Link>
                     <button
                       onClick={handleSignOut}
                       disabled={signing}

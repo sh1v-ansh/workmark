@@ -1307,12 +1307,22 @@ create table accounts (
   -- 'waitlisted' is an under-18 signup. The profile is saved and the account
   -- exists, but nothing about their record is built or shown until their
   -- eighteenth birthday, at which point it opens by itself. See v05_0017.
+  -- 'deleting' is an account inside its seven-day deletion grace period.
   status              text not null default 'active'
-                        check (status in ('active', 'suspended', 'declined', 'waitlisted')),
-  -- Why we ask: an account creates a binding agreement, and a student's
-  -- account creates a consumer report about a real person. Stored as the
-  -- date rather than an "is adult" flag, which would be wrong the next day.
+                        check (status in ('active', 'suspended', 'declined', 'waitlisted', 'deleting')),
+  -- Only populated when someone volunteers it because they're under 18 and
+  -- want their place held. We don't ask everyone: a birthday for every
+  -- account is sensitive data collected to answer one yes/no question, and
+  -- knowing an age is what creates the duty around minors in the first
+  -- place. The minimum age lives in the terms, and signup is the
+  -- representation — see age_attested_at. v05_0018.
   date_of_birth       date,
+  terms_accepted_at   timestamptz,
+  terms_version       text,
+  -- Separate from terms_accepted_at: re-accepting amended terms must not
+  -- silently move when they told us they were an adult.
+  age_attested_at     timestamptz,
+  deletion_requested_at timestamptz,
   faculty_requested_at timestamptz,
   faculty_verified_at timestamptz,
   faculty_verified_by uuid references auth.users(id),
@@ -1492,3 +1502,19 @@ returns void language sql security definer set search_path = public as $$
      set seen_count = seen_count + 1, last_seen_at = now()
    where raw_string = any(p_raw_strings) and status = 'pending';
 $$;
+
+-- Proof that a deletion was asked for and carried out. Holds nothing about
+-- the person — an opaque id and three timestamps — and deliberately has no
+-- FK to auth.users, which would cascade the row away at the moment it
+-- became useful. See v05_0018.
+create table account_deletions (
+  id           uuid default gen_random_uuid() primary key,
+  user_id      uuid not null,
+  requested_at timestamptz not null,
+  purged_at    timestamptz,
+  restored_at  timestamptz,
+  note         text
+);
+
+alter table account_deletions enable row level security;
+-- No policies: service role only.

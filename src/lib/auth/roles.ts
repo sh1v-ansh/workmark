@@ -19,7 +19,8 @@ export type Role = (typeof ROLES)[number]
 // the other two non-active statuses it simply means "not active", so
 // getAccount() refuses it without needing to know why — only the routing in
 // /waitlist cares about the difference.
-export type AccountStatus = 'active' | 'suspended' | 'declined' | 'waitlisted'
+// 'deleting' is an account inside its deletion grace period.
+export type AccountStatus = 'active' | 'suspended' | 'declined' | 'waitlisted' | 'deleting'
 
 export interface Account {
   id: string
