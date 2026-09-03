@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { enforce } from '@/lib/rate-limit'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { generateBrief } from '@/lib/agents/brief'
@@ -34,6 +35,9 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  const limited = await enforce('agent', user.id)
+  if (limited) return limited
 
   if (!agentsAvailable()) {
     return NextResponse.json(

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { enforce } from '@/lib/rate-limit'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { syncRepoGrants } from '@/lib/github/sync-grants'
@@ -31,6 +32,9 @@ export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  const limited = await enforce('scan', user.id)
+  if (limited) return limited
 
   // Refuse before creating anything the deployment can't run. This used to
   // create the job, fail to kick it, log to a console nobody reads, and tell

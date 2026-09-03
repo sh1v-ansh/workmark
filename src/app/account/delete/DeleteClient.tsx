@@ -93,11 +93,21 @@ export function DeleteClient({ liveEngagements }: { liveEngagements: number }) {
       </div>
 
       <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '15px 18px', marginBottom: 22 }}>
-        <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 10 }}>
           <strong style={{ color: C.text }}>You have {GRACE_DAYS} days to change your mind.</strong>{' '}
           Sign in again and there&apos;s a button to restore it. That brings back your record — but
           not your public profile link, your directory listing or the applications that were
           withdrawn. Those went the moment you pressed the button.
+        </p>
+        {/* Said plainly, because the seven days are the one part of this
+            people misread — either as "it's already gone" or as "it's
+            recoverable later". Neither is true, and which one they believe
+            changes what they do next. */}
+        <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6 }}>
+          To make that possible we keep your data for those {GRACE_DAYS} days and no longer.
+          After that it is permanently deleted and{' '}
+          <strong style={{ color: C.text }}>cannot be recovered</strong> — not by you, not by us,
+          not by asking. If you want a copy, download it before you go.
         </p>
       </div>
 
@@ -129,9 +139,9 @@ export function DeleteClient({ liveEngagements }: { liveEngagements: number }) {
       </div>
 
       <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.6, marginTop: 24 }}>
-        Want a copy of everything we hold about you before you go? Ask at{' '}
-        <a href="mailto:support@workmark.org" style={{ color: C.textFaint }}>support@workmark.org</a>{' '}
-        and we&apos;ll send it.
+        Want a copy of everything we hold about you before you go?{' '}
+        <a href="/api/account/export" download style={{ color: C.textFaint }}>Download it now</a>{' '}
+        — one JSON file, no waiting.
       </p>
     </div>
   )

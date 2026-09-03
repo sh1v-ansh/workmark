@@ -10,6 +10,20 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
     // user reporting "it broke" is unactionable, so it's surfaced below
     // as well as logged.
     console.error('[app] unhandled error:', error)
+
+    // And reported, so nobody has to tell us. Fire-and-forget: a reporting
+    // failure inside an error boundary must not produce a second error.
+    void fetch('/api/client-error', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        context: `client:${window.location.pathname}`,
+        message: error.message,
+        stack: error.stack,
+        pageUrl: window.location.href,
+      }),
+      keepalive: true,
+    }).catch(() => {})
   }, [error])
 
   return (

@@ -1323,6 +1323,11 @@ create table accounts (
   -- silently move when they told us they were an adult.
   age_attested_at     timestamptz,
   deletion_requested_at timestamptz,
+  -- Absent key means on, so a new notification kind needs no backfill.
+  notification_prefs  jsonb not null default '{}'::jsonb,
+  email_unsubscribed_at timestamptz,
+  -- Lets an unsubscribe link work from an email client with no session.
+  unsubscribe_token   uuid default gen_random_uuid(),
   faculty_requested_at timestamptz,
   faculty_verified_at timestamptz,
   faculty_verified_by uuid references auth.users(id),
@@ -1518,3 +1523,37 @@ create table account_deletions (
 
 alter table account_deletions enable row level security;
 -- No policies: service role only.
+
+-- Fixed-window rate limits. One row per (who, what), overwritten rather
+-- than appended, so the write volume stays flat. See v05_0019.
+create table rate_limits (
+  key           text primary key,
+  window_start  timestamptz not null default now(),
+  count         int not null default 0
+);
+
+alter table rate_limits enable row level security;
+-- No policies: service role only.
+
+-- Where production errors go. In Postgres and surfaced in /admin rather
+-- than shipped to a third party, because error payloads here routinely
+-- contain repo names and skill data. See v05_0019.
+create table error_log (
+  id          uuid default gen_random_uuid() primary key,
+  source      text not null check (source in ('server', 'client')),
+  context     text not null,
+  message     text not null,
+  stack       text,
+  user_id     uuid,
+  page_url    text,
+  user_agent  text,
+  seen_count  int not null default 1,
+  first_seen  timestamptz not null default now(),
+  last_seen   timestamptz not null default now(),
+  resolved_at timestamptz
+);
+
+alter table error_log enable row level security;
+
+create policy "Admins: read errors" on error_log
+  for select using (is_admin());

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { enforce } from '@/lib/rate-limit'
 import { NextResponse } from 'next/server'
 
 /**
@@ -15,6 +16,9 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Sign in to send feedback.' }, { status: 401 })
+
+  const limited = await enforce('feedback', user.id)
+  if (limited) return limited
 
   let body: { kind?: string; title?: string; body?: string; pageUrl?: string }
   try {

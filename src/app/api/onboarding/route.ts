@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { enforce } from '@/lib/rate-limit'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { ageOn, eligibleOn, parseDob, MINIMUM_AGE, MINIMUM_SIGNUP_AGE } from '@/lib/auth/age'
@@ -61,6 +62,9 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  const limited = await enforce('onboarding', user.id)
+  if (limited) return limited
 
   if (!isAcademicEmail(user.email)) {
     return NextResponse.json(

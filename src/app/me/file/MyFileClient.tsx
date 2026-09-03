@@ -153,6 +153,16 @@ export default function MyFileClient({ data }: { data: FileData }) {
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 630 }}>
             Everything we hold about you, where each piece came from, and everyone we&apos;ve shared it with. If something here is wrong, dispute it — most are settled by rescanning the code within seconds.
           </p>
+          {/* The same file, as a file. Reading it on screen is one right;
+              being able to take it somewhere else is a different one, and
+              the second is what "portable" in the privacy law means. */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 14 }}>
+            <a href="/api/account/export" download className="nb-btn nb-btn-outline nb-btn-sm">
+              Download everything (JSON)
+            </a>
+            <Link href="/account/notifications" className="nb-btn nb-btn-quiet nb-btn-sm">Email settings</Link>
+            <Link href="/account/delete" className="nb-btn nb-btn-quiet nb-btn-sm">Delete account</Link>
+          </div>
         </div>
 
         {/* Answers "is anything wrong with my file" before any reading. */}

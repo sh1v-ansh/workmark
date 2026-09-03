@@ -13,6 +13,7 @@ const SECTIONS = [
   { href: '/admin/growth', label: 'Growth' },
   { href: '/admin/people', label: 'People' },
   { href: '/admin/fairness', label: 'Fairness' },
+  { href: '/admin/errors', label: 'Errors' },
   { href: '/admin/audit', label: 'Audit log' },
 ]
 
