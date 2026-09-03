@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Playfair_Display, Inter, IBM_Plex_Mono, Schibsted_Grotesk, Hanken_Grotesk } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/components/Toast'
+import { CookieNotice } from '@/components/CookieNotice'
 import { SessionProvider, type SessionValue } from '@/components/SessionProvider'
 import { createClient } from '@/lib/supabase/server'
 import { getAccount, hasRole, isVerifiedFaculty } from '@/lib/auth/roles'
@@ -111,6 +112,7 @@ export default async function RootLayout({
         <SessionProvider value={session}>
           <ToastProvider>{children}</ToastProvider>
         </SessionProvider>
+        <CookieNotice />
       </body>
     </html>
   )

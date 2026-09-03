@@ -228,6 +228,10 @@ create table applications (
   rank_score_at_apply numeric,
   computed_snapshot  jsonb,  -- per-skill depth values, missing skills, gpa, track record — as of submission
   status             text default 'submitted' not null check (status in ('submitted', 'shortlisted', 'accepted', 'rejected', 'withdrawn')),
+  -- When the poster actually answered. Without this a rejection leaves no
+  -- trace of when it happened, so neither "how fast do posters reply" nor
+  -- "how long has this person been waiting" can be answered.
+  decided_at         timestamptz,
   created_at         timestamptz default now(),
   unique (listing_id, student_id)
 );
@@ -629,7 +633,7 @@ create table review_requests (
 
 create table agent_calls (
   id           uuid default gen_random_uuid() primary key,
-  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'application_scoring')),
+  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'application_scoring', 'taxonomy')),
   student_id   uuid references students(id) on delete cascade,
   poster_id    uuid,
   input        jsonb not null,
@@ -1300,8 +1304,30 @@ create table accounts (
   -- 'declined' is a refused faculty claim. Like 'suspended' it is simply
   -- "not active", so has_role() and getAccount() refuse it without either
   -- needing to learn a new value.
+  -- 'waitlisted' is an under-18 signup. The profile is saved and the account
+  -- exists, but nothing about their record is built or shown until their
+  -- eighteenth birthday, at which point it opens by itself. See v05_0017.
+  -- 'deleting' is an account inside its seven-day deletion grace period.
   status              text not null default 'active'
-                        check (status in ('active', 'suspended', 'declined')),
+                        check (status in ('active', 'suspended', 'declined', 'waitlisted', 'deleting')),
+  -- Only populated when someone volunteers it because they're under 18 and
+  -- want their place held. We don't ask everyone: a birthday for every
+  -- account is sensitive data collected to answer one yes/no question, and
+  -- knowing an age is what creates the duty around minors in the first
+  -- place. The minimum age lives in the terms, and signup is the
+  -- representation — see age_attested_at. v05_0018.
+  date_of_birth       date,
+  terms_accepted_at   timestamptz,
+  terms_version       text,
+  -- Separate from terms_accepted_at: re-accepting amended terms must not
+  -- silently move when they told us they were an adult.
+  age_attested_at     timestamptz,
+  deletion_requested_at timestamptz,
+  -- Absent key means on, so a new notification kind needs no backfill.
+  notification_prefs  jsonb not null default '{}'::jsonb,
+  email_unsubscribed_at timestamptz,
+  -- Lets an unsubscribe link work from an email client with no session.
+  unsubscribe_token   uuid default gen_random_uuid(),
   faculty_requested_at timestamptz,
   faculty_verified_at timestamptz,
   faculty_verified_by uuid references auth.users(id),
@@ -1392,8 +1418,48 @@ create table unresolved_skills (
                   check (status in ('pending', 'mapped', 'not_a_skill')),
   resolved_by     uuid references auth.users(id),
   resolved_at     timestamptz,
-  mapped_skill_id text references skills(id)
+  mapped_skill_id text references skills(id),
+  -- Who this cost. Without it the queue says a name didn't match and not
+  -- whether that lost one person a skill or forty — which is the only thing
+  -- that decides whether it's worth acting on. Capped arrays rather than a
+  -- join table: read on every render, never joined against.
+  affected_student_ids uuid[] not null default '{}',
+  example_repos        text[] not null default '{}',
+  -- Advisory AI classification. Nothing here applies without a person.
+  ai_verdict           jsonb,
+  ai_checked_at        timestamptz
 );
+
+-- Bug reports and feature requests. page_url and user_agent are captured
+-- silently — a student will never tell you which page they were on, and
+-- without it a report is "it's broken".
+create table feedback (
+  id           uuid default gen_random_uuid() primary key,
+  reporter_id  uuid references auth.users(id) on delete set null,
+  kind         text not null check (kind in ('bug', 'feature')),
+  title        text not null,
+  body         text not null,
+  page_url     text,
+  user_agent   text,
+  status       text not null default 'new'
+               check (status in ('new', 'triaged', 'done', 'declined')),
+  admin_note   text,
+  resolved_by  uuid references auth.users(id),
+  resolved_at  timestamptz,
+  created_at   timestamptz default now() not null
+);
+
+create index feedback_open_idx on feedback (created_at desc) where status in ('new', 'triaged');
+
+-- Where the job worker lives and how to authenticate to it, for the pg_cron
+-- sweeper. No RLS policies at all: a table holding a shared secret should be
+-- invisible to every client, admins included.
+create table private_config (
+  key   text primary key,
+  value text not null
+);
+
+create index jobs_sweep_idx on jobs (updated_at) where status in ('queued', 'running');
 
 create index unresolved_skills_pending_idx
   on unresolved_skills (seen_count desc) where status = 'pending';
@@ -1421,6 +1487,17 @@ create policy "Admins: read admin actions"
 create policy "Admins: read unresolved skills"
   on unresolved_skills for select using (is_admin());
 
+-- ── feedback ──
+alter table feedback enable row level security;
+alter table private_config enable row level security;
+
+create policy "Users: file feedback"
+  on feedback for insert with check (auth.uid() = reporter_id);
+create policy "Users: read own feedback"
+  on feedback for select using (auth.uid() = reporter_id);
+create policy "Admins: read all feedback"
+  on feedback for select using (is_admin());
+
 -- Increment the seen count for unmatched names already on file. Called after
 -- an insert-ignoring-duplicates, because the count must increment rather
 -- than be overwritten.
@@ -1430,3 +1507,53 @@ returns void language sql security definer set search_path = public as $$
      set seen_count = seen_count + 1, last_seen_at = now()
    where raw_string = any(p_raw_strings) and status = 'pending';
 $$;
+
+-- Proof that a deletion was asked for and carried out. Holds nothing about
+-- the person — an opaque id and three timestamps — and deliberately has no
+-- FK to auth.users, which would cascade the row away at the moment it
+-- became useful. See v05_0018.
+create table account_deletions (
+  id           uuid default gen_random_uuid() primary key,
+  user_id      uuid not null,
+  requested_at timestamptz not null,
+  purged_at    timestamptz,
+  restored_at  timestamptz,
+  note         text
+);
+
+alter table account_deletions enable row level security;
+-- No policies: service role only.
+
+-- Fixed-window rate limits. One row per (who, what), overwritten rather
+-- than appended, so the write volume stays flat. See v05_0019.
+create table rate_limits (
+  key           text primary key,
+  window_start  timestamptz not null default now(),
+  count         int not null default 0
+);
+
+alter table rate_limits enable row level security;
+-- No policies: service role only.
+
+-- Where production errors go. In Postgres and surfaced in /admin rather
+-- than shipped to a third party, because error payloads here routinely
+-- contain repo names and skill data. See v05_0019.
+create table error_log (
+  id          uuid default gen_random_uuid() primary key,
+  source      text not null check (source in ('server', 'client')),
+  context     text not null,
+  message     text not null,
+  stack       text,
+  user_id     uuid,
+  page_url    text,
+  user_agent  text,
+  seen_count  int not null default 1,
+  first_seen  timestamptz not null default now(),
+  last_seen   timestamptz not null default now(),
+  resolved_at timestamptz
+);
+
+alter table error_log enable row level security;
+
+create policy "Admins: read errors" on error_log
+  for select using (is_admin());

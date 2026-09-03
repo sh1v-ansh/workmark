@@ -151,6 +151,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       const listing = full?.listings as unknown as { title: string | null } | null
       if (poster?.user?.email) {
         await workSubmitted({
+          posterId: engagement.poster_id,
           posterEmail: poster.user.email,
           studentName: student?.full_name ?? 'The student',
           listingTitle: listing?.title ?? 'your project',

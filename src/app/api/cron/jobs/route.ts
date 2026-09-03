@@ -33,7 +33,14 @@ const KEEP_FINISHED_DAYS = 7
  * student's scan would stop silently at step 3 and never resume, which is
  * the exact failure the queue exists to prevent.
  *
- * Runs once per day on Hobby (Vercel's per-plan limit). Kicking a job that is already progressing is harmless:
+ * No longer on Vercel Cron. Hobby allows one run a day, which is useless as
+ * a recovery mechanism — a dropped chain would stall for up to 24 hours. The
+ * sweep now runs every minute from pg_cron inside Postgres (see
+ * v05_0016_queue_feedback_cron.sql), which is free on every Supabase tier.
+ *
+ * This route stays as the manual and belt-and-braces path: it still works if
+ * called with the secret, and it also does the purge and recalibration that
+ * belong on a slower cadence than the sweep. Kicking a job that is already progressing is harmless:
  * claim_job() refuses the lease and the extra call returns immediately.
  *
  * Vercel Cron sends `Authorization: Bearer $CRON_SECRET` automatically when

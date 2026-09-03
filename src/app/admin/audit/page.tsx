@@ -1,9 +1,10 @@
 import { requireAdmin } from '@/lib/admin/guard'
 import { loadQueue } from '@/lib/admin/queue'
 import AdminShell from '../AdminShell'
-import { EmptyState, tableStyles as ts } from '../widgets'
+import { EmptyState } from '../widgets'
 import Badge from '@/components/ui/Badge'
 import { C } from '@/lib/theme/dark-tokens'
+import { tableStyles as ts } from '../table-styles'
 
 /**
  * /admin/audit — what staff have done.

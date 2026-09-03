@@ -20,6 +20,8 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { embedText, embedTexts } from '@/lib/embeddings/voyage'
+import { isNoise, normalizeName } from '@/lib/skills/noise'
+import { SEED_ALIASES } from '@/lib/skills/seed-aliases'
 
 // Unvalidated starting point, not an empirically derived constant — there's
 // no real canonicalization traffic yet to calibrate against. Revisit once
@@ -35,7 +37,7 @@ function normalize(raw: string): string {
 export interface CanonicalizeResult {
   resolved: boolean
   skillId: string | null
-  source: 'cache' | 'embedding' | 'unresolved'
+  source: 'cache' | 'exact' | 'embedding' | 'unresolved'
   candidates?: { skillId: string; canonicalName: string; similarity: number }[]
 }
 
@@ -100,12 +102,35 @@ export async function canonicalizeSkill(
  *
  * Alias writes are one bulk insert at the end rather than one per hit.
  */
+export interface ScanContext {
+  studentId: string
+  repoFullName: string
+}
+
 export async function canonicalizeSkills(
   supabase: SupabaseClient,
   rawTexts: string[],
+  /**
+   * Whose scan this is. Optional because the dispute path re-derives skills
+   * without wanting to record sightings, but when present it's what lets the
+   * review queue say a miss cost three students rather than just that it
+   * happened.
+   */
+  context?: ScanContext,
 ): Promise<Map<string, CanonicalizeResult>> {
-  const unique = Array.from(new Set(rawTexts.map(normalize).filter(Boolean)))
   const results = new Map<string, CanonicalizeResult>()
+
+  // 0. Drop noise before anything costs money or attention.
+  //
+  //    `import os`, `import utils`, `eslint` — standard library, the
+  //    student's own sibling files, and build tooling every project has.
+  //    These used to be embedded (paid for), fail to match, and land in the
+  //    review queue as work for a human whose only possible answer is "no,
+  //    that isn't a skill". Dropped silently: an unresolved entry is a
+  //    request for a decision, and there is no decision here.
+  const unique = Array.from(new Set(
+    rawTexts.map(normalize).filter((r) => r && !isNoise(r)),
+  ))
   if (unique.length === 0) return results
 
   // 1. Cache, in bulk.
@@ -120,8 +145,29 @@ export async function canonicalizeSkills(
     results.set(row.raw_string, { resolved: true, skillId: row.skill_id, source: 'cache' })
   }
 
-  const misses = unique.filter((raw) => !cacheHits.has(raw))
+  let misses = unique.filter((raw) => !cacheHits.has(raw))
   if (misses.length === 0) return results
+
+  // 2. Exact match on the normalized name, before any similarity scoring.
+  //
+  //    This is the fix for the biggest class of failure. Similarity is poor
+  //    at short bare tokens: measured on real scans, `numpy` scored 70%
+  //    against NumPy, `docker` 75% against Docker, `typescript` 81% against
+  //    TypeScript — every one correct, every one under the 0.85 bar, every
+  //    one silently dropped from a student's record. Comparing normalized
+  //    strings settles those with no model involved and no ambiguity.
+  const exact = await resolveExact(supabase, misses)
+  const newAliases: { raw_string: string; skill_id: string }[] = []
+  for (const [raw, skillId] of Array.from(exact.entries())) {
+    results.set(raw, { resolved: true, skillId, source: 'exact' })
+    newAliases.push({ raw_string: raw, skill_id: skillId })
+  }
+  misses = misses.filter((raw) => !exact.has(raw))
+
+  if (misses.length === 0) {
+    await writeAliases(supabase, newAliases)
+    return results
+  }
 
   // 2. Embed every miss, chunked — Voyage caps inputs per request, and a
   //    monorepo's manifests can produce a few hundred dependency names.
@@ -156,7 +202,6 @@ export async function canonicalizeSkills(
     }),
   )
 
-  const newAliases: { raw_string: string; skill_id: string }[] = []
   const unresolved: { raw: string; candidates: CanonicalizeResult['candidates'] }[] = []
   for (const { raw, candidates } of looked) {
     const top = candidates[0]
@@ -174,18 +219,71 @@ export async function canonicalizeSkills(
   // to find out which, or how often. Recording them makes the misses
   // reviewable, and the seen count says which are common enough to be worth
   // adding to the taxonomy.
-  if (unresolved.length > 0) await recordUnresolved(supabase, unresolved)
+  if (unresolved.length > 0) await recordUnresolved(supabase, unresolved, context)
 
-  if (newAliases.length > 0) {
-    // ignoreDuplicates: a concurrent scan resolving the same alias is a
-    // benign race on the raw_string primary key, not a failure.
-    const { error } = await supabase
-      .from('skill_aliases')
-      .upsert(newAliases, { onConflict: 'raw_string', ignoreDuplicates: true })
-    if (error) console.error('[canonicalize] alias cache write failed:', error)
-  }
+  await writeAliases(supabase, newAliases)
 
   return results
+}
+
+/**
+ * Resolve names by string, not by similarity.
+ *
+ * Three passes, cheapest first, all case- and punctuation-insensitive:
+ *   1. The hand-curated seed table (postgres -> PostgreSQL, torch -> PyTorch).
+ *   2. The taxonomy id itself (`numpy` is literally the id of NumPy).
+ *   3. The canonical display name normalized the same way (`Next.js` -> nextjs).
+ *
+ * Everything matched here is written to skill_aliases, so the work happens
+ * once per name across the whole platform rather than once per scan.
+ */
+async function resolveExact(
+  supabase: SupabaseClient,
+  raws: string[],
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>()
+  const remaining: string[] = []
+
+  for (const raw of raws) {
+    const seeded = SEED_ALIASES[normalizeName(raw)]
+    if (seeded) out.set(raw, seeded)
+    else remaining.push(raw)
+  }
+  if (remaining.length === 0) return out
+
+  const { data: skills } = await supabase
+    .from('skills')
+    .select('id, canonical_name')
+    .is('deprecated_at', null)
+  if (!skills) return out
+
+  const byNormalized = new Map<string, string>()
+  for (const s of skills) {
+    byNormalized.set(normalizeName(s.id), s.id)
+    // The id wins on collision — it's the stable key, and a display name
+    // like "HTML/CSS" normalizes to something a package could also produce.
+    const nameKey = normalizeName(s.canonical_name)
+    if (!byNormalized.has(nameKey)) byNormalized.set(nameKey, s.id)
+  }
+
+  for (const raw of remaining) {
+    const hit = byNormalized.get(normalizeName(raw))
+    if (hit) out.set(raw, hit)
+  }
+  return out
+}
+
+async function writeAliases(
+  supabase: SupabaseClient,
+  aliases: { raw_string: string; skill_id: string }[],
+): Promise<void> {
+  if (aliases.length === 0) return
+  // ignoreDuplicates: a concurrent scan resolving the same alias is a benign
+  // race on the raw_string primary key, not a failure.
+  const { error } = await supabase
+    .from('skill_aliases')
+    .upsert(aliases, { onConflict: 'raw_string', ignoreDuplicates: true })
+  if (error) console.error('[canonicalize] alias cache write failed:', error)
 }
 
 /**
@@ -202,6 +300,7 @@ export async function canonicalizeSkills(
 async function recordUnresolved(
   supabase: SupabaseClient,
   items: { raw: string; candidates: CanonicalizeResult['candidates'] }[],
+  context?: ScanContext,
 ): Promise<void> {
   try {
     const now = new Date().toISOString()
@@ -218,7 +317,20 @@ async function recordUnresolved(
       })),
       { onConflict: 'raw_string', ignoreDuplicates: true },
     )
-    await supabase.rpc('bump_unresolved_skills', { p_raw_strings: items.map((i) => i.raw) })
+    if (context) {
+      // Per-row rather than bulk: each call also folds this student and repo
+      // into the row's affected list, deduped in SQL so two students'
+      // concurrent scans can't overwrite each other.
+      await Promise.all(items.map((i) =>
+        supabase.rpc('record_unresolved_sighting', {
+          p_raw_string: i.raw,
+          p_student_id: context.studentId,
+          p_repo: context.repoFullName,
+        }),
+      ))
+    } else {
+      await supabase.rpc('bump_unresolved_skills', { p_raw_strings: items.map((i) => i.raw) })
+    }
   } catch (err) {
     console.error('[canonicalize] could not record unresolved skills:', err)
   }

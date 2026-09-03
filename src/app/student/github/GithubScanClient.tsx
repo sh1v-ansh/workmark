@@ -207,16 +207,18 @@ export default function GithubScanClient({ studentName, connection, grants, prio
         if (cancelled) return
         const next = json.job as JobView
         setJob(next)
-        if (next.status === 'succeeded' || next.status === 'failed') {
+        if (next.status === 'succeeded' || next.status === 'failed' || next.status === 'cancelled') {
           const failed = next.result?.failed ?? 0
           const total = next.result?.total ?? next.total_steps
           toast(
-            next.status === 'failed'
+            next.status === 'cancelled'
+              ? 'Scan stopped.'
+              : next.status === 'failed'
               ? next.error ?? 'The scan could not read any of your repos — try again in a minute.'
               : failed > 0
                 ? `Scan complete — ${total - failed} of ${total} repo(s) read. ${failed} failed and can be retried.`
                 : `Scan complete — ${total} repo(s) read.`,
-            next.status === 'failed' ? 'error' : failed > 0 ? 'info' : 'success',
+            next.status === 'failed' ? 'error' : next.status === 'cancelled' ? 'info' : failed > 0 ? 'info' : 'success',
           )
           setScanning(false)
           setJobId(null)
@@ -236,6 +238,22 @@ export default function GithubScanClient({ studentName, connection, grants, prio
     let timer = setTimeout(tick, 400)
     return () => { cancelled = true; clearTimeout(timer) }
   }, [jobId, router, toast])
+
+  async function stopScan() {
+    if (!confirm('Stop this scan? Repos already read stay on your record; the rest are discarded.')) return
+    try {
+      const res = await fetch('/api/github/scan', { method: 'DELETE' })
+      const json = await readJson(res)
+      if (!res.ok) throw new Error(json?.error ?? 'Could not stop it.')
+      toast(json.message, 'info')
+      setJobId(null)
+      setScanning(false)
+      setJob(null)
+      router.refresh()
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not stop it.', 'error')
+    }
+  }
 
   async function runScan() {
     setScanning(true)
@@ -514,9 +532,18 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                           ? `${job.completed_steps} of ${job.total_steps}${currentStepLabel ? ` · ${currentStepLabel}` : ''}`
                           : 'Queueing…'}
                       </p>
-                      <p style={{ fontSize: 12.5, color: C.textFaint, marginTop: 3 }}>
-                        Runs in the background — you can leave this page.
-                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 3 }}>
+                        <p style={{ fontSize: 12.5, color: C.textFaint }}>
+                          Runs in the background — you can leave this page.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={stopScan}
+                          style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 12.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          Stop
+                        </button>
+                      </div>
                     </div>
                   )}
                 </>

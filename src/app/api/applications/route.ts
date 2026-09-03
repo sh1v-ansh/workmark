@@ -5,6 +5,7 @@ import { getStudentDepth } from '@/lib/matching/depth'
 import { getListingRequirements, getApplicantPools } from '@/lib/matching/listing'
 import { computeFit, assignTier } from '@/lib/matching/fit'
 import { applicationReceived } from '@/lib/notify/email'
+import { enforce } from '@/lib/rate-limit'
 
 // Versioned so a consent record says which wording was actually agreed to.
 // Changing the text below REQUIRES bumping this — an FCRA consent that
@@ -45,6 +46,9 @@ export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  const limited = await enforce('apply', user.id)
+  if (limited) return limited
 
   let body: { listingId?: string; responseText?: string; claimedSkills?: string[]; consented?: boolean }
   try {
@@ -196,6 +200,7 @@ export async function POST(request: Request) {
     ])
     if (poster?.user?.email) {
       await applicationReceived({
+        posterId: listing.poster_id,
         posterEmail: poster.user.email,
         applicantName: student?.full_name ?? 'A student',
         listingTitle: listingRow?.title ?? 'your project',

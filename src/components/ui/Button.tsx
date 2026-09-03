@@ -1,6 +1,6 @@
 import Link from 'next/link'
 
-export type ButtonVariant = 'ink' | 'accent' | 'outline' | 'quiet'
+export type ButtonVariant = 'ink' | 'accent' | 'outline' | 'quiet' | 'danger'
 
 interface CommonProps {
   variant?: ButtonVariant

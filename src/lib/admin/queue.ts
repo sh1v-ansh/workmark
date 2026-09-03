@@ -26,6 +26,7 @@ export type QueueKind =
   | 'unresolved_skill'
   | 'failed_job'
   | 'faculty_verification'
+  | 'feedback'
 
 export type Severity = 'overdue' | 'due_soon' | 'normal'
 
@@ -140,13 +141,15 @@ async function disputes(admin: SupabaseClient, now: Date): Promise<QueueItem[]> 
 async function unresolvedSkills(admin: SupabaseClient): Promise<QueueItem[]> {
   const { data } = await admin
     .from('unresolved_skills')
-    .select('id, raw_string, candidates, seen_count, first_seen_at, example_source')
+    .select('id, raw_string, candidates, seen_count, first_seen_at, affected_student_ids, example_repos, ai_verdict')
     .eq('status', 'pending')
     .order('seen_count', { ascending: false })
     .limit(60)
 
   return (data ?? []).map((u) => {
     const candidates = (u.candidates ?? []) as { canonicalName?: string; similarity?: number }[]
+    const affected = ((u.affected_student_ids ?? []) as string[]).length || 1
+    const repos = (u.example_repos ?? []) as string[]
     const near = candidates
       .slice(0, 3)
       .map((c) => `${c.canonicalName ?? '?'} (${Math.round((c.similarity ?? 0) * 100)}%)`)
@@ -154,21 +157,26 @@ async function unresolvedSkills(admin: SupabaseClient): Promise<QueueItem[]> {
     return {
       kind: 'unresolved_skill' as const,
       id: u.id,
-      title: `"${u.raw_string}" didn't match anything`,
+      // Says what actually happened rather than naming the mechanism. The
+      // old label — "didn't match anything" — described our internals and
+      // left the consequence, and who bore it, unsaid.
+      title: affected === 1
+        ? `1 student's code mentions "${u.raw_string}" and we don't know what skill that is`
+        : `${affected} students' code mentions "${u.raw_string}" and we don't know what skill that is`,
       detail: [
         `Seen ${u.seen_count} time${u.seen_count === 1 ? '' : 's'}`,
+        repos.length ? `in ${repos.slice(0, 2).join(', ')}` : null,
         near ? `Closest: ${near}` : null,
-        u.example_source ? `e.g. ${u.example_source}` : null,
       ].filter(Boolean).join(' · '),
       subjectName: null,
       subjectId: null,
       createdAt: u.first_seen_at,
       dueAt: null,
       severity: 'normal' as const,
-      // Frequency is the signal: a name 200 students hit is a gap in the
-      // taxonomy, one seen once is probably a typo. Capped so a single very
-      // common miss can't bury everything else.
-      weight: Math.min(u.seen_count, 40),
+      // How many people it cost, not how many times it was seen. One
+      // student importing something in forty files is one lost skill; forty
+      // students hitting the same name is a hole in the taxonomy.
+      weight: Math.min(affected * 5, 40),
     }
   })
 }
@@ -232,6 +240,34 @@ async function facultyVerifications(admin: SupabaseClient): Promise<QueueItem[]>
   })
 }
 
+async function feedbackItems(admin: SupabaseClient): Promise<QueueItem[]> {
+  const { data } = await admin
+    .from('feedback')
+    .select('id, kind, title, body, page_url, status, created_at, reporter_id, students(full_name)')
+    .in('status', ['new', 'triaged'])
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  return (data ?? []).map((f) => {
+    const reporter = f.students as unknown as { full_name: string | null } | null
+    return {
+      kind: 'feedback' as const,
+      id: f.id,
+      title: `${f.kind === 'bug' ? 'Bug' : 'Idea'}: ${f.title}`,
+      detail: [f.body.slice(0, 200), f.page_url ? `on ${f.page_url}` : null]
+        .filter(Boolean).join(' · '),
+      subjectName: reporter?.full_name ?? null,
+      subjectId: f.reporter_id,
+      createdAt: f.created_at,
+      dueAt: null,
+      severity: 'normal' as const,
+      // A bug someone hit outranks an idea, and both sit below anything with
+      // a person actually blocked on it.
+      weight: f.kind === 'bug' ? 45 : 20,
+    }
+  })
+}
+
 /**
  * Everything waiting on a person.
  *
@@ -249,6 +285,7 @@ export async function loadQueue(
     ['faculty_verification', facultyVerifications(admin)],
     ['unresolved_skill', unresolvedSkills(admin)],
     ['failed_job', failedJobs(admin)],
+    ['feedback', feedbackItems(admin)],
   ]
 
   const settled = await Promise.allSettled(sources.map(([, p]) => p))
@@ -269,7 +306,7 @@ export async function loadQueue(
 export function countsByKind(items: QueueItem[]): Record<QueueKind, number> {
   const counts = {
     dispute: 0, review_request: 0, faculty_verification: 0,
-    unresolved_skill: 0, failed_job: 0,
+    unresolved_skill: 0, failed_job: 0, feedback: 0,
   } as Record<QueueKind, number>
   for (const i of items) counts[i.kind]++
   return counts

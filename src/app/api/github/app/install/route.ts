@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
+import { hasGithubConsent } from '@/lib/github/consent'
 
 /**
  * GET /api/github/app/install
@@ -11,6 +12,10 @@ import { randomUUID } from 'crypto'
  * with an installation_id. Same CSRF-cookie pattern as the old OAuth flow:
  * a random state value set here must round-trip back at callback time.
  *
+ * Requires a recorded consent first, and redirects to the screen that
+ * collects it if there isn't one. GitHub's own screen says "read access to
+ * code and metadata", which describes a permission rather than a purpose.
+ *
  * Env: GITHUB_APP_SLUG (the App's URL-safe name, set when it was
  * registered on GitHub — distinct from GITHUB_APP_ID).
  */
@@ -19,6 +24,14 @@ export async function GET(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.redirect(new URL('/login', request.url))
+  }
+
+  // Nobody reaches GitHub's install screen without having read ours first.
+  // The check is here rather than only on the buttons that link here,
+  // because a button added later would silently skip it — and "we can't
+  // show what this person agreed to" is not a state this route may create.
+  if (!(await hasGithubConsent(supabase, user.id))) {
+    return NextResponse.redirect(new URL('/student/github/consent', request.url))
   }
 
   const appSlug = process.env.GITHUB_APP_SLUG

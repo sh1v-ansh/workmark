@@ -163,6 +163,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const listing = full?.listings as unknown as { title: string | null } | null
     if (student?.user?.email) {
       await engagementClosed({
+        studentId: engagement.student_id,
         studentEmail: student.user.email,
         listingTitle: listing?.title ?? 'the project',
         skillCount: evidenceResult?.evidenceWritten.length ?? 0,

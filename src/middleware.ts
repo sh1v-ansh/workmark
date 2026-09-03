@@ -71,7 +71,20 @@ export async function middleware(request: NextRequest) {
   // page that says what happened ends the loop for every reason at once.
   const STATUS_PAGE = '/account/status'
 
-  if (user && requiresAuth && pathname !== STATUS_PAGE) {
+  // An under-18 signup is also not active, but it is not a problem — the
+  // account is simply waiting for a birthday. Sending them to a page about
+  // suspended and declined accounts would tell them something untrue about
+  // themselves, so held accounts get their own destination.
+  const HOLD_PAGE = '/waitlist'
+  // A deletion inside its grace period is also "not active", but the page it
+  // needs is the one with the Restore button on it.
+  const DELETED_PAGE = '/account/deleted'
+  const landingFor = (status: string) =>
+    status === 'waitlisted' ? HOLD_PAGE : status === 'deleting' ? DELETED_PAGE : STATUS_PAGE
+
+  const EXEMPT = new Set([STATUS_PAGE, HOLD_PAGE, DELETED_PAGE])
+
+  if (user && requiresAuth && !EXEMPT.has(pathname)) {
     const { data: current } = await supabase
       .from('accounts')
       .select('status')
@@ -80,7 +93,7 @@ export async function middleware(request: NextRequest) {
 
     if (current && current.status !== 'active') {
       const url = request.nextUrl.clone()
-      url.pathname = STATUS_PAGE
+      url.pathname = landingFor(current.status)
       return NextResponse.redirect(url)
     }
   }
@@ -105,7 +118,7 @@ export async function middleware(request: NextRequest) {
     url.pathname = !account
       ? '/onboarding'
       : account.status !== 'active'
-        ? STATUS_PAGE
+        ? landingFor(account.status)
         : facultyOnly
           ? '/faculty'
           : student

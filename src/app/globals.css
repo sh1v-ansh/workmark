@@ -303,6 +303,11 @@
 .nb-btn-quiet    { background: transparent; color: #5A6172; border-color: transparent; padding-left: 9px; padding-right: 9px; }
 .nb-btn-quiet:not(:disabled):hover { background: #F1EDE3; color: #191E2E; }
 
+/* Destructive. Outlined rather than filled: an irreversible action should
+   read as serious, not as the obvious thing to click. */
+.nb-btn-danger   { background: #FFFFFF; color: #A32218; border-color: #E3B3AE; }
+.nb-btn-danger:not(:disabled):hover { background: #A32218; color: #FFFFFF; border-color: #A32218; }
+
 .nb-btn-sm { font-size: 13px; padding: 8px 14.5px; border-radius: 8.5px; }
 
 /* ── Nav tabs — notebook dividers, not a toolbar ──────────────────────────

@@ -4,8 +4,10 @@ import { NextResponse } from 'next/server'
 import { getAccount, hasRole, recordAdminAction, type AdminSubject } from '@/lib/auth/roles'
 import {
   resolveReviewRequest, resolveDispute, resolveUnresolvedSkill, retryJob, verifyFaculty,
+  createSkillNode, resolveFeedback,
   type DisputeResolution,
 } from '@/lib/admin/actions'
+import { suggestTaxonomy, slugify } from '@/lib/agents/taxonomy'
 import type { QueueKind } from '@/lib/admin/queue'
 
 /**
@@ -93,6 +95,43 @@ export async function POST(request: Request) {
     }
 
     case 'unresolved_skill': {
+      // "What is this?" — research, not a decision. It records what the
+      // assistant thinks and returns it for a person to accept or ignore;
+      // nothing is applied.
+      if (action === 'suggest') {
+        const { data: row } = await admin
+          .from('unresolved_skills').select('raw_string').eq('id', id).maybeSingle()
+        if (!row) return NextResponse.json({ error: 'That entry no longer exists.' }, { status: 404 })
+
+        const [suggestion] = await suggestTaxonomy(admin, [row.raw_string])
+        if (!suggestion) {
+          return NextResponse.json({ error: 'Could not classify that one — decide by hand.' }, { status: 502 })
+        }
+        await admin.from('unresolved_skills')
+          .update({ ai_verdict: suggestion, ai_checked_at: new Date().toISOString() })
+          .eq('id', id)
+        await recordAdminAction(admin, {
+          adminId, action: 'unresolved_skill.suggest', subjectType: 'unresolved_skill',
+          subjectId: id, detail: { decision: suggestion.decision, confidence: suggestion.confidence },
+        })
+        return NextResponse.json({ ok: true, suggestion })
+      }
+
+      // Creating a taxonomy node. Deliberately a separate action from
+      // mapping, because free node creation is how a taxonomy fragments —
+      // the same skill splits across near-duplicates and matches none well.
+      if (action === 'create_skill') {
+        const name = body.note?.trim()
+        if (!name) return NextResponse.json({ error: 'Name the new skill.' }, { status: 400 })
+        result = await createSkillNode(admin, {
+          unresolvedId: id, adminId,
+          skillId: slugify(name),
+          canonicalName: name,
+          parentId: body.skillId ?? null,
+        })
+        break
+      }
+
       if (action !== 'map' && action !== 'not_a_skill') {
         return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })
       }
@@ -101,6 +140,20 @@ export async function POST(request: Request) {
       }
       result = await resolveUnresolvedSkill(admin, {
         id, adminId, mapToSkillId: action === 'map' ? body.skillId! : null,
+      })
+      break
+    }
+
+    case 'feedback': {
+      if (!['triaged', 'done', 'declined'].includes(action)) {
+        return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })
+      }
+      const { data } = await admin.from('feedback').select('reporter_id').eq('id', id).maybeSingle()
+      studentId = data?.reporter_id ?? null
+      result = await resolveFeedback(admin, {
+        id, adminId,
+        status: action as 'triaged' | 'done' | 'declined',
+        note: body.note?.trim() || null,
       })
       break
     }

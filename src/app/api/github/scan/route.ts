@@ -1,8 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
+import { enforce } from '@/lib/rate-limit'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { syncRepoGrants } from '@/lib/github/sync-grants'
-import { createJob, findActiveJob, kickJob, type JobStep } from '@/lib/jobs/queue'
+import { cancelJob, createJob, findActiveJob, kickJob, workerReachable, type JobStep } from '@/lib/jobs/queue'
 
 // This route no longer scans anything — it builds the work list and hands
 // back a job id. It stays generous only because syncRepoGrants pages the
@@ -31,6 +32,22 @@ export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  const limited = await enforce('scan', user.id)
+  if (limited) return limited
+
+  // Refuse before creating anything the deployment can't run. This used to
+  // create the job, fail to kick it, log to a console nobody reads, and tell
+  // the student "scanning 25 repos" — which then sat at 0/25 forever,
+  // surviving logout, with no way to tell it was never going to start.
+  const reachable = workerReachable()
+  if (!reachable.ok) {
+    console.error('[api/github/scan] worker unreachable:', reachable.reason)
+    return NextResponse.json(
+      { error: 'Scanning is misconfigured on this deployment, so nothing was started. Please report this.' },
+      { status: 503 },
+    )
+  }
 
   const admin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,4 +104,34 @@ export async function POST() {
   kickJob(job.id)
 
   return NextResponse.json({ ok: true, jobId: job.id, totalSteps: steps.length })
+}
+
+/**
+ * DELETE /api/github/scan — stop the scan in flight and discard the rest.
+ *
+ * Evidence from steps that already finished stays: that work genuinely
+ * happened, and deleting it would misrepresent the past. What's discarded is
+ * the remaining plan.
+ */
+export async function DELETE() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  const active = await findActiveJob(admin, user.id, 'github_scan')
+  if (!active) return NextResponse.json({ ok: true, cancelled: false, message: 'No scan is running.' })
+
+  const cancelled = await cancelJob(admin, active.id, user.id)
+  return NextResponse.json({
+    ok: true,
+    cancelled,
+    message: cancelled
+      ? 'Scan stopped. Repos already read stayed on your record.'
+      : 'That scan had already finished.',
+  })
 }

@@ -62,7 +62,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  const { error: statusErr } = await admin.from('applications').update({ status }).eq('id', applicationId)
+  const { error: statusErr } = await admin.from('applications').update({
+    status,
+    // Stamped for any decision, not just acceptance — the waiting is the
+    // part worth measuring, and a rejection previously left no trace of when.
+    decided_at: status === 'submitted' ? null : new Date().toISOString(),
+  }).eq('id', applicationId)
   if (statusErr) {
     console.error('[api/applications/status] update failed:', statusErr)
     return NextResponse.json({ error: 'Could not update the application.' }, { status: 500 })
@@ -77,6 +82,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       const { data: rejected } = await admin.auth.admin.getUserById(application.student_id)
       if (rejected?.user?.email) {
         await applicationRejected({
+          studentId: application.student_id,
           studentEmail: rejected.user.email,
           listingTitle: listing.title ?? 'the project',
         })
@@ -129,6 +135,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       .from('engagements').select('id').eq('application_id', applicationId).maybeSingle()
     if (studentAuth?.user?.email && engagement) {
       await applicationAccepted({
+        studentId: application.student_id,
         studentEmail: studentAuth.user.email,
         posterName: poster?.full_name ?? 'The poster',
         listingTitle: listing.title ?? 'the project',
