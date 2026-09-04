@@ -13,6 +13,7 @@ const links: [string, string][] = [
 const legalLinks: [string, string][] = [
   ['/legal/privacy', 'Privacy'],
   ['/legal/terms', 'Terms'],
+  ['/legal/cookies', 'Cookies'],
   ['/legal/acceptable-use', 'Acceptable use'],
 ]
 

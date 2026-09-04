@@ -2,11 +2,12 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { TermlyEmbed } from '@/components/TermlyEmbed'
+import { pastedHtmlFor } from '@/lib/legal/documents'
 import { Wordmark } from '@/app/landing/Wordmark'
 import { light as C, F, R } from '@/lib/theme/tokens'
 
 /**
- * The three documents every account is agreed to, and where they come from.
+ * The legal documents, and where they come from.
  *
  * The text is hosted at Termly and pulled in at render time. The alternative
  * — pasting the text into this repo — sounds simpler and is worse: a policy
@@ -34,6 +35,11 @@ const DOCS = {
     blurb: 'What you may and may not do here — and what happens if you do.',
     termlyId: process.env.NEXT_PUBLIC_TERMLY_ACCEPTABLE_USE_ID ?? '',
   },
+  cookies: {
+    title: 'Cookie Policy',
+    blurb: 'The one cookie we set, what it does, and how to get rid of it.',
+    termlyId: process.env.NEXT_PUBLIC_TERMLY_COOKIES_ID ?? '',
+  },
 } as const
 
 type Slug = keyof typeof DOCS
@@ -53,6 +59,8 @@ export async function generateMetadata(
 export default function LegalPage({ params }: { params: { doc: string } }) {
   const doc = DOCS[params.doc as Slug]
   if (!doc) notFound()
+
+  const pasted = pastedHtmlFor(params.doc)
 
   return (
     <main style={{ background: C.bg, minHeight: '100vh', color: C.text }}>
@@ -79,8 +87,18 @@ export default function LegalPage({ params }: { params: { doc: string } }) {
           ))}
         </nav>
 
+        {/* Three sources, in order of how current they stay. The live embed
+            reflects whatever the document says today; pasted HTML reflects
+            whatever it said when somebody pasted it; the placeholder is
+            honest about there being nothing. */}
         {doc.termlyId ? (
           <TermlyEmbed dataId={doc.termlyId} />
+        ) : pasted ? (
+          // The content is a file in this repo, written by us — not user
+          // input — so there is nothing here to sanitize against. Note that
+          // any <script> in it will not run: that's how innerHTML works, and
+          // it's why the embed is the better path for the cookie table.
+          <div className="legal-prose" dangerouslySetInnerHTML={{ __html: pasted }} />
         ) : (
           // Shown when the embed id isn't configured — in local development,
           // or in a deploy where the env var was missed. Saying so plainly

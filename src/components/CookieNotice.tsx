@@ -83,6 +83,8 @@ export function CookieNotice() {
       <p style={{ flex: '1 1 260px', fontSize: 13, color: '#5A6172', lineHeight: 1.55, margin: 0 }}>
         Workmark uses one cookie, to keep you signed in. We don&apos;t use advertising or
         tracking cookies, and there&apos;s no analytics on this site.{' '}
+        <Link href="/legal/cookies" style={{ color: '#191E2E' }}>Cookie Policy</Link>
+        {' · '}
         <Link href="/legal/privacy" style={{ color: '#191E2E' }}>Privacy Policy</Link>
       </p>
       <div style={{ display: 'flex', gap: 8 }}>
