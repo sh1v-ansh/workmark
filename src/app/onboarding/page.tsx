@@ -11,7 +11,6 @@ import { Wordmark } from '@/app/landing/Wordmark'
 import { Combobox } from '@/components/Combobox'
 import { UNIVERSITIES } from '@/lib/data/universities'
 import { MAJORS } from '@/lib/data/majors'
-import { ageOn, eligibleOn, formatDay, parseDob, MINIMUM_AGE, MINIMUM_SIGNUP_AGE } from '@/lib/auth/age'
 
 // Asked before anything else, because a .edu address doesn't distinguish
 // the two — professors have university email too. Without this branch a
@@ -101,11 +100,9 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
   // previous version quietly told them they were a student.
   const isStudent = role === 'student'
   const [fullName, setFullName] = useState('')
-  const [dateOfBirth, setDateOfBirth] = useState('')
-  // Two ways to say how old you are: tick the box, or (if you can't) tell
-  // us the date so we can hold the account until you can.
+  // One box. Ticking it is the representation that they are 18 or over and
+  // have agreed to the three documents it links to.
   const [agreed, setAgreed] = useState(false)
-  const [underAge, setUnderAge] = useState(false)
   const [university, setUniversity] = useState('')
   const [major, setMajor] = useState('')
   const [degreeType, setDegreeType] = useState('BS')
@@ -124,8 +121,6 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
     e.preventDefault()
     onSubmit({
       full_name: fullName,
-      // Only sent when they told us — an adult signup stores no birthday.
-      date_of_birth: underAge ? dateOfBirth : null,
       age_attested: agreed,
       university, major, degree_type: degreeType,
       graduation_year: graduationYear ? parseInt(graduationYear) : null,
@@ -139,15 +134,6 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
 
   const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column' }
 
-  // Shown as they type, not after they submit. Someone who is seventeen
-  // should be told their account is being held rather than refused — there
-  // is a real difference and the wrong impression loses the person.
-  const dob = dateOfBirth ? parseDob(dateOfBirth) : null
-  const age = dob ? ageOn(dob) : null
-  const held = age !== null && age >= MINIMUM_SIGNUP_AGE && age < MINIMUM_AGE
-  const tooYoung = age !== null && age < MINIMUM_SIGNUP_AGE
-  const alreadyAdult = age !== null && age >= MINIMUM_AGE
-  const canSubmit = agreed || held
 
   return (
     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -237,75 +223,42 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
         <p style={{ fontSize: 13, color: C.textGhost }}>Signing up with <strong style={{ color: C.textMuted }}>{emailDomain}</strong></p>
       )}
 
-      {/* Age and terms, as a statement rather than a birthday.
-          Asking every account for a date of birth is the thorough-looking
-          option and the worse one: it puts sensitive data in the database
-          for everybody in order to answer one yes/no question, and knowing
-          an age is what creates the duty around minors in the first place.
-          Every comparable platform states the minimum in the terms and
-          takes signup as the representation.
-          What they don't do is offer the honest 17-year-old anything at
-          all, which is the gap below. */}
-      <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {/* Age and terms.
+          A statement, not a birthday. Asking every account for a date of
+          birth is the thorough-looking option and the worse one: it puts
+          sensitive data in the database for everybody to answer one yes/no
+          question, and knowing someone's age is what creates the duty
+          around minors in the first place. Every comparable platform states
+          the minimum in the terms and takes signup as the representation.
+
+          Under 18 is refused rather than held. An earlier version saved the
+          profile and opened the account on the eighteenth birthday, which
+          was kinder — but it put the product in direct conflict with its own
+          Terms, which say under-18s may not register at all. One true rule
+          beats a nice feature the legal documents contradict. */}
+      <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: 16 }}>
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
           <input
-            id="student-terms" type="checkbox" checked={agreed}
-            onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setUnderAge(false) }}
+            id="student-terms" type="checkbox" checked={agreed} required
+            onChange={(e) => setAgreed(e.target.checked)}
             className="dk-checkbox" style={{ marginTop: 2 }}
           />
           <span style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6 }}>
             I&apos;m 18 or over, and I agree to the{' '}
-            <Link href="/legal/terms" target="_blank" style={{ color: C.text }}>Terms</Link>,{' '}
-            <Link href="/legal/privacy" target="_blank" style={{ color: C.text }}>Privacy Policy</Link>.
+            <Link href="/legal/terms" target="_blank" rel="noopener" style={{ color: C.text, textDecoration: 'underline' }}>Terms of Service</Link>,{' '}
+            <Link href="/legal/privacy" target="_blank" rel="noopener" style={{ color: C.text, textDecoration: 'underline' }}>Privacy Policy</Link>{' '}
+            and{' '}
+            <Link href="/legal/cookies" target="_blank" rel="noopener" style={{ color: C.text, textDecoration: 'underline' }}>Cookie Policy</Link>.
           </span>
         </label>
-
-        {!agreed && !underAge && (
-          <button
-            type="button" onClick={() => setUnderAge(true)}
-            style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 13, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer' }}
-          >
-            Not 18 yet?
-          </button>
-        )}
-
-        {underAge && (
-          <div style={{ ...gap }}>
-            <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, marginBottom: 9 }}>
-              Then we&apos;ll hold your place instead of turning you away. Tell us your birthday
-              and the account opens by itself on the day you turn 18.
-            </p>
-            <FieldLabel htmlFor="student-dob">Date of birth</FieldLabel>
-            <input
-              id="student-dob" type="date" autoComplete="bday" required
-              value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)}
-              max={new Date().toISOString().slice(0, 10)}
-              className="dk-input" style={{ maxWidth: 220 }}
-            />
-            {held && dob && (
-              <div role="status" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 10 }}>
-                Your account will open on <strong>{formatDay(eligibleOn(dob))}</strong>. Finish
-                signing up now — your profile is saved, and nothing is scanned or shown to anyone
-                before then.
-              </div>
-            )}
-            {tooYoung && (
-              <div role="alert" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 10 }}>
-                That date would make you under 13, so we can&apos;t create an account. Check it.
-              </div>
-            )}
-            {alreadyAdult && (
-              <div role="status" style={{ background: state.cautionBg, borderRadius: R.md, padding: '11px 14px', fontSize: 13, color: '#6B3A0A', lineHeight: 1.55, marginTop: 10 }}>
-                That makes you 18 already — tick the box above instead and your account opens
-                straight away.
-              </div>
-            )}
-          </div>
-        )}
+        <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 10, paddingLeft: 25 }}>
+          Workmark accounts are for people aged 18 and over. Each link opens in a new tab, so
+          you won&apos;t lose what you&apos;ve filled in.
+        </p>
       </div>
 
-      <Button type="submit" variant="accent" fullWidth disabled={loading || !canSubmit} busyLabel={loading ? 'Saving profile…' : null}>
-        {held ? 'Save my profile and hold my place' : 'Complete profile'}
+      <Button type="submit" variant="accent" fullWidth disabled={loading || !agreed} busyLabel={loading ? 'Saving profile…' : null}>
+        Complete profile
       </Button>
     </form>
   )
@@ -341,12 +294,11 @@ export default function OnboardingPage() {
       // professor the signup form again every time they came back.
       const { data: account } = await supabase
         .from('accounts')
-        .select('roles, status')
+        .select('roles')
         .eq('id', user.id)
         .maybeSingle()
 
       if (account) {
-        if (account.status === 'waitlisted') { router.replace('/waitlist'); return }
         const roles = (account.roles ?? []) as string[]
         const facultyOnly = roles.includes('faculty') && !roles.includes('student')
         router.replace(facultyOnly ? '/faculty' : '/student/dashboard')
@@ -384,15 +336,6 @@ export default function OnboardingPage() {
       }
 
       if (!res.ok) throw new Error(json.error ?? 'Failed to save profile.')
-
-      // Under 18: the profile is saved and the account exists, but it is
-      // held. Sending them to a dashboard they can't use would read as the
-      // site being broken.
-      if (json.held) {
-        router.replace('/waitlist')
-        router.refresh()
-        return
-      }
 
       toast(
         role === 'faculty'

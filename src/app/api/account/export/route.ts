@@ -43,7 +43,7 @@ export async function GET() {
     applications, engagements, briefs, consents, disclosures, disputes,
     messages, artifacts, listings, reviewRequests,
   ] = await Promise.all([
-    supabase.from('accounts').select('roles, status, display_name, institution, date_of_birth, terms_accepted_at, terms_version, age_attested_at, notification_prefs, email_unsubscribed_at, created_at').eq('id', user.id).maybeSingle(),
+    supabase.from('accounts').select('roles, status, display_name, institution, terms_accepted_at, terms_version, age_attested_at, notification_prefs, email_unsubscribed_at, created_at').eq('id', user.id).maybeSingle(),
     supabase.from('students').select('*').eq('id', user.id).maybeSingle(),
     mine('github_connections', 'github_username, installation_id, connected_at, last_scanned_at'),
     mine('github_repo_grants', 'repo_full_name, is_private, scan_enabled, rank_score, granted_at, revoked_at'),
