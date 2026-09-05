@@ -17,6 +17,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { callStructuredAgent } from './client'
+import { untrusted } from './untrusted'
 import {
   CAREER_TRACK_META, SKILL_LEVEL_META,
   type CareerTrack, type SkillLevel,
@@ -103,7 +104,8 @@ export async function generateBrief(
     // else here, including the skill itself.
     skillLevel ? `Level: ${SKILL_LEVEL_META[skillLevel].label}. ${SKILL_LEVEL_META[skillLevel].prompt}` : null,
     careerTrack ? CAREER_TRACK_META[careerTrack].prompt : null,
-    targetRole ? `Additional context on what they're aiming for: ${targetRole}` : null,
+    // Typed by the student, so it is data rather than instruction.
+    targetRole ? `Additional context on what they're aiming for:\n${untrusted('target_role', targetRole)}` : null,
     existingNames.length
       ? `They already have verified evidence in: ${existingNames.join(', ')}. Build on these where it makes the project better, but the target skill is what this brief must demonstrate.`
       : 'They have no verified evidence yet — this would be their first project on the platform, so keep the scope achievable.',

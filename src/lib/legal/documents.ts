@@ -79,8 +79,6 @@ word-break: break-word !important;
 
   terms: ``,
 
-  'acceptable-use': ``,
-
   // ── Paste the Termly cookie policy HTML between these backticks ──
   cookies: `<style>
   [data-custom-class='body'], [data-custom-class='body'] * {

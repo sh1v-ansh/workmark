@@ -18,6 +18,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { callStructuredAgent } from './client'
+import { untrusted } from './untrusted'
 import { lookupPackages, type PackageInfo } from '@/lib/skills/registry'
 
 export type TaxonomyDecision = 'alias_existing' | 'new_skill' | 'not_a_skill'
@@ -112,12 +113,18 @@ export async function suggestTaxonomy(
   const taxonomyList = skills.map((s) => `${s.id}: ${s.canonical_name}`).join('\n')
   const categoryList = categories.map((c) => `${c.id}: ${c.canonical_name}`).join('\n')
 
+  // Both halves of this are untrusted, for different reasons. The raw
+  // string came out of somebody's repository. The description and keywords
+  // came from npm or PyPI, written by whoever published the package — the
+  // one input in this codebase a stranger could plant on purpose.
   const names = rawStrings.map((raw) => {
     const info = registry.get(raw)
-    if (!info) return `- "${raw}" (not found in npm or PyPI)`
+    if (!info) return `- name: ${untrusted('name', raw)}\n  (not found in npm or PyPI)`
     return [
-      `- "${raw}" (${info.registry}): ${info.description ?? 'no description published'}`,
-      info.keywords.length ? `  keywords: ${info.keywords.join(', ')}` : null,
+      `- name: ${untrusted('name', raw)}`,
+      `  registry: ${info.registry}`,
+      `  published description: ${untrusted('registry_description', info.description ?? '')}`,
+      info.keywords.length ? `  published keywords: ${untrusted('registry_keywords', info.keywords.join(', '))}` : null,
     ].filter(Boolean).join('\n')
   }).join('\n')
 

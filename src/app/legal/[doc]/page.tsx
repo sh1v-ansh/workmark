@@ -9,6 +9,11 @@ import { light as C, F, R } from '@/lib/theme/tokens'
 /**
  * The legal documents, and where they come from.
  *
+ * Three, not four. Acceptable use is not its own page: the Terms of Service
+ * carry a Prohibited Activities section that says the same things, and two
+ * documents covering one subject drift apart the first time only one of
+ * them is updated.
+ *
  * The text is hosted at Termly and pulled in at render time. The alternative
  * — pasting the text into this repo — sounds simpler and is worse: a policy
  * is a document that gets amended, and a copy in the codebase means the
@@ -29,11 +34,6 @@ const DOCS = {
     title: 'Terms of Service',
     blurb: 'The agreement between you and Workmark.',
     termlyId: process.env.NEXT_PUBLIC_TERMLY_TERMS_ID ?? '',
-  },
-  'acceptable-use': {
-    title: 'Acceptable Use',
-    blurb: 'What you may and may not do here — and what happens if you do.',
-    termlyId: process.env.NEXT_PUBLIC_TERMLY_ACCEPTABLE_USE_ID ?? '',
   },
   cookies: {
     title: 'Cookie Policy',

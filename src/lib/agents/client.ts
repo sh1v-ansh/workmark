@@ -14,6 +14,7 @@
 // from behavior.
 
 import Anthropic from '@anthropic-ai/sdk'
+import { UNTRUSTED_BOUNDARY } from './untrusted'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // These agents are I/O adapters (draft a listing, write a brief) with a
@@ -28,7 +29,13 @@ export const AGENT_MODEL = 'claude-sonnet-5'
 // caps only the JSON output and a structured response is never truncated.
 const MAX_TOKENS = 16000
 
-export type AgentType = 'posting' | 'brief' | 'goals' | 'application_scoring' | 'taxonomy'
+// 'application_scoring' is deliberately absent. It was reserved once and
+// never built: applications are scored by plain matching code — skill depth
+// against listing requirements — with no model involved, and that is the
+// right design for the one decision on this platform that affects whether
+// somebody gets work. A reserved name for an agent that does not exist is
+// how a reader concludes the opposite.
+export type AgentType = 'posting' | 'brief' | 'goals' | 'taxonomy' | 'work_summary'
 
 let cached: Anthropic | null = null
 
@@ -79,7 +86,9 @@ export async function callStructuredAgent<T>(
     // thinking by default when omitted, so disable it explicitly to keep
     // these calls cheap and their token use predictable.
     thinking: { type: 'disabled' },
-    system: args.system,
+    // Appended here rather than in each agent so a new agent cannot ship
+    // without it. See untrusted.ts for what it says and why.
+    system: args.system + UNTRUSTED_BOUNDARY,
     output_config: { format: { type: 'json_schema', schema: args.schema } },
     messages: [{ role: 'user', content: args.userContent }],
   })

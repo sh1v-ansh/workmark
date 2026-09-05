@@ -256,9 +256,7 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
           <span style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6 }}>
             I&apos;m 18 or over, and I agree to the{' '}
             <Link href="/legal/terms" target="_blank" style={{ color: C.text }}>Terms</Link>,{' '}
-            <Link href="/legal/privacy" target="_blank" style={{ color: C.text }}>Privacy Policy</Link>{' '}
-            and{' '}
-            <Link href="/legal/acceptable-use" target="_blank" style={{ color: C.text }}>Acceptable Use</Link>.
+            <Link href="/legal/privacy" target="_blank" style={{ color: C.text }}>Privacy Policy</Link>.
           </span>
         </label>
 

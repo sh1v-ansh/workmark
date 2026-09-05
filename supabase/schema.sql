@@ -633,7 +633,7 @@ create table review_requests (
 
 create table agent_calls (
   id           uuid default gen_random_uuid() primary key,
-  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'application_scoring', 'taxonomy')),
+  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'taxonomy', 'work_summary')),
   student_id   uuid references students(id) on delete cascade,
   poster_id    uuid,
   input        jsonb not null,

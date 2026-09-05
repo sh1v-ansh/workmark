@@ -92,6 +92,33 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
   const { toast } = useToast()
 
   const [description, setDescription] = useState(data.description ?? '')
+  // Writing help, for the student only. The poster agrees to the account of
+  // the work; they don't get to draft somebody else's account of it.
+  const [notes, setNotes] = useState('')
+  const [drafting, setDrafting] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
+
+  async function draftFromNotes() {
+    setDrafting(true)
+    try {
+      const res = await fetch('/api/agents/work-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ engagementId: data.id, notes }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Could not draft a description.')
+      // Into the textarea, not into the record. It still has to be saved,
+      // and both sides still have to agree to it.
+      setDescription(json.description)
+      setNotesOpen(false)
+      toast('Draft ready — edit it until it\'s right.', 'success')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
+    } finally {
+      setDrafting(false)
+    }
+  }
   const [repo, setRepo] = useState('')
   const [busy, setBusy] = useState(false)
   const [satisfaction, setSatisfaction] = useState(data.outcome?.posterSatisfaction ?? 0)
@@ -244,6 +271,51 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
                     placeholder="What was built, what they owned, what shipped."
                     aria-label="Work description"
                   />
+
+                  {/* Offered to the student, because this is their account of
+                      their own work. Deliberately not a "write it for me"
+                      button on an empty box: it works from notes they type,
+                      and refuses if there is nothing to work from, because a
+                      description invented from nothing would be a fiction
+                      going onto someone's permanent record. */}
+                  {!isPoster && (
+                    notesOpen ? (
+                      <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '15px 17px', marginTop: 13 }}>
+                        <label htmlFor="work-notes" style={{ display: 'block', fontSize: 13.5, fontWeight: 600, color: C.textSub, marginBottom: 7 }}>
+                          Rough notes — what did you build?
+                        </label>
+                        <textarea
+                          id="work-notes" value={notes} onChange={(e) => setNotes(e.target.value)}
+                          rows={4} className="dk-textarea"
+                          style={{ fontFamily: 'inherit', fontSize: 14.5, lineHeight: 1.6 }}
+                          placeholder="Bullet points are fine. e.g. built the search page, wrote the ranking query, fixed the slow load"
+                        />
+                        <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, margin: '9px 0 12px' }}>
+                          We only use what you write here. Nothing gets invented — if the notes don&apos;t
+                          say it, the draft won&apos;t claim it.
+                        </p>
+                        <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+                          <Button
+                            variant="outline" size="sm" onClick={draftFromNotes}
+                            disabled={drafting || notes.trim().length < 20}
+                            busyLabel={drafting ? 'Writing…' : null}
+                          >
+                            Draft it
+                          </Button>
+                          <Button variant="quiet" size="sm" onClick={() => setNotesOpen(false)} disabled={drafting}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        type="button" onClick={() => setNotesOpen(true)}
+                        style={{ background: 'none', border: 'none', padding: 0, marginTop: 11, font: 'inherit', fontSize: 13.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer' }}
+                      >
+                        Help me write this
+                      </button>
+                    )
+                  )}
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16.5, padding: '12.5px 16.5px', background: theirAgreement ? state.positiveBg : C.bg, borderRadius: R.md, margin: '16px 0', flexWrap: 'wrap' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 8.5, fontSize: 14, fontWeight: 600, color: theirAgreement ? state.positive : C.textMuted }}>
