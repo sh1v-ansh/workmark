@@ -633,7 +633,7 @@ create table review_requests (
 
 create table agent_calls (
   id           uuid default gen_random_uuid() primary key,
-  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'application_scoring', 'taxonomy')),
+  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'taxonomy', 'work_summary')),
   student_id   uuid references students(id) on delete cascade,
   poster_id    uuid,
   input        jsonb not null,
@@ -1309,14 +1309,12 @@ create table accounts (
   -- eighteenth birthday, at which point it opens by itself. See v05_0017.
   -- 'deleting' is an account inside its seven-day deletion grace period.
   status              text not null default 'active'
-                        check (status in ('active', 'suspended', 'declined', 'waitlisted', 'deleting')),
-  -- Only populated when someone volunteers it because they're under 18 and
-  -- want their place held. We don't ask everyone: a birthday for every
-  -- account is sensitive data collected to answer one yes/no question, and
-  -- knowing an age is what creates the duty around minors in the first
-  -- place. The minimum age lives in the terms, and signup is the
-  -- representation — see age_attested_at. v05_0018.
-  date_of_birth       date,
+                        check (status in ('active', 'suspended', 'declined', 'deleting')),
+  -- No date of birth is stored. The minimum age lives in the Terms and
+  -- signup is the representation — see age_attested_at. A birthday on every
+  -- account would be sensitive data collected to answer one yes/no question,
+  -- and knowing an age is what creates the duty around minors in the first
+  -- place. Under-18 signups are refused rather than held. v05_0021.
   terms_accepted_at   timestamptz,
   terms_version       text,
   -- Separate from terms_accepted_at: re-accepting amended terms must not

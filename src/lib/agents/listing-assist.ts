@@ -15,6 +15,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { callStructuredAgent } from './client'
+import { untrusted } from './untrusted'
 
 export interface SuggestedRequirement {
   skillId: string
@@ -143,7 +144,9 @@ export async function draftListing(
     agentType: 'posting',
     posterId,
     system: SYSTEM,
-    userContent: `Here is the taxonomy of skills you may choose from:\n\n${taxonomyList}\n\n---\n\nThe poster describes their project like this:\n\n${description}`,
+    // The taxonomy is ours and stays plain; the poster's description is
+    // theirs and is fenced.
+    userContent: `Here is the taxonomy of skills you may choose from:\n\n${taxonomyList}\n\n---\n\nThe poster describes their project like this:\n\n${untrusted('poster_description', description)}`,
     schema: SCHEMA as unknown as Record<string, unknown>,
     inputForAudit: { description, taxonomy_size: validById.size },
   })

@@ -13,7 +13,7 @@ const links: [string, string][] = [
 const legalLinks: [string, string][] = [
   ['/legal/privacy', 'Privacy'],
   ['/legal/terms', 'Terms'],
-  ['/legal/acceptable-use', 'Acceptable use'],
+  ['/legal/cookies', 'Cookies'],
 ]
 
 export function Footer() {

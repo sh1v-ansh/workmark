@@ -31,7 +31,6 @@ export default function robots(): MetadataRoute.Robots {
           '/me',
           '/account/',
           '/onboarding',
-          '/waitlist',
           '/engagements/',
           // Applicant lists name real people who applied to something.
           '/listings/*/applicants',
