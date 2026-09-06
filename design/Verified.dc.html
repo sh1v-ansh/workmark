@@ -1,0 +1,221 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4E2FD6; text-decoration: none; } a:hover { color: #3B22A8; }
+    .wm-disp { font-family: 'Schibsted Grotesk', system-ui, sans-serif; }
+    .wm-card { background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px;
+      box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18); padding: 22px 24px; }
+    .wm-stat { font-family: 'Schibsted Grotesk', system-ui, sans-serif; font-size: 30px;
+      font-weight: 700; letter-spacing: -0.03em; color: #191E2E; line-height: 1; }
+    .wm-statlab { font-size: 12.5px; color: #666D80; }
+    .wm-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 13px;
+      font-weight: 600; border-radius: 8px; padding: 7px 12px; }
+    .wm-legend { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172; }
+    .wm-dot { width: 8px; height: 8px; border-radius: 999px; }
+    .wm-tradeoff { font-size: 12.5px; color: #666D80; line-height: 1.6; }
+  </style>
+</helmet>
+
+<div style="background: #F4F4F7; padding: 34px 32px 44px; box-sizing: border-box; min-height: 1500px;">
+  <div style="max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px;">
+
+    <div style="display: flex; flex-direction: column; gap: 7px;">
+      <h1 class="wm-disp" style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: #191E2E;">What verification should look like</h1>
+      <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.6; max-width: 82ch; text-wrap: pretty;">
+        Same card, four ways of saying &ldquo;this was proved&rdquo;. The question isn&rsquo;t really which hue &mdash;
+        it&rsquo;s how much of the card the hue is allowed to touch. Gold on six chips out of thirty-seven
+        reads as a medal; gold on all thirty-seven reads as a casino. Every option below carries the
+        same 6 advanced / 14 intermediate / 17 beginner.
+      </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px;">
+      <sc-for list="{{opts}}" as="o" hint-placeholder-count="4">
+        <div style="display: flex; flex-direction: column; gap: 13px;">
+
+          <div style="display: flex; align-items: baseline; gap: 10px;">
+            <span class="wm-disp" style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: {{o.tagColor}};">{{o.tag}}</span>
+            <h2 class="wm-disp" style="margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; color: #191E2E;">{{o.name}}</h2>
+          </div>
+
+          <div class="wm-card">
+            <!-- Stats row. Option B hangs its seal here rather than on the chips. -->
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px;">
+              <div style="display: flex; gap: 34px;">
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span class="wm-stat">37</span>
+                  <span class="wm-statlab">Skills proven</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 2px;">
+                  <span class="wm-stat">5<span style="font-size: 19px; color: #8D94A5;">/6</span></span>
+                  <span class="wm-statlab">Projects finished</span>
+                </div>
+              </div>
+              <sc-if value="{{o.seal}}" hint-placeholder-val="{{true}}">
+                <span style="display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 11px;
+                             border-radius: 999px; background: linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%);
+                             border: 1px solid #CE9F32; box-shadow: 0 1px 2px rgba(154,113,18,0.24), 0 6px 14px -6px rgba(184,141,40,0.55);">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M4.5 12.5l5 5 10-11" stroke="#4A3106" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  <span class="wm-disp" style="font-size: 11.5px; font-weight: 800; letter-spacing: 0.07em; color: #4A3106;">VERIFIED</span>
+                </span>
+              </sc-if>
+            </div>
+
+            <!-- Level bar -->
+            <div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 11px;">
+              <div style="width: 16%; background: {{o.barAdv}};"></div>
+              <div style="width: 38%; background: {{o.barInt}};"></div>
+              <div style="width: 46%; background: {{o.barBeg}};"></div>
+            </div>
+            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+              <span class="wm-legend"><span class="wm-dot" style="background: {{o.dotAdv}};"></span>6 advanced</span>
+              <span class="wm-legend"><span class="wm-dot" style="background: {{o.barInt}};"></span>14 intermediate</span>
+              <span class="wm-legend"><span class="wm-dot" style="background: {{o.barBeg}};"></span>17 beginner</span>
+            </div>
+
+            <p style="margin: 0 0 11px; font-size: 12.5px; font-weight: 600; color: #8D94A5; letter-spacing: 0.04em; text-transform: uppercase;">Strongest</p>
+            <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+              <sc-for list="{{o.chips}}" as="c" hint-placeholder-count="6">
+                <span class="wm-chip" style="background: {{c.bg}}; border: 1px solid {{c.border}}; color: {{c.fg}}; box-shadow: {{c.shadow}};">
+                  {{c.name}}<span style="font-weight: 500; color: {{c.levelFg}};">{{c.level}}</span>
+                </span>
+              </sc-for>
+              <a href="#" style="display: inline-flex; align-items: center; font-size: 13px; font-weight: 600;
+                                 color: #5A6172; border: 1px dashed #D3D0DE; border-radius: 8px; padding: 7px 12px;">+31 more</a>
+            </div>
+          </div>
+
+          <p class="wm-tradeoff" style="text-wrap: pretty;">{{o.tradeoff}}</p>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- The recommendation, argued rather than asserted -->
+    <div style="background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px;
+                box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18);
+                padding: 24px 26px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 34px; align-items: start;">
+      <div style="display: flex; flex-direction: column; gap: 11px;">
+        <span class="wm-disp" style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #9A7112;">RECOMMENDATION</span>
+        <h2 class="wm-disp" style="margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -0.02em; color: #191E2E; line-height: 1.3; text-wrap: pretty;">
+          A &mdash; gold on the top tier only
+        </h2>
+        <div style="display: flex; gap: 8px; margin-top: 4px;">
+          <div style="width: 52px; height: 52px; border-radius: 12px;
+                      background: linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%); border: 1px solid #CE9F32;"></div>
+          <div style="width: 52px; height: 52px; border-radius: 12px; background: #6142F5;"></div>
+        </div>
+        <p style="margin: 4px 0 0; font-size: 12.5px; color: #8D94A5; line-height: 1.5;">
+          Gold #D9A93C on ink #4A3106 &mdash; violet #6142F5 keeps every action.
+        </p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <p style="margin: 0; font-size: 14.5px; color: #3A4152; line-height: 1.65; text-wrap: pretty;">
+          <strong style="color: #191E2E;">Scarcity is what makes it a reward.</strong> Six of thirty-seven skills
+          are gold, so gold means something a student worked for rather than something the page is
+          wearing. Colour the whole ramp and the top tier stops being distinguishable from the bottom
+          one &mdash; which is exactly the failure the current card has.
+        </p>
+        <p style="margin: 0; font-size: 14.5px; color: #3A4152; line-height: 1.65; text-wrap: pretty;">
+          <strong style="color: #191E2E;">The gradient is what keeps it from looking cheap.</strong> Flat yellow
+          reads as a highlighter; a light-to-deep sweep reads as metal. That difference is the whole
+          distance between a medal and a novelty sticker, and it costs one line of CSS.
+        </p>
+        <p style="margin: 0; font-size: 14.5px; color: #3A4152; line-height: 1.65; text-wrap: pretty;">
+          <strong style="color: #191E2E;">It doesn&rsquo;t collide with anything.</strong> Your caution state is dark
+          brown text on pale cream inside an alert box. This is dark ink on a saturated metal fill
+          inside a chip. Nobody confuses the two, and gold sits nowhere near violet, green or blue on
+          the wheel &mdash; so the page finally has warm and cool in it.
+        </p>
+        <p style="margin: 0; font-size: 13.5px; color: #666D80; line-height: 1.6; text-wrap: pretty;">
+          If it still feels like too much, <strong style="color: #5A6172;">B</strong> is the restrained version:
+          one seal per card, chips left alone. Take it if you ever want gold somewhere else too.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview": {"width": 1364, "height": 1500}}'>
+class Component extends DCLogic {
+  chips(mode) {
+    const GOLD = {
+      bg: 'linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%)',
+      border: '#CE9F32', fg: '#4A3106', levelFg: '#7A5410',
+      shadow: '0 1px 2px rgba(154,113,18,0.20), 0 5px 12px -6px rgba(184,141,40,0.50)',
+    };
+    const QUIET = { bg: '#F4F4F7', border: '#E6E6EE', fg: '#3A4152', levelFg: '#8D94A5', shadow: 'none' };
+    const names = [
+      ['TypeScript', 'Advanced'], ['React', 'Advanced'], ['PostgreSQL', 'Advanced'],
+      ['Python', 'Intermediate'], ['FastAPI', 'Intermediate'], ['pytest', 'Intermediate'],
+    ];
+    const palettes = {
+      // A — gold only where it was earned
+      goldTop: (lvl) => (lvl === 'Advanced' ? GOLD : QUIET),
+      // B — no colour on chips at all; the card wears one seal
+      seal: () => QUIET,
+      // C — a full warm ramp, every chip carrying colour
+      amberRamp: (lvl) => (lvl === 'Advanced'
+        ? { bg: '#F6C86B', border: '#E0AC3E', fg: '#4A3106', levelFg: '#7A5410', shadow: 'none' }
+        : { bg: '#FDF0D6', border: '#F2DFB4', fg: '#7A5410', levelFg: '#A88536', shadow: 'none' }),
+      // D — the conventional verified green
+      emerald: (lvl) => (lvl === 'Advanced'
+        ? { bg: '#0F7A4A', border: '#0F7A4A', fg: '#FFFFFF', levelFg: '#A8E0C4', shadow: 'none' }
+        : { bg: '#E3F5EB', border: '#C6E9D6', fg: '#0C5836', levelFg: '#3D8A64', shadow: 'none' }),
+    };
+    const pick = palettes[mode];
+    return names.map(([name, level]) => ({ name, level, ...pick(level) }));
+  }
+
+  renderVals() {
+    return {
+      opts: [
+        {
+          tag: 'A', tagColor: '#9A7112', name: 'Gold, top tier only',
+          seal: false,
+          barAdv: 'linear-gradient(90deg, #EBCB74 0%, #D9A93C 100%)',
+          barInt: '#B9BDCA', barBeg: '#E4E4EB', dotAdv: '#D9A93C',
+          chips: this.chips('goldTop'),
+          tradeoff: 'Gold appears six times and nowhere else, so it reads as earned. The cost is that intermediate skills look plain — which is the honest hierarchy, but it will feel like a demotion to anyone used to seeing all their chips coloured.',
+        },
+        {
+          tag: 'B', tagColor: '#9A7112', name: 'One gold seal, plain chips',
+          seal: true,
+          barAdv: 'linear-gradient(90deg, #EBCB74 0%, #D9A93C 100%)',
+          barInt: '#B9BDCA', barBeg: '#E4E4EB', dotAdv: '#D9A93C',
+          chips: this.chips('seal'),
+          tradeoff: 'Maximum scarcity: gold once per card, on the badge. The quietest and the most premium, but the reward attaches to the record as a whole rather than to any particular skill, so nothing tells you which six were the hard ones.',
+        },
+        {
+          tag: 'C', tagColor: '#B07A18', name: 'Warm ramp, every level',
+          seal: false,
+          barAdv: '#E0AC3E', barInt: '#F0D598', barBeg: '#F8EDD6', dotAdv: '#E0AC3E',
+          chips: this.chips('amberRamp'),
+          tradeoff: 'The most colour on screen and the most conspicuous. It is also thirty-seven amber things, which stops being a reward and starts being a background — and pale amber on a card is close enough to your caution state to cause a double-take.',
+        },
+        {
+          tag: 'D', tagColor: '#0C5836', name: 'Verified green',
+          seal: false,
+          barAdv: '#0F7A4A', barInt: '#8FCBAC', barBeg: '#DCEFE5', dotAdv: '#0F7A4A',
+          chips: this.chips('emerald'),
+          tradeoff: 'Instantly legible — green plus a tick is the universal verified mark, so it needs no learning. But it is the same green as your positive state, it reads as "passed a check" rather than "earned over time", and it leaves the page entirely cool.',
+        },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

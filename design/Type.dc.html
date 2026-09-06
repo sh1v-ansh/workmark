@@ -1,0 +1,212 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&family=Instrument+Sans:wght@400;500;600;700&family=Geist:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=Onest:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&family=Figtree:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: Hanken Grotesk, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4E2FD6; text-decoration: none; } a:hover { color: #3B22A8; }
+    .wm-disp { font-family: Schibsted Grotesk, system-ui, sans-serif; }
+    .wm-spec { background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px;
+      box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18);
+      padding: 22px 24px; display: flex; flex-direction: column; gap: 15px; }
+    .wm-note { font-size: 12.5px; color: #666D80; line-height: 1.6; }
+    .wm-gold { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
+      border-radius: 8px; padding: 7px 12px; color: #4A3106; border: 1px solid #CE9F32;
+      background: linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%);
+      box-shadow: 0 1px 2px rgba(154,113,18,0.20), 0 5px 12px -6px rgba(184,141,40,0.50); }
+    .wm-rule { height: 1px; background: #F0EFF5; }
+  </style>
+</helmet>
+
+<div style="background: #F4F4F7; padding: 34px 32px 44px; box-sizing: border-box; min-height: 1860px;">
+  <div style="max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px;">
+
+    <div style="display: flex; flex-direction: column; gap: 7px;">
+      <h1 class="wm-disp" style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: #191E2E;">Seven ways the same screen could read</h1>
+      <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.6; max-width: 84ch; text-wrap: pretty;">
+        Every specimen carries identical copy at identical sizes, so the only variable is the face.
+        Stripe sets everything in S&ouml;hne, a neo-grotesque &mdash; plain letterforms, no personality
+        competing with the words, and a bold that stays lean. That family is licensed, but several
+        faces on Google Fonts are built on the same idea.
+      </p>
+    </div>
+
+    <!-- The cheaper fix, stated first because it might be the whole answer -->
+    <div style="background: #FFFFFF; border: 1px solid #DCD4F7; border-radius: 13px;
+                box-shadow: 0 1px 2px rgba(97,66,245,0.06), 0 12px 28px -18px rgba(97,66,245,0.42);
+                padding: 20px 24px; display: flex; align-items: flex-start; gap: 18px;">
+      <div style="flex-shrink: 0; width: 4px; align-self: stretch; border-radius: 999px; background: #6142F5;"></div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="wm-disp" style="font-size: 15.5px; font-weight: 700; color: #191E2E;">Before changing family, try changing weight</span>
+        <span style="font-size: 14px; color: #5A6172; line-height: 1.6; max-width: 90ch; text-wrap: pretty;">
+          The app sets headings at 700 and a few at 800. Schibsted Grotesk gets genuinely heavy up
+          there &mdash; what you are reacting to may be one weight step rather than the typeface. Specimen 2
+          is the same family at 600 and nothing else changed. Read it against specimen 1 before
+          reading any of the others; if 2 fixes it, that is a one-line change instead of a font swap.
+        </span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px;">
+      <sc-for list="{{faces}}" as="f" hint-placeholder-count="7">
+        <div class="wm-spec" style="border-color: {{f.borderColor}};">
+
+          <!-- Name + why you would pick it -->
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <div style="display: flex; align-items: baseline; gap: 9px;">
+              <span class="wm-disp" style="font-size: 11.5px; font-weight: 700; letter-spacing: 0.06em; color: {{f.tagColor}};">{{f.tag}}</span>
+              <h2 style="margin: 0; font-family: {{f.head}}; font-size: 17px; font-weight: 600; letter-spacing: -0.015em; color: #191E2E;">{{f.name}}</h2>
+            </div>
+            <p class="wm-note" style="text-wrap: pretty;">{{f.note}}</p>
+          </div>
+
+          <div class="wm-rule"></div>
+
+          <!-- The same screen, every time -->
+          <div style="display: flex; flex-direction: column; gap: 11px;">
+            <span style="font-family: {{f.head}}; font-size: 24px; font-weight: {{f.hw}}; letter-spacing: -0.025em; color: #191E2E; line-height: 1.15;">2 things need you</span>
+            <span style="font-family: {{f.head}}; font-size: 17px; font-weight: {{f.hw}}; letter-spacing: -0.015em; color: #191E2E; line-height: 1.3; text-wrap: pretty;">
+              Agree the description of what you built on Campus Transit API
+            </span>
+            <span style="font-family: {{f.body}}; font-size: 14px; font-weight: 400; color: #5A6172; line-height: 1.62; text-wrap: pretty;">
+              Dr. Alvarez signed off two days ago. Once you agree the same wording, the project closes
+              and the skills it proves are added to your record.
+            </span>
+          </div>
+
+          <!-- Numerals and UI, where a face usually gives itself away -->
+          <div style="display: flex; align-items: flex-end; gap: 26px;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-family: {{f.head}}; font-size: 30px; font-weight: {{f.hw}}; letter-spacing: -0.03em; color: #191E2E; line-height: 1;">37</span>
+              <span style="font-family: {{f.body}}; font-size: 12px; color: #666D80;">Skills proven</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-family: {{f.head}}; font-size: 30px; font-weight: {{f.hw}}; letter-spacing: -0.03em; color: #191E2E; line-height: 1;">5<span style="font-size: 19px; color: #8D94A5;">/6</span></span>
+              <span style="font-family: {{f.body}}; font-size: 12px; color: #666D80;">Finished</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 9px; flex-wrap: wrap;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; font-family: {{f.body}};
+                         font-size: 14px; font-weight: 600; padding: 11px 17px; border-radius: 10px;
+                         background: #6142F5; color: #FFFFFF;">Read it and agree</span>
+            <span class="wm-gold" style="font-family: {{f.body}};">TypeScript<span style="font-weight: 500; color: #7A5410;">Advanced</span></span>
+          </div>
+
+          <!-- Weight ladder: the actual complaint, made visible -->
+          <div style="display: flex; align-items: baseline; gap: 14px; padding-top: 3px; border-top: 1px solid #F0EFF5;">
+            <span style="font-family: {{f.head}}; font-size: 21px; font-weight: 400; color: #8D94A5;">Aa</span>
+            <span style="font-family: {{f.head}}; font-size: 21px; font-weight: 500; color: #666D80;">Aa</span>
+            <span style="font-family: {{f.head}}; font-size: 21px; font-weight: 600; color: #3A4152;">Aa</span>
+            <span style="font-family: {{f.head}}; font-size: 21px; font-weight: 700; color: #191E2E;">Aa</span>
+            <span class="wm-note" style="font-size: 11.5px; margin-left: auto;">400 &middot; 500 &middot; 600 &middot; 700</span>
+          </div>
+
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- Recommendation -->
+    <div style="background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px;
+                box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18);
+                padding: 24px 26px; display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.5fr); gap: 34px; align-items: start;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <span class="wm-disp" style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #6142F5;">RECOMMENDATION</span>
+        <h2 style="margin: 0; font-family: Instrument Sans, system-ui, sans-serif; font-size: 24px; font-weight: 600; letter-spacing: -0.025em; color: #191E2E; line-height: 1.2;">
+          Instrument Sans, one family, 600 for headings
+        </h2>
+        <p class="wm-note" style="font-size: 13px;">
+          Fallback stack: <span style="font-family: Instrument Sans, system-ui, sans-serif;">Instrument Sans, system-ui, sans-serif</span>
+        </p>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 11px;">
+        <p style="margin: 0; font-size: 14.5px; color: #3A4152; line-height: 1.65; text-wrap: pretty;">
+          <strong style="color: #191E2E;">It is the closest thing on Google Fonts to what you liked about Stripe.</strong>
+          A neo-grotesque with narrow apertures and almost no personality &mdash; which sounds like a
+          criticism and is the entire point. Nothing about the letterforms competes with the words,
+          which is what makes a dense screen feel calm.
+        </p>
+        <p style="margin: 0; font-size: 14.5px; color: #3A4152; line-height: 1.65; text-wrap: pretty;">
+          <strong style="color: #191E2E;">Its 600 is a real semibold, not a light bold.</strong> That is the
+          specific thing Schibsted lacks: the gap between 600 and 700 is small there, so you reach for
+          700 and get more weight than you wanted. Here 600 holds a heading on its own.
+        </p>
+        <p style="margin: 0; font-size: 14.5px; color: #3A4152; line-height: 1.65; text-wrap: pretty;">
+          <strong style="color: #191E2E;">One family, not two.</strong> Stripe sets everything in one face, and
+          dropping Hanken removes a decision from every new component &mdash; no more &ldquo;is this a display
+          or a body string?&rdquo;. It also cuts a font request off every page load.
+        </p>
+        <p class="wm-note" style="text-wrap: pretty;">
+          If you want to keep more warmth, <strong style="color: #5A6172;">Onest</strong> is the humanist
+          option and the closest in temperature to what you have now. If you want the most plainspoken
+          thing on the list, <strong style="color: #5A6172;">Public Sans</strong> was drawn for government
+          forms and it shows &mdash; in a good way.
+        </p>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview": {"width": 1364, "height": 1860}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const stack = (n) => `${n}, system-ui, sans-serif`;
+    return {
+      faces: [
+        {
+          tag: 'NOW', tagColor: '#B33A2B', name: 'Schibsted Grotesk 700',
+          head: stack('Schibsted Grotesk'), body: stack('Hanken Grotesk'), hw: '700',
+          borderColor: '#EEDCD8',
+          note: 'What ships today: Schibsted for headings, Hanken for body. The 700 is what you are reacting to — look at the ladder, 600 and 700 are close and 700 is already heavy.',
+        },
+        {
+          tag: 'FIX', tagColor: '#14663D', name: 'Schibsted Grotesk 600',
+          head: stack('Schibsted Grotesk'), body: stack('Hanken Grotesk'), hw: '600',
+          borderColor: '#CFE5DA',
+          note: 'Identical to the row above except every heading drops one weight step. No new font, no new request, one token changed. Read this before reading anything else.',
+        },
+        {
+          tag: 'A', tagColor: '#8D94A5', name: 'Instrument Sans',
+          head: stack('Instrument Sans'), body: stack('Instrument Sans'), hw: '600',
+          borderColor: '#ECEBF3',
+          note: 'The nearest neighbour to Söhne here. Tight apertures, restrained bold, no flourish anywhere. Reads professional without trying to.',
+        },
+        {
+          tag: 'B', tagColor: '#8D94A5', name: 'Geist',
+          head: stack('Geist'), body: stack('Geist'), hw: '600',
+          borderColor: '#ECEBF3',
+          note: 'Drawn for developer tooling, so it is engineered for exactly this: dense UI, lots of numerals, long strings that must not wobble. The most neutral face on the page.',
+        },
+        {
+          tag: 'C', tagColor: '#8D94A5', name: 'Public Sans',
+          head: stack('Public Sans'), body: stack('Public Sans'), hw: '600',
+          borderColor: '#ECEBF3',
+          note: 'The US government design system face. Built to be unmistakable at small sizes to people who are not enjoying themselves — which describes a student reading a rejection.',
+        },
+        {
+          tag: 'D', tagColor: '#8D94A5', name: 'Onest',
+          head: stack('Onest'), body: stack('Onest'), hw: '600',
+          borderColor: '#ECEBF3',
+          note: 'Humanist rather than strictly grotesque — slightly open, slightly friendly. Closest in temperature to what you have now, if losing the warmth is the worry.',
+        },
+        {
+          tag: 'E', tagColor: '#8D94A5', name: 'Manrope',
+          head: stack('Manrope'), body: stack('Manrope'), hw: '600',
+          borderColor: '#ECEBF3',
+          note: 'Semi-geometric, with rounder bowls and a wider set. It has more character than the others, which is a plus on a landing page and a slow drag inside a dashboard.',
+        },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

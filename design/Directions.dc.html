@@ -1,0 +1,198 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4E2FD6; text-decoration: none; } a:hover { color: #3B22A8; }
+    .wm-disp { font-family: 'Instrument Sans', system-ui, sans-serif; }
+    .wm-sw { width: 100%; height: 42px; border-radius: 8px; }
+    .wm-swlab { font-size: 10.5px; color: #8D94A5; letter-spacing: 0.02em; }
+  </style>
+</helmet>
+
+<div style="background: #F4F4F7; padding: 34px 32px 40px; box-sizing: border-box; min-height: 1160px;">
+
+  <div style="max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px;">
+
+    <div style="display: flex; flex-direction: column; gap: 7px;">
+      <h1 class="wm-disp" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E;">Three grounds to pick from</h1>
+      <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.6; max-width: 74ch; text-wrap: pretty;">
+        Same card, same type, same violet. What changes is how cool the paper is, whether gradient
+        does any work, and how a card earns its separation from the page &mdash; border, shadow, or both.
+        The current app is warmer than all three and uses no gradient at all. Gold joins violet in each &mdash; the rule for which is directly below.
+      </p>
+    </div>
+
+    <!-- The two-colour rule. Written down because a second hue used by feel
+         becomes decoration, and decoration is what makes a palette noisy. -->
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 4px;">
+      <div style="background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px; padding: 19px 22px;
+                  box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18);
+                  display: flex; align-items: flex-start; gap: 16px;">
+        <div style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 11px; background: #6142F5;"></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="wm-disp" style="font-size: 15px; font-weight: 600; color: #191E2E;">Violet is what we&rsquo;re asking you to do</span>
+          <span style="font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">
+            Every button, the focal card, the next-project block. If it is violet, it wants a click.
+          </span>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px; padding: 19px 22px;
+                  box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18);
+                  display: flex; align-items: flex-start; gap: 16px;">
+        <div style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 11px; background: linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%); border: 1px solid #CE9F32;"></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="wm-disp" style="font-size: 15px; font-weight: 600; color: #191E2E;">Gold is what your code already proved</span>
+          <span style="font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">
+            The top tier of your skill record, and nothing else. Gold is never a button, and never
+            the whole ramp &mdash; six of thirty-seven is what makes it read as earned.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start;">
+      <sc-for list="{{dirs}}" as="d" hint-placeholder-count="3">
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+
+          <!-- Name and the case for it -->
+          <div style="display: flex; flex-direction: column; gap: 5px; padding-left: 2px;">
+            <div style="display: flex; align-items: baseline; gap: 9px;">
+              <span class="wm-disp" style="font-size: 12px; font-weight: 700; color: #8D94A5; letter-spacing: 0.06em;">{{d.tag}}</span>
+              <h2 class="wm-disp" style="margin: 0; font-size: 19.5px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E;">{{d.name}}</h2>
+            </div>
+            <p style="margin: 0; font-size: 13.5px; color: #5A6172; line-height: 1.55; text-wrap: pretty;">{{d.pitch}}</p>
+          </div>
+
+          <!-- Swatches -->
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div class="wm-sw" style="background: {{d.pageBg}}; border: 1px solid #E1E0EA;"></div>
+              <span class="wm-swlab">Page</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div class="wm-sw" style="background: {{d.surfaceSwatch}}; border: 1px solid #E1E0EA;"></div>
+              <span class="wm-swlab">Card</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div class="wm-sw" style="background: #6142F5;"></div>
+              <span class="wm-swlab">Accent</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+              <div class="wm-sw" style="background: {{d.deep}};"></div>
+              <span class="wm-swlab">Deep</span>
+            </div>
+          </div>
+
+          <!-- The same card, three ways -->
+          <div style="position: relative; overflow: hidden; border-radius: 15px; padding: 22px; background: {{d.pageBg}}; border: 1px solid #E9E8F0;">
+            <div style="position: absolute; inset: 0; pointer-events: none; background: {{d.pageArt}};"></div>
+
+            <div style="position: relative; background: {{d.cardBg}}; border: {{d.cardBorder}}; border-radius: 13px;
+                        box-shadow: {{d.cardShadow}}; padding: 20px 21px; display: flex; flex-direction: column; gap: 10px;">
+              <span style="font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6142F5;">Waiting on you</span>
+              <h3 class="wm-disp" style="margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E; line-height: 1.3; text-wrap: pretty;">
+                Agree the description of what you built
+              </h3>
+              <p style="margin: 0; font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">
+                Dr. Alvarez signed off two days ago. Agree the same wording and the project closes.
+              </p>
+              <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px;">
+                <span style="display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600;
+                             padding: 12px 18px; border-radius: 10px; background: #6142F5; color: #FFFFFF; box-shadow: {{d.btnShadow}};">
+                  Read it and agree
+                </span>
+                <span style="font-size: 13px; color: #8D94A5;">About a minute</span>
+              </div>
+            </div>
+
+            <!-- A plain sibling carrying evidence, so both hues are judged in place -->
+            <div style="position: relative; margin-top: 12px; background: {{d.cardBg}}; border: {{d.cardBorder}}; border-radius: 13px;
+                        box-shadow: {{d.cardShadow}}; padding: 16px 21px; display: flex; flex-direction: column; gap: 11px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span class="wm-disp" style="font-size: 14.5px; font-weight: 600; color: #191E2E;">37 skills proven</span>
+                <span style="font-size: 13px; color: #8D94A5;">6 advanced</span>
+              </div>
+              <div style="display: flex; height: 7px; border-radius: 999px; overflow: hidden;">
+                <div style="width: 16%; background: linear-gradient(90deg, #EBCB74 0%, #D9A93C 100%);"></div>
+                <div style="width: 38%; background: #B9BDCA;"></div>
+                <div style="width: 46%; background: #E4E4EB;"></div>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <span style="font-size: 12.5px; font-weight: 600; color: #4A3106; border-radius: 8px; padding: 6px 10px;
+                             background: linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%); border: 1px solid #CE9F32;">TypeScript</span>
+                <span style="font-size: 12.5px; font-weight: 600; color: #3A4152; background: #F4F4F7;
+                             border: 1px solid #E6E6EE; border-radius: 8px; padding: 6px 10px;">Python</span>
+              </div>
+            </div>
+          </div>
+
+          <p style="margin: 0; font-size: 12.5px; color: #8D94A5; line-height: 1.55; padding-left: 2px; text-wrap: pretty;">
+            <strong style="color: #5A6172; font-weight: 600;">Trade-off.</strong> {{d.tradeoff}}
+          </p>
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview": {"width": 1364, "height": 1160}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      dirs: [
+        {
+          tag: 'A',
+          name: 'Cool paper',
+          pitch: 'The smallest move. Same bordered cards, but the warmth comes out of the ground so violet stops fighting the paper.',
+          pageBg: '#FBFBFD',
+          surfaceSwatch: '#FFFFFF',
+          deep: '#191E2E',
+          pageArt: 'none',
+          cardBg: '#FFFFFF',
+          cardBorder: '1px solid #E6E6EE',
+          cardShadow: '0 1px 2px rgba(25,30,46,0.04)',
+          btnShadow: 'none',
+        },
+        {
+          tag: 'B',
+          name: 'Lit edges',
+          pitch: 'White ground with violet light pooling at the corners. Borders stay, shadow does the lifting, gradient is confined to what matters.',
+          pageBg: '#FFFFFF',
+          surfaceSwatch: '#FFFFFF',
+          deep: '#241B57',
+          pageArt: 'radial-gradient(340px 190px at 8% -6%, rgba(97,66,245,0.10) 0%, rgba(97,66,245,0) 70%), radial-gradient(300px 170px at 98% 4%, rgba(129,140,248,0.09) 0%, rgba(129,140,248,0) 72%)',
+          cardBg: '#FFFFFF',
+          cardBorder: '1px solid #ECEBF3',
+          cardShadow: '0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18)',
+          btnShadow: '0 1px 2px rgba(97,66,245,0.24), 0 8px 18px -8px rgba(97,66,245,0.55)',
+        },
+        {
+          tag: 'C',
+          name: 'Soft mesh',
+          pitch: 'Borderless cards floating on a three-hue wash. The most atmosphere, and the furthest from what the app looks like today.',
+          pageBg: '#FCFCFE',
+          surfaceSwatch: '#FFFFFF',
+          deep: '#1B1440',
+          pageArt: 'radial-gradient(300px 210px at 2% 0%, rgba(97,66,245,0.14) 0%, rgba(97,66,245,0) 64%), radial-gradient(280px 200px at 82% 4%, rgba(236,72,153,0.08) 0%, rgba(236,72,153,0) 64%), radial-gradient(340px 240px at 56% 100%, rgba(56,189,248,0.09) 0%, rgba(56,189,248,0) 64%)',
+          cardBg: 'rgba(255,255,255,0.88)',
+          cardBorder: 'none',
+          cardShadow: '0 2px 4px rgba(25,30,46,0.04), 0 14px 32px -14px rgba(25,30,46,0.22)',
+          btnShadow: '0 2px 4px rgba(97,66,245,0.22), 0 12px 24px -10px rgba(97,66,245,0.60)',
+        },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
