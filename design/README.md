@@ -16,6 +16,8 @@ and is git-ignored, since it is rebuilt from these on every change.
   visible steps, and a dimmed preview of where they land.
 - `Verified.dc.html` — four ways to colour verification, argued and compared:
   gold on the top tier, one gold seal, a full warm ramp, verified green.
+- `Type.dc.html` — seven typeface specimens carrying identical copy, plus the
+  current face one weight step lighter, which may be the whole fix.
 - `canvas.json` — where each artboard sits on the canvas.
 
 ## The two colours

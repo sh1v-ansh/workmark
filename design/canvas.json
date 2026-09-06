@@ -47,6 +47,14 @@
       "w": 1364,
       "h": 1500,
       "title": "Verification colour \u2014 4 options"
+    },
+    {
+      "file": "Type.dc.html",
+      "x": 2980,
+      "y": 1320,
+      "w": 1364,
+      "h": 1860,
+      "title": "Typeface \u2014 7 specimens"
     }
   ],
   "annotations": [
@@ -77,6 +85,13 @@
       "y": 2210,
       "w": 600,
       "text": "Four ways of saying \"this was proved\". The question is less which hue than how much of the card it touches \u2014 recommendation and reasoning are at the bottom of the artboard."
+    },
+    {
+      "id": "type-note",
+      "x": 2980,
+      "y": 1130,
+      "w": 600,
+      "text": "Same copy, same sizes, seven faces. Read specimen 2 before the rest \u2014 it is your current font one weight step lighter, and it may be the whole fix."
     }
   ],
   "launch": {
