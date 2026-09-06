@@ -72,7 +72,7 @@ function render(
   const essential = EMAIL_KINDS[kind].essential
   const unsub = unsubscribeToken && !essential
     ? `${siteUrl()}/api/unsubscribe?token=${unsubscribeToken}&kind=${kind}`
-    : `${siteUrl()}/account/notifications`
+    : `${siteUrl()}/account/settings#email`
   const unsubLabel = essential ? 'Manage your email settings' : 'Unsubscribe from these'
 
   const text = url

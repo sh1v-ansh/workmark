@@ -56,8 +56,11 @@ export function DeleteClient({ liveEngagements }: { liveEngagements: number }) {
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px 24px 72px' }}>
-      <Link href="/student/dashboard" style={{ fontSize: 13, color: C.textFaint, textDecoration: 'none' }}>
-        ← Back
+      {/* Back to where this page is reached from, not to the dashboard.
+          Someone who opened this to read what happens and decided against it
+          should land on the screen they were on. */}
+      <Link href="/account/settings" style={{ fontSize: 13, color: C.textFaint, textDecoration: 'none' }}>
+        ← Back to settings
       </Link>
 
       <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, margin: '20px 0 10px' }}>

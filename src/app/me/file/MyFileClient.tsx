@@ -160,7 +160,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
             <a href="/api/account/export" download className="nb-btn nb-btn-outline nb-btn-sm">
               Download everything (JSON)
             </a>
-            <Link href="/account/notifications" className="nb-btn nb-btn-quiet nb-btn-sm">Email settings</Link>
+            <Link href="/account/settings#email" className="nb-btn nb-btn-quiet nb-btn-sm">Email settings</Link>
             <Link href="/account/delete" className="nb-btn nb-btn-quiet nb-btn-sm">Delete account</Link>
           </div>
         </div>

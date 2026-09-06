@@ -1,14 +1,21 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
 import { useToast } from '@/components/Toast'
-import { C, F, R } from '@/lib/theme/dark-tokens'
+import { C, R } from '@/lib/theme/dark-tokens'
 import { EMAIL_KINDS, type EmailKind } from '@/lib/notify/prefs'
 
 const KINDS = Object.keys(EMAIL_KINDS) as EmailKind[]
 
-export function NotificationsClient({
+/**
+ * Which emails Workmark is allowed to send.
+ *
+ * This was its own page at /account/notifications. It is a settings section,
+ * so it lives with the other settings; the old route forwards here because
+ * its address is printed in the List-Unsubscribe header of every email we
+ * have ever sent and cannot stop existing.
+ */
+export default function EmailSection({
   initialPrefs,
   initialUnsubscribedAll,
   notice,
@@ -62,31 +69,24 @@ export function NotificationsClient({
   }
 
   return (
-    <div style={{ maxWidth: 620, margin: '0 auto', padding: '40px 24px 72px' }}>
-      <Link href="/student/dashboard" style={{ fontSize: 13, color: C.textFaint, textDecoration: 'none' }}>← Back</Link>
-
-      <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, margin: '20px 0 10px' }}>
-        Email
-      </h1>
-      <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.65, marginBottom: 24 }}>
-        Workmark only emails you when something happened that you can act on. Turn off whatever
-        you don&apos;t want.
-      </p>
-
+    <>
       {notice && (
-        <div role="status" style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '13px 16px', fontSize: 13.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 20 }}>
+        <div
+          role="status"
+          style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '13px 16px', fontSize: 13.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 18 }}
+        >
           {notice}
         </div>
       )}
 
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, overflow: 'hidden' }}>
+      <div style={{ border: `1px solid ${C.border}`, borderRadius: R.md, overflow: 'hidden' }}>
         {KINDS.map((kind, i) => {
           const meta = EMAIL_KINDS[kind]
           return (
             <label
               key={kind}
               style={{
-                display: 'flex', alignItems: 'flex-start', gap: 13, padding: '15px 20px',
+                display: 'flex', alignItems: 'flex-start', gap: 13, padding: '14px 17px',
                 borderTop: i === 0 ? 'none' : `1px solid ${C.borderFaint}`,
                 cursor: meta.essential ? 'default' : 'pointer',
               }}
@@ -117,18 +117,16 @@ export function NotificationsClient({
         })}
       </div>
 
-      <button
-        type="button" disabled={busy}
-        onClick={() => save(prefs, !allOff)}
-        style={{ background: 'none', border: 'none', padding: 0, marginTop: 18, font: 'inherit', fontSize: 13.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer' }}
-      >
-        {allOff ? 'Turn my email back on' : 'Turn off everything optional'}
-      </button>
-
-      <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.6, marginTop: 26 }}>
-        Changes save as you make them. This doesn&apos;t affect password resets or sign-in emails,
-        which aren&apos;t notifications.
-      </p>
-    </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, marginTop: 14, flexWrap: 'wrap' }}>
+        <button
+          type="button" disabled={busy}
+          onClick={() => save(prefs, !allOff)}
+          style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 13.5, color: C.textFaint, textDecoration: 'underline', textUnderlineOffset: 2, cursor: 'pointer' }}
+        >
+          {allOff ? 'Turn my email back on' : 'Turn off everything optional'}
+        </button>
+        <span style={{ fontSize: 12.5, color: C.textGhost }}>Saves as you change it</span>
+      </div>
+    </>
   )
 }

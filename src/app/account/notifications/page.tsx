@@ -1,46 +1,29 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
-import { EMAIL_KINDS, type EmailKind } from '@/lib/notify/prefs'
-import { NotificationsClient } from './NotificationsClient'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Email settings · Workmark' }
-
 /**
- * Confirms what the one-click unsubscribe just did.
+ * Email settings moved into /account/settings.
  *
- * The link in an email turns the setting off before this page renders, so
- * this is a receipt rather than a form to submit. Someone who clicked it by
- * accident can put it back here in one click.
+ * This route cannot simply be deleted. Its address is printed in the
+ * List-Unsubscribe header and the footer of every email Workmark has ever
+ * sent, and those live in people's inboxes for years. Breaking it would mean
+ * an unsubscribe link that 404s, which is both rude and, under CAN-SPAM, not
+ * an unsubscribe mechanism at all.
+ *
+ * So it forwards, carrying the receipt parameters through — `off` names the
+ * kind that was just switched off, `stale` says the token had expired — so
+ * the settings page can still tell the reader what just happened.
  */
-function noticeFor(off: string | undefined, stale: string | undefined): string | null {
-  if (stale) return 'That unsubscribe link had expired, so nothing changed. You can set your preferences here.'
-  if (off === 'all') return 'Done — every optional email is off. You\'ll still get the answer to applications you send.'
-  if (off && off in EMAIL_KINDS) return `Done — you won't get "${EMAIL_KINDS[off as EmailKind].label}" emails any more.`
-  return null
-}
-
-export default async function NotificationsPage({
+export default function NotificationsRedirect({
   searchParams,
 }: {
   searchParams: { off?: string; stale?: string }
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const params = new URLSearchParams()
+  if (searchParams.off) params.set('off', searchParams.off)
+  if (searchParams.stale) params.set('stale', searchParams.stale)
+  const query = params.toString()
 
-  const { data: account } = await supabase
-    .from('accounts')
-    .select('notification_prefs, email_unsubscribed_at')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  return (
-    <NotificationsClient
-      initialPrefs={(account?.notification_prefs ?? {}) as Record<string, boolean>}
-      initialUnsubscribedAll={!!account?.email_unsubscribed_at}
-      notice={noticeFor(searchParams.off, searchParams.stale)}
-    />
-  )
+  redirect(`/account/settings${query ? `?${query}` : ''}#email`)
 }

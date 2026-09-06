@@ -56,10 +56,12 @@ const FACULTY_TABS: Tab[] = [
 const STUDENT_MENU = [
   { href: '/students', label: 'Student directory' },
   { href: '/me/file', label: 'Your file & disputes' },
+  { href: '/account/settings', label: 'Settings' },
 ]
 
 const FACULTY_MENU = [
   { href: '/students', label: 'Student directory' },
+  { href: '/account/settings', label: 'Settings' },
 ]
 
 // Admins get a real tab, not a menu entry.
@@ -211,17 +213,12 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                   <div style={{ borderTop: `1px solid ${C.borderFaint}`, marginTop: 3.5, paddingTop: 3.5, padding: '8.5px 11.5px' }}>
                     <FeedbackLink />
                   </div>
+                  {/* Deleting an account used to sit here, one row above
+                      Sign out, same size, same grey — the most irreversible
+                      thing in the product rendered as the least remarkable
+                      and a mis-click from the thing people do daily. It is
+                      at the bottom of Settings now, in red, on its own. */}
                   <div style={{ borderTop: `1px solid ${C.borderFaint}`, paddingTop: 3.5 }}>
-                    {/* Findable rather than buried. A product that builds a
-                        record about someone and hides the way out of it has
-                        no business claiming to be honest with them. */}
-                    <Link
-                      href="/account/delete"
-                      role="menuitem"
-                      style={{ display: 'block', fontSize: 13.5, color: C.textFaint, textDecoration: 'none', padding: '8.5px 11.5px', borderRadius: 7.5 }}
-                    >
-                      Delete account
-                    </Link>
                     <button
                       onClick={handleSignOut}
                       disabled={signing}
