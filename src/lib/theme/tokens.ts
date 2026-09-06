@@ -64,7 +64,8 @@ export const dark = {
 // wrong in company: it pushed every card towards beige, it made the violet
 // look muddy, and there is no version of "verified" that reads as valuable
 // against it. The ground is now white and the depth comes from two things
-// the paper could not give — very soft radial light (ART.page) and shadow.
+// the paper could not give — very soft radial light and shadow. Both are
+// CSS: .wm-app-ground paints the light, .nb-card the shadow.
 //
 // Token NAMES match `light` exactly. That is deliberate: ~900 inline styles
 // across the app read C.text / C.surface / C.border, so repointing the export
@@ -73,7 +74,7 @@ export const dark = {
 //
 // Contrast verified against white, which is what the app renders on.
 export const app = {
-  bg:            '#FFFFFF',      // the ground; ART.page lights its corners
+  bg:            '#FFFFFF',      // the ground; .wm-app-ground lights its corners
   bgAlt:         '#FBFBFD',      // the next surface down — a hair cooler, not grey
   bgDeep:        '#191E2E',      // reversed panel — the one dark block per page
   surface:       '#FFFFFF',      // cards sit above the ground on shadow, not tint
@@ -153,7 +154,6 @@ export const LEVELS = {
   },
 } as const
 
-export type SkillLevel = keyof typeof LEVELS
 
 // ─── Scales ──────────────────────────────────────────────────────────────────
 // One source for the numbers that used to be typed by hand at every call site.
@@ -184,34 +184,19 @@ export const T = {
  *
  *  On the old cream paper a card was legible because it was white and the
  *  page was not, so a border was enough. On a white ground that trick is
- *  gone: a white card on white needs light under it. `card` is the default
- *  for anything that used to be `E.none` plus a border; `focal` is for the
- *  one card per screen you want read first, and paying twice on the same
- *  screen spends the effect. */
+ *  gone: a white card on white needs light under it.
+ *
+ *  Only two live here. The card, focal and button shadows are CSS —
+ *  .nb-card, .nb-card-focal and .nb-btn-accent in globals.css — because
+ *  every card and button already goes through those classes. Keeping a
+ *  second copy as a token would mean two places to change one shadow and
+ *  no way to tell which one a given element used. `card` stays because one
+ *  call site (the sign-in panel) is a hand-built box rather than a Card. */
 export const E = {
   none: 'none',
   card:    '0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18)',
-  focal:   '0 1px 2px rgba(97,66,245,0.06), 0 16px 36px -20px rgba(97,66,245,0.45)',
-  button:  '0 1px 2px rgba(97,66,245,0.24), 0 8px 18px -8px rgba(97,66,245,0.55)',
   overlay: '0 4px 6px rgba(25,30,46,0.04), 0 12px 32px rgba(25,30,46,0.10)',
 } as const
-
-/** Background art.
- *
- *  Two very soft violet radials in the top corners. They carry no meaning and
- *  must never be the reason something is findable — they exist so a white
- *  page has a top and a bottom. `focal` pools a little more light into the
- *  bottom-right of the card that owns the screen. */
-export const ART = {
-  page:
-    'radial-gradient(900px 420px at 12% -8%, rgba(97,66,245,0.07) 0%, rgba(97,66,245,0) 68%), ' +
-    'radial-gradient(700px 380px at 96% 2%, rgba(129,140,248,0.06) 0%, rgba(129,140,248,0) 70%)',
-  focal:
-    'radial-gradient(560px 260px at 88% 108%, rgba(97,66,245,0.10) 0%, rgba(97,66,245,0) 72%)',
-} as const
-
-/** The border a focal card uses instead of C.border. */
-export const FOCAL_BORDER = '#DCD4F7'
 
 // ─── App font stacks ─────────────────────────────────────────────────────────
 // Exported separately from F so the marketing pages keep Playfair/Inter/Plex

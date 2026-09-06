@@ -79,7 +79,7 @@ export default function LegalPage({ params }: { params: { doc: string } }) {
             <Link
               key={slug}
               href={`/legal/${slug}`}
-              className={slug === params.doc ? 'nb-tab nb-tab-active' : 'nb-tab'}
+              className={slug === params.doc ? 'nb-navlink nb-navlink-active' : 'nb-navlink'}
               aria-current={slug === params.doc ? 'page' : undefined}
             >
               {DOCS[slug].title}

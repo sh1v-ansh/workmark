@@ -360,40 +360,132 @@
 
 .nb-btn-sm { font-size: 13px; padding: 8px 14.5px; border-radius: 8.5px; }
 
-/* ── Nav tabs — notebook dividers, not a toolbar ──────────────────────────
-   The active tab shares the card's fill and loses its bottom border, so it
-   reads as the sheet you're currently on rather than a highlighted link. */
-.nb-tab {
+/* ── The nav bar ──────────────────────────────────────────────────────────
+   Sticky, white, and translucent so the page slides under it rather than
+   disappearing at a hard edge. The bar has a hairline under it and nothing
+   else — no shadow, because it is not floating above the page, it is the
+   top of it. */
+.nb-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid #ECEBF3;
+}
+@supports not (backdrop-filter: blur(1px)) {
+  .nb-header { background: #FFFFFF; }
+}
+
+/* ── Nav links ────────────────────────────────────────────────────────────
+   These were 11.5px uppercase tabs drawn as sheets of paper joining the
+   page below them. That metaphor needed the cream ground to work; on white
+   it was three hairlines around some small caps, which is what read as
+   unfinished. They are links in a pill now: sentence case, legible size,
+   and an active state that is a quiet violet fill rather than a diagram. */
+.nb-navlink {
   display: inline-flex;
   align-items: center;
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 9px;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  color: #5A6172;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.nb-navlink:hover { color: #191E2E; background: #F4F3F8; }
+.nb-navlink-active,
+.nb-navlink-active:hover {
+  color: #4E2FD6;
+  background: rgba(97, 66, 245, 0.08);
+  font-weight: 600;
+}
+
+/* ── The avatar ───────────────────────────────────────────────────────────
+   A ring rather than a filled square. Filled violet made it the loudest
+   thing in the bar, which is wrong — your own face is not the action on
+   any page. It fills in only while its menu is open, where being loud is
+   the correct answer to "where did this come from". */
+.nb-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 33px;
+  height: 33px;
+  border-radius: 999px;
+  border: 1px solid #DCD4F7;
+  background: #F5F2FF;
+  color: #4E2FD6;
   font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
   font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.075em;
-  text-transform: uppercase;
-  padding: 7.5px 13.5px;
-  border-radius: 8.5px 8.5px 0 0;
-  color: #5A6172;
-  text-decoration: none;
-  border: 1px solid transparent;
-  border-bottom: none;
-  position: relative;
-  transition: color 0.15s ease, background 0.15s ease;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
-.nb-tab:hover { color: #191E2E; background: #F4F3F8; }
-.nb-tab-active {
-  background: #FFFFFF;
-  color: #191E2E;
-  border-color: #ECEBF3;
+.nb-avatar:hover { border-color: #C3B4F2; box-shadow: 0 0 0 3px rgba(97, 66, 245, 0.08); }
+.nb-avatar[data-open='true'] {
+  background: #6142F5;
+  border-color: #6142F5;
+  color: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.24), 0 6px 14px -6px rgba(97, 66, 245, 0.55);
 }
-/* Bridge the 1px rule under the bar so the active tab joins the page. */
-.nb-tab-active::after {
-  content: '';
+.nb-avatar-lg { width: 36px; height: 36px; font-size: 12.5px; cursor: default; }
+
+/* ── The account menu ─────────────────────────────────────────────────────
+   Grouped, with icons and rules, so it reads as a menu rather than a list
+   of links that happen to be in a box. The groups are the point: who you
+   are, where you can go, what you can tell us, and out. Four things, each
+   two or three rows long, is a menu you use — one run of eight rows is a
+   list you read. */
+.nb-menu {
   position: absolute;
-  left: 0; right: 0; bottom: -1px;
-  height: 1px;
+  right: 0;
+  top: 46px;
+  min-width: 244px;
+  z-index: 50;
   background: #FFFFFF;
+  border: 1px solid #ECEBF3;
+  border-radius: 13px;
+  box-shadow: 0 4px 6px rgba(25, 30, 46, 0.04), 0 16px 40px -12px rgba(25, 30, 46, 0.18);
+  padding: 0;
+  overflow: hidden;
+  animation: nb-menu-in 140ms cubic-bezier(0.22, 1, 0.36, 1);
 }
+@keyframes nb-menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes nb-menu-in { from { opacity: 0; } to { opacity: 1; } }
+}
+
+.nb-menu-rule { height: 1px; background: #F4F3F8; }
+.nb-menu-group { padding: 5px; display: flex; flex-direction: column; }
+
+.nb-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2B3244;
+  text-decoration: none;
+  text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.nb-menu-item:hover { background: #F7F7FA; color: #191E2E; }
+.nb-menu-item:disabled { opacity: 0.5; }
+/* FeedbackLink renders its own button; make the whole row the target
+   rather than the eight words inside it. */
+.nb-menu-item > button { text-align: left; flex: 1; cursor: pointer; }
 
 /* ── Ruled paper ──────────────────────────────────────────────────────────
    Behind the record only. It signals "this is the written-down part", which

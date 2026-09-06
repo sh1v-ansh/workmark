@@ -125,7 +125,7 @@ export default function AdminQueueClient({ items, counts, failedSources, taxonom
         <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 20 }}>
           <button
             onClick={() => setFilter('all')}
-            className={`nb-tab${filter === 'all' ? ' nb-tab-active' : ''}`}
+            className={`nb-navlink${filter === 'all' ? ' nb-navlink-active' : ''}`}
           >
             All · {items.length}
           </button>
@@ -133,7 +133,7 @@ export default function AdminQueueClient({ items, counts, failedSources, taxonom
             <button
               key={k}
               onClick={() => setFilter(k)}
-              className={`nb-tab${filter === k ? ' nb-tab-active' : ''}`}
+              className={`nb-navlink${filter === k ? ' nb-navlink-active' : ''}`}
             >
               {KIND_LABEL[k]} · {counts[k]}
             </button>

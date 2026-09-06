@@ -11,11 +11,18 @@ import { C, F, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 import { LAYOUT } from '@/lib/theme/layout'
 import { isTabActive, type Tab } from '@/lib/nav/tabs'
+import { Icon, type IconName } from '@/components/Icon'
 
 // Everything the navbar needs now comes from the session context, read once
 // in the root layout. Props are still accepted so the fourteen existing call
 // sites keep working, but nothing has to pass them — which is the point,
 // since the previous prop-based version was forgotten by twelve of them.
+interface MenuItem {
+  href: string
+  label: string
+  icon: IconName
+}
+
 interface NavbarProps {
   role?: 'student' | 'faculty'
   userName?: string
@@ -53,15 +60,15 @@ const FACULTY_TABS: Tab[] = [
 // change, where the student is already standing when they want them. Admin
 // became a tab. What remains is what a menu is for: the low-traffic places
 // that belong to you rather than to the page you are on.
-const STUDENT_MENU = [
-  { href: '/students', label: 'Student directory' },
-  { href: '/me/file', label: 'Your file & disputes' },
-  { href: '/account/settings', label: 'Settings' },
+const STUDENT_MENU: MenuItem[] = [
+  { href: '/students', label: 'Student directory', icon: 'users' },
+  { href: '/me/file', label: 'Your file & disputes', icon: 'inbox' },
+  { href: '/account/settings', label: 'Settings', icon: 'settings' },
 ]
 
-const FACULTY_MENU = [
-  { href: '/students', label: 'Student directory' },
-  { href: '/account/settings', label: 'Settings' },
+const FACULTY_MENU: MenuItem[] = [
+  { href: '/students', label: 'Student directory', icon: 'users' },
+  { href: '/account/settings', label: 'Settings', icon: 'settings' },
 ]
 
 // Admins get a real tab, not a menu entry.
@@ -130,135 +137,157 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
   const isActive = (tab: Tab) => isTabActive(tab, pathname)
 
   return (
-    <header style={{ background: C.bg, position: 'sticky', top: 0, zIndex: 40 }}>
-      {/* 1180 and 28px side padding, matching the page containers below.
-          It was 1100, so content overhung the nav by 40px a side on every
-          page that used the standard width — the nav and the page it framed
-          were never on the same grid. */}
-      <nav aria-label="Main navigation" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '18px 28px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
-          {/* Logo + tabs */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 26, minWidth: 0 }}>
-            <Link href="/student/dashboard" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none', paddingBottom: 8.5 }}>
-              <Wordmark height={20} />
-            </Link>
-            {(
-              <div className="mob-hide" style={{ display: 'flex', alignItems: 'flex-end', gap: 4 }}>
-                {TABS.map((tab) => (
-                  <Link
-                    key={tab.href}
-                    href={tab.href}
-                    aria-current={isActive(tab) ? 'page' : undefined}
-                    className={`nb-tab${isActive(tab) ? ' nb-tab-active' : ''}`}
-                  >
-                    {tab.label}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
+    <header className="nb-header">
+      {/* Three columns rather than two, so the tabs are centred on the page
+          and not on whatever is left over after the logo. With flex the
+          centre drifts every time the right-hand side changes width — an
+          admin gains a tab, a name gets longer — and a navigation bar that
+          moves when the account changes is the thing that read as unfinished.
 
-          {/* Right side */}
-          <div className="mob-hide" style={{ display: 'flex', alignItems: 'center', gap: 13, paddingBottom: 8.5 }}>
-            <Link href="/listings/new" style={{ fontSize: 13.5, color: C.textMuted, textDecoration: 'none', fontWeight: 500 }}>
-              Post a project
+          Same max width and side padding as the page containers below, so
+          the nav and the page it frames sit on one grid. */}
+      <nav
+        aria-label="Main navigation"
+        style={{
+          maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '0 28px',
+          height: 62, display: 'grid', gridTemplateColumns: '1fr auto 1fr',
+          alignItems: 'center', gap: 20,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
+          <Link href="/student/dashboard" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', textDecoration: 'none' }}>
+            <Wordmark height={21} />
+          </Link>
+        </div>
+
+        {/* The tabs. Sentence case at 13.5px, not 11.5px uppercase — small
+            caps in a nav bar is a typographic tic from the cream-paper
+            version, and at that size it costs legibility for nothing. The
+            old active state drew the tab as a page joining the sheet below
+            it, a metaphor that needed the paper to work; on white it was
+            three hairlines around some text. */}
+        <div className="mob-hide" style={{ display: 'flex', alignItems: 'center', gap: 2, justifySelf: 'center' }}>
+          {TABS.map((tab) => (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              aria-current={isActive(tab) ? 'page' : undefined}
+              className={`nb-navlink${isActive(tab) ? ' nb-navlink-active' : ''}`}
+            >
+              {tab.label}
             </Link>
-            <div ref={menuRef} style={{ position: 'relative' }}>
-              <button
-                onClick={() => setMenuOpen((v) => !v)}
-                aria-haspopup="menu"
-                aria-expanded={menuOpen}
-                aria-label="Account menu"
-                style={{
-                  width: 32, height: 32, borderRadius: R.md, border: 'none', cursor: 'pointer',
-                  background: menuOpen ? C.accent : '#EDE9FF',
-                  color: menuOpen ? '#fff' : C.accentInk,
-                  fontFamily: F.display, fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'background 0.15s, color 0.15s',
-                }}
-              >
-                {initials(name)}
-              </button>
-              {menuOpen && (
-                <div
-                  role="menu"
-                  style={{
-                    position: 'absolute', right: 0, top: 40, minWidth: 209, zIndex: 50,
-                    background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg,
-                    boxShadow: '0 4px 6px rgba(25,30,46,0.04), 0 12px 32px rgba(25,30,46,0.10)',
-                    padding: 5.5,
-                  }}
-                >
-                  {name && (
-                    <p style={{ fontSize: 12.5, color: C.textFaint, padding: '7.5px 11.5px 9.5px', borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 3.5 }}>
-                      {name}
-                    </p>
-                  )}
+          ))}
+        </div>
+
+        <div className="mob-hide" style={{ display: 'flex', alignItems: 'center', gap: 10, justifySelf: 'end' }}>
+          <Link href="/listings/new" className="nb-navlink">
+            Post a project
+          </Link>
+
+          <div ref={menuRef} style={{ position: 'relative' }}>
+            <button
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+              aria-label="Account menu"
+              className="nb-avatar"
+              data-open={menuOpen ? 'true' : undefined}
+            >
+              {initials(name)}
+            </button>
+
+            {menuOpen && (
+              <div role="menu" className="nb-menu">
+                {/* Who you are, before what you can do. The menu used to open
+                    on a grey line of text that was only a name; it is the one
+                    place in the product that answers "which account am I in",
+                    which matters to anyone with a staff account and a real
+                    one. */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 14px 12px' }}>
+                  <span className="nb-avatar nb-avatar-lg" aria-hidden="true">{initials(name)}</span>
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {name ?? 'Your account'}
+                    </span>
+                    <span style={{ display: 'block', fontSize: 12.5, color: C.textGhost, textTransform: 'capitalize' }}>
+                      {showAdmin ? 'Staff' : effectiveRole}
+                    </span>
+                  </span>
+                </div>
+
+                <div className="nb-menu-rule" />
+
+                <div className="nb-menu-group">
                   {MENU.map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
                       role="menuitem"
                       onClick={() => setMenuOpen(false)}
-                      style={{ display: 'block', fontSize: 14, color: C.textSub, textDecoration: 'none', padding: '8.5px 11.5px', borderRadius: 7.5 }}
+                      className="nb-menu-item"
                     >
+                      <Icon name={item.icon} size={15.5} style={{ color: C.textGhost }} />
                       {item.label}
                     </Link>
                   ))}
-                  {/* Two entries, not one. These are different acts: one
-                      is a complaint and one is a favour, and putting them
-                      behind a single link labelled "bug" meant the favour
-                      was only reachable by first agreeing to file a
-                      complaint. Both open a drawer rather than navigating,
-                      because the page you are on is often the subject. */}
-                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, marginTop: 3.5, paddingTop: 6, paddingBottom: 2 }}>
-                    <div style={{ padding: '5px 11.5px' }}>
-                      <FeedbackLink kind="feature" style={{ fontSize: 14, color: C.textSub }} />
-                    </div>
-                    <div style={{ padding: '5px 11.5px' }}>
-                      <FeedbackLink kind="bug" style={{ fontSize: 14, color: C.textSub }} />
-                    </div>
-                  </div>
-                  {/* Deleting an account used to sit here, one row above
-                      Sign out, same size, same grey — the most irreversible
-                      thing in the product rendered as the least remarkable
-                      and a mis-click from the thing people do daily. It is
-                      at the bottom of Settings now, in red, on its own. */}
-                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, paddingTop: 3.5 }}>
-                    <button
-                      onClick={handleSignOut}
-                      disabled={signing}
-                      role="menuitem"
-                      style={{ display: 'block', width: '100%', textAlign: 'left', fontSize: 14, color: C.textMuted, background: 'none', border: 'none', padding: '8.5px 11.5px', borderRadius: 7.5, cursor: signing ? 'not-allowed' : 'pointer', font: 'inherit' }}
-                    >
-                      {signing ? 'Signing out…' : 'Sign out'}
-                    </button>
-                  </div>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Mobile hamburger */}
-          <button className="mob-show" style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 8, marginBottom: 4, alignItems: 'center', justifyContent: 'center' }}
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={mobileOpen}>
-            {mobileOpen ? (
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                <path d="M3 3l12 12M15 3L3 15" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                <line x1="2" y1="5" x2="16" y2="5" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
-                <line x1="2" y1="9" x2="16" y2="9" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
-                <line x1="2" y1="13" x2="16" y2="13" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
-              </svg>
+                <div className="nb-menu-rule" />
+
+                {/* Two entries, not one. These are different acts: one is a
+                    complaint and one is a favour, and putting them behind a
+                    single link labelled "bug" meant the favour was only
+                    reachable by first agreeing to file a complaint. Both open
+                    a drawer rather than navigating, because the page you are
+                    on is often the subject. */}
+                <div className="nb-menu-group">
+                  <span className="nb-menu-item">
+                    <Icon name="spark" size={15.5} style={{ color: C.accent }} />
+                    <FeedbackLink kind="feature" style={{ fontSize: 14, color: 'inherit', fontWeight: 'inherit' }} />
+                  </span>
+                  <span className="nb-menu-item">
+                    <Icon name="bug" size={15.5} style={{ color: C.textGhost }} />
+                    <FeedbackLink kind="bug" style={{ fontSize: 14, color: 'inherit', fontWeight: 'inherit' }} />
+                  </span>
+                </div>
+
+                <div className="nb-menu-rule" />
+
+                <div className="nb-menu-group">
+                  <button
+                    onClick={handleSignOut}
+                    disabled={signing}
+                    role="menuitem"
+                    className="nb-menu-item"
+                    style={{ width: '100%', background: 'none', border: 'none', font: 'inherit', cursor: signing ? 'not-allowed' : 'pointer' }}
+                  >
+                    <Icon name="sign-out" size={15.5} style={{ color: C.textGhost }} />
+                    {signing ? 'Signing out…' : 'Sign out'}
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
         </div>
-        <div style={{ borderBottom: `1px solid ${C.border}` }} />
+
+        {/* Mobile hamburger. Sits in the third grid column so it lands
+            where the avatar does at wider widths, rather than jumping. */}
+        <button className="mob-show" style={{ display: 'none', background: 'none', border: 'none', cursor: 'pointer', padding: 8, justifySelf: 'end', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={mobileOpen}>
+          {mobileOpen ? (
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <path d="M3 3l12 12M15 3L3 15" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+              <line x1="2" y1="5" x2="16" y2="5" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
+              <line x1="2" y1="9" x2="16" y2="9" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
+              <line x1="2" y1="13" x2="16" y2="13" stroke={C.textMuted} strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          )}
+        </button>
       </nav>
 
       {/* Mobile dropdown */}
@@ -270,7 +299,7 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
           {[
             ...TABS.map((t) => ({ href: t.href, label: t.label })),
             ...(effectiveRole === 'student' ? [{ href: '/listings/new', label: 'Post a project' }] : []),
-            ...MENU,
+            ...MENU.map((m) => ({ href: m.href, label: m.label })),
           ].map(({ href, label }) => (
             <Link key={href} href={href} onClick={() => setMobileOpen(false)} aria-current={pathname === href ? 'page' : undefined}
               style={{ display: 'block', fontSize: 16, fontWeight: pathname === href ? 600 : 400, color: pathname === href ? C.accent : C.textSub, textDecoration: 'none', padding: '13px 0', borderBottom: `1px solid ${C.borderFaint}` }}>

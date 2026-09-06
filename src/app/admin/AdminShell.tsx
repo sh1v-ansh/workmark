@@ -63,7 +63,7 @@ export default function AdminShell({ title, lede, queueCount = 0, overdueCount =
               <Link
                 key={s.href}
                 href={s.href}
-                className={`nb-tab${active ? ' nb-tab-active' : ''}`}
+                className={`nb-navlink${active ? ' nb-navlink-active' : ''}`}
                 style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 7 }}
               >
                 {s.label}
