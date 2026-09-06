@@ -32,3 +32,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Bundled design canvas — 2.5 MB build output, regenerated on publish
+design/workmark-ui-refresh.html
