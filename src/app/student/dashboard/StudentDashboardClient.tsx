@@ -30,6 +30,9 @@ export interface DashboardData {
   githubConnected: boolean
   /** When the last scan finished, so the record can say whether it is stale. */
   lastScannedAt: string | null
+  /** The skill open listings ask for most that this student cannot show.
+   *  Null when there are no listings, or nothing they are missing. */
+  topGap: { skillName: string; listingCount: number } | null
   trackRecord: TrackRecord
   skills: { skillId: string; name: string; bestLevel: number }[]
   applications: {
@@ -121,7 +124,7 @@ const ICON_BG: Record<Todo['kind'], string> = {
 }
 
 export default function StudentDashboardClient({ data }: { data: DashboardData }) {
-  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, trackRecord } = data
+  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, topGap, trackRecord } = data
   const router = useRouter()
   const { toast } = useToast()
   const [withdrawing, setWithdrawing] = useState<string | null>(null)
@@ -276,19 +279,29 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
   const firstName = student.fullName?.trim().split(/\s+/)[0]
 
+  // "Not sure what to build next?" asked the reader a question and described
+  // nothing. It is a project recommender, so it says so — and when we know
+  // which skill open projects keep asking for that they cannot show, it
+  // leads with that number, because the number is what does the persuading.
   const nudge = (
-    <div style={{ background: C.bgDeep, borderRadius: R.lg, padding: 21, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 154 }}>
-      <div>
-        <p style={{ fontFamily: F.display, fontSize: 17, fontWeight: 600, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.25, marginBottom: 7 }}>
-          Not sure what to build next?
+    <div className="nb-nudge">
+      <div style={{ position: 'relative' }}>
+        <span className="nb-nudge-eyebrow">Your next project</span>
+        <p style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.28, margin: '9px 0 8px' }}>
+          {topGap
+            ? `${topGap.listingCount} open project${topGap.listingCount === 1 ? '' : 's'} want ${topGap.skillName}. Your record doesn't have it.`
+            : 'We can tell you what to build next'}
         </p>
-        <p style={{ fontSize: 13.5, color: '#A9B0C2', lineHeight: 1.55 }}>
-          We&apos;ll show you which skills open projects keep asking for that your record
-          doesn&apos;t cover yet — and give you a project worth building to close one.
+        <p style={{ fontSize: 13.5, color: '#C6C2E4', lineHeight: 1.55 }}>
+          {topGap
+            ? 'We compare what open projects ask for against what your code proves, then write you something specific to build that closes the biggest gap.'
+            : 'We compare what open projects ask for against what your code proves, and write you a project worth building to close the biggest gap.'}
         </p>
       </div>
-      <div style={{ marginTop: 16 }}>
-        <Button href="/goals" variant="accent" size="sm">Show me the gaps</Button>
+      <div style={{ position: 'relative', marginTop: 17 }}>
+        <Link href="/goals" className="nb-btn nb-btn-sm nb-nudge-btn">
+          {topGap ? `Get a project that proves ${topGap.skillName}` : 'Show me what to build'}
+        </Link>
       </div>
     </div>
   )

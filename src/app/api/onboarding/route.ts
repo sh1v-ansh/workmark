@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     )
   }
 
-  let body: { role?: string; profile?: Record<string, unknown> }
+  let body: { role?: string; profile?: Record<string, unknown>; heardAbout?: unknown; heardAboutDetail?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -107,6 +107,21 @@ export async function POST(request: Request) {
   }
 
   const displayName = typeof profile.full_name === 'string' ? profile.full_name : null
+
+  // Optional, and validated against the same list the column allows so an
+  // unexpected value is dropped rather than failing the whole signup. A
+  // dropped attribution answer costs us one data point; a rejected signup
+  // costs us the student.
+  const HEARD_ABOUT = [
+    'friend', 'professor', 'club_or_society', 'social_media',
+    'search', 'event', 'other', 'prefer_not_to_say',
+  ]
+  const heardAbout = typeof body.heardAbout === 'string' && HEARD_ABOUT.includes(body.heardAbout)
+    ? body.heardAbout
+    : null
+  const heardAboutDetail = heardAbout === 'other' && typeof body.heardAboutDetail === 'string'
+    ? body.heardAboutDetail.trim().slice(0, 200) || null
+    : null
   const institution = typeof profile.university === 'string' ? profile.university : null
 
   // ─── Age and terms ─────────────────────────────────────────────────────
@@ -152,6 +167,8 @@ export async function POST(request: Request) {
     age_attested_at: now,
     terms_accepted_at: now,
     terms_version: TERMS_VERSION,
+    heard_about: heardAbout,
+    heard_about_detail: heardAboutDetail,
   })
 
   if (accountErr) {

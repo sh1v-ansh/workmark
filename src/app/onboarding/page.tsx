@@ -103,6 +103,8 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
   // One box. Ticking it is the representation that they are 18 or over and
   // have agreed to the three documents it links to.
   const [agreed, setAgreed] = useState(false)
+  const [heardAbout, setHeardAbout] = useState('')
+  const [heardAboutDetail, setHeardAboutDetail] = useState('')
   const [university, setUniversity] = useState('')
   const [major, setMajor] = useState('')
   const [degreeType, setDegreeType] = useState('BS')
@@ -122,6 +124,10 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
     onSubmit({
       full_name: fullName,
       age_attested: agreed,
+      // Not part of the profile the scanner and matcher read — the parent
+      // pulls these two out before the insert. See handleSubmit.
+      heard_about: heardAbout || null,
+      heard_about_detail: heardAbout === 'other' ? heardAboutDetail : null,
       university, major, degree_type: degreeType,
       graduation_year: graduationYear ? parseInt(graduationYear) : null,
       gpa: gpa ? parseFloat(gpa) : null,
@@ -236,6 +242,36 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
           was kinder — but it put the product in direct conflict with its own
           Terms, which say under-18s may not register at all. One true rule
           beats a nice feature the legal documents contradict. */}
+      {/* The only question on this form that is for us rather than for the
+          person filling it in, so it goes last, says it is optional, and
+          offers "Prefer not to say" as a real answer rather than making
+          somebody pick a lie to get past it. */}
+      <div style={gap}>
+        <FieldLabel htmlFor="student-heard">How did you hear about Workmark? <span style={{ fontWeight: 400, color: C.textGhost }}>Optional</span></FieldLabel>
+        <select id="student-heard" value={heardAbout} onChange={(e) => setHeardAbout(e.target.value)} className="dk-select">
+          <option value="">Select…</option>
+          <option value="friend">A friend or classmate</option>
+          <option value="professor">A professor or advisor</option>
+          <option value="club_or_society">A club or student society</option>
+          <option value="social_media">Social media</option>
+          <option value="search">Search</option>
+          <option value="event">An event or hackathon</option>
+          <option value="other">Something else</option>
+          <option value="prefer_not_to_say">Prefer not to say</option>
+        </select>
+        {heardAbout === 'other' && (
+          <input
+            value={heardAboutDetail}
+            onChange={(e) => setHeardAboutDetail(e.target.value)}
+            className="dk-input"
+            maxLength={200}
+            placeholder="Where did you come across it?"
+            aria-label="How you heard about Workmark"
+            style={{ marginTop: 9 }}
+          />
+        )}
+      </div>
+
       <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: 16 }}>
         <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
           <input
@@ -320,10 +356,19 @@ export default function OnboardingPage() {
       // no insert policy for users on purpose, because an account row says
       // what someone is allowed to be. A client that could write it could
       // grant itself admin.
+      const { heard_about, heard_about_detail, ...rest } = data as Record<string, unknown>
       const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role, profile: data }),
+        // heard_about belongs to the account, not to the student profile
+        // the scanner and matcher read, so it travels beside it. The form
+        // collects everything in one object; this is where they part.
+        body: JSON.stringify({
+          role,
+          profile: rest,
+          heardAbout: heard_about ?? undefined,
+          heardAboutDetail: heard_about_detail ?? undefined,
+        }),
       })
       const json = await res.json()
 

@@ -1354,6 +1354,16 @@ create table accounts (
   -- Faculty have no student profile to hold them.
   display_name        text,
   institution         text,
+  -- How this account found Workmark, asked once at signup. Optional in the
+  -- strong sense: no default, and 'prefer_not_to_say' is a real answer, so
+  -- null means never asked or skipped. Free text lives in its own column so
+  -- the choice above stays countable.
+  heard_about         text
+                        check (heard_about is null or heard_about in (
+                          'friend', 'professor', 'club_or_society', 'social_media',
+                          'search', 'event', 'other', 'prefer_not_to_say'
+                        )),
+  heard_about_detail  text,
   created_at          timestamptz default now() not null,
   updated_at          timestamptz default now() not null,
   constraint accounts_roles_valid check (

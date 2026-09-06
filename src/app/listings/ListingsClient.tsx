@@ -66,14 +66,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      style={{
-        fontSize: 13, padding: '5.5px 12px', borderRadius: R.pill, cursor: 'pointer', font: 'inherit', fontWeight: 500,
-        transition: 'background 120ms, border-color 120ms, color 120ms',
-        color: active ? '#fff' : C.textMuted,
-        background: active ? C.text : 'transparent',
-        border: `1.5px solid ${active ? C.text : C.border}`,
-        whiteSpace: 'nowrap',
-      }}
+      className={`nb-chip${active ? ' nb-chip-active' : ''}`}
     >
       {label}
     </button>
@@ -233,17 +226,26 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
           <div style={{ display: 'grid', gridTemplateColumns: hasAnyFacet ? '230px minmax(0, 1fr)' : '1fr', gap: 22, alignItems: 'start' }} className="mob-1col">
 
             {hasAnyFacet && (
-              <Card hoverable={false} padding={16.5} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <span style={{ fontSize: 13, color: C.textMuted, fontWeight: 600 }}>
-                    Filter{activeCount > 0 ? ` · ${activeCount}` : ''}
+              <Card hoverable={false} padding="15px 17px 18px" className="nb-filters" style={{ display: 'flex', flexDirection: 'column', gap: 17 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, minHeight: 24 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13.5, color: C.text, fontWeight: 600 }}>
+                    Filter
+                    {activeCount > 0 && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        minWidth: 19, height: 19, padding: '0 5px', borderRadius: R.pill,
+                        fontSize: 11.5, fontWeight: 700, color: '#FFFFFF', background: C.accent,
+                      }}>
+                        {activeCount}
+                      </span>
+                    )}
                   </span>
                   {activeCount > 0 && (
                     <button
                       type="button" onClick={clearAll}
-                      style={{ fontSize: 12, color: C.textFaint, background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0, font: 'inherit' }}
+                      style={{ fontSize: 12.5, color: C.accent, fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
                     >
-                      Clear
+                      Clear all
                     </button>
                   )}
                 </div>

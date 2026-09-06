@@ -369,11 +369,22 @@
   position: sticky;
   top: 0;
   z-index: 40;
-  background: rgba(255, 255, 255, 0.82);
-  backdrop-filter: saturate(160%) blur(12px);
-  border-bottom: 1px solid #ECEBF3;
+  /* Glass, properly. The first pass was 82% white with a small blur, which
+     is a slightly foggy white bar — you cannot tell it is translucent
+     unless something coloured passes under it. Thinner tint, much bigger
+     blur and a saturation boost, so the violet in the page ground actually
+     bleeds through and the bar takes on the colour of whatever is beneath
+     it. The hairline is a highlight above a shadow rather than a border,
+     which is what gives an edge its thickness. */
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: saturate(180%) blur(22px);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  border-bottom: 1px solid rgba(236, 235, 243, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 12px -6px rgba(25, 30, 46, 0.10);
 }
-@supports not (backdrop-filter: blur(1px)) {
+/* No blur support means the text has to sit on something solid — a 62%
+   white bar over scrolling content is unreadable, not stylish. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .nb-header { background: #FFFFFF; }
 }
 
@@ -455,14 +466,40 @@
   box-shadow: 0 4px 6px rgba(25, 30, 46, 0.04), 0 16px 40px -12px rgba(25, 30, 46, 0.18);
   padding: 0;
   overflow: hidden;
-  animation: nb-menu-in 140ms cubic-bezier(0.22, 1, 0.36, 1);
+  /* Grows out of the avatar rather than appearing near it. The origin is
+     the top-right corner, which is where the thing that opened it is, so
+     the menu reads as unfolding from the button instead of being dealt
+     onto the page. */
+  transform-origin: top right;
+  animation: nb-menu-in 190ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes nb-menu-in {
-  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  from { opacity: 0; transform: translateY(-6px) scale(0.94); }
   to   { opacity: 1; transform: none; }
 }
+
+/* The rows arrive just behind the panel, top to bottom. Short and small —
+   90ms and 5px — because this is a menu somebody is about to click, and an
+   entrance they have to wait through is a worse menu.
+
+   The delay comes from the component as --row, not from an nth-of-type
+   rule here. The first attempt used :nth-of-type on .nb-menu-group, which
+   silently matched nothing: nth-of-type counts by element type, and every
+   child of this menu is a div, so "the first .nb-menu-group div" is a
+   different thing from "the first div, which is a .nb-menu-group". The
+   stagger simply did not happen and nothing said so. */
+.nb-menu-row {
+  animation: nb-menu-row-in 90ms ease-out both;
+  animation-delay: calc(45ms + var(--row, 0) * 22ms);
+}
+@keyframes nb-menu-row-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   @keyframes nb-menu-in { from { opacity: 0; } to { opacity: 1; } }
+  .nb-menu-row { animation: none; }
 }
 
 .nb-menu-rule { height: 1px; background: #F4F3F8; }
@@ -800,4 +837,99 @@
   border-radius: 11px;
   border: 1px solid #E7E1FB;
   background: linear-gradient(120deg, rgba(97, 66, 245, 0.06) 0%, rgba(97, 66, 245, 0.015) 60%, rgba(255, 255, 255, 0) 100%);
+}
+
+/* ── The next-project card ────────────────────────────────────────────────
+   The one dark block on the dashboard, and now a gradient rather than a
+   flat slab of ink. It earns the weight: it is the only growth action on
+   the page — everything else there is something already in motion.
+
+   Violet deepening to near-black, with a light source off the top-right
+   corner. The white button is the highest-contrast thing on the whole
+   screen, which is correct, because it is the one thing on this page that
+   starts something new. */
+.nb-nudge {
+  position: relative;
+  overflow: hidden;
+  border-radius: 13px;
+  padding: 21px;
+  min-height: 154px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(155deg, #241B57 0%, #3B1F86 47%, #5B3EE8 100%);
+  box-shadow: 0 2px 4px rgba(36, 27, 87, 0.20), 0 18px 40px -18px rgba(97, 66, 245, 0.65);
+}
+.nb-nudge::before {
+  content: '';
+  position: absolute;
+  width: 330px;
+  height: 330px;
+  right: -140px;
+  top: -160px;
+  border-radius: 999px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.55) 0%, rgba(167, 139, 250, 0) 70%);
+}
+.nb-nudge-eyebrow {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #C7B8FF;
+}
+/* White on violet. The inverse of every other button in the app, because
+   this is the only button that ever sits on a dark card. */
+.nb-nudge-btn {
+  background: #FFFFFF;
+  color: #241B57;
+  border-color: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(20, 12, 60, 0.18), 0 8px 18px -8px rgba(20, 12, 60, 0.45);
+}
+.nb-nudge-btn:hover { background: #F3F0FF; border-color: #F3F0FF; color: #1B1442; }
+
+/* ── Filter chips ─────────────────────────────────────────────────────────
+   A row of these is a selection, and selection is violet everywhere else in
+   the product now — the active tab, the focal card, the primary button. The
+   old active state was a solid near-black pill with a 1.5px outline, which
+   was the same flat, hard-edged look the nav bar had before it was redone,
+   and it made "remote" look like the most important thing on the page.
+
+   Inactive is a soft fill rather than an outline. A row of eight outlined
+   pills is sixteen hairlines competing with the listings beside them. */
+.nb-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  color: #5A6172;
+  background: #F4F4F7;
+  border: 1px solid transparent;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.nb-chip:hover { background: #ECEBF3; color: #191E2E; }
+.nb-chip-active,
+.nb-chip-active:hover {
+  color: #4E2FD6;
+  font-weight: 600;
+  background: rgba(97, 66, 245, 0.09);
+  border-color: rgba(97, 66, 245, 0.22);
+}
+
+/* The panel they sit in. Sticky, because it is a sidebar beside a list that
+   can be much taller than it — a filter you have to scroll back up to reach
+   is a filter people stop using. */
+.nb-filters {
+  position: sticky;
+  top: 78px;
+}
+@media (max-width: 900px) {
+  .nb-filters { position: static; }
 }

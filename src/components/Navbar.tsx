@@ -203,7 +203,7 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     place in the product that answers "which account am I in",
                     which matters to anyone with a staff account and a real
                     one. */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 14px 12px' }}>
+                <div className="nb-menu-row" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 14px 12px' }}>
                   <span className="nb-avatar nb-avatar-lg" aria-hidden="true">{initials(name)}</span>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -218,13 +218,14 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                 <div className="nb-menu-rule" />
 
                 <div className="nb-menu-group">
-                  {MENU.map((item) => (
+                  {MENU.map((item, i) => (
                     <Link
                       key={item.href}
                       href={item.href}
                       role="menuitem"
                       onClick={() => setMenuOpen(false)}
-                      className="nb-menu-item"
+                      className="nb-menu-item nb-menu-row"
+                      style={{ '--row': i + 1 } as React.CSSProperties}
                     >
                       <Icon name={item.icon} size={15.5} style={{ color: C.textGhost }} />
                       {item.label}
@@ -241,11 +242,11 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     a drawer rather than navigating, because the page you are
                     on is often the subject. */}
                 <div className="nb-menu-group">
-                  <span className="nb-menu-item">
+                  <span className="nb-menu-item nb-menu-row" style={{ '--row': MENU.length + 1 } as React.CSSProperties}>
                     <Icon name="spark" size={15.5} style={{ color: C.accent }} />
                     <FeedbackLink kind="feature" style={{ fontSize: 14, color: 'inherit', fontWeight: 'inherit' }} />
                   </span>
-                  <span className="nb-menu-item">
+                  <span className="nb-menu-item nb-menu-row" style={{ '--row': MENU.length + 2 } as React.CSSProperties}>
                     <Icon name="bug" size={15.5} style={{ color: C.textGhost }} />
                     <FeedbackLink kind="bug" style={{ fontSize: 14, color: 'inherit', fontWeight: 'inherit' }} />
                   </span>
@@ -258,8 +259,12 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     onClick={handleSignOut}
                     disabled={signing}
                     role="menuitem"
-                    className="nb-menu-item"
-                    style={{ width: '100%', background: 'none', border: 'none', font: 'inherit', cursor: signing ? 'not-allowed' : 'pointer' }}
+                    className="nb-menu-item nb-menu-row"
+                    style={{
+                      width: '100%', background: 'none', border: 'none', font: 'inherit',
+                      cursor: signing ? 'not-allowed' : 'pointer',
+                      '--row': MENU.length + 3,
+                    } as React.CSSProperties}
                   >
                     <Icon name="sign-out" size={15.5} style={{ color: C.textGhost }} />
                     {signing ? 'Signing out…' : 'Sign out'}
