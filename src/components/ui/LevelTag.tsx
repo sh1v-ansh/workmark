@@ -7,8 +7,8 @@ import { C, R } from '@/lib/theme/dark-tokens'
 /**
  * A level name that can explain itself.
  *
- * "Familiar" and "Practiced" are the two words the whole record hangs on and
- * neither says what it means. That was previously answered by a paragraph
+ * A level name still needs an answer to "how did you decide that", which
+ * was previously given by a paragraph
  * standing permanently above the skills list, which every reader paid for
  * and almost none needed twice.
  *

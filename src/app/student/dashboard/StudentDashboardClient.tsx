@@ -10,11 +10,12 @@ import Button from '@/components/ui/Button'
 import { type BadgeTone } from '@/components/ui/Badge'
 import { Kicker, Stat } from '@/components/ui/Section'
 import RescanButton from '@/components/RescanButton'
+import SkillChip from '@/components/skills/SkillChip'
+import LevelBar, { countLevels } from '@/components/skills/LevelBar'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
-import LevelTag from '@/components/ui/LevelTag'
 
 export interface DashboardData {
   student: {
@@ -126,6 +127,12 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
   const [withdrawing, setWithdrawing] = useState<string | null>(null)
 
   const activeEngagements = engagements.filter((e) => e.stage !== 'closed' && e.stage !== 'abandoned')
+
+  // Six is the number that fits on one line at most widths and still reads
+  // as a shortlist rather than a truncation. `skills` arrives sorted by
+  // level then name, so these really are the strongest.
+  const levelCounts = countLevels(skills)
+  const topSkills = skills.slice(0, 6)
 
   async function withdraw(id: string) {
     if (!confirm('Withdraw this application? You can apply again later while the project is still open.')) return
@@ -422,23 +429,29 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
                   : 'Connect GitHub and scan your repositories — everything on this page grows from that.'}
               </p>
             ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {skills.map((s) => {
-                  const strong = s.bestLevel >= 3
-                  return (
-                    <span
-                      key={s.skillId}
-                      style={{
-                        fontSize: 13, fontWeight: strong ? 600 : 500,
-                        color: strong ? C.accentInk : C.textMuted,
-                        background: strong ? '#EDE9FF' : C.surfaceAlt,
-                        borderRadius: R.sm, padding: '5.5px 11px',
-                      }}
+              /* The strongest six, not all thirty-seven.
+                 This box used to print every skill, so it grew without limit
+                 and the answer to "how good is this record" was somewhere in
+                 the middle of a wall of chips. The bar says the shape of it,
+                 the six say the best of it, and the rest are one click away
+                 on a page built to hold them. */
+              <div>
+                <div style={{ marginBottom: 15 }}>
+                  <LevelBar counts={levelCounts} />
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                  {topSkills.map((s) => (
+                    <SkillChip key={s.skillId} name={s.name} level={s.bestLevel} />
+                  ))}
+                  {skills.length > topSkills.length && (
+                    <Link
+                      href="/me"
+                      style={{ fontSize: 12.5, fontWeight: 600, color: C.textMuted, textDecoration: 'none', padding: '6px 4px' }}
                     >
-                      {s.name} · <LevelTag level={s.bestLevel} />
-                    </span>
-                  )
-                })}
+                      +{skills.length - topSkills.length} more
+                    </Link>
+                  )}
+                </div>
               </div>
             )}
           </Card>
@@ -468,11 +481,14 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           <Card hoverable={false} padding={23}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
+                {/* "Nothing out, nothing in flight" was aviation for "you
+                    have not applied to anything". It sounded like it meant
+                    something and did not survive being read once. */}
                 <p style={{ fontFamily: F.display, fontSize: 17.5, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 4 }}>
-                  Nothing out, nothing in flight.
+                  You haven&apos;t applied to anything yet
                 </p>
                 <p style={{ fontSize: 14, color: C.textMuted }}>
-                  You have {MAX_ACTIVE_APPLICATIONS - student.activeApplicationCount} application slots free.
+                  You can have {MAX_ACTIVE_APPLICATIONS} applications open at once. All {MAX_ACTIVE_APPLICATIONS - student.activeApplicationCount} are free.
                 </p>
               </div>
               <Button href="/listings" variant="ink" size="sm">Find work</Button>

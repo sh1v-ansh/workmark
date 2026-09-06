@@ -6,8 +6,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import Button from '@/components/ui/Button'
-import { C, F, R } from '@/lib/theme/dark-tokens'
+import { C, F, R, E } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
+import { Icon } from '@/components/Icon'
 
 type Mode = 'signin' | 'signup'
 // Student-only in MVP: company/faculty accounts are deferred to Tier 1+
@@ -148,14 +149,70 @@ export default function LoginPage() {
     )
   }
 
-  return (
-    <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 36 }}>
-        <Wordmark height={24} />
-      </Link>
+  const signingUp = mode === 'signup'
 
-      <div style={{ width: '100%', maxWidth: 390 }}>
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 29 }}>
+  return (
+    <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 24px 56px' }}>
+      {/* Two columns, because this page had one job and was doing half of
+          it. A box floating alone in the middle of a white screen tells a
+          returning student nothing they need and a first-time visitor
+          nothing at all — they arrive from a link with no idea what this
+          is, and the only words on the page were "Email" and "Password". */}
+      <div
+        className="nb-login"
+        style={{ width: '100%', maxWidth: 980, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 390px', gap: 64, alignItems: 'center' }}
+      >
+        <div>
+          <Link href="/" aria-label="Workmark home" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', marginBottom: 26 }}>
+            <Wordmark height={24} />
+          </Link>
+
+          <h1 style={{ fontFamily: F.display, fontSize: 34, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, lineHeight: 1.15, marginBottom: 13 }}>
+            {signingUp ? 'Prove what you can build' : 'Welcome back'}
+          </h1>
+
+          <p style={{ fontSize: 15.5, color: C.textMuted, lineHeight: 1.65, maxWidth: '46ch', marginBottom: signingUp ? 26 : 14 }}>
+            {signingUp
+              ? 'Workmark reads the code you have already written and turns it into a skill record you can show someone. Then it finds you real project work that needs those skills.'
+              : 'Sign in to pick up your record, your applications and the projects you are working on.'}
+          </p>
+
+          {/* The page opens on Sign in, so a first-time visitor arriving from
+              a link is greeted by "Welcome back" and told nothing. This is
+              the one line that lets them out of that. */}
+          {!signingUp && (
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setError(null) }}
+              style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 14.5, fontWeight: 600, color: C.accentInk, cursor: 'pointer' }}
+            >
+              First time here? See what Workmark does →
+            </button>
+          )}
+
+          {signingUp && (
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {[
+                ['You pick the repositories', 'We read what they depend on, how they are built and which commits are yours. Never the source itself.'],
+                ['Every level is checkable', 'Each skill says which project it came from, so a poster can look rather than take your word for it.'],
+                ['Free while you are a student', 'A .edu address is all it takes to sign up.'],
+              ].map(([title, detail]) => (
+                <li key={title} style={{ display: 'flex', gap: 11 }}>
+                  <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 3, color: C.accent, display: 'flex' }}>
+                    <Icon name="check" size={15} />
+                  </span>
+                  <span>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 2 }}>{title}</span>
+                    <span style={{ display: 'block', fontSize: 13.5, color: C.textFaint, lineHeight: 1.55, maxWidth: '48ch' }}>{detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+      <div style={{ width: '100%' }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 29, boxShadow: E.card }}>
           {/* Mode tabs */}
           <div role="group" aria-label="Sign in or sign up" style={{ display: 'flex', gap: 2, marginBottom: 25, background: C.surfaceAlt, borderRadius: R.md, padding: 3 }}>
             {(['signin', 'signup'] as Mode[]).map((m) => (
@@ -229,9 +286,10 @@ export default function LoginPage() {
 
         <p style={{ textAlign: 'center', fontSize: 13, color: C.textGhost, marginTop: 16.5 }}>
           <Link href="/listings" style={{ color: C.textMuted, textDecoration: 'none' }}>
-            Browse open projects →
+            Browse open projects without an account →
           </Link>
         </p>
+      </div>
       </div>
     </main>
   )

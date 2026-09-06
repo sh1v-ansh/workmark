@@ -28,8 +28,8 @@ describe('percentile bands', () => {
 
 describe('level names', () => {
   it('names every level, including the ones not yet reachable', () => {
-    expect(levelName(1)).toBe('Familiar')
-    expect(levelName(3)).toBe('Strong')
+    expect(levelName(1)).toBe('Beginner')
+    expect(levelName(3)).toBe('Advanced')
     expect(levelName(5)).toBe('Expert')
   })
 

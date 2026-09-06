@@ -23,6 +23,39 @@
   }
 }
 
+/* Visible to a screen reader, to nothing else. For labels that a sighted
+   reader gets from context — a search field under a heading that already
+   says what is being searched. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Scroll containers inside a card. A default scrollbar on a white card is a
+   grey slab down the side of it; this is the same control, quieter. It
+   stays wide enough to grab — a 4px scrollbar is a decision to make
+   scrolling harder in exchange for looking tidy. */
+.nb-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #D5D4E2 transparent;
+}
+.nb-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.nb-scroll::-webkit-scrollbar-track { background: transparent; }
+.nb-scroll::-webkit-scrollbar-thumb {
+  background: #D5D4E2;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.nb-scroll::-webkit-scrollbar-thumb:hover { background: #BDBBD0; background-clip: content-box; }
+
 /* Skip-to-content link — WCAG 2.4.1 */
 .skip-to-content {
   position: absolute;
@@ -80,10 +113,16 @@
   to   { opacity: 1; }
 }
 
+@keyframes nb-modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* Respect a stated preference for less motion — the drawer still appears,
    it just stops sliding. */
 @media (prefers-reduced-motion: reduce) {
   @keyframes nb-drawer-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes nb-modal-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes nb-shimmer { 0%, 100% { background-position: 50% 50%; } }
 }
 
@@ -602,3 +641,16 @@
 .legal-prose table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 13.5px; display: block; overflow-x: auto; }
 .legal-prose th, .legal-prose td { border: 1px solid #DDDCE8; padding: 9px 12px; text-align: left; vertical-align: top; }
 .legal-prose th { background: #F4F3F8; color: #191E2E; font-weight: 600; }
+
+/* ── The sign-in page ─────────────────────────────────────────────────────
+   Two columns while there is room for two: what Workmark is on the left,
+   the form on the right. Below that width the pitch stacks above the form
+   rather than beside it — a 180px column of body copy is worse than no
+   column of body copy. */
+@media (max-width: 900px) {
+  .nb-login {
+    grid-template-columns: 1fr !important;
+    gap: 34px !important;
+    max-width: 430px !important;
+  }
+}

@@ -206,12 +206,19 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                       {item.label}
                     </Link>
                   ))}
-                  {/* Reporting a bug shouldn't cost you the page you're
-                      reporting on, so this opens a drawer rather than
-                      navigating. Sits above sign out because it's the more
-                      likely of the two to be wanted. */}
-                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, marginTop: 3.5, paddingTop: 3.5, padding: '8.5px 11.5px' }}>
-                    <FeedbackLink />
+                  {/* Two entries, not one. These are different acts: one
+                      is a complaint and one is a favour, and putting them
+                      behind a single link labelled "bug" meant the favour
+                      was only reachable by first agreeing to file a
+                      complaint. Both open a drawer rather than navigating,
+                      because the page you are on is often the subject. */}
+                  <div style={{ borderTop: `1px solid ${C.borderFaint}`, marginTop: 3.5, paddingTop: 6, paddingBottom: 2 }}>
+                    <div style={{ padding: '5px 11.5px' }}>
+                      <FeedbackLink kind="feature" style={{ fontSize: 14, color: C.textSub }} />
+                    </div>
+                    <div style={{ padding: '5px 11.5px' }}>
+                      <FeedbackLink kind="bug" style={{ fontSize: 14, color: C.textSub }} />
+                    </div>
                   </div>
                   {/* Deleting an account used to sit here, one row above
                       Sign out, same size, same grey — the most irreversible

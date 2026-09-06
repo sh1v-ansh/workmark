@@ -140,11 +140,14 @@ export const LEVELS = {
     bar:    '#B9BDCA',
     shadow: 'none',
   },
+  // A step lighter than intermediate, so the three tiers read as a ramp
+  // rather than "gold, and then two identical greys". The difference is
+  // deliberately small: this is the bottom of a scale, not a warning.
   beginner: {
-    fill:   '#F4F4F7',
-    border: '#E6E6EE',
-    text:   '#3A4152',
-    sub:    '#8D94A5',
+    fill:   '#FAFAFC',
+    border: '#EDEDF3',
+    text:   '#5A6172',
+    sub:    '#9AA0AD',
     bar:    '#E4E4EB',
     shadow: 'none',
   },

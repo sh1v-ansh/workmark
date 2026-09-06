@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Card from '@/components/Card'
@@ -9,12 +9,15 @@ import Badge from '@/components/ui/Badge'
 import { Kicker, Stat } from '@/components/ui/Section'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
-import { C, F, R, state } from '@/lib/theme/dark-tokens'
-import { tagColor } from '@/lib/theme/tagColors'
+import { C, F, state } from '@/lib/theme/dark-tokens'
 import type { StudentRecord } from '@/lib/profile/record'
 import { STAGE_LABEL, type Stage } from '@/lib/engagements/lifecycle'
-import LevelTag from '@/components/ui/LevelTag'
 import RescanButton from '@/components/RescanButton'
+import SearchableBox from '@/components/ui/SearchableBox'
+import SkillChip, { PlainChip } from '@/components/skills/SkillChip'
+import LevelBar, { countLevels } from '@/components/skills/LevelBar'
+import SkillEvidenceModal from '@/components/skills/SkillEvidenceModal'
+import { SELF_EVIDENCED_CAP } from '@/lib/skills/level-names'
 import { LAYOUT } from '@/lib/theme/layout'
 
 interface EvidenceSource {
@@ -40,6 +43,19 @@ const TIER_LABEL: Record<string, string> = {
  * 'repo_link', 'human_review'. These are read by students disputing their
  * own record, so they have to be words.
  */
+/** Strongest first. The order here is the order on the page. */
+const SKILL_GROUPS = [
+  { key: 'advanced', label: 'Advanced' },
+  { key: 'intermediate', label: 'Intermediate' },
+  { key: 'beginner', label: 'Beginner' },
+] as const
+
+function groupOf(level: number): (typeof SKILL_GROUPS)[number]['key'] {
+  if (level >= SELF_EVIDENCED_CAP) return 'advanced'
+  if (level === 2) return 'intermediate'
+  return 'beginner'
+}
+
 const VERIFICATION_LABEL: Record<string, string> = {
   repo_link: 'Link',
   deployment: 'Deployed',
@@ -63,7 +79,9 @@ export default function MyRecordClient({ record, sources, suggestedHandle, githu
   const [handle, setHandle] = useState(student.handle ?? suggestedHandle)
   const [editingHandle, setEditingHandle] = useState(false)
   const [savingHandle, setSavingHandle] = useState(false)
-  const [expandedSkill, setExpandedSkill] = useState<string | null>(null)
+  const [openSkill, setOpenSkill] = useState<string | null>(null)
+  const [skillQuery, setSkillQuery] = useState('')
+  const [repoQuery, setRepoQuery] = useState('')
 
   const profileUrl = student.handle
     ? `${typeof window === 'undefined' ? '' : window.location.origin}/p/${student.handle}`
@@ -90,12 +108,58 @@ export default function MyRecordClient({ record, sources, suggestedHandle, githu
 
   // Group evidence by repo so the "where did this come from" answer is
   // per-project rather than a flat list that repeats skill names.
-  const byRepo = new Map<string, EvidenceSource[]>()
-  for (const s of sources) {
-    const key = s.repoFullName ?? '(no repo)'
-    if (!byRepo.has(key)) byRepo.set(key, [])
-    byRepo.get(key)!.push(s)
-  }
+  const byRepo = useMemo(() => {
+    const map = new Map<string, EvidenceSource[]>()
+    for (const s of sources) {
+      const key = s.repoFullName ?? '(no repo)'
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(s)
+    }
+    return map
+  }, [sources])
+
+  const levelCounts = useMemo(() => countLevels(skills), [skills])
+
+  const filteredSkills = useMemo(() => {
+    const q = skillQuery.trim().toLowerCase()
+    if (!q) return skills
+    return skills.filter((s) => s.name.toLowerCase().includes(q))
+  }, [skills, skillQuery])
+
+  // Searching projects also searches the skills inside them, because "which
+  // project was my Docker one" is the question people actually have and the
+  // repository name rarely answers it.
+  const filteredRepos = useMemo(() => {
+    const entries = Array.from(byRepo.entries())
+    const q = repoQuery.trim().toLowerCase()
+    if (!q) return entries
+    return entries.filter(([repo, items]) =>
+      repo.toLowerCase().includes(q) || items.some((i) => i.skillName.toLowerCase().includes(q)),
+    )
+  }, [byRepo, repoQuery])
+
+  // Whichever skill the modal is showing, with every piece of evidence
+  // behind it. Built here rather than in the modal so the modal stays a
+  // presentation of data it was handed.
+  const openSkillDetail = useMemo(() => {
+    if (!openSkill) return null
+    const skill = skills.find((s) => s.skillId === openSkill)
+    if (!skill) return null
+    return {
+      skillId: skill.skillId,
+      name: skill.name,
+      bestLevel: skill.bestLevel,
+      evidence: sources
+        .filter((src) => src.skillId === openSkill)
+        .map((src) => ({
+          repoFullName: src.repoFullName,
+          tier: src.tier,
+          level: src.level,
+          verificationMethod: src.verificationMethod,
+        }))
+        .sort((a, b) => b.level - a.level),
+    }
+  }, [openSkill, skills, sources])
 
   return (
     <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
@@ -260,15 +324,15 @@ export default function MyRecordClient({ record, sources, suggestedHandle, githu
             </Card>
           </div>
 
-          <div>
-            {/* Verified skills */}
-            <div style={{ marginBottom: 32 }}>
-              <Kicker style={{ marginBottom: 5.5, paddingLeft: 20.5 }}>Verified skills · {skills.length}</Kicker>
-              {/* No standing explanation here any more. Every level name is a
-                  LevelTag that explains itself on hover and links to /levels,
-                  so the answer sits at the point of the question instead of
-                  above the list everyone came to read. */}
-              <div style={{ marginBottom: 12 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 30 }}>
+
+            {/* ── Skills ────────────────────────────────────────────────────
+                The focal card: this is what the page is. It gets the violet
+                edge and the light in the corner, and nothing else on the
+                screen does — two focal cards and neither is focal. */}
+            <div>
+              <Kicker style={{ marginBottom: 11, paddingLeft: 20.5 }}>Your skills · {skills.length}</Kicker>
+
               {skills.length === 0 ? (
                 /* Text only. There used to be a "Link repos" button here as
                    well as the one in the panel to the left, going to the same
@@ -283,85 +347,117 @@ export default function MyRecordClient({ record, sources, suggestedHandle, githu
                   </p>
                 </Card>
               ) : (
-                <Card hoverable={false} padding="3.5px 20px 7px">
-                  {skills.map((s, i) => {
-                    const expanded = expandedSkill === s.skillId
-                    const from = sources.filter((src) => src.skillId === s.skillId)
-                    return (
-                      <div key={s.skillId} style={{ borderBottom: i < skills.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
-                        <button
-                          onClick={() => setExpandedSkill(expanded ? null : s.skillId)}
-                          style={{ display: 'flex', alignItems: 'center', gap: 15, width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '13.5px 0', textAlign: 'left', font: 'inherit' }}
-                          aria-expanded={expanded}
-                        >
-                          <span style={{ flexGrow: 1, minWidth: 0 }}>
-                            <span style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em' }}>{s.name}</span>
-                          </span>
-                          <LevelTag level={s.bestLevel} style={{ fontSize: 13, color: C.textMuted, width: 84, flexShrink: 0 }} />
-                          <span style={{ fontSize: 13, color: C.textGhost, width: 74, flexShrink: 0, textAlign: 'right' }}>{s.artifactCount} project{s.artifactCount === 1 ? '' : 's'}</span>
-                          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0, transform: expanded ? 'rotate(180deg)' : undefined }}>
-                            <path d="M4 6l4 4 4-4" stroke={C.textGhost} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        </button>
+                <Card focal hoverable={false} padding="20px 21px 18px">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap', marginBottom: 15 }}>
+                    <div>
+                      <span style={{ fontFamily: F.display, fontSize: 30, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, lineHeight: 1 }}>
+                        {skills.length}
+                      </span>
+                      <span style={{ fontSize: 13.5, color: C.textMuted, marginLeft: 9 }}>
+                        {skills.length === 1 ? 'skill on your record' : 'skills on your record'}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: 12.5, color: C.textGhost, paddingTop: 6 }}>
+                      Click any skill to see where it came from
+                    </span>
+                  </div>
 
-                        {expanded && (
-                          <div style={{ paddingBottom: 14.5, display: 'flex', flexDirection: 'column', gap: 6.5 }}>
-                            {from.map((src, j) => (
-                              <div key={`${src.repoFullName}-${j}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9.5px 13px', background: C.surfaceAlt, borderRadius: R.md, flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: 13.5, color: C.textSub }}>{src.repoFullName ?? 'Non-code work'}</span>
-                                <span style={{ fontSize: 12, color: C.textGhost, display: 'inline-flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                                  <span>{TIER_LABEL[src.tier ?? ''] ?? src.tier}</span>
-                                  <span aria-hidden="true">·</span>
-                                  <LevelTag level={src.level} style={{ fontSize: 12, color: C.textGhost }} />
-                                  <span aria-hidden="true">·</span>
-                                  {src.verificationMethod === 'repo_link' && src.repoFullName ? (
-                                    <a
-                                      href={`https://github.com/${src.repoFullName}`}
-                                      target="_blank"
-                                      rel="noreferrer noopener"
-                                      style={{ color: C.accent, textDecoration: 'none', fontWeight: 600 }}
-                                    >
-                                      Link ↗
-                                    </a>
-                                  ) : (
-                                    <span>{VERIFICATION_LABEL[src.verificationMethod] ?? src.verificationMethod}</span>
-                                  )}
-                                </span>
-                              </div>
-                            ))}
+                  <div style={{ marginBottom: 17 }}>
+                    <LevelBar counts={levelCounts} />
+                  </div>
+
+                  <SearchableBox
+                    label="Search your skills"
+                    query={skillQuery}
+                    onQuery={setSkillQuery}
+                    placeholder="Search skills…"
+                    count={filteredSkills.length}
+                    total={skills.length}
+                    searchable={skills.length > 8}
+                    maxHeight={296}
+                    emptyMessage="No skill on your record matches that."
+                  >
+                    {/* Grouped strongest first, so the answer to "what is
+                        this person good at" is the first thing under the
+                        bar rather than something you scroll for. */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
+                      {SKILL_GROUPS.map((group) => {
+                        const inGroup = filteredSkills.filter((s) => groupOf(s.bestLevel) === group.key)
+                        if (inGroup.length === 0) return null
+                        return (
+                          <div key={group.key}>
+                            <p style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.075em', textTransform: 'uppercase', color: C.textGhost, marginBottom: 8 }}>
+                              {group.label} · {inGroup.length}
+                            </p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                              {inGroup.map((s) => (
+                                <SkillChip
+                                  key={s.skillId}
+                                  name={s.name}
+                                  level={s.bestLevel}
+                                  showLevel={false}
+                                  onClick={() => setOpenSkill(s.skillId)}
+                                />
+                              ))}
+                            </div>
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
+                        )
+                      })}
+                    </div>
+                  </SearchableBox>
                 </Card>
               )}
             </div>
 
-            {/* Projects behind the record */}
+            {/* ── Projects ──────────────────────────────────────────────────
+                Searchable and capped. This list used to be a two-column grid
+                of every repository, so the page got taller the more work
+                someone had done and everything below it moved further away —
+                exactly backwards. */}
             {byRepo.size > 0 && (
-              <div style={{ marginBottom: 32 }}>
-                <Kicker style={{ marginBottom: 12, paddingLeft: 20.5 }}>Projects · {byRepo.size}</Kicker>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 11 }} className="mob-1col">
-                  {Array.from(byRepo.entries()).map(([repo, entries]) => (
-                    <Card key={repo} hoverable={false} padding={19.5}>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3, wordBreak: 'break-word' }}>{repo}</p>
-                      <p style={{ fontSize: 12, color: C.textGhost, marginBottom: 10 }}>
-                        {TIER_LABEL[entries[0]?.tier ?? ''] ?? entries[0]?.tier}
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-                        {entries.map((e, i) => {
-                          const c = tagColor(e.skillName)
-                          return (
-                            <span key={`${e.skillId}-${i}`} style={{ fontSize: 12, padding: '3px 8.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
-                              {e.skillName}
+              <div>
+                <Kicker style={{ marginBottom: 11, paddingLeft: 20.5 }}>Projects · {byRepo.size}</Kicker>
+                <Card hoverable={false} padding="17px 19px 15px">
+                  <SearchableBox
+                    label="Search your projects"
+                    query={repoQuery}
+                    onQuery={setRepoQuery}
+                    placeholder="Search projects and the skills in them…"
+                    count={filteredRepos.length}
+                    total={byRepo.size}
+                    searchable={byRepo.size > 5}
+                    maxHeight={356}
+                    emptyMessage="No project matches that."
+                  >
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      {filteredRepos.map(([repo, entries], i) => (
+                        <div
+                          key={repo}
+                          style={{
+                            padding: i === 0 ? '0 2px 13px' : '13px 2px',
+                            borderTop: i === 0 ? 'none' : `1px solid ${C.borderFaint}`,
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                            <span style={{ fontSize: 14, fontWeight: 600, color: C.text, wordBreak: 'break-word' }}>{repo}</span>
+                            <span style={{ fontSize: 12, color: C.textGhost, whiteSpace: 'nowrap' }}>
+                              {TIER_LABEL[entries[0]?.tier ?? ''] ?? entries[0]?.tier}
                             </span>
-                          )
-                        })}
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                            {entries.map((e, j) => (
+                              <PlainChip
+                                key={`${e.skillId}-${j}`}
+                                name={e.skillName}
+                                onClick={() => setOpenSkill(e.skillId)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </SearchableBox>
+                </Card>
               </div>
             )}
 
@@ -393,6 +489,8 @@ export default function MyRecordClient({ record, sources, suggestedHandle, githu
           </div>
         </div>
       </main>
+
+      <SkillEvidenceModal skill={openSkillDetail} onClose={() => setOpenSkill(null)} />
     </div>
   )
 }
