@@ -19,7 +19,7 @@ export default function MarketplacePage() {
       <section style={{ padding: '120px 24px 64px', maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ maxWidth: 780 }}>
           <div className="wm-eyebrow" style={{ marginBottom: 22 }}>The Workmark marketplace</div>
-          <h1 className="mob-text-hero" style={{ fontFamily: F.serif, fontSize: 60, fontWeight: 800, lineHeight: 1.05, letterSpacing: '-0.035em', color: C.text, margin: '0 0 22px' }}>
+          <h1 className="mob-text-hero" style={{ fontFamily: F.serif, fontSize: 60, fontWeight: 600, lineHeight: 1.05, letterSpacing: '-0.035em', color: C.text, margin: '0 0 22px' }}>
             Where verified work records get earned.
           </h1>
           <p style={{ fontSize: 19, lineHeight: 1.65, color: C.textMuted, maxWidth: 640, marginBottom: 36 }}>

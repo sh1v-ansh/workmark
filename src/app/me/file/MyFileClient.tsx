@@ -140,14 +140,14 @@ export default function MyFileClient({ data }: { data: FileData }) {
   const corrections = data.evidence.filter((e) => e.isCorrection).length
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
         <div style={{ margin: '13px 0 20px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 9 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
             Your file
           </h1>
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 630 }}>
@@ -160,7 +160,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
             <a href="/api/account/export" download className="nb-btn nb-btn-outline nb-btn-sm">
               Download everything (JSON)
             </a>
-            <Link href="/account/notifications" className="nb-btn nb-btn-quiet nb-btn-sm">Email settings</Link>
+            <Link href="/account/settings#email" className="nb-btn nb-btn-quiet nb-btn-sm">Email settings</Link>
             <Link href="/account/delete" className="nb-btn nb-btn-quiet nb-btn-sm">Delete account</Link>
           </div>
         </div>
@@ -304,7 +304,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                         </Button>
                       </div>
                       {expandedDisclosure === d.id && (
-                        <pre style={{ marginTop: 11, padding: 13, background: C.bg, borderRadius: R.md, fontSize: 12, color: C.textMuted, overflowX: 'auto', lineHeight: 1.5, fontFamily: 'ui-monospace, Menlo, monospace' }}>
+                        <pre style={{ marginTop: 11, padding: 13, background: C.surfaceAlt, borderRadius: R.md, fontSize: 12, color: C.textMuted, overflowX: 'auto', lineHeight: 1.5, fontFamily: 'ui-monospace, Menlo, monospace' }}>
                           {JSON.stringify(d.payloadSnapshot, null, 2)}
                         </pre>
                       )}

@@ -56,11 +56,14 @@ export function DeleteClient({ liveEngagements }: { liveEngagements: number }) {
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px 24px 72px' }}>
-      <Link href="/student/dashboard" style={{ fontSize: 13, color: C.textFaint, textDecoration: 'none' }}>
-        ← Back
+      {/* Back to where this page is reached from, not to the dashboard.
+          Someone who opened this to read what happens and decided against it
+          should land on the screen they were on. */}
+      <Link href="/account/settings" style={{ fontSize: 13, color: C.textFaint, textDecoration: 'none' }}>
+        ← Back to settings
       </Link>
 
-      <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.025em', color: C.text, margin: '20px 0 10px' }}>
+      <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, margin: '20px 0 10px' }}>
         Delete your account
       </h1>
       <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.65, marginBottom: 26 }}>
@@ -68,7 +71,7 @@ export function DeleteClient({ liveEngagements }: { liveEngagements: number }) {
       </p>
 
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: '20px 22px', marginBottom: 18 }}>
-        <h2 style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 11 }}>Straight away</h2>
+        <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 11 }}>Straight away</h2>
         <ul style={{ paddingLeft: 18, margin: 0 }}>
           <Bullet>You&apos;re signed out and the account stops working.</Bullet>
           <Bullet>Your public profile stops loading and you disappear from the student directory.</Bullet>
@@ -78,7 +81,7 @@ export function DeleteClient({ liveEngagements }: { liveEngagements: number }) {
       </div>
 
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: '20px 22px', marginBottom: 18 }}>
-        <h2 style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 11 }}>After {GRACE_DAYS} days</h2>
+        <h2 style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 11 }}>After {GRACE_DAYS} days</h2>
         <ul style={{ paddingLeft: 18, margin: 0 }}>
           <Bullet>
             Everything is deleted for real — your profile, your skill record and the evidence

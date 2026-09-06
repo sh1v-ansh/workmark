@@ -42,7 +42,7 @@ export default function PublicProfileClient({
   const claimedOnly = student.selfReportedSkills.filter((s) => !evidencedNames.has(s.toLowerCase()))
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
       {/* Signed-in visitors get the app navbar from the section layout. A
           recruiter opening this link has no account and no use for a nav
           full of "My record" — they get the wordmark and nothing else. */}
@@ -70,7 +70,7 @@ export default function PublicProfileClient({
             of competing across a two-column layout. */}
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 36, alignItems: 'center', paddingBottom: 26, borderBottom: `1px solid ${C.border}`, marginBottom: 31 }} className="mob-1col">
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 34, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1.05, color: C.text, marginBottom: 10.5 }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 34, fontWeight: 600, letterSpacing: '-0.035em', lineHeight: 1.05, color: C.text, marginBottom: 10.5 }}>
               {student.fullName ?? 'Student'}
             </h1>
             <p style={{ fontSize: 15.5, color: C.textMuted, marginBottom: 14.5 }}>
@@ -178,7 +178,7 @@ export default function PublicProfileClient({
                       </div>
                     ) : (
                       <div>
-                        <p style={{ fontFamily: F.display, fontSize: 15.5, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 3 }}>
+                        <p style={{ fontFamily: F.display, fontSize: 15.5, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 3 }}>
                           {e.listingTitle ?? 'Untitled project'}
                         </p>
                         <p style={{ fontSize: 12, color: C.textGhost, marginBottom: e.description ? 9.5 : 0 }}>

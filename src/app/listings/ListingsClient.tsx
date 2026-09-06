@@ -11,6 +11,8 @@ import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
 import { tagColor } from '@/lib/theme/tagColors'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
+import AiProjectCard, { type AiProjectCardData } from '@/components/briefs/AiProjectCard'
+import { Icon } from '@/components/Icon'
 import MultiSelect from '@/components/ui/MultiSelect'
 
 export interface ListingCardData {
@@ -64,14 +66,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      style={{
-        fontSize: 13, padding: '5.5px 12px', borderRadius: R.pill, cursor: 'pointer', font: 'inherit', fontWeight: 500,
-        transition: 'background 120ms, border-color 120ms, color 120ms',
-        color: active ? '#fff' : C.textMuted,
-        background: active ? C.text : 'transparent',
-        border: `1.5px solid ${active ? C.text : C.border}`,
-        whiteSpace: 'nowrap',
-      }}
+      className={`nb-chip${active ? ' nb-chip-active' : ''}`}
     >
       {label}
     </button>
@@ -92,8 +87,10 @@ function sentenceCase(v: string): string {
   return v.charAt(0).toUpperCase() + v.slice(1)
 }
 
-export default function ListingsClient({ listings, signedIn, studentName }: {
+export default function ListingsClient({ listings, aiProjects = [], signedIn, studentName }: {
   listings: ListingCardData[]
+  /** Projects Workmark wrote for this student and they have not started. */
+  aiProjects?: AiProjectCardData[]
   signedIn: boolean
   studentName: string | null
 }) {
@@ -152,13 +149,13 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
   const hasAnyFacet = skillOptions.length > 0 || workModeOptions.length > 0 || showHoursFilter || showTierFilter
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
               Find Work
             </h1>
           </div>
@@ -174,27 +171,81 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
           )}
         </div>
 
+        {/* ── Projects Workmark wrote ─────────────────────────────────────
+            Above the real postings, and only for a signed-in student who
+            has some. The order is deliberate: on a young marketplace this
+            is often the only thing on the page, and burying it under "No
+            open projects right now" would waste the one section that is
+            never empty.
+
+            The band says once what the cards are, so the cards do not each
+            have to carry a disclaimer. */}
+        {signedIn && aiProjects.length > 0 && (
+          <section aria-label="Projects suggested for you" style={{ marginBottom: 26 }}>
+            <div className="nb-ai-band">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: R.md, background: 'rgba(97,66,245,0.10)', color: C.accent, flexShrink: 0 }}>
+                  <Icon name="spark" size={16} />
+                </span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>
+                    Written for you, not posted by anyone
+                  </span>
+                  <span style={{ display: 'block', fontSize: 13, color: C.textMuted, lineHeight: 1.5 }}>
+                    Workmark reads your record every night and writes projects that would move it. Nobody is waiting on these — start one whenever you like.
+                  </span>
+                </span>
+              </div>
+              <Link
+                href="/me/briefs"
+                style={{ fontSize: 13, fontWeight: 600, color: C.accent, textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                Ask for something specific →
+              </Link>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14.5 }} className="mob-1col">
+              {aiProjects.map((p) => (
+                <AiProjectCard key={p.id} project={p} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {listings.length === 0 ? (
           <Card hoverable={false} padding={36}>
-            <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center' }}>
-              No open projects right now.{signedIn ? ' Post the first one.' : ' Sign in to post one.'}
+            <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center', lineHeight: 1.6 }}>
+              {aiProjects.length > 0
+                ? 'Nobody has posted a project yet. The ones above are yours to start in the meantime.'
+                : signedIn
+                  ? 'No open projects right now. Post the first one.'
+                  : 'No open projects right now. Sign in to post one.'}
             </p>
           </Card>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: hasAnyFacet ? '230px minmax(0, 1fr)' : '1fr', gap: 22, alignItems: 'start' }} className="mob-1col">
 
             {hasAnyFacet && (
-              <Card hoverable={false} padding={16.5} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                  <span style={{ fontSize: 13, color: C.textMuted, fontWeight: 600 }}>
-                    Filter{activeCount > 0 ? ` · ${activeCount}` : ''}
+              <Card hoverable={false} padding="15px 17px 18px" className="nb-filters" style={{ display: 'flex', flexDirection: 'column', gap: 17 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, minHeight: 24 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 13.5, color: C.text, fontWeight: 600 }}>
+                    Filter
+                    {activeCount > 0 && (
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        minWidth: 19, height: 19, padding: '0 5px', borderRadius: R.pill,
+                        fontSize: 11.5, fontWeight: 700, color: '#FFFFFF', background: C.accent,
+                      }}>
+                        {activeCount}
+                      </span>
+                    )}
                   </span>
                   {activeCount > 0 && (
                     <button
                       type="button" onClick={clearAll}
-                      style={{ fontSize: 12, color: C.textFaint, background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0, font: 'inherit' }}
+                      style={{ fontSize: 12.5, color: C.accent, fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
                     >
-                      Clear
+                      Clear all
                     </button>
                   )}
                 </div>
@@ -253,7 +304,7 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
                   {filtered.map((l) => (
                     <Card key={l.id} href={`/listings/${l.id}`} padding={18}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 9, flexWrap: 'wrap' }}>
-                        <h2 style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, lineHeight: 1.3 }}>
+                        <h2 style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, lineHeight: 1.3 }}>
                           {l.title ?? 'Untitled project'}
                         </h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>

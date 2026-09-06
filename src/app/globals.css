@@ -23,6 +23,39 @@
   }
 }
 
+/* Visible to a screen reader, to nothing else. For labels that a sighted
+   reader gets from context — a search field under a heading that already
+   says what is being searched. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Scroll containers inside a card. A default scrollbar on a white card is a
+   grey slab down the side of it; this is the same control, quieter. It
+   stays wide enough to grab — a 4px scrollbar is a decision to make
+   scrolling harder in exchange for looking tidy. */
+.nb-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #D5D4E2 transparent;
+}
+.nb-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+.nb-scroll::-webkit-scrollbar-track { background: transparent; }
+.nb-scroll::-webkit-scrollbar-thumb {
+  background: #D5D4E2;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+.nb-scroll::-webkit-scrollbar-thumb:hover { background: #BDBBD0; background-clip: content-box; }
+
 /* Skip-to-content link — WCAG 2.4.1 */
 .skip-to-content {
   position: absolute;
@@ -80,10 +113,16 @@
   to   { opacity: 1; }
 }
 
+@keyframes nb-modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
 /* Respect a stated preference for less motion — the drawer still appears,
    it just stops sliding. */
 @media (prefers-reduced-motion: reduce) {
   @keyframes nb-drawer-in { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes nb-modal-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes nb-shimmer { 0%, 100% { background-position: 50% 50%; } }
 }
 
@@ -110,13 +149,13 @@
 .dk-select,
 .dk-textarea {
   background: #FFFFFF;
-  border: 1.5px solid #E7E2D6;
+  border: 1.5px solid #ECEBF3;
   color: #191E2E;
   font-size: 15px;
   padding: 11px 14px;
   outline: none;
   width: 100%;
-  font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
   transition: border-color 0.15s, box-shadow 0.15s;
   border-radius: 10px;
 }
@@ -276,7 +315,7 @@
   align-items: center;
   justify-content: center;
   gap: 7.5px;
-  font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
   font-weight: 600;
   font-size: 14px;
   line-height: 1;
@@ -286,7 +325,7 @@
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
 .nb-btn:disabled,
 .nb-btn[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; }
@@ -294,14 +333,25 @@
 .nb-btn-ink      { background: #191E2E; color: #FFFFFF; border-color: #191E2E; }
 .nb-btn-ink:not(:disabled):hover { background: #262D42; border-color: #262D42; }
 
-.nb-btn-accent   { background: #6142F5; color: #FFFFFF; border-color: #6142F5; }
-.nb-btn-accent:not(:disabled):hover { background: #4E2FD6; border-color: #4E2FD6; }
+/* The accent button throws a little of its own colour onto the page under it.
+   On cream this was invisible; on white it is what makes the one growth
+   action on a screen findable without making it bigger. */
+.nb-btn-accent   {
+  background: #6142F5; color: #FFFFFF; border-color: #6142F5;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.24), 0 8px 18px -8px rgba(97, 66, 245, 0.55);
+}
+.nb-btn-accent:not(:disabled):hover {
+  background: #4E2FD6; border-color: #4E2FD6;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.28), 0 10px 22px -8px rgba(97, 66, 245, 0.62);
+}
+.nb-btn-accent:disabled,
+.nb-btn-accent[aria-disabled='true'] { box-shadow: none; }
 
-.nb-btn-outline  { background: #FFFFFF; color: #191E2E; border-color: #DCD6C8; }
+.nb-btn-outline  { background: #FFFFFF; color: #191E2E; border-color: #DDDCE8; }
 .nb-btn-outline:not(:disabled):hover { border-color: #191E2E; }
 
 .nb-btn-quiet    { background: transparent; color: #5A6172; border-color: transparent; padding-left: 9px; padding-right: 9px; }
-.nb-btn-quiet:not(:disabled):hover { background: #F1EDE3; color: #191E2E; }
+.nb-btn-quiet:not(:disabled):hover { background: #F4F3F8; color: #191E2E; }
 
 /* Destructive. Outlined rather than filled: an irreversible action should
    read as serious, not as the obvious thing to click. */
@@ -310,40 +360,169 @@
 
 .nb-btn-sm { font-size: 13px; padding: 8px 14.5px; border-radius: 8.5px; }
 
-/* ── Nav tabs — notebook dividers, not a toolbar ──────────────────────────
-   The active tab shares the card's fill and loses its bottom border, so it
-   reads as the sheet you're currently on rather than a highlighted link. */
-.nb-tab {
+/* ── The nav bar ──────────────────────────────────────────────────────────
+   Sticky, white, and translucent so the page slides under it rather than
+   disappearing at a hard edge. The bar has a hairline under it and nothing
+   else — no shadow, because it is not floating above the page, it is the
+   top of it. */
+.nb-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  /* Glass, properly. The first pass was 82% white with a small blur, which
+     is a slightly foggy white bar — you cannot tell it is translucent
+     unless something coloured passes under it. Thinner tint, much bigger
+     blur and a saturation boost, so the violet in the page ground actually
+     bleeds through and the bar takes on the colour of whatever is beneath
+     it. The hairline is a highlight above a shadow rather than a border,
+     which is what gives an edge its thickness. */
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: saturate(180%) blur(22px);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  border-bottom: 1px solid rgba(236, 235, 243, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 1px 12px -6px rgba(25, 30, 46, 0.10);
+}
+/* No blur support means the text has to sit on something solid — a 62%
+   white bar over scrolling content is unreadable, not stylish. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .nb-header { background: #FFFFFF; }
+}
+
+/* ── Nav links ────────────────────────────────────────────────────────────
+   These were 11.5px uppercase tabs drawn as sheets of paper joining the
+   page below them. That metaphor needed the cream ground to work; on white
+   it was three hairlines around some small caps, which is what read as
+   unfinished. They are links in a pill now: sentence case, legible size,
+   and an active state that is a quiet violet fill rather than a diagram. */
+.nb-navlink {
   display: inline-flex;
   align-items: center;
-  font-family: var(--font-display), 'Schibsted Grotesk', system-ui, sans-serif;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.075em;
-  text-transform: uppercase;
-  padding: 7.5px 13.5px;
-  border-radius: 8.5px 8.5px 0 0;
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 9px;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
   color: #5A6172;
   text-decoration: none;
-  border: 1px solid transparent;
-  border-bottom: none;
-  position: relative;
+  white-space: nowrap;
   transition: color 0.15s ease, background 0.15s ease;
 }
-.nb-tab:hover { color: #191E2E; background: #F1EDE3; }
-.nb-tab-active {
-  background: #FFFFFF;
-  color: #191E2E;
-  border-color: #E7E2D6;
+.nb-navlink:hover { color: #191E2E; background: #F4F3F8; }
+.nb-navlink-active,
+.nb-navlink-active:hover {
+  color: #4E2FD6;
+  background: rgba(97, 66, 245, 0.08);
+  font-weight: 600;
 }
-/* Bridge the 1px rule under the bar so the active tab joins the page. */
-.nb-tab-active::after {
-  content: '';
+
+/* ── The avatar ───────────────────────────────────────────────────────────
+   A ring rather than a filled square. Filled violet made it the loudest
+   thing in the bar, which is wrong — your own face is not the action on
+   any page. It fills in only while its menu is open, where being loud is
+   the correct answer to "where did this come from". */
+.nb-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 33px;
+  height: 33px;
+  border-radius: 999px;
+  border: 1px solid #DCD4F7;
+  background: #F5F2FF;
+  color: #4E2FD6;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.nb-avatar:hover { border-color: #C3B4F2; box-shadow: 0 0 0 3px rgba(97, 66, 245, 0.08); }
+.nb-avatar[data-open='true'] {
+  background: #6142F5;
+  border-color: #6142F5;
+  color: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.24), 0 6px 14px -6px rgba(97, 66, 245, 0.55);
+}
+.nb-avatar-lg { width: 36px; height: 36px; font-size: 12.5px; cursor: default; }
+
+/* ── The account menu ─────────────────────────────────────────────────────
+   Grouped, with icons and rules, so it reads as a menu rather than a list
+   of links that happen to be in a box. The groups are the point: who you
+   are, where you can go, what you can tell us, and out. Four things, each
+   two or three rows long, is a menu you use — one run of eight rows is a
+   list you read. */
+.nb-menu {
   position: absolute;
-  left: 0; right: 0; bottom: -1px;
-  height: 1px;
+  right: 0;
+  top: 46px;
+  min-width: 244px;
+  z-index: 50;
   background: #FFFFFF;
+  border: 1px solid #ECEBF3;
+  border-radius: 13px;
+  box-shadow: 0 4px 6px rgba(25, 30, 46, 0.04), 0 16px 40px -12px rgba(25, 30, 46, 0.18);
+  padding: 0;
+  overflow: hidden;
+  /* Grows out of the avatar rather than appearing near it. The origin is
+     the top-right corner, which is where the thing that opened it is, so
+     the menu reads as unfolding from the button instead of being dealt
+     onto the page. */
+  transform-origin: top right;
+  animation: nb-menu-in 190ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+@keyframes nb-menu-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.94); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The rows arrive just behind the panel, top to bottom. Short and small —
+   90ms and 5px — because this is a menu somebody is about to click, and an
+   entrance they have to wait through is a worse menu.
+
+   The delay comes from the component as --row, not from an nth-of-type
+   rule here. The first attempt used :nth-of-type on .nb-menu-group, which
+   silently matched nothing: nth-of-type counts by element type, and every
+   child of this menu is a div, so "the first .nb-menu-group div" is a
+   different thing from "the first div, which is a .nb-menu-group". The
+   stagger simply did not happen and nothing said so. */
+.nb-menu-row {
+  animation: nb-menu-row-in 90ms ease-out both;
+  animation-delay: calc(45ms + var(--row, 0) * 22ms);
+}
+@keyframes nb-menu-row-in {
+  from { opacity: 0; transform: translateY(-5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes nb-menu-in { from { opacity: 0; } to { opacity: 1; } }
+  .nb-menu-row { animation: none; }
+}
+
+.nb-menu-rule { height: 1px; background: #F4F3F8; }
+.nb-menu-group { padding: 5px; display: flex; flex-direction: column; }
+
+.nb-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #2B3244;
+  text-decoration: none;
+  text-align: left;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.nb-menu-item:hover { background: #F7F7FA; color: #191E2E; }
+.nb-menu-item:disabled { opacity: 0.5; }
+/* FeedbackLink renders its own button; make the whole row the target
+   rather than the eight words inside it. */
+.nb-menu-item > button { text-align: left; flex: 1; cursor: pointer; }
 
 /* ── Ruled paper ──────────────────────────────────────────────────────────
    Behind the record only. It signals "this is the written-down part", which
@@ -354,9 +533,53 @@
     to bottom,
     transparent 0,
     transparent 33px,
-    #EDE8DC 33px,
-    #EDE8DC 34px
+    #F0F0F6 33px,
+    #F0F0F6 34px
   );
+}
+
+/* ── The app ground ───────────────────────────────────────────────────────
+   Goes on the outermost element of every signed-in screen.
+
+   The app used to sit on cream, which gave a white card something to be
+   white against. On a white ground that contrast is gone, so the depth has
+   to come from somewhere else: two very soft violet radials in the top
+   corners, and shadow under the cards (E.card).
+
+   The light is decoration and nothing may depend on it — it is fixed to the
+   viewport so it does not smear down a long page, and it sits behind
+   everything at z-index 0. If you cannot find something on this page, the
+   gradient is not the reason and turning it up will not fix it. */
+.wm-app-ground {
+  position: relative;
+  isolation: isolate;
+
+  /* The app's typeface, set once here rather than at ~900 call sites.
+     `body` stays on Inter because the marketing pages are still Inter and
+     still correct that way; anything that does not set a family explicitly
+     used to inherit Inter into the app, which is how half a signed-in page
+     ended up in the wrong face. This is the boundary between the two. */
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+}
+/* Form controls do not inherit font-family, so they need saying twice. */
+.wm-app-ground input,
+.wm-app-ground select,
+.wm-app-ground textarea,
+.wm-app-ground button {
+  font-family: inherit;
+}
+.wm-app-ground::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 420px at 12% -8%, rgba(97, 66, 245, 0.07) 0%, rgba(97, 66, 245, 0) 68%),
+    radial-gradient(700px 380px at 96% 2%, rgba(129, 140, 248, 0.06) 0%, rgba(129, 140, 248, 0) 70%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .wm-app-ground::before { background: none; }
 }
 
 /* ── The page grid ────────────────────────────────────────────────────────
@@ -411,15 +634,42 @@
 }
 
 /* ── Cards ────────────────────────────────────────────────────────────────
-   Bordered, not floated. A hover lift on a card that isn't clickable is a
-   lie about affordance, so only the link/button variants get it. */
+   White on white, so the edge is carried by a soft shadow as well as a
+   border. This is not a lift — the card is not claiming to float above the
+   page, it is claiming to be a separate sheet on it, which it is.
+
+   A hover lift on a card that isn't clickable is a lie about affordance, so
+   only the link/button variants move. */
 .nb-card {
   background: #FFFFFF;
-  border: 1px solid #E7E2D6;
+  border: 1px solid #ECEBF3;
   border-radius: 13px;
+  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03), 0 8px 20px -12px rgba(25, 30, 46, 0.18);
 }
-.nb-card-interactive { transition: border-color 0.15s ease, background 0.15s ease; }
-.nb-card-interactive:hover { border-color: #C9C2B2; background: #FFFDFA; }
+.nb-card-interactive { transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease; }
+.nb-card-interactive:hover {
+  border-color: #DCD4F7;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 30px -16px rgba(97, 66, 245, 0.38);
+  transform: translateY(-1px);
+}
+
+/* The one card per screen that owns it. Violet edge, violet light pooling in
+   the bottom-right corner. Spending this twice on the same screen spends the
+   effect — if two things are focal, neither is. */
+.nb-card-focal {
+  position: relative;
+  overflow: hidden;
+  border-color: #DCD4F7;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 16px 36px -20px rgba(97, 66, 245, 0.45);
+}
+.nb-card-focal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(560px 260px at 88% 108%, rgba(97, 66, 245, 0.10) 0%, rgba(97, 66, 245, 0) 72%);
+}
+.nb-card-focal > * { position: relative; }
 
 /* Respect user's motion preference — WCAG 2.3.3 */
 @media (prefers-reduced-motion: reduce) {
@@ -465,7 +715,7 @@
   cursor: help;
   text-decoration: underline dotted;
   text-underline-offset: 3px;
-  text-decoration-color: #C9C2B2;
+  text-decoration-color: #C6C4D6;
   border-radius: 3px;
 }
 .nb-leveltag-label:focus-visible { outline: 2px solid #6B4EFF; outline-offset: 2px; }
@@ -478,7 +728,7 @@
   width: 264px;
   padding: 11px 13px;
   background: #FFFFFF;
-  border: 1px solid #E7E2D6;
+  border: 1px solid #ECEBF3;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(25, 30, 46, 0.04), 0 12px 32px rgba(25, 30, 46, 0.12);
   opacity: 0;
@@ -518,5 +768,168 @@
 .legal-prose strong { color: #191E2E; }
 /* Termly's cookie table is wide and must not push the page sideways. */
 .legal-prose table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 13.5px; display: block; overflow-x: auto; }
-.legal-prose th, .legal-prose td { border: 1px solid #DCD6C8; padding: 9px 12px; text-align: left; vertical-align: top; }
-.legal-prose th { background: #F1EDE3; color: #191E2E; font-weight: 600; }
+.legal-prose th, .legal-prose td { border: 1px solid #DDDCE8; padding: 9px 12px; text-align: left; vertical-align: top; }
+.legal-prose th { background: #F4F3F8; color: #191E2E; font-weight: 600; }
+
+/* ── The sign-in page ─────────────────────────────────────────────────────
+   Two columns while there is room for two: what Workmark is on the left,
+   the form on the right. Below that width the pitch stacks above the form
+   rather than beside it — a 180px column of body copy is worse than no
+   column of body copy. */
+@media (max-width: 900px) {
+  .nb-login {
+    grid-template-columns: 1fr !important;
+    gap: 34px !important;
+    max-width: 430px !important;
+  }
+}
+
+/* ── AI project cards ─────────────────────────────────────────────────────
+   Projects Workmark wrote, sitting in a grid of projects people posted.
+
+   The entire job of this treatment is that the two are never confused. A
+   real listing is a person who will read what you send them; one of these
+   is an editor waiting to be opened. So this is the one card in the product
+   with a tinted ground and a violet edge — everywhere else violet marks
+   something you can click, and the exception is the signal.
+
+   The gradient runs from a violet wash at the top-left to white at the
+   bottom-right so the card is unmistakable at a glance and still readable
+   where the words are. */
+.nb-ai-card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  padding: 18px;
+  border-radius: 13px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #DCD4F7;
+  background:
+    linear-gradient(152deg, #F6F2FF 0%, #FCFBFF 46%, #FFFFFF 100%);
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 32px -18px rgba(97, 66, 245, 0.45);
+  transition: box-shadow 0.2s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+/* Light pooling in the bottom-right, the same move the focal card makes. */
+.nb-ai-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(420px 220px at 96% 108%, rgba(97, 66, 245, 0.13) 0%, rgba(97, 66, 245, 0) 72%);
+}
+.nb-ai-card:hover {
+  border-color: #C3B4F2;
+  transform: translateY(-1px);
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.08), 0 18px 38px -18px rgba(97, 66, 245, 0.55);
+}
+
+/* The band above the grid that says what these are. Full width, once, so
+   the cards themselves do not each have to carry the explanation. */
+.nb-ai-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 13px 17px;
+  margin-bottom: 13px;
+  border-radius: 11px;
+  border: 1px solid #E7E1FB;
+  background: linear-gradient(120deg, rgba(97, 66, 245, 0.06) 0%, rgba(97, 66, 245, 0.015) 60%, rgba(255, 255, 255, 0) 100%);
+}
+
+/* ── The next-project card ────────────────────────────────────────────────
+   The one dark block on the dashboard, and now a gradient rather than a
+   flat slab of ink. It earns the weight: it is the only growth action on
+   the page — everything else there is something already in motion.
+
+   Violet deepening to near-black, with a light source off the top-right
+   corner. The white button is the highest-contrast thing on the whole
+   screen, which is correct, because it is the one thing on this page that
+   starts something new. */
+.nb-nudge {
+  position: relative;
+  overflow: hidden;
+  border-radius: 13px;
+  padding: 21px;
+  min-height: 154px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: linear-gradient(155deg, #241B57 0%, #3B1F86 47%, #5B3EE8 100%);
+  box-shadow: 0 2px 4px rgba(36, 27, 87, 0.20), 0 18px 40px -18px rgba(97, 66, 245, 0.65);
+}
+.nb-nudge::before {
+  content: '';
+  position: absolute;
+  width: 330px;
+  height: 330px;
+  right: -140px;
+  top: -160px;
+  border-radius: 999px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(167, 139, 250, 0.55) 0%, rgba(167, 139, 250, 0) 70%);
+}
+.nb-nudge-eyebrow {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #C7B8FF;
+}
+/* White on violet. The inverse of every other button in the app, because
+   this is the only button that ever sits on a dark card. */
+.nb-nudge-btn {
+  background: #FFFFFF;
+  color: #241B57;
+  border-color: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(20, 12, 60, 0.18), 0 8px 18px -8px rgba(20, 12, 60, 0.45);
+}
+.nb-nudge-btn:hover { background: #F3F0FF; border-color: #F3F0FF; color: #1B1442; }
+
+/* ── Filter chips ─────────────────────────────────────────────────────────
+   A row of these is a selection, and selection is violet everywhere else in
+   the product now — the active tab, the focal card, the primary button. The
+   old active state was a solid near-black pill with a 1.5px outline, which
+   was the same flat, hard-edged look the nav bar had before it was redone,
+   and it made "remote" look like the most important thing on the page.
+
+   Inactive is a soft fill rather than an outline. A row of eight outlined
+   pills is sixteen hairlines competing with the listings beside them. */
+.nb-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  color: #5A6172;
+  background: #F4F4F7;
+  border: 1px solid transparent;
+  transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
+}
+.nb-chip:hover { background: #ECEBF3; color: #191E2E; }
+.nb-chip-active,
+.nb-chip-active:hover {
+  color: #4E2FD6;
+  font-weight: 600;
+  background: rgba(97, 66, 245, 0.09);
+  border-color: rgba(97, 66, 245, 0.22);
+}
+
+/* The panel they sit in. Sticky, because it is a sidebar beside a list that
+   can be much taller than it — a filter you have to scroll back up to reach
+   is a filter people stop using. */
+.nb-filters {
+  position: sticky;
+  top: 78px;
+}
+@media (max-width: 900px) {
+  .nb-filters { position: static; }
+}

@@ -37,7 +37,7 @@ export interface GoalsData {
 function BigStat({ value, suffix, caption, tone }: { value: string | number; suffix?: string; caption: string; tone?: string }) {
   return (
     <Card hoverable={false} padding={21} style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-      <div style={{ fontFamily: F.display, fontSize: 42, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums', color: tone ?? C.text }}>
+      <div style={{ fontFamily: F.display, fontSize: 42, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.04em', fontVariantNumeric: 'tabular-nums', color: tone ?? C.text }}>
         {value}
         {suffix && <span style={{ fontSize: 20, color: C.textGhost }}>{suffix}</span>}
       </div>
@@ -77,11 +77,11 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
   const topRecs = data.recommendations.slice(0, 3)
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 700, letterSpacing: '-0.025em', color: C.text, marginBottom: 18 }}>
+        <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 18 }}>
           What to build next
         </h1>
 
@@ -92,7 +92,7 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
           <div className="nb-g3" style={{ marginBottom: 23 }}>
             <div className="nb-focal nb-s2" style={{ padding: '27px 29px' }}>
               <Kicker style={{ color: C.accentInk }}>The one gap worth closing</Kicker>
-              <p style={{ fontFamily: F.display, fontSize: 31, fontWeight: 700, letterSpacing: '-0.035em', lineHeight: 1.1, color: C.text, margin: '13.5px 0 12px' }}>
+              <p style={{ fontFamily: F.display, fontSize: 31, fontWeight: 600, letterSpacing: '-0.035em', lineHeight: 1.1, color: C.text, margin: '13.5px 0 12px' }}>
                 Build something with {topGap.name}.
               </p>
               <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.65, maxWidth: 445, marginBottom: 22 }}>
@@ -130,7 +130,7 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
           </div>
         ) : (
           <Card hoverable={false} padding={26} style={{ marginBottom: 23 }}>
-            <p style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 9 }}>
+            <p style={{ fontFamily: F.display, fontSize: 22, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
               Nothing open is asking for something you don&apos;t have.
             </p>
             <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 540 }}>
@@ -170,7 +170,7 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
             <div className="nb-g3">
               {topRecs.map((r) => (
                 <Card key={r.id} href={`/listings/${r.id}`} padding={19.5}>
-                  <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.3, color: C.text, marginBottom: 5.5 }}>
+                  <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.3, color: C.text, marginBottom: 5.5 }}>
                     {r.title}
                   </p>
                   <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 14.5 }}>{r.posterName ?? 'Unnamed poster'}</p>

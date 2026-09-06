@@ -1,13 +1,15 @@
 import Link from 'next/link'
 
-// The app's card shell. Bordered on paper rather than floated on white —
-// elevation is reserved for things that genuinely sit above the page
-// (toasts, menus), so a shadow here would be a lie about layering.
+// The app's card shell. White on a white ground, so the edge comes from a
+// border plus a soft shadow — see .nb-card. The shadow is not a lift; the
+// card sits on the page, it does not float above it.
 //
 // Hover treatment only applies when the card actually goes somewhere. A
 // static card that lifts under the cursor promises a click that never
 // happens, which is the most common small dishonesty in card UI.
 interface CardProps {
+  /** For linking to a specific card from another page. */
+  id?: string
   href?: string
   onClick?: () => void
   padding?: number | string
@@ -17,9 +19,11 @@ interface CardProps {
   hoverable?: boolean
   /** Puts ruled-paper lines behind the content. The record only — see .nb-ruled. */
   ruled?: boolean
+  /** The one card on the screen that owns it. At most one per screen. */
+  focal?: boolean
 }
 
-export default function Card({ href, onClick, padding = 20, style, className, children, hoverable, ruled }: CardProps) {
+export default function Card({ id, href, onClick, padding = 20, style, className, children, hoverable, ruled, focal }: CardProps) {
   const interactive = hoverable ?? (!!href || !!onClick)
   const baseStyle: React.CSSProperties = {
     display: 'block',
@@ -31,26 +35,27 @@ export default function Card({ href, onClick, padding = 20, style, className, ch
   const cls = [
     'nb-card',
     interactive ? 'nb-card-interactive' : '',
+    focal ? 'nb-card-focal' : '',
     ruled ? 'nb-ruled' : '',
     className,
   ].filter(Boolean).join(' ')
 
   if (href) {
     return (
-      <Link href={href} className={cls} style={baseStyle}>
+      <Link id={id} href={href} className={cls} style={baseStyle}>
         {children}
       </Link>
     )
   }
   if (onClick) {
     return (
-      <button onClick={onClick} className={cls} style={{ ...baseStyle, width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}>
+      <button id={id} onClick={onClick} className={cls} style={{ ...baseStyle, width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}>
         {children}
       </button>
     )
   }
   return (
-    <div className={cls} style={baseStyle}>
+    <div id={id} className={cls} style={baseStyle}>
       {children}
     </div>
   )

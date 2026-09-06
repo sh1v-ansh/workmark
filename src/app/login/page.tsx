@@ -6,8 +6,9 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import Button from '@/components/ui/Button'
-import { C, F, R } from '@/lib/theme/dark-tokens'
+import { C, F, R, E } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
+import { Icon } from '@/components/Icon'
 
 type Mode = 'signin' | 'signup'
 // Student-only in MVP: company/faculty accounts are deferred to Tier 1+
@@ -116,7 +117,7 @@ export default function LoginPage() {
 
   if (pendingConfirmEmail) {
     return (
-      <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 36 }}>
           <Wordmark height={24} />
         </Link>
@@ -128,9 +129,9 @@ export default function LoginPage() {
               <path d="M2 5.5l8 5 8-5" stroke={C.accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <h1 style={{ fontFamily: F.display, fontSize: 19.5, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 11 }}>Check your inbox</h1>
+          <h1 style={{ fontFamily: F.display, fontSize: 19.5, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 11 }}>Check your inbox</h1>
           <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 5.5, lineHeight: 1.6 }}>We sent a confirmation link to</p>
-          <p style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 13, wordBreak: 'break-all' }}>{pendingConfirmEmail}</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 13, wordBreak: 'break-all' }}>{pendingConfirmEmail}</p>
           <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 23 }}>
             Click the link in that email to activate your account, then come back here and sign in.
           </p>
@@ -148,16 +149,78 @@ export default function LoginPage() {
     )
   }
 
-  return (
-    <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 36 }}>
-        <Wordmark height={24} />
-      </Link>
+  const signingUp = mode === 'signup'
 
-      <div style={{ width: '100%', maxWidth: 390 }}>
-        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 29 }}>
+  return (
+    <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px 24px 56px' }}>
+      {/* Two columns, because this page had one job and was doing half of
+          it. A box floating alone in the middle of a white screen tells a
+          returning student nothing they need and a first-time visitor
+          nothing at all — they arrive from a link with no idea what this
+          is, and the only words on the page were "Email" and "Password". */}
+      <div
+        className="nb-login"
+        style={{ width: '100%', maxWidth: 980, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 390px', gap: 64, alignItems: 'center' }}
+      >
+        <div>
+          <Link href="/" aria-label="Workmark home" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', marginBottom: 26 }}>
+            <Wordmark height={24} />
+          </Link>
+
+          <h1 style={{ fontFamily: F.display, fontSize: 34, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, lineHeight: 1.15, marginBottom: 13 }}>
+            {signingUp ? 'A record of what you can actually do' : 'Welcome back'}
+          </h1>
+
+          <p style={{ fontSize: 15.5, color: C.textMuted, lineHeight: 1.65, maxWidth: '46ch', marginBottom: signingUp ? 26 : 14 }}>
+            {signingUp
+              ? 'Workmark builds you a verified record of your skills, then finds you real project work that uses them — and gives you something to build when it does not.'
+              : 'Sign in to pick up your record, your applications and the projects you are working on.'}
+          </p>
+
+          {/* The page opens on Sign in, so a first-time visitor arriving from
+              a link is greeted by "Welcome back" and told nothing. This is
+              the one line that lets them out of that. */}
+          {!signingUp && (
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setError(null) }}
+              style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 14.5, fontWeight: 600, color: C.accentInk, cursor: 'pointer' }}
+            >
+              First time here? See what Workmark does →
+            </button>
+          )}
+
+          {signingUp && (
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {/* What they get, in the order it matters. The first draft of
+                  this listed how the scan works, which is the mechanism and
+                  not the offer — nobody signs up to have their repositories
+                  read. They sign up to have something to show and somewhere
+                  to use it. */}
+              {[
+                ['A record you can prove', 'Every skill on it says which project it came from and how it was verified, so a poster can check rather than take your word for it.'],
+                ['Real project work', 'Apply to projects from faculty and other students, with your record already attached. No cover letter about your passion for teamwork.'],
+                ['Something to build next', 'When nothing open fits, Workmark writes you a project that closes the gap between what you have and what people are asking for.'],
+                ['Free while you are a student', 'A .edu address is all it takes.'],
+              ].map(([title, detail]) => (
+                <li key={title} style={{ display: 'flex', gap: 11 }}>
+                  <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 3, color: C.accent, display: 'flex' }}>
+                    <Icon name="check" size={15} />
+                  </span>
+                  <span>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 2 }}>{title}</span>
+                    <span style={{ display: 'block', fontSize: 13.5, color: C.textFaint, lineHeight: 1.55, maxWidth: '48ch' }}>{detail}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+      <div style={{ width: '100%' }}>
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 29, boxShadow: E.card }}>
           {/* Mode tabs */}
-          <div role="group" aria-label="Sign in or sign up" style={{ display: 'flex', gap: 2, marginBottom: 25, background: C.bg, borderRadius: R.md, padding: 3 }}>
+          <div role="group" aria-label="Sign in or sign up" style={{ display: 'flex', gap: 2, marginBottom: 25, background: C.surfaceAlt, borderRadius: R.md, padding: 3 }}>
             {(['signin', 'signup'] as Mode[]).map((m) => (
               <button
                 key={m}
@@ -229,9 +292,10 @@ export default function LoginPage() {
 
         <p style={{ textAlign: 'center', fontSize: 13, color: C.textGhost, marginTop: 16.5 }}>
           <Link href="/listings" style={{ color: C.textMuted, textDecoration: 'none' }}>
-            Browse open projects →
+            Browse open projects without an account →
           </Link>
         </p>
+      </div>
       </div>
     </main>
   )

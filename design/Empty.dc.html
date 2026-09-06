@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4E2FD6; text-decoration: none; } a:hover { color: #3B22A8; }
+    .wm-disp { font-family: 'Instrument Sans', system-ui, sans-serif; }
+    .wm-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .wm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      font-weight: 600; font-size: 15px; line-height: 1; padding: 15px 24px; border-radius: 10px; }
+  </style>
+</helmet>
+
+<div style="position: relative; min-height: 1080px; background: #FFFFFF; padding: 30px 28px 56px; box-sizing: border-box; overflow: hidden;">
+  <div style="position: absolute; inset: 0; pointer-events: none;
+              background: radial-gradient(900px 420px at 12% -8%, rgba(97,66,245,0.07) 0%, rgba(97,66,245,0) 68%),
+                          radial-gradient(700px 380px at 96% 2%, rgba(217,169,60,0.10) 0%, rgba(217,169,60,0) 70%);"></div>
+
+  <div style="position: relative; max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px;">
+
+    <!-- HEADER — states the job, not a greeting -->
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 2px;">
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <h1 class="wm-disp" style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E;">One step to a verified record</h1>
+        <p style="margin: 0; font-size: 14px; color: #5A6172;">BS Computer Science · University of Massachusetts Amherst</p>
+      </div>
+      <span style="font-size: 14px; color: #8D94A5; white-space: nowrap; padding-top: 4px;">Saturday, 6 September</span>
+    </div>
+
+    <!-- PROGRESS — three steps, visible, only the first is live -->
+    <div style="display: flex; align-items: center; gap: 0; padding: 4px 0 6px;">
+      <sc-for list="{{steps}}" as="s" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 0; flex-grow: {{s.grow}};">
+          <div style="display: flex; align-items: center; gap: 11px; flex-shrink: 0;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: 27px; height: 27px;
+                         border-radius: 999px; font-size: 13px; font-weight: 700;
+                         background: {{s.dotBg}}; color: {{s.dotFg}}; border: {{s.dotBorder}};">{{s.n}}</span>
+            <span style="font-size: 14px; font-weight: {{s.weight}}; color: {{s.fg}}; white-space: nowrap;">{{s.label}}</span>
+          </div>
+          <div style="flex-grow: 1; height: 2px; margin: 0 16px; border-radius: 999px; background: {{s.lineBg}};"></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- THE ONE ACTION. Nothing else on this screen is clickable-looking. -->
+    <div style="position: relative; overflow: hidden; background: #FFFFFF; border: 1px solid #DCD4F7; border-radius: 13px;
+                box-shadow: 0 1px 2px rgba(97,66,245,0.06), 0 16px 36px -20px rgba(97,66,245,0.45); padding: 30px 32px;">
+      <div style="position: absolute; inset: 0; pointer-events: none;
+                  background: radial-gradient(560px 260px at 92% 112%, rgba(97,66,245,0.10) 0%, rgba(97,66,245,0) 72%);"></div>
+
+      <div style="position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 44px; align-items: center;">
+
+        <div style="display: flex; flex-direction: column; gap: 13px;">
+          <span class="wm-eyebrow" style="color: #6142F5;">Step 1 of 3</span>
+          <h2 class="wm-disp" style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E; line-height: 1.24; text-wrap: pretty;">
+            Connect GitHub and we&rsquo;ll read the code you&rsquo;ve already written
+          </h2>
+          <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.65; max-width: 54ch; text-wrap: pretty;">
+            You pick which repositories. We read what they depend on, how they&rsquo;re built and which
+            commits are yours &mdash; never the source itself &mdash; and turn that into skills you can prove
+            to someone.
+          </p>
+
+          <div style="display: flex; align-items: center; gap: 16px; margin-top: 12px;">
+            <a href="#" class="wm-btn" style="background: #6142F5; color: #FFFFFF; box-shadow: 0 1px 2px rgba(97,66,245,0.24), 0 10px 24px -10px rgba(97,66,245,0.60);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.48 2 2 6.58 2 12.25c0 4.53 2.87 8.37 6.84 9.73.5.1.68-.22.68-.49v-1.7c-2.78.62-3.37-1.37-3.37-1.37-.46-1.19-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1 .07 1.53 1.06 1.53 1.06.9 1.57 2.34 1.12 2.91.85.09-.66.35-1.12.63-1.37-2.22-.26-4.55-1.14-4.55-5.06 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.71 0 0 .84-.28 2.75 1.05a9.3 9.3 0 0 1 5 0c1.91-1.33 2.75-1.05 2.75-1.05.55 1.41.2 2.45.1 2.71.64.72 1.03 1.63 1.03 2.75 0 3.93-2.34 4.8-4.57 5.05.36.32.68.94.68 1.9v2.82c0 .27.18.6.69.49A10.02 10.02 0 0 0 22 12.25C22 6.58 17.52 2 12 2z"/></svg>
+              Connect GitHub
+            </a>
+            <span style="font-size: 13.5px; color: #8D94A5;">Takes about two minutes</span>
+          </div>
+        </div>
+
+        <!-- Make completion feel closer: show the destination, dimmed. -->
+        <div style="position: relative;">
+          <p style="margin: 0 0 11px; font-size: 12.5px; font-weight: 600; color: #8D94A5; letter-spacing: 0.04em; text-transform: uppercase;">What you&rsquo;ll have afterwards</p>
+          <div style="position: relative; background: #FDFDFE; border: 1px solid #EDECF3; border-radius: 13px; padding: 20px 22px; overflow: hidden;">
+            <div style="display: flex; gap: 30px; margin-bottom: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span class="wm-disp" style="font-size: 27px; font-weight: 600; letter-spacing: -0.022em; color: #B9BCC8; line-height: 1;">14</span>
+                <span style="font-size: 12px; color: #B9BCC8;">Skills proven</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span class="wm-disp" style="font-size: 27px; font-weight: 600; letter-spacing: -0.022em; color: #B9BCC8; line-height: 1;">6</span>
+                <span style="font-size: 12px; color: #B9BCC8;">Repositories read</span>
+              </div>
+            </div>
+            <div style="display: flex; height: 7px; border-radius: 999px; overflow: hidden; margin-bottom: 15px;">
+              <div style="width: 21%; background: #E8D5A6;"></div>
+              <div style="width: 43%; background: #DEDFE6;"></div>
+              <div style="width: 36%; background: #EFEFF3;"></div>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <sc-for list="{{ghostSkills}}" as="g" hint-placeholder-count="6">
+                <span style="font-size: 12.5px; font-weight: 600; color: #A8AEB9; background: #F5F6F8;
+                             border: 1px solid #ECEDF1; border-radius: 8px; padding: 6px 11px;">{{g}}</span>
+              </sc-for>
+            </div>
+            <div style="position: absolute; inset: 0; background: linear-gradient(180deg, rgba(255,255,255,0) 42%, rgba(255,255,255,0.86) 100%);"></div>
+          </div>
+          <p style="margin: 10px 0 0; font-size: 12.5px; color: #8D94A5; line-height: 1.55; text-wrap: pretty;">
+            A typical first scan. Yours depends on what you&rsquo;ve built.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Reassurance, where the doubt actually is. Not a modal, not a wall. -->
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px;">
+      <sc-for list="{{answers}}" as="a" hint-placeholder-count="3">
+        <div style="background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px;
+                    box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18);
+                    padding: 19px 21px; display: flex; flex-direction: column; gap: 7px;">
+          <span class="wm-disp" style="font-size: 14.5px; font-weight: 600; color: #191E2E;">{{a.q}}</span>
+          <span style="font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">{{a.a}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- A reason to come back even before scanning. One quiet link, no button. -->
+    <div style="background: #FBFBFD; border: 1px solid #EDECF3; border-radius: 13px; padding: 17px 24px;
+                display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span class="wm-disp" style="font-size: 15px; font-weight: 600; color: #191E2E;">14 projects are open right now</span>
+        <span style="font-size: 13.5px; color: #666D80;">Have a look before you connect &mdash; you can apply once your record has something in it.</span>
+      </div>
+      <a href="#" style="font-size: 14px; font-weight: 600; color: #4E2FD6; white-space: nowrap;">Browse projects →</a>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview": {"width": 1376, "height": 1080}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      steps: [
+        { n: '1', label: 'Connect GitHub', grow: 1, weight: '600', fg: '#191E2E',
+          dotBg: '#6142F5', dotFg: '#FFFFFF', dotBorder: 'none', lineBg: '#E4E3EC' },
+        { n: '2', label: 'Scan your repositories', grow: 1, weight: '400', fg: '#8D94A5',
+          dotBg: '#FFFFFF', dotFg: '#8D94A5', dotBorder: '1.5px solid #E4E3EC', lineBg: '#E4E3EC' },
+        { n: '3', label: 'Apply to your first project', grow: 0, weight: '400', fg: '#8D94A5',
+          dotBg: '#FFFFFF', dotFg: '#8D94A5', dotBorder: '1.5px solid #E4E3EC', lineBg: 'transparent' },
+      ],
+      ghostSkills: ['TypeScript', 'React', 'PostgreSQL', 'Python', 'Docker', 'pytest'],
+      answers: [
+        {
+          q: 'Do you read my source code?',
+          a: 'No. We read what a project depends on, how it is configured, which files import what, and the dates on your commits. The code itself is never stored.',
+        },
+        {
+          q: 'What about private repositories?',
+          a: 'Only the ones you tick. Their names appear in your own scan history and are never shown to anyone else.',
+        },
+        {
+          q: 'Can I undo it?',
+          a: 'Disconnect at any time and we stop reading immediately. Ask us to delete what the scan built and we will.',
+        },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

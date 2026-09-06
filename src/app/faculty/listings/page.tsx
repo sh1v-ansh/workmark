@@ -48,13 +48,13 @@ export default async function FacultyListingsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
           <div>
             <Kicker style={{ marginBottom: 7 }}>Faculty</Kicker>
-            <h1 style={{ fontSize: T.h1, fontWeight: 800, letterSpacing: '-0.03em', color: C.text }}>
+            <h1 style={{ fontSize: T.h1, fontWeight: 600, letterSpacing: '-0.022em', color: C.text }}>
               My projects
             </h1>
           </div>
@@ -74,7 +74,7 @@ export default async function FacultyListingsPage() {
               return (
                 <Card key={l.id} hoverable={false} padding={19}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
-                    <span style={{ fontSize: 16, fontWeight: 700, color: C.text, letterSpacing: '-0.015em' }}>
+                    <span style={{ fontSize: 16, fontWeight: 600, color: C.text, letterSpacing: '-0.015em' }}>
                       {l.title ?? 'Untitled project'}
                     </span>
                     <Badge tone={l.status === 'open' ? 'positive' : 'neutral'}>{l.status}</Badge>

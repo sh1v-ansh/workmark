@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StudentDashboardClient, { type DashboardData } from './StudentDashboardClient'
-import { getAccount, hasRole } from '@/lib/auth/roles'
 import { computeTrackRecord, type Stage } from '@/lib/engagements/lifecycle'
+import { lastScanFinishedAt } from '@/lib/github/last-scan'
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
@@ -22,6 +22,8 @@ export default async function StudentDashboardPage() {
     { data: myEngagements },
     { data: evidenceRows },
     { data: connection },
+    lastScannedAt,
+    { data: demandRows },
   ] = await Promise.all([
     supabase
       .from('applications')
@@ -43,6 +45,14 @@ export default async function StudentDashboardPage() {
       .select('skill_id, difficulty_cleared')
       .eq('student_id', user.id),
     supabase.from('github_connections').select('student_id').eq('student_id', user.id).maybeSingle(),
+    lastScanFinishedAt(supabase, user.id),
+    // What open projects keep asking for. Small — one row per requirement
+    // across open listings only — and it rides along with the five queries
+    // already going out, so it costs no extra latency.
+    supabase
+      .from('listing_requirements')
+      .select('skill_id, listings!inner(status)')
+      .eq('listings.status', 'open'),
   ])
 
   // Applicant counts for the listings this student posted — a poster's
@@ -80,6 +90,26 @@ export default async function StudentDashboardPage() {
     (myEngagements ?? []).filter((e) => e.student_id === user.id).map((e) => e.stage as Stage),
   )
 
+  // The most-wanted skill this student cannot show. The dashboard's next
+  // project card leads with this number, so it has to be a real count of
+  // real open listings rather than a plausible-sounding one.
+  const demand = new Map<string, number>()
+  for (const row of demandRows ?? []) {
+    if (bestBySkill.has(row.skill_id)) continue
+    demand.set(row.skill_id, (demand.get(row.skill_id) ?? 0) + 1)
+  }
+  let topGap: { skillName: string; listingCount: number } | null = null
+  if (demand.size > 0) {
+    const [gapSkillId, listingCount] = Array.from(demand.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]
+    const { data: gapSkill } = await supabase
+      .from('skills')
+      .select('canonical_name')
+      .eq('id', gapSkillId)
+      .maybeSingle()
+    if (gapSkill) topGap = { skillName: gapSkill.canonical_name, listingCount }
+  }
+
   const data: DashboardData = {
     student: {
       fullName: student.full_name,
@@ -91,6 +121,8 @@ export default async function StudentDashboardPage() {
       activeApplicationCount: student.active_application_count ?? 0,
     },
     githubConnected: !!connection,
+    lastScannedAt,
+    topGap,
     trackRecord,
     skills: skillIds
       .map((id) => ({ skillId: id, name: nameById.get(id) ?? id, bestLevel: bestBySkill.get(id) ?? 0 }))
@@ -127,9 +159,8 @@ export default async function StudentDashboardPage() {
     }),
   }
 
-  // Staff land here like everyone else, so the queue has to be reachable
-  // from the page they actually arrive on — not only from itself.
-  const account = await getAccount(supabase)
-
-  return <StudentDashboardClient data={data} isAdmin={hasRole(account, 'admin')} />
+  // The admin console is a navbar tab now, drawn from the session context
+  // the root layout already read. This page used to fetch the account again
+  // solely to answer "is this person staff" for a prop nothing rendered.
+  return <StudentDashboardClient data={data} />
 }

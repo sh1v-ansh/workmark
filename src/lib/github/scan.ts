@@ -10,6 +10,7 @@ import { getInstallationOctokit } from './app'
 import { parseManifest } from './manifests'
 import { planFiles, type TreeEntry } from './file-plan'
 import { isStudentAuthored, TEST_PATH } from './code-signals'
+import { detectAgenticTools } from './agentic-tools'
 import {
   detection, extractImports, parseComposeServices, parseDockerfile, parseOrmConfig,
   parsePrismaSchema, parseSqlFile, parseTerraform, parseWorkflow, type Detection,
@@ -142,6 +143,15 @@ export async function scanRepo(
     ...plan.presence.map((p) => detection(p.raw, 'file', p.where)),
     ...planned,
     ...sampledSources.flatMap((f) => extractImports(f.content, f.path)),
+    // Who else worked here. Reads the contributor list, the student's own
+    // commit trailers and the repo's config files — the three places an AI
+    // coding tool leaves a mark. No extra requests: all three inputs were
+    // already fetched and two of them were being discarded.
+    ...detectAgenticTools({
+      contributorLogins: contributorStats?.logins ?? [],
+      commitMessages: studentCommits.messages,
+      paths: tree.map((t) => t.path),
+    }),
   ]
 
   const hasDockerfile = detections.some((d) => d.source === 'dockerfile')
@@ -206,21 +216,26 @@ async function fetchLanguages(octokit: Octokit, owner: string, repo: string): Pr
  */
 async function getContributorStats(
   octokit: Octokit, owner: string, repo: string, githubLogin: string,
-): Promise<{ studentCommits: number; totalCommits: number; distinctContributors: number } | null> {
+): Promise<{ studentCommits: number; totalCommits: number; distinctContributors: number; logins: string[] } | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const { status, data } = await octokit.rest.repos.getContributorsStats({ owner, repo })
     if (status === 200 && Array.isArray(data)) {
       let studentCommits = 0
       let totalCommits = 0
       let distinctContributors = 0
+      // Kept, not just counted. These are how an AI coding tool that
+      // actually committed is recognised — see agentic-tools.ts. The
+      // response already carries them, so this costs nothing.
+      const logins: string[] = []
       for (const c of data) {
         const commits = c.total ?? 0
         if (commits === 0) continue
         totalCommits += commits
         distinctContributors++
+        if (c.author?.login) logins.push(c.author.login)
         if (c.author?.login?.toLowerCase() === githubLogin.toLowerCase()) studentCommits = commits
       }
-      return { studentCommits, totalCommits, distinctContributors }
+      return { studentCommits, totalCommits, distinctContributors, logins }
     }
     if (attempt < 1) await new Promise((r) => setTimeout(r, 600))
   }
@@ -229,6 +244,9 @@ async function getContributorStats(
 
 interface StudentCommits {
   commits: string[]
+  /** Their commit messages, for Co-Authored-By trailers. Free — listCommits
+   *  already returns them and they were being thrown away. */
+  messages: string[]
   firstAt: string | null
   lastAt: string | null
   filesTouched: string[]
@@ -241,6 +259,7 @@ async function fetchStudentCommits(
   octokit: Octokit, owner: string, repo: string, githubLogin: string,
 ): Promise<StudentCommits> {
   const commits: string[] = []
+  const messages: string[] = []
   const filesTouched = new Set<string>()
   const commitDays = new Set<string>()
   /** One entry per sampled commit, newest first — the input to revisit rate. */
@@ -257,6 +276,7 @@ async function fetchStudentCommits(
       if (data.length === 0) break
       for (const c of data) {
         commits.push(c.sha)
+        if (c.commit.message) messages.push(c.commit.message)
         const date = c.commit.author?.date ?? null
         if (date && (!firstAt || date < firstAt)) firstAt = date
         if (date && (!lastAt || date > lastAt)) lastAt = date
@@ -333,6 +353,7 @@ async function fetchStudentCommits(
 
   return {
     commits,
+    messages,
     firstAt,
     lastAt,
     filesTouched: Array.from(filesTouched),

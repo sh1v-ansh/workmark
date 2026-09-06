@@ -34,8 +34,8 @@ export default function LevelsPage() {
       <Kicker style={{ marginBottom: 8 }}>How the record works</Kicker>
       <h1
         style={{
-          fontFamily: F.display, fontSize: 30, fontWeight: 700,
-          letterSpacing: '-0.03em', color: C.text, marginBottom: 12, lineHeight: 1.15,
+          fontFamily: F.display, fontSize: 30, fontWeight: 600,
+          letterSpacing: '-0.022em', color: C.text, marginBottom: 12, lineHeight: 1.15,
         }}
       >
         What the levels mean
@@ -61,7 +61,7 @@ export default function LevelsPage() {
                 <span style={{ fontSize: 12, fontWeight: 700, color: C.textGhost, fontVariantNumeric: 'tabular-nums' }}>
                   {n}
                 </span>
-                <span style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', color: C.text }}>
+                <span style={{ fontFamily: F.display, fontSize: 17, fontWeight: 600, letterSpacing: '-0.02em', color: C.text }}>
                   {LEVEL_NAMES[n]}
                 </span>
                 {!reachable && (
@@ -84,7 +84,7 @@ export default function LevelsPage() {
       </div>
 
       <Card hoverable={false} padding={19.5} style={{ marginBottom: 26 }}>
-        <h2 style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 8 }}>
+        <h2 style={{ fontFamily: F.display, fontSize: 17, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 8 }}>
           Why it stops at {LEVEL_NAMES[SELF_EVIDENCED_CAP]}
         </h2>
         <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.6 }}>
@@ -92,7 +92,7 @@ export default function LevelsPage() {
         </p>
       </Card>
 
-      <h2 style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 8 }}>
+      <h2 style={{ fontFamily: F.display, fontSize: 17, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 8 }}>
         If you think a level is wrong
       </h2>
       <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.65, marginBottom: 26 }}>

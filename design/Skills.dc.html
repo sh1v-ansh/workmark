@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4E2FD6; text-decoration: none; } a:hover { color: #3B22A8; }
+    .wm-disp { font-family: 'Instrument Sans', system-ui, sans-serif; }
+    .wm-note { font-size: 13px; color: #666D80; line-height: 1.6; }
+  </style>
+</helmet>
+
+<div style="background: #FFFFFF; padding: 34px 32px 40px; box-sizing: border-box; min-height: 880px;">
+  <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px;">
+
+    <div style="display: flex; flex-direction: column; gap: 7px;">
+      <h1 class="wm-disp" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E;">37 skills, without 37 chips</h1>
+      <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.6; max-width: 78ch; text-wrap: pretty;">
+        The card today renders every skill, so it grows without limit and says nothing &mdash; a wall of
+        equal-weight chips reads as noise, and the fifteen a poster would care about are buried
+        among twenty-two they wouldn&rsquo;t. Fixed size, ranked content, one route to the rest.
+      </p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr); gap: 30px; align-items: start;">
+
+      <!-- BEFORE -->
+      <div style="display: flex; flex-direction: column; gap: 11px;">
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span class="wm-disp" style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #B33A2B;">NOW</span>
+          <span class="wm-disp" style="font-size: 16.5px; font-weight: 600; color: #191E2E;">Every skill, forever</span>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #E7E2D6; border-radius: 13px; padding: 22px 24px; opacity: 0.92;">
+          <div style="display: flex; gap: 34px; margin-bottom: 16px;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span class="wm-disp" style="font-size: 32px; font-weight: 600; letter-spacing: -0.022em; color: #191E2E; line-height: 1;">37</span>
+              <span style="font-size: 12.5px; color: #666D80;">Skills proven</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span class="wm-disp" style="font-size: 32px; font-weight: 600; letter-spacing: -0.022em; color: #191E2E; line-height: 1;">5<span style="font-size: 20px; color: #8D94A5;">/6</span></span>
+              <span style="font-size: 12.5px; color: #666D80;">Projects finished</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+            <sc-for list="{{allSkills}}" as="s" hint-placeholder-count="37">
+              <span style="font-size: 13px; font-weight: 500; color: #5A6172; background: #F4F1E9; border-radius: 8px; padding: 5.5px 11px;">{{s}}</span>
+            </sc-for>
+          </div>
+        </div>
+
+        <p class="wm-note" style="text-wrap: pretty;">
+          Grows every scan. At 37 it is the tallest thing on the dashboard; at 60 it pushes
+          everything that needs an action below the fold.
+        </p>
+      </div>
+
+      <!-- AFTER -->
+      <div style="display: flex; flex-direction: column; gap: 11px;">
+        <div style="display: flex; align-items: baseline; gap: 10px;">
+          <span class="wm-disp" style="font-size: 12px; font-weight: 700; letter-spacing: 0.06em; color: #14663D;">PROPOSED</span>
+          <span class="wm-disp" style="font-size: 16.5px; font-weight: 600; color: #191E2E;">Shape, strongest six, a door</span>
+        </div>
+
+        <div style="background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px;
+                    box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18); padding: 24px 26px;">
+
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 20px;">
+            <div style="display: flex; gap: 38px;">
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span class="wm-disp" style="font-size: 32px; font-weight: 600; letter-spacing: -0.022em; color: #191E2E; line-height: 1;">37</span>
+                <span style="font-size: 12.5px; color: #666D80;">Skills proven</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span class="wm-disp" style="font-size: 32px; font-weight: 600; letter-spacing: -0.022em; color: #191E2E; line-height: 1;">5<span style="font-size: 20px; color: #8D94A5;">/6</span></span>
+                <span style="font-size: 12.5px; color: #666D80;">Projects finished</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 2px;">
+                <span class="wm-disp" style="font-size: 32px; font-weight: 600; letter-spacing: -0.022em; color: #191E2E; line-height: 1;">2</span>
+                <span style="font-size: 12.5px; color: #666D80;">In flight</span>
+              </div>
+            </div>
+            <a href="#" style="font-size: 13px; font-weight: 600; color: #4E2FD6; white-space: nowrap;">See your record →</a>
+          </div>
+
+          <div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 11px;">
+            <div style="width: 16%; background: linear-gradient(90deg, #EBCB74 0%, #D9A93C 100%);"></div>
+            <div style="width: 38%; background: #B9BDCA;"></div>
+            <div style="width: 46%; background: #E4E4EB;"></div>
+          </div>
+          <div style="display: flex; gap: 20px; margin-bottom: 22px;">
+            <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
+              <span style="width: 8px; height: 8px; border-radius: 999px; background: #D9A93C;"></span>6 advanced
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
+              <span style="width: 8px; height: 8px; border-radius: 999px; background: #B9BDCA;"></span>14 intermediate
+            </span>
+            <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
+              <span style="width: 8px; height: 8px; border-radius: 999px; background: #E4E4EB;"></span>17 beginner
+            </span>
+          </div>
+
+          <p style="margin: 0 0 11px; font-size: 12.5px; font-weight: 600; color: #8D94A5; letter-spacing: 0.04em; text-transform: uppercase;">Strongest</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+            <sc-for list="{{topSkills}}" as="s" hint-placeholder-count="6">
+              <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
+                           color: {{s.fg}}; background: {{s.bg}}; border: 1px solid {{s.border}};
+                           border-radius: 8px; padding: 7px 12px; box-shadow: {{s.shadow}};">
+                {{s.name}}<span style="font-weight: 500; color: {{s.levelFg}};">{{s.level}}</span>
+              </span>
+            </sc-for>
+            <a href="#" style="display: inline-flex; align-items: center; font-size: 13px; font-weight: 600;
+                               color: #5A6172; border: 1px dashed #D3D0DE; border-radius: 8px; padding: 7px 12px;">+31 more</a>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 4px;">
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span class="wm-disp" style="font-size: 13.5px; font-weight: 700; color: #191E2E;">Fixed height</span>
+            <span class="wm-note" style="font-size: 12.5px;">Six chips and a bar, at 37 skills or 137. Nothing below it ever moves.</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span class="wm-disp" style="font-size: 13.5px; font-weight: 700; color: #191E2E;">Ranked, not listed</span>
+            <span class="wm-note" style="font-size: 12.5px;">Deepest first &mdash; the six a poster reads before deciding anything.</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span class="wm-disp" style="font-size: 13.5px; font-weight: 700; color: #191E2E;">Shape at a glance</span>
+            <span class="wm-note" style="font-size: 12.5px;">The bar answers &ldquo;is this deep or broad?&rdquo; without reading a single name.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"$preview": {"width": 1244, "height": 880}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      // Gold is earned, so it is computed per skill rather than applied to
+      // the row. Six of thirty-seven carry it; the rest stay quiet, which is
+      // the whole reason it reads as a reward.
+      topSkills: [
+        ['TypeScript', 'Advanced'], ['React', 'Advanced'], ['PostgreSQL', 'Advanced'],
+        ['Python', 'Intermediate'], ['FastAPI', 'Intermediate'], ['pytest', 'Intermediate'],
+      ].map(([name, level]) => ({
+        name,
+        level,
+        ...(level === 'Advanced'
+          ? {
+              bg: 'linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%)',
+              border: '#CE9F32', fg: '#4A3106', levelFg: '#7A5410',
+              shadow: '0 1px 2px rgba(154,113,18,0.20), 0 5px 12px -6px rgba(184,141,40,0.50)',
+            }
+          : { bg: '#F4F4F7', border: '#E6E6EE', fg: '#3A4152', levelFg: '#8D94A5', shadow: 'none' }),
+      })),
+      allSkills: [
+        'TypeScript', 'React', 'PostgreSQL', 'Python', 'FastAPI', 'pytest', 'Docker Compose',
+        'Redis', 'Alembic', 'GitHub Actions', 'Tailwind CSS', 'Next.js', 'Node.js', 'Express',
+        'SQLAlchemy', 'NumPy', 'pandas', 'Jupyter', 'Flask', 'Jest', 'Playwright', 'ESLint',
+        'Vite', 'Prisma', 'GraphQL', 'Celery', 'nginx', 'Bash', 'Make', 'Git', 'C', 'C++',
+        'CMake', 'Java', 'JUnit', 'Matplotlib', 'scikit-learn',
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

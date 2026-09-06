@@ -9,11 +9,13 @@ import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import { type BadgeTone } from '@/components/ui/Badge'
 import { Kicker, Stat } from '@/components/ui/Section'
+import RescanButton from '@/components/RescanButton'
+import SkillChip from '@/components/skills/SkillChip'
+import LevelBar, { countLevels } from '@/components/skills/LevelBar'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
-import LevelTag from '@/components/ui/LevelTag'
 
 export interface DashboardData {
   student: {
@@ -26,6 +28,11 @@ export interface DashboardData {
     activeApplicationCount: number
   }
   githubConnected: boolean
+  /** When the last scan finished, so the record can say whether it is stale. */
+  lastScannedAt: string | null
+  /** The skill open listings ask for most that this student cannot show.
+   *  Null when there are no listings, or nothing they are missing. */
+  topGap: { skillName: string; listingCount: number } | null
   trackRecord: TrackRecord
   skills: { skillId: string; name: string; bestLevel: number }[]
   applications: {
@@ -116,13 +123,19 @@ const ICON_BG: Record<Todo['kind'], string> = {
   github: '#EDE9FF',
 }
 
-export default function StudentDashboardClient({ data, isAdmin = false }: { data: DashboardData; isAdmin?: boolean }) {
-  const { student, skills, applications, listings, engagements, githubConnected, trackRecord } = data
+export default function StudentDashboardClient({ data }: { data: DashboardData }) {
+  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, topGap, trackRecord } = data
   const router = useRouter()
   const { toast } = useToast()
   const [withdrawing, setWithdrawing] = useState<string | null>(null)
 
   const activeEngagements = engagements.filter((e) => e.stage !== 'closed' && e.stage !== 'abandoned')
+
+  // Six is the number that fits on one line at most widths and still reads
+  // as a shortlist rather than a truncation. `skills` arrives sorted by
+  // level then name, so these really are the strongest.
+  const levelCounts = countLevels(skills)
+  const topSkills = skills.slice(0, 6)
 
   async function withdraw(id: string) {
     if (!confirm('Withdraw this application? You can apply again later while the project is still open.')) return
@@ -266,32 +279,42 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
 
   const firstName = student.fullName?.trim().split(/\s+/)[0]
 
+  // "Not sure what to build next?" asked the reader a question and described
+  // nothing. It is a project recommender, so it says so — and when we know
+  // which skill open projects keep asking for that they cannot show, it
+  // leads with that number, because the number is what does the persuading.
   const nudge = (
-    <div style={{ background: C.bgDeep, borderRadius: R.lg, padding: 21, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 154 }}>
-      <div>
-        <p style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.25, marginBottom: 7 }}>
-          Not sure what to build next?
+    <div className="nb-nudge">
+      <div style={{ position: 'relative' }}>
+        <span className="nb-nudge-eyebrow">Your next project</span>
+        <p style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.28, margin: '9px 0 8px' }}>
+          {topGap
+            ? `${topGap.listingCount} open project${topGap.listingCount === 1 ? '' : 's'} want ${topGap.skillName}. Your record doesn't have it.`
+            : 'We can tell you what to build next'}
         </p>
-        <p style={{ fontSize: 13.5, color: '#A9B0C2', lineHeight: 1.55 }}>
-          We&apos;ll show you which skills open projects keep asking for that your record
-          doesn&apos;t cover yet — and give you a project worth building to close one.
+        <p style={{ fontSize: 13.5, color: '#C6C2E4', lineHeight: 1.55 }}>
+          {topGap
+            ? 'We compare what open projects ask for against what your code proves, then write you something specific to build that closes the biggest gap.'
+            : 'We compare what open projects ask for against what your code proves, and write you a project worth building to close the biggest gap.'}
         </p>
       </div>
-      <div style={{ marginTop: 16 }}>
-        <Button href="/goals" variant="accent" size="sm">Show me the gaps</Button>
+      <div style={{ position: 'relative', marginTop: 17 }}>
+        <Link href="/goals" className="nb-btn nb-btn-sm nb-nudge-btn">
+          {topGap ? `Get a project that proves ${topGap.skillName}` : 'Show me what to build'}
+        </Link>
       </div>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         {/* Header — the answer, not a greeting */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 700, letterSpacing: '-0.025em', color: C.text, marginBottom: 4.5 }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 4.5 }}>
               {todos.length === 0
                 ? `You're all caught up${firstName ? `, ${firstName}` : ''}`
                 : `${todos.length === 1 ? 'One thing needs' : `${todos.length} things need`} you`}
@@ -324,7 +347,7 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
                   </div>
                   <Kicker style={{ color: C.accentInk }}>{lead.eyebrow}</Kicker>
                 </div>
-                <p style={{ fontFamily: F.display, fontSize: 27, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.text, marginBottom: 10.5 }}>
+                <p style={{ fontFamily: F.display, fontSize: 27, fontWeight: 600, letterSpacing: '-0.022em', lineHeight: 1.15, color: C.text, marginBottom: 10.5 }}>
                   {lead.headline}
                 </p>
                 <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 455 }}>
@@ -346,7 +369,7 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
                     </div>
                     <Kicker>{t.eyebrow}</Kicker>
                   </div>
-                  <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.25, color: C.text, marginBottom: 4 }}>
+                  <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.25, color: C.text, marginBottom: 4 }}>
                     {t.headline}
                   </p>
                   <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.45 }}>{t.body}</p>
@@ -386,9 +409,30 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
                 )}
                 {trackRecord.active > 0 && <Stat value={trackRecord.active} label="In flight" />}
               </div>
-              <Link href="/me" style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                See it all →
-              </Link>
+              {/* Rescan sits on the numbers it changes. It used to be a menu
+                  item two clicks away called "Evidence source & Rescan",
+                  which named the page rather than the act — so the student
+                  looking straight at a stale skill count had no way to tell
+                  that the fix was behind their own avatar. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+                {/* Only once connected. Unconnected, RescanButton offers
+                    "Connect GitHub" — which is right everywhere except here,
+                    where the focal to-do above is already that button. Two of
+                    the same call to action on one screen and neither is the
+                    obvious one. */}
+                {githubConnected && (
+                  <RescanButton
+                    githubConnected
+                    lastScannedAt={lastScannedAt}
+                    variant="outline"
+                    size="sm"
+                    showLastScan={false}
+                  />
+                )}
+                <Link href="/me" style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  See it all →
+                </Link>
+              </div>
             </div>
 
             {skills.length === 0 ? (
@@ -398,23 +442,29 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
                   : 'Connect GitHub and scan your repositories — everything on this page grows from that.'}
               </p>
             ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {skills.map((s) => {
-                  const strong = s.bestLevel >= 3
-                  return (
-                    <span
-                      key={s.skillId}
-                      style={{
-                        fontSize: 13, fontWeight: strong ? 600 : 500,
-                        color: strong ? C.accentInk : C.textMuted,
-                        background: strong ? '#EDE9FF' : C.surfaceAlt,
-                        borderRadius: R.sm, padding: '5.5px 11px',
-                      }}
+              /* The strongest six, not all thirty-seven.
+                 This box used to print every skill, so it grew without limit
+                 and the answer to "how good is this record" was somewhere in
+                 the middle of a wall of chips. The bar says the shape of it,
+                 the six say the best of it, and the rest are one click away
+                 on a page built to hold them. */
+              <div>
+                <div style={{ marginBottom: 15 }}>
+                  <LevelBar counts={levelCounts} />
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                  {topSkills.map((s) => (
+                    <SkillChip key={s.skillId} name={s.name} level={s.bestLevel} />
+                  ))}
+                  {skills.length > topSkills.length && (
+                    <Link
+                      href="/me"
+                      style={{ fontSize: 12.5, fontWeight: 600, color: C.textMuted, textDecoration: 'none', padding: '6px 4px' }}
                     >
-                      {s.name} · <LevelTag level={s.bestLevel} />
-                    </span>
-                  )
-                })}
+                      +{skills.length - topSkills.length} more
+                    </Link>
+                  )}
+                </div>
               </div>
             )}
           </Card>
@@ -444,11 +494,14 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
           <Card hoverable={false} padding={23}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
-                <p style={{ fontFamily: F.display, fontSize: 17.5, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 4 }}>
-                  Nothing out, nothing in flight.
+                {/* "Nothing out, nothing in flight" was aviation for "you
+                    have not applied to anything". It sounded like it meant
+                    something and did not survive being read once. */}
+                <p style={{ fontFamily: F.display, fontSize: 17.5, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 4 }}>
+                  You haven&apos;t applied to anything yet
                 </p>
                 <p style={{ fontSize: 14, color: C.textMuted }}>
-                  You have {MAX_ACTIVE_APPLICATIONS - student.activeApplicationCount} application slots free.
+                  You can have {MAX_ACTIVE_APPLICATIONS} applications open at once. All {MAX_ACTIVE_APPLICATIONS - student.activeApplicationCount} are free.
                 </p>
               </div>
               <Button href="/listings" variant="ink" size="sm">Find work</Button>

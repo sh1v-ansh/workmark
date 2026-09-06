@@ -57,7 +57,7 @@ export default function FacultyHomeClient({ data }: { data: FacultyData }) {
   const needsReview = active.filter((e) => e.stage === 'submitted')
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
         <div style={{ marginBottom: 24 }}>
@@ -70,7 +70,7 @@ export default function FacultyHomeClient({ data }: { data: FacultyData }) {
               {data.verified ? 'Verified faculty' : 'Verification pending'}
             </Badge>
           </div>
-          <h1 style={{ fontSize: T.h1, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
+          <h1 style={{ fontSize: T.h1, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
             {waiting.length + needsReview.length > 0
               ? `${waiting.length + needsReview.length} thing${waiting.length + needsReview.length === 1 ? '' : 's'} need you`
               : 'Nothing needs you right now'}
@@ -135,7 +135,7 @@ export default function FacultyHomeClient({ data }: { data: FacultyData }) {
                       href={`/listings/${a.listingId}/applicants`}
                       style={{
                         display: 'block', textDecoration: 'none',
-                        background: C.bg, borderRadius: R.md, padding: '12px 15px',
+                        background: C.surfaceAlt, borderRadius: R.md, padding: '12px 15px',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap', marginBottom: 2 }}>

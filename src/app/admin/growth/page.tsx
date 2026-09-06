@@ -49,7 +49,7 @@ export default async function AdminGrowthPage() {
           <p style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.textGhost, marginBottom: 8 }}>
             Students who got real work
           </p>
-          <p style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+          <p style={{ fontSize: 38, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
             {matched}<span style={{ fontSize: 20, color: C.textGhost, fontWeight: 600 }}> / {top}</span>
           </p>
           <p style={{ fontSize: 13.5, color: C.textFaint, marginTop: 8, lineHeight: 1.55 }}>
@@ -62,7 +62,7 @@ export default async function AdminGrowthPage() {
           <p style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.textGhost, marginBottom: 8 }}>
             Came back for a second
           </p>
-          <p style={{ fontSize: 38, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+          <p style={{ fontSize: 38, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
             {repeated}
           </p>
           <p style={{ fontSize: 13.5, color: C.textFaint, marginTop: 8, lineHeight: 1.55 }}>

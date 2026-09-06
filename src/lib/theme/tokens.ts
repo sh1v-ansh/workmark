@@ -56,32 +56,37 @@ export const dark = {
   accentInk:     violet[300],    // lighter for text on the accent bg
 } as const
 
-// ─── App theme — "Notebook" ──────────────────────────────────────────────────
-// The logged-in product. Cream paper, ink-blue near-black, and a violet that
-// sits a shade warmer and lighter than the marketing #3E1FFF so it holds
-// together against warm paper instead of fighting it.
+// ─── App theme — "Lit edges" ─────────────────────────────────────────────────
+// The logged-in product. White ground, cool greys, and violet reserved for
+// things you can act on.
+//
+// This replaced a warm cream paper. The paper was pleasant on its own and
+// wrong in company: it pushed every card towards beige, it made the violet
+// look muddy, and there is no version of "verified" that reads as valuable
+// against it. The ground is now white and the depth comes from two things
+// the paper could not give — very soft radial light and shadow. Both are
+// CSS: .wm-app-ground paints the light, .nb-card the shadow.
 //
 // Token NAMES match `light` exactly. That is deliberate: ~900 inline styles
 // across the app read C.text / C.surface / C.border, so repointing the export
 // in dark-tokens.ts re-themes every page without editing a single call site.
 // Values below are the only thing that differs.
 //
-// Contrast verified against the paper (#FAF7F0), not against pure white —
-// the paper is what the app actually renders on.
+// Contrast verified against white, which is what the app renders on.
 export const app = {
-  bg:            '#FAF7F0',      // paper
-  bgAlt:         '#F4F1E9',      // the next surface down
+  bg:            '#FFFFFF',      // the ground; .wm-app-ground lights its corners
+  bgAlt:         '#FBFBFD',      // the next surface down — a hair cooler, not grey
   bgDeep:        '#191E2E',      // reversed panel — the one dark block per page
-  surface:       '#FFFFFF',      // cards sit above the paper, not level with it
-  surfaceAlt:    '#F4F1E9',
-  border:        '#E7E2D6',
-  borderFaint:   '#F1EDE3',
-  text:          '#191E2E',      // 14.9:1 on paper
-  textSub:       '#2B3244',      // 11.8:1
-  textMuted:     '#5A6172',      // 5.8:1
-  textFaint:     '#666D80',      // 4.8:1 — still passes at body sizes
-  textGhost:     '#8D94A5',      // 3.5:1 — large text only
-  accent:        '#6142F5',      // 5.5:1 on paper
+  surface:       '#FFFFFF',      // cards sit above the ground on shadow, not tint
+  surfaceAlt:    '#F7F7FA',      // a panel nested inside a card
+  border:        '#ECEBF3',
+  borderFaint:   '#F4F3F8',
+  text:          '#191E2E',      // 15.4:1 on white
+  textSub:       '#2B3244',      // 12.2:1
+  textMuted:     '#5A6172',      // 6.0:1
+  textFaint:     '#666D80',      // 5.0:1 — still passes at body sizes
+  textGhost:     '#8D94A5',      // 3.6:1 — large text only
+  accent:        '#6142F5',      // 5.6:1 on white
   accentHover:   'rgba(97,66,245,0.08)',
   accentBorder:  'rgba(97,66,245,0.30)',
   accentInk:     '#4E2FD6',
@@ -104,8 +109,51 @@ export const state = {
   info:         '#1D4ED8',
   infoBg:       '#E4EBFF',
   neutral:      '#5A6172',
-  neutralBg:    '#F1EDE3',
+  neutralBg:    '#F2F2F7',
 } as const
+
+// ─── Skill levels ────────────────────────────────────────────────────────────
+// Three levels, and only the top one is coloured.
+//
+// Gold marks a skill the scan could actually prove out. It works because it
+// is scarce — on a typical record six of thirty-seven skills carry it. Apply
+// it to a whole list and it stops meaning anything, so LEVELS.advanced must
+// never be used for "a skill", only for "an advanced skill".
+//
+// The fill is a gradient rather than a flat yellow on purpose: flat gold is
+// the colour of a novelty sticker, a gradient is the colour of a medal.
+//
+// Gold is never a button. Nothing gold is clickable.
+export const LEVELS = {
+  advanced: {
+    fill:   'linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%)',
+    border: '#CE9F32',
+    text:   '#4A3106',      // 8.9:1 on the lightest stop
+    sub:    '#7A5410',      // the "Advanced" suffix, quieter than the name
+    bar:    'linear-gradient(90deg, #EBCB74 0%, #D9A93C 100%)',
+    shadow: '0 1px 2px rgba(154,113,18,0.20), 0 5px 12px -6px rgba(184,141,40,0.50)',
+  },
+  intermediate: {
+    fill:   '#F4F4F7',
+    border: '#E6E6EE',
+    text:   '#3A4152',
+    sub:    '#8D94A5',
+    bar:    '#B9BDCA',
+    shadow: 'none',
+  },
+  // A step lighter than intermediate, so the three tiers read as a ramp
+  // rather than "gold, and then two identical greys". The difference is
+  // deliberately small: this is the bottom of a scale, not a warning.
+  beginner: {
+    fill:   '#FAFAFC',
+    border: '#EDEDF3',
+    text:   '#5A6172',
+    sub:    '#9AA0AD',
+    bar:    '#E4E4EB',
+    shadow: 'none',
+  },
+} as const
+
 
 // ─── Scales ──────────────────────────────────────────────────────────────────
 // One source for the numbers that used to be typed by hand at every call site.
@@ -132,26 +180,44 @@ export const T = {
   label: 11.5,    // uppercase tab/eyebrow labels
 } as const
 
-/** Elevation. Cards are bordered, not floated — shadow is for overlays only. */
+/** Elevation.
+ *
+ *  On the old cream paper a card was legible because it was white and the
+ *  page was not, so a border was enough. On a white ground that trick is
+ *  gone: a white card on white needs light under it.
+ *
+ *  Only two live here. The card, focal and button shadows are CSS —
+ *  .nb-card, .nb-card-focal and .nb-btn-accent in globals.css — because
+ *  every card and button already goes through those classes. Keeping a
+ *  second copy as a token would mean two places to change one shadow and
+ *  no way to tell which one a given element used. `card` stays because one
+ *  call site (the sign-in panel) is a hand-built box rather than a Card. */
 export const E = {
   none: 'none',
+  card:    '0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18)',
   overlay: '0 4px 6px rgba(25,30,46,0.04), 0 12px 32px rgba(25,30,46,0.10)',
 } as const
 
 // ─── App font stacks ─────────────────────────────────────────────────────────
 // Exported separately from F so the marketing pages keep Playfair/Inter/Plex
-// while the app moves to Schibsted + Hanken.
+// while the app runs on Instrument Sans.
 //
-// `mono` is deliberately NOT monospace any more. The app had ~200 call sites
-// setting fontFamily: F.mono on timestamps and counts, which is what made it
-// read as a terminal rather than a product. Rather than churn all of them at
-// once, the token now resolves to the body face — those call sites become
-// correct by doing nothing, and the key disappears as pages get rebuilt.
+// All four keys resolve to the same family, which is the point. The app used
+// to pair a display face with a body face; readers did not notice the pairing
+// and the payload was twice what it needed to be. The keys survive only so
+// the ~900 call sites reading F.display / F.sans / F.mono keep compiling —
+// they are aliases now, not choices, and new code should just use F.sans.
+//
+// `mono` is deliberately NOT monospace. Around 200 call sites set it on
+// timestamps and counts, which is what made the app read as a terminal
+// rather than a product.
+const APP_STACK = 'var(--font-app), "Instrument Sans", system-ui, sans-serif'
+
 export const appFonts = {
-  display: 'var(--font-display), "Schibsted Grotesk", system-ui, sans-serif',
-  sans:    'var(--font-body), "Hanken Grotesk", system-ui, sans-serif',
-  serif:   'var(--font-display), "Schibsted Grotesk", system-ui, sans-serif',
-  mono:    'var(--font-body), "Hanken Grotesk", system-ui, sans-serif',
+  display: APP_STACK,
+  sans:    APP_STACK,
+  serif:   APP_STACK,
+  mono:    APP_STACK,
 } as const
 
 // ─── Fonts (rendered by next/font in layout.tsx, exposed as CSS variables) ───

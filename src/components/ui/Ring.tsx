@@ -27,7 +27,7 @@ export default function Ring({ pct, size = 82, stroke = 8 }: { pct: number; size
       <div
         style={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: F.display, fontSize: size * 0.24, fontWeight: 800, letterSpacing: '-0.02em',
+          fontFamily: F.display, fontSize: size * 0.24, fontWeight: 600, letterSpacing: '-0.02em',
           fontVariantNumeric: 'tabular-nums', color: C.text,
         }}
       >

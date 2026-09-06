@@ -40,6 +40,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         aria-live="polite"
         aria-atomic="false"
+        style={{ fontFamily: "var(--font-app), 'Instrument Sans', system-ui, sans-serif" }}
         className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 w-full max-w-sm"
       >
         {toasts.filter(t => t.type !== 'error').map((t) => (
@@ -60,6 +61,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         aria-live="assertive"
         aria-atomic="false"
+        style={{ fontFamily: "var(--font-app), 'Instrument Sans', system-ui, sans-serif" }}
         className="fixed bottom-5 right-5 z-50 flex flex-col gap-2 w-full max-w-sm pointer-events-none"
       >
         {toasts.filter(t => t.type === 'error').map((t) => (

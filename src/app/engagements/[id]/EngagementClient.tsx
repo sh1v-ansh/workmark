@@ -217,14 +217,14 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
         : data.listingTitle
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <Link href="/student/dashboard" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Home</Link>
 
         <div style={{ margin: '13px 0 20px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.text, marginBottom: 7 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 28, fontWeight: 600, letterSpacing: '-0.022em', lineHeight: 1.15, color: C.text, marginBottom: 7 }}>
             {headline}
           </h1>
           <p style={{ fontSize: 15, color: C.textMuted }}>

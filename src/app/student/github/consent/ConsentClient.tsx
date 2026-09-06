@@ -50,7 +50,7 @@ export function ConsentClient({ alreadyConsented }: { alreadyConsented: boolean 
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 24px 72px' }}>
-      <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.025em', color: C.text, marginBottom: 10 }}>
+      <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 10 }}>
         Before you connect GitHub
       </h1>
       <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.65, marginBottom: 26 }}>

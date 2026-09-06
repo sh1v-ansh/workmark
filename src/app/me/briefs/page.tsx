@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { agentsAvailable } from '@/lib/agents/client'
 import BriefsClient, { type BriefRow } from './BriefsClient'
+import { splitBriefText } from '@/lib/briefs/format'
 
 /**
  * /me/briefs — private project ideas.
@@ -40,13 +41,11 @@ export default async function BriefsPage() {
   const evidencedSkillIds = new Set((evidence ?? []).map((e) => e.skill_id))
 
   const rows: BriefRow[] = (briefs ?? []).map((b) => {
-    // brief_text is stored as "Title\n\nBody" — the title is the first
-    // line, so it survives without a separate column.
-    const [title, ...rest] = b.brief_text.split('\n\n')
+    const { title, body } = splitBriefText(b.brief_text)
     return {
       id: b.id,
-      title: title ?? 'Project idea',
-      body: rest.join('\n\n'),
+      title,
+      body,
       targetSkillId: b.target_skill_id,
       targetSkillName: b.target_skill_id ? (nameById.get(b.target_skill_id) ?? b.target_skill_id) : null,
       targetRole: b.target_role,

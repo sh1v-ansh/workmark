@@ -499,6 +499,18 @@ create table project_briefs (
   career_track        text check (career_track is null or career_track in (
                         'frontend', 'backend', 'systems', 'ml_ai', 'data', 'security', 'mobile', 'infrastructure'
                       )),
+  -- Who asked for this. 'student' means they pressed the button;
+  -- 'recommended' means the nightly job wrote it unprompted, because a
+  -- marketplace with nothing in it is not worth coming back to. The two are
+  -- never presented the same way — see components/briefs/AiProjectCard.
+  source              text not null default 'student'
+                        check (source in ('student', 'recommended')),
+  -- Why this skill, on a recommended brief. Null on one they asked for,
+  -- because there is no reason to give beyond "you asked". A recommendation
+  -- that cannot explain itself is an advert.
+  recommendation_reason text
+                        check (recommendation_reason is null or
+                               recommendation_reason in ('deepen', 'gap', 'adjacent')),
   -- The repo this brief turned into, once the student starts building.
   -- A brief with a repo is in progress; one without is still just an idea.
   repo_full_name      text,
@@ -511,6 +523,14 @@ create table project_briefs (
 create index project_briefs_repo_idx
   on project_briefs (student_id, repo_full_name)
   where repo_full_name is not null;
+
+-- The one query the nightly job and the Find work page both run: this
+-- student's recommendations that they have not started yet. Partial,
+-- because started and student-asked briefs are the large majority and
+-- neither is ever fetched this way.
+create index project_briefs_open_recommendations_idx
+  on project_briefs (student_id, issued_at desc)
+  where source = 'recommended' and started_at is null;
 
 -- ─── FCRA write-path — cannot be backfilled, must exist from row one ──────
 
@@ -1334,6 +1354,16 @@ create table accounts (
   -- Faculty have no student profile to hold them.
   display_name        text,
   institution         text,
+  -- How this account found Workmark, asked once at signup. Optional in the
+  -- strong sense: no default, and 'prefer_not_to_say' is a real answer, so
+  -- null means never asked or skipped. Free text lives in its own column so
+  -- the choice above stays countable.
+  heard_about         text
+                        check (heard_about is null or heard_about in (
+                          'friend', 'professor', 'club_or_society', 'social_media',
+                          'search', 'event', 'other', 'prefer_not_to_say'
+                        )),
+  heard_about_detail  text,
   created_at          timestamptz default now() not null,
   updated_at          timestamptz default now() not null,
   constraint accounts_roles_valid check (

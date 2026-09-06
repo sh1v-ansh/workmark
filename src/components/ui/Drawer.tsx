@@ -108,7 +108,7 @@ export default function Drawer({ open, onClose, title, subtitle, children, foote
       >
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, padding: '20px 24px 16px', borderBottom: `1px solid ${C.border}`, flexShrink: 0 }}>
           <div style={{ minWidth: 0 }}>
-            <h2 style={{ fontSize: T.h2, fontWeight: 700, color: C.text, letterSpacing: '-0.02em' }}>{title}</h2>
+            <h2 style={{ fontSize: T.h2, fontWeight: 600, color: C.text, letterSpacing: '-0.02em' }}>{title}</h2>
             {subtitle && <p style={{ fontSize: T.bodySm, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>{subtitle}</p>}
           </div>
           <button

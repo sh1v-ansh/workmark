@@ -26,7 +26,7 @@ export async function GET(request: Request) {
   const token = url.searchParams.get('token')
   const kind = url.searchParams.get('kind')
 
-  if (!token) return NextResponse.redirect(new URL('/account/notifications', request.url))
+  if (!token) return NextResponse.redirect(new URL('/account/settings#email', request.url))
 
   const admin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
   // Someone clicking unsubscribe wants the mail to stop; telling them their
   // link is invalid and leaving it at that is a dead end.
   if (!account) {
-    return NextResponse.redirect(new URL('/account/notifications?stale=1', request.url))
+    return NextResponse.redirect(new URL('/account/settings?stale=1#email', request.url))
   }
 
   const now = new Date().toISOString()
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
   if (kind && kind in EMAIL_KINDS && !EMAIL_KINDS[kind as EmailKind].essential) {
     const prefs = { ...((account.notification_prefs ?? {}) as Record<string, boolean>), [kind]: false }
     await admin.from('accounts').update({ notification_prefs: prefs, updated_at: now }).eq('id', account.id)
-    return NextResponse.redirect(new URL(`/account/notifications?off=${kind}`, request.url))
+    return NextResponse.redirect(new URL(`/account/settings?off=${kind}#email`, request.url))
   }
 
   await admin
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     .update({ email_unsubscribed_at: now, updated_at: now })
     .eq('id', account.id)
 
-  return NextResponse.redirect(new URL('/account/notifications?off=all', request.url))
+  return NextResponse.redirect(new URL('/account/settings?off=all#email', request.url))
 }
 
 /**

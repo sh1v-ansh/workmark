@@ -42,6 +42,10 @@ export const LIMITS = {
   feedback: { limit: 10, windowSeconds: 3600 },
   /** Account creation from one session. */
   onboarding: { limit: 5, windowSeconds: 3600 },
+  /** Editing your own profile. Looser than onboarding on purpose: someone
+   *  fixing a typo, then their major, then their graduation year has done
+   *  nothing wrong, and five an hour would tell them they had. */
+  profile: { limit: 30, windowSeconds: 3600 },
   /** The data export. Assembles seventeen queries; not a page to refresh. */
   export: { limit: 5, windowSeconds: 3600 },
 } as const

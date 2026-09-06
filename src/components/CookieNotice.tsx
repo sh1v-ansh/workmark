@@ -74,7 +74,11 @@ export function CookieNotice() {
       style={{
         position: 'fixed', left: 16, right: 16, bottom: 16, zIndex: 1000,
         maxWidth: 560, margin: '0 auto',
-        background: '#FFFFFF', border: '1px solid #DCD6C8', borderRadius: 12,
+        // Product chrome, not marketing copy — it says the same thing on the
+        // landing page and inside the app, so it takes the app's face rather
+        // than switching identity depending on which page it lands over.
+        fontFamily: "var(--font-app), 'Instrument Sans', system-ui, sans-serif",
+        background: '#FFFFFF', border: '1px solid #DDDCE8', borderRadius: 12,
         boxShadow: '0 8px 28px rgba(25,30,46,0.14)',
         padding: '16px 18px',
         display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap',

@@ -16,7 +16,7 @@ export default function PricingPage() {
         <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
           Pricing
         </div>
-        <h1 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, lineHeight: 1.1, maxWidth: 560, marginBottom: 20 }}>
+        <h1 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, lineHeight: 1.1, maxWidth: 560, marginBottom: 20 }}>
           Free, for now.
         </h1>
         <p style={{ fontSize: 16, color: C.textMuted, maxWidth: 480, lineHeight: 1.6 }}>
@@ -30,7 +30,7 @@ export default function PricingPage() {
           {/* Students */}
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 36 }}>
             <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>Students</div>
-            <div style={{ fontFamily: F.serif, fontSize: 36, fontWeight: 800, color: C.text, marginBottom: 4 }}>$0</div>
+            <div style={{ fontFamily: F.serif, fontSize: 36, fontWeight: 600, color: C.text, marginBottom: 4 }}>$0</div>
             <div style={{ fontFamily: F.mono, fontSize: 11, color: C.accent, marginBottom: 28 }}>Always free</div>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[
@@ -57,7 +57,7 @@ export default function PricingPage() {
           {/* Organizations */}
           <div style={{ background: C.surface, border: `1px solid ${C.border}`, padding: 36 }}>
             <div style={{ fontFamily: F.mono, fontSize: 10, color: C.textFaint, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>Posting a project</div>
-            <div style={{ fontFamily: F.serif, fontSize: 36, fontWeight: 800, color: C.text, marginBottom: 4 }}>$0</div>
+            <div style={{ fontFamily: F.serif, fontSize: 36, fontWeight: 600, color: C.text, marginBottom: 4 }}>$0</div>
             <div style={{ fontFamily: F.mono, fontSize: 11, color: C.textMuted, marginBottom: 28 }}>Also free</div>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
               {[

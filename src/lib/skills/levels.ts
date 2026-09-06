@@ -4,7 +4,7 @@
 // via skill_calibration and recomputing existing evidence as correction
 // rows (§5, Phase 0's append-only design).
 //
-// Every value this module produces is 1-3 (Familiar/Practiced/Strong) —
+// Every value this module produces is 1-3 (Beginner/Intermediate/Advanced) —
 // there's no attestation anywhere in MVP, so every skill_evidence row the
 // scan pipeline writes is self-evidenced and capped at Strong (§3). Levels
 // 4-5 stay unreachable until Tier 1+ attestation exists; this module isn't

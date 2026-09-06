@@ -47,12 +47,12 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
   }, [directory, query])
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
             Student directory
           </h1>
           <p style={{ fontSize: 15, color: C.textMuted }}>
@@ -102,7 +102,7 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
             {filtered.map((s) => (
               <Card key={s.id} hoverable={false} padding={18} style={{ display: 'flex', flexDirection: 'column' }}>
                 <div style={{ marginBottom: 11 }}>
-                  <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 3.5 }}>
+                  <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 3.5 }}>
                     {s.handle ? (
                       <Link href={`/p/${s.handle}`} style={{ color: C.text, textDecoration: 'none' }}>
                         {s.full_name ?? 'Student'} <span style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 600, color: C.accent }}>· verified record →</span>

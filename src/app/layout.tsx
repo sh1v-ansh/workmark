@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Playfair_Display, Inter, IBM_Plex_Mono, Schibsted_Grotesk, Hanken_Grotesk } from 'next/font/google'
+import { Playfair_Display, Inter, IBM_Plex_Mono, Instrument_Sans } from 'next/font/google'
 import './globals.css'
 import { ToastProvider } from '@/components/Toast'
 import { CookieNotice } from '@/components/CookieNotice'
@@ -30,20 +30,17 @@ const plexMono = IBM_Plex_Mono({
   display: 'swap',
 })
 
-// App faces. Schibsted carries headings and anything that needs to feel
-// deliberate; Hanken carries everything else and is deliberately warmer and
-// rounder than Inter.
-const schibsted = Schibsted_Grotesk({
-  subsets: ['latin'],
-  weight: ['500', '600', '700', '800'],
-  variable: '--font-display',
-  display: 'swap',
-})
-
-const hanken = Hanken_Grotesk({
+// App face. One family for the whole product, not two.
+//
+// Schibsted-for-headings + Hanken-for-body was a pairing decision that never
+// paid for itself: the two faces are close enough that nobody reads them as
+// different voices, and it doubled the font payload on every page. Instrument
+// Sans carries both jobs, and headings drop to 600 rather than 700 — the old
+// pairing read heavy, and one weight step is most of that fix.
+const instrument = Instrument_Sans({
   subsets: ['latin'],
   weight: ['400', '500', '600', '700'],
-  variable: '--font-body',
+  variable: '--font-app',
   display: 'swap',
 })
 
@@ -104,7 +101,7 @@ export default async function RootLayout({
 }) {
   const session = await loadSession()
   return (
-    <html lang="en" className={`${playfair.variable} ${inter.variable} ${plexMono.variable} ${schibsted.variable} ${hanken.variable}`}>
+    <html lang="en" className={`${playfair.variable} ${inter.variable} ${plexMono.variable} ${instrument.variable}`}>
       <body>
         <a href="#main-content" className="skip-to-content">
           Skip to main content
