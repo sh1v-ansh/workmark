@@ -1,0 +1,25 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1376, "h": 1180, "title": "Student dashboard" },
+    { "file": "Directions.dc.html", "x": 1496, "y": 0, "w": 1364, "h": 1000, "title": "Colour directions" },
+    { "file": "Skills.dc.html", "x": 0, "y": 1320, "w": 1244, "h": 880, "title": "Skills summary — before / after" },
+    { "file": "NextProject.dc.html", "x": 1496, "y": 1320, "w": 1244, "h": 860, "title": "Next project card — 3 treatments" }
+  ],
+  "annotations": [
+    {
+      "id": "start-here",
+      "x": 0,
+      "y": -190,
+      "w": 620,
+      "text": "Start here.\n\nThe dashboard has a Direction tweak above it — flip between Cool paper, Lit edges and Soft mesh to see the whole screen in each. It's currently on Lit edges.\n\nThe other three artboards break out the pieces you called out."
+    },
+    {
+      "id": "directions-note",
+      "x": 1496,
+      "y": -190,
+      "w": 560,
+      "text": "Three grounds, same card. A is the smallest move off today's warm paper; C is the furthest. Trade-offs are written under each."
+    }
+  ],
+  "launch": { "view": "canvas" }
+}

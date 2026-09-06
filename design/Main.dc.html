@@ -1,0 +1,257 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; font-family: 'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #4E2FD6; text-decoration: none; } a:hover { color: #3B22A8; }
+    .wm-disp { font-family: 'Schibsted Grotesk', system-ui, sans-serif; }
+    .wm-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+    .wm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7.5px;
+      font-family: 'Hanken Grotesk', system-ui, sans-serif; font-weight: 600; font-size: 14px;
+      line-height: 1; padding: 13px 20px; border-radius: 10px; border: 1.5px solid transparent; }
+    .wm-row { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 15px 0; border-top: 1px solid #F0EFF5; }
+  </style>
+</helmet>
+
+<div style="position: relative; min-height: 1180px; background: {{t.pageBg}}; padding: 30px 28px 56px; box-sizing: border-box; overflow: hidden;">
+
+  <!-- Background art. Sits behind everything, never intercepts a click. -->
+  <div style="position: absolute; inset: 0; pointer-events: none; background: {{t.pageArt}};"></div>
+
+  <div style="position: relative; max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px;">
+
+    <!-- HEADER — the answer, not a greeting -->
+    <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 2px;">
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <h1 class="wm-disp" style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.025em; color: #191E2E;">2 things need you</h1>
+        <p style="margin: 0; font-size: 14px; color: #5A6172;">BS Computer Science · University of Massachusetts Amherst</p>
+      </div>
+      <span style="font-size: 14px; color: #8D94A5; white-space: nowrap; padding-top: 4px;">Saturday, 6 September</span>
+    </div>
+
+    <!-- FOCAL BAND — one lead at ~4x a supporting tile -->
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; align-items: stretch;">
+
+      <div style="grid-column: span 2; grid-row: span 2; position: relative; overflow: hidden;
+                  background: {{t.focalBg}}; border: {{t.focalBorder}}; border-radius: 13px;
+                  box-shadow: {{t.focalShadow}}; padding: 28px 30px;
+                  display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="position: absolute; inset: 0; pointer-events: none; background: {{t.focalArt}};"></div>
+        <div style="position: relative; display: flex; flex-direction: column; gap: 11px;">
+          <span class="wm-eyebrow" style="color: #6142F5;">Waiting on you</span>
+          <h2 class="wm-disp" style="margin: 0; font-size: 25px; font-weight: 700; letter-spacing: -0.02em; color: #191E2E; line-height: 1.22; max-width: 30ch; text-wrap: pretty;">
+            Agree the description of what you built on Campus Transit API
+          </h2>
+          <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.6; max-width: 56ch; text-wrap: pretty;">
+            Dr. Alvarez signed off two days ago. Once you agree the same wording, the project
+            closes and the skills it proves are added to your record.
+          </p>
+        </div>
+        <div style="position: relative; display: flex; align-items: center; gap: 14px; margin-top: 26px;">
+          <a href="#" class="wm-btn" style="background: #6142F5; color: #FFFFFF; border-color: #6142F5; box-shadow: 0 1px 2px rgba(97,66,245,0.24), 0 8px 20px -8px rgba(97,66,245,0.55);">Read it and agree</a>
+          <span style="font-size: 13.5px; color: #8D94A5;">Takes about a minute</span>
+        </div>
+      </div>
+
+      <div style="background: {{t.cardBg}}; border: {{t.cardBorder}}; border-radius: 13px; box-shadow: {{t.cardShadow}};
+                  padding: 20px 21px; display: flex; flex-direction: column; gap: 9px;">
+        <span class="wm-eyebrow" style="color: #8D94A5;">Your project</span>
+        <h3 class="wm-disp" style="margin: 0; font-size: 16.5px; font-weight: 700; color: #191E2E; line-height: 1.35; text-wrap: pretty;">
+          3 people applied to Recipe scaling tool
+        </h3>
+        <p style="margin: 0; font-size: 13.5px; color: #666D80; line-height: 1.55;">
+          You can see which of your required skills each one has evidence for.
+        </p>
+        <a href="#" style="margin-top: auto; padding-top: 12px; font-size: 14px; font-weight: 600; color: #4E2FD6;">See them →</a>
+      </div>
+
+      <div style="background: {{t.cardBg}}; border: {{t.cardBorder}}; border-radius: 13px; box-shadow: {{t.cardShadow}};
+                  padding: 20px 21px; display: flex; flex-direction: column; gap: 9px;">
+        <span class="wm-eyebrow" style="color: #8D94A5;">New evidence</span>
+        <h3 class="wm-disp" style="margin: 0; font-size: 16.5px; font-weight: 700; color: #191E2E; line-height: 1.35; text-wrap: pretty;">
+          Your last scan proved 4 new skills
+        </h3>
+        <p style="margin: 0; font-size: 13.5px; color: #666D80; line-height: 1.55;">
+          Redis, Alembic, GitHub Actions and pytest, from 3 repositories.
+        </p>
+        <a href="#" style="margin-top: auto; padding-top: 12px; font-size: 14px; font-weight: 600; color: #4E2FD6;">See what changed →</a>
+      </div>
+    </div>
+
+    <!-- RECORD + NEXT PROJECT -->
+    <div style="display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 18px; align-items: stretch;">
+
+      <!-- Skill record. Bounded: a headline number, the shape of the record,
+           the six a poster would actually care about, and a way to the rest. -->
+      <div style="background: {{t.cardBg}}; border: {{t.cardBorder}}; border-radius: 13px; box-shadow: {{t.cardShadow}}; padding: 24px 26px;">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 20px;">
+          <div style="display: flex; gap: 38px;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span class="wm-disp" style="font-size: 32px; font-weight: 700; letter-spacing: -0.03em; color: #191E2E; line-height: 1;">37</span>
+              <span style="font-size: 12.5px; color: #666D80;">Skills proven</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span class="wm-disp" style="font-size: 32px; font-weight: 700; letter-spacing: -0.03em; color: #191E2E; line-height: 1;">5<span style="font-size: 20px; color: #8D94A5;">/6</span></span>
+              <span style="font-size: 12.5px; color: #666D80;">Projects finished</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span class="wm-disp" style="font-size: 32px; font-weight: 700; letter-spacing: -0.03em; color: #191E2E; line-height: 1;">2</span>
+              <span style="font-size: 12.5px; color: #666D80;">In flight</span>
+            </div>
+          </div>
+          <a href="#" style="font-size: 13px; font-weight: 600; color: #4E2FD6; white-space: nowrap;">See your record →</a>
+        </div>
+
+        <!-- The shape of 37, in one line you can read at a glance -->
+        <div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 11px;">
+          <div style="width: 16%; background: #6142F5;"></div>
+          <div style="width: 38%; background: #A48CFF;"></div>
+          <div style="width: 46%; background: #DDD5FA;"></div>
+        </div>
+        <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+          <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
+            <span style="width: 8px; height: 8px; border-radius: 999px; background: #6142F5;"></span>6 deep
+          </span>
+          <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
+            <span style="width: 8px; height: 8px; border-radius: 999px; background: #A48CFF;"></span>14 working
+          </span>
+          <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
+            <span style="width: 8px; height: 8px; border-radius: 999px; background: #DDD5FA;"></span>17 familiar
+          </span>
+        </div>
+
+        <p style="margin: 0 0 11px; font-size: 12.5px; font-weight: 600; color: #8D94A5; letter-spacing: 0.04em; text-transform: uppercase;">Strongest</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 7px;">
+          <sc-for list="{{topSkills}}" as="s" hint-placeholder-count="6">
+            <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
+                         color: #3B22A8; background: #F1EDFF; border: 1px solid #E2DAFB;
+                         border-radius: 8px; padding: 7px 12px;">
+              {{s.name}}<span style="font-weight: 500; color: #7A6BB5;">{{s.level}}</span>
+            </span>
+          </sc-for>
+          <a href="#" style="display: inline-flex; align-items: center; font-size: 13px; font-weight: 600;
+                             color: #5A6172; border: 1px dashed #D3D0DE; border-radius: 8px; padding: 7px 12px;">
+            +31 more
+          </a>
+        </div>
+      </div>
+
+      <!-- NEXT PROJECT — the one growth action, and the only gradient block -->
+      <div style="position: relative; overflow: hidden; border-radius: 13px; padding: 24px 25px;
+                  background: linear-gradient(155deg, #241B57 0%, #3B1F86 46%, #6142F5 100%);
+                  box-shadow: 0 2px 4px rgba(36,27,87,0.20), 0 18px 40px -18px rgba(97,66,245,0.65);
+                  display: flex; flex-direction: column; justify-content: space-between;">
+        <div style="position: absolute; width: 320px; height: 320px; right: -130px; top: -150px; border-radius: 999px;
+                    background: radial-gradient(circle, rgba(167,139,250,0.55) 0%, rgba(167,139,250,0) 70%);"></div>
+        <div style="position: relative; display: flex; flex-direction: column; gap: 10px;">
+          <span class="wm-eyebrow" style="color: #C7B8FF;">Your next project</span>
+          <h3 class="wm-disp" style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: #FFFFFF; line-height: 1.3; text-wrap: pretty;">
+            3 open projects want Docker. Your record doesn&rsquo;t have it.
+          </h3>
+          <p style="margin: 0; font-size: 13.5px; color: #C6C2E4; line-height: 1.6; text-wrap: pretty;">
+            We compare what open projects ask for against what your code proves, then write you
+            something specific to build that closes the biggest gap.
+          </p>
+        </div>
+        <div style="position: relative; display: flex; flex-direction: column; gap: 10px; margin-top: 22px;">
+          <a href="#" class="wm-btn" style="background: #FFFFFF; color: #241B57; border-color: #FFFFFF; width: 100%; box-sizing: border-box;">Get a project that proves Docker</a>
+          <a href="#" style="font-size: 13px; font-weight: 600; color: #C7B8FF; text-align: center;">See all 5 gaps</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- CLOSING LIST — everything that is not the reader's move -->
+    <div style="background: {{t.cardBg}}; border: {{t.cardBorder}}; border-radius: 13px; box-shadow: {{t.cardShadow}}; padding: 18px 24px 6px;">
+      <p style="margin: 0 0 2px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #8D94A5;">Nothing needed from you</p>
+      <sc-for list="{{waiting}}" as="w" hint-placeholder-count="4">
+        <div class="wm-row">
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0;">
+            <span class="wm-disp" style="font-size: 15px; font-weight: 600; color: #191E2E;">{{w.title}}</span>
+            <span style="font-size: 13px; color: #8D94A5;">{{w.meta}}</span>
+          </div>
+          <span style="font-size: 13.5px; color: #666D80; white-space: nowrap;">{{w.status}}</span>
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{
+  "direction": {"editor": "enum", "options": ["Cool paper", "Lit edges", "Soft mesh"], "default": "Lit edges", "section": "Direction"},
+  "$preview": {"width": 1376, "height": 1180}
+}'>
+class Component extends DCLogic {
+  themes() {
+    return {
+      'Cool paper': {
+        pageBg: '#FBFBFD',
+        pageArt: 'none',
+        cardBg: '#FFFFFF',
+        cardBorder: '1px solid #E6E6EE',
+        cardShadow: '0 1px 2px rgba(25,30,46,0.04)',
+        focalBg: 'linear-gradient(180deg, #FFFFFF 0%, #FBF9FF 100%)',
+        focalBorder: '1px solid #DCD4F7',
+        focalShadow: '0 1px 2px rgba(25,30,46,0.04)',
+        focalArt: 'none',
+      },
+      'Lit edges': {
+        pageBg: '#FFFFFF',
+        pageArt: 'radial-gradient(900px 420px at 12% -8%, rgba(97,66,245,0.07) 0%, rgba(97,66,245,0) 68%), radial-gradient(700px 380px at 96% 2%, rgba(129,140,248,0.06) 0%, rgba(129,140,248,0) 70%)',
+        cardBg: '#FFFFFF',
+        cardBorder: '1px solid #ECEBF3',
+        cardShadow: '0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18)',
+        focalBg: '#FFFFFF',
+        focalBorder: '1px solid #DCD4F7',
+        focalShadow: '0 1px 2px rgba(97,66,245,0.06), 0 16px 36px -20px rgba(97,66,245,0.45)',
+        focalArt: 'radial-gradient(560px 260px at 88% 108%, rgba(97,66,245,0.10) 0%, rgba(97,66,245,0) 72%)',
+      },
+      'Soft mesh': {
+        pageBg: '#FCFCFE',
+        pageArt: 'radial-gradient(760px 500px at 4% 0%, rgba(97,66,245,0.10) 0%, rgba(97,66,245,0) 62%), radial-gradient(680px 460px at 78% 6%, rgba(236,72,153,0.05) 0%, rgba(236,72,153,0) 62%), radial-gradient(900px 600px at 60% 96%, rgba(56,189,248,0.05) 0%, rgba(56,189,248,0) 62%)',
+        cardBg: 'rgba(255,255,255,0.86)',
+        cardBorder: 'none',
+        cardShadow: '0 2px 4px rgba(25,30,46,0.04), 0 14px 32px -14px rgba(25,30,46,0.20)',
+        focalBg: 'rgba(255,255,255,0.9)',
+        focalBorder: 'none',
+        focalShadow: '0 3px 6px rgba(36,27,87,0.06), 0 24px 52px -22px rgba(97,66,245,0.42)',
+        focalArt: 'radial-gradient(520px 300px at 92% 110%, rgba(97,66,245,0.12) 0%, rgba(97,66,245,0) 70%)',
+      },
+    };
+  }
+
+  renderVals() {
+    const all = this.themes();
+    const t = all[this.props.direction] ?? all['Lit edges'];
+    return {
+      t,
+      // Six, not thirty-seven. These are the ones a poster reads.
+      topSkills: [
+        { name: 'TypeScript', level: 'Deep' },
+        { name: 'React', level: 'Deep' },
+        { name: 'PostgreSQL', level: 'Deep' },
+        { name: 'Python', level: 'Working' },
+        { name: 'FastAPI', level: 'Working' },
+        { name: 'pytest', level: 'Working' },
+      ],
+      waiting: [
+        { title: 'Sensor mesh dashboard', meta: 'Applied 4 days ago · Dr. Nkemdirim · Competitive', status: 'Under review' },
+        { title: 'Course scheduling solver', meta: 'Applied 9 days ago · Ravi Menon · Strong fit', status: 'Shortlisted' },
+        { title: 'Recipe scaling tool', meta: 'Your project · posted 12 days ago', status: '3 applicants' },
+        { title: 'Lab inventory rewrite', meta: 'In progress · opened 3 weeks ago', status: 'In progress' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
