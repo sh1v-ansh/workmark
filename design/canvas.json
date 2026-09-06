@@ -39,6 +39,14 @@
       "w": 1376,
       "h": 1080,
       "title": "Empty state \u2014 first run"
+    },
+    {
+      "file": "Verified.dc.html",
+      "x": 1496,
+      "y": 2400,
+      "w": 1364,
+      "h": 1500,
+      "title": "Verification colour \u2014 4 options"
     }
   ],
   "annotations": [
@@ -62,6 +70,13 @@
       "y": -190,
       "w": 560,
       "text": "The first screen every new student sees. One action, three visible steps, and a dimmed preview of where they end up \u2014 the doubts are answered on the page rather than in a modal."
+    },
+    {
+      "id": "verified-note",
+      "x": 1496,
+      "y": 2210,
+      "w": 600,
+      "text": "Four ways of saying \"this was proved\". The question is less which hue than how much of the card it touches \u2014 recommendation and reasoning are at the bottom of the artboard."
     }
   ],
   "launch": {

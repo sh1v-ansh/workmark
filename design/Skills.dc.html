@@ -90,19 +90,19 @@
           </div>
 
           <div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 11px;">
-            <div style="width: 16%; background: #0E7C74;"></div>
-            <div style="width: 38%; background: #4FB8AF;"></div>
-            <div style="width: 46%; background: #CFE5E2;"></div>
+            <div style="width: 16%; background: linear-gradient(90deg, #EBCB74 0%, #D9A93C 100%);"></div>
+            <div style="width: 38%; background: #B9BDCA;"></div>
+            <div style="width: 46%; background: #E4E4EB;"></div>
           </div>
           <div style="display: flex; gap: 20px; margin-bottom: 22px;">
             <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
-              <span style="width: 8px; height: 8px; border-radius: 999px; background: #0E7C74;"></span>6 advanced
+              <span style="width: 8px; height: 8px; border-radius: 999px; background: #D9A93C;"></span>6 advanced
             </span>
             <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
-              <span style="width: 8px; height: 8px; border-radius: 999px; background: #4FB8AF;"></span>14 intermediate
+              <span style="width: 8px; height: 8px; border-radius: 999px; background: #B9BDCA;"></span>14 intermediate
             </span>
             <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
-              <span style="width: 8px; height: 8px; border-radius: 999px; background: #CFE5E2;"></span>17 beginner
+              <span style="width: 8px; height: 8px; border-radius: 999px; background: #E4E4EB;"></span>17 beginner
             </span>
           </div>
 
@@ -110,8 +110,9 @@
           <div style="display: flex; flex-wrap: wrap; gap: 7px;">
             <sc-for list="{{topSkills}}" as="s" hint-placeholder-count="6">
               <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
-                           color: #0B5F58; background: #E4F5F2; border: 1px solid #C7E7E2; border-radius: 8px; padding: 7px 12px;">
-                {{s.name}}<span style="font-weight: 500; color: #3E8C85;">{{s.level}}</span>
+                           color: {{s.fg}}; background: {{s.bg}}; border: 1px solid {{s.border}};
+                           border-radius: 8px; padding: 7px 12px; box-shadow: {{s.shadow}};">
+                {{s.name}}<span style="font-weight: 500; color: {{s.levelFg}};">{{s.level}}</span>
               </span>
             </sc-for>
             <a href="#" style="display: inline-flex; align-items: center; font-size: 13px; font-weight: 600;
@@ -144,14 +145,23 @@
 class Component extends DCLogic {
   renderVals() {
     return {
+      // Gold is earned, so it is computed per skill rather than applied to
+      // the row. Six of thirty-seven carry it; the rest stay quiet, which is
+      // the whole reason it reads as a reward.
       topSkills: [
-        { name: 'TypeScript', level: 'Advanced' },
-        { name: 'React', level: 'Advanced' },
-        { name: 'PostgreSQL', level: 'Advanced' },
-        { name: 'Python', level: 'Intermediate' },
-        { name: 'FastAPI', level: 'Intermediate' },
-        { name: 'pytest', level: 'Intermediate' },
-      ],
+        ['TypeScript', 'Advanced'], ['React', 'Advanced'], ['PostgreSQL', 'Advanced'],
+        ['Python', 'Intermediate'], ['FastAPI', 'Intermediate'], ['pytest', 'Intermediate'],
+      ].map(([name, level]) => ({
+        name,
+        level,
+        ...(level === 'Advanced'
+          ? {
+              bg: 'linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%)',
+              border: '#CE9F32', fg: '#4A3106', levelFg: '#7A5410',
+              shadow: '0 1px 2px rgba(154,113,18,0.20), 0 5px 12px -6px rgba(184,141,40,0.50)',
+            }
+          : { bg: '#F4F4F7', border: '#E6E6EE', fg: '#3A4152', levelFg: '#8D94A5', shadow: 'none' }),
+      })),
       allSkills: [
         'TypeScript', 'React', 'PostgreSQL', 'Python', 'FastAPI', 'pytest', 'Docker Compose',
         'Redis', 'Alembic', 'GitHub Actions', 'Tailwind CSS', 'Next.js', 'Node.js', 'Express',
