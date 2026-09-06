@@ -90,19 +90,19 @@
           </div>
 
           <div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; margin-bottom: 11px;">
-            <div style="width: 16%; background: #6142F5;"></div>
-            <div style="width: 38%; background: #A48CFF;"></div>
-            <div style="width: 46%; background: #DDD5FA;"></div>
+            <div style="width: 16%; background: #0E7C74;"></div>
+            <div style="width: 38%; background: #4FB8AF;"></div>
+            <div style="width: 46%; background: #CFE5E2;"></div>
           </div>
           <div style="display: flex; gap: 20px; margin-bottom: 22px;">
             <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
-              <span style="width: 8px; height: 8px; border-radius: 999px; background: #6142F5;"></span>6 deep
+              <span style="width: 8px; height: 8px; border-radius: 999px; background: #0E7C74;"></span>6 advanced
             </span>
             <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
-              <span style="width: 8px; height: 8px; border-radius: 999px; background: #A48CFF;"></span>14 working
+              <span style="width: 8px; height: 8px; border-radius: 999px; background: #4FB8AF;"></span>14 intermediate
             </span>
             <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: #5A6172;">
-              <span style="width: 8px; height: 8px; border-radius: 999px; background: #DDD5FA;"></span>17 familiar
+              <span style="width: 8px; height: 8px; border-radius: 999px; background: #CFE5E2;"></span>17 beginner
             </span>
           </div>
 
@@ -110,8 +110,8 @@
           <div style="display: flex; flex-wrap: wrap; gap: 7px;">
             <sc-for list="{{topSkills}}" as="s" hint-placeholder-count="6">
               <span style="display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600;
-                           color: #3B22A8; background: #F1EDFF; border: 1px solid #E2DAFB; border-radius: 8px; padding: 7px 12px;">
-                {{s.name}}<span style="font-weight: 500; color: #7A6BB5;">{{s.level}}</span>
+                           color: #0B5F58; background: #E4F5F2; border: 1px solid #C7E7E2; border-radius: 8px; padding: 7px 12px;">
+                {{s.name}}<span style="font-weight: 500; color: #3E8C85;">{{s.level}}</span>
               </span>
             </sc-for>
             <a href="#" style="display: inline-flex; align-items: center; font-size: 13px; font-weight: 600;
@@ -145,12 +145,12 @@ class Component extends DCLogic {
   renderVals() {
     return {
       topSkills: [
-        { name: 'TypeScript', level: 'Deep' },
-        { name: 'React', level: 'Deep' },
-        { name: 'PostgreSQL', level: 'Deep' },
-        { name: 'Python', level: 'Working' },
-        { name: 'FastAPI', level: 'Working' },
-        { name: 'pytest', level: 'Working' },
+        { name: 'TypeScript', level: 'Advanced' },
+        { name: 'React', level: 'Advanced' },
+        { name: 'PostgreSQL', level: 'Advanced' },
+        { name: 'Python', level: 'Intermediate' },
+        { name: 'FastAPI', level: 'Intermediate' },
+        { name: 'pytest', level: 'Intermediate' },
       ],
       allSkills: [
         'TypeScript', 'React', 'PostgreSQL', 'Python', 'FastAPI', 'pytest', 'Docker Compose',

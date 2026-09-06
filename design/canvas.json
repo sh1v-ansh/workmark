@@ -1,9 +1,45 @@
 {
   "artboards": [
-    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1376, "h": 1180, "title": "Student dashboard" },
-    { "file": "Directions.dc.html", "x": 1496, "y": 0, "w": 1364, "h": 1000, "title": "Colour directions" },
-    { "file": "Skills.dc.html", "x": 0, "y": 1320, "w": 1244, "h": 880, "title": "Skills summary — before / after" },
-    { "file": "NextProject.dc.html", "x": 1496, "y": 1320, "w": 1244, "h": 860, "title": "Next project card — 3 treatments" }
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1376,
+      "h": 1180,
+      "title": "Student dashboard"
+    },
+    {
+      "file": "Directions.dc.html",
+      "x": 1496,
+      "y": 0,
+      "w": 1364,
+      "h": 1160,
+      "title": "Colour directions"
+    },
+    {
+      "file": "Skills.dc.html",
+      "x": 0,
+      "y": 1320,
+      "w": 1244,
+      "h": 880,
+      "title": "Skills summary \u2014 before / after"
+    },
+    {
+      "file": "NextProject.dc.html",
+      "x": 1496,
+      "y": 1320,
+      "w": 1244,
+      "h": 860,
+      "title": "Next project card \u2014 3 treatments"
+    },
+    {
+      "file": "Empty.dc.html",
+      "x": 2980,
+      "y": 0,
+      "w": 1376,
+      "h": 1080,
+      "title": "Empty state \u2014 first run"
+    }
   ],
   "annotations": [
     {
@@ -11,7 +47,7 @@
       "x": 0,
       "y": -190,
       "w": 620,
-      "text": "Start here.\n\nThe dashboard has a Direction tweak above it — flip between Cool paper, Lit edges and Soft mesh to see the whole screen in each. It's currently on Lit edges.\n\nThe other three artboards break out the pieces you called out."
+      "text": "Start here.\n\nThe dashboard has a Direction tweak above it \u2014 flip between Cool paper, Lit edges and Soft mesh to see the whole screen in each. It's currently on Lit edges.\n\nThe other four artboards break out the pieces you called out."
     },
     {
       "id": "directions-note",
@@ -19,7 +55,16 @@
       "y": -190,
       "w": 560,
       "text": "Three grounds, same card. A is the smallest move off today's warm paper; C is the furthest. Trade-offs are written under each."
+    },
+    {
+      "id": "empty-note",
+      "x": 2980,
+      "y": -190,
+      "w": 560,
+      "text": "The first screen every new student sees. One action, three visible steps, and a dimmed preview of where they end up \u2014 the doubts are answered on the page rather than in a modal."
     }
   ],
-  "launch": { "view": "canvas" }
+  "launch": {
+    "view": "canvas"
+  }
 }

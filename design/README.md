@@ -12,7 +12,23 @@ and is git-ignored, since it is rebuilt from these on every change.
   real bug: `skills.map()` renders all 37 chips with no cap.
 - `NextProject.dc.html` — three rewrites of the card that currently reads
   "Not sure what to build next?".
+- `Empty.dc.html` — the first screen a new student sees: one action, three
+  visible steps, and a dimmed preview of where they land.
 - `canvas.json` — where each artboard sits on the canvas.
+
+## The two colours
+
+Violet is what Workmark is asking you to do — buttons, the focal card, the
+next-project block. Teal (#0E7C74) is what your code already proved — skill
+chips, the level bar, anything a scan produced.
+
+Teal is never a button. Evidence is a fact, not an action, and the moment a
+second hue starts appearing wherever it looks nice it stops carrying meaning
+and starts being noise. It also sits in the one gap the palette had: green is
+already "positive", amber is "caution", blue is "info", and violet owned
+everything else.
+
+Levels read Beginner / Intermediate / Advanced.
 
 Values are lifted from the real app rather than approximated: Schibsted
 Grotesk and Hanken Grotesk, the `R`/`T` scales in `src/lib/theme/tokens.ts`,

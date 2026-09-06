@@ -17,7 +17,7 @@
   </style>
 </helmet>
 
-<div style="background: #F4F4F7; padding: 34px 32px 40px; box-sizing: border-box; min-height: 1000px;">
+<div style="background: #F4F4F7; padding: 34px 32px 40px; box-sizing: border-box; min-height: 1160px;">
 
   <div style="max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px;">
 
@@ -26,8 +26,36 @@
       <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.6; max-width: 74ch; text-wrap: pretty;">
         Same card, same type, same violet. What changes is how cool the paper is, whether gradient
         does any work, and how a card earns its separation from the page &mdash; border, shadow, or both.
-        The current app is warmer than all three and uses no gradient at all.
+        The current app is warmer than all three and uses no gradient at all. Teal joins violet in each &mdash; the rule for which is directly below.
       </p>
+    </div>
+
+    <!-- The two-colour rule. Written down because a second hue used by feel
+         becomes decoration, and decoration is what makes a palette noisy. -->
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 4px;">
+      <div style="background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px; padding: 19px 22px;
+                  box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18);
+                  display: flex; align-items: flex-start; gap: 16px;">
+        <div style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 11px; background: #6142F5;"></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="wm-disp" style="font-size: 15px; font-weight: 700; color: #191E2E;">Violet is what we&rsquo;re asking you to do</span>
+          <span style="font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">
+            Every button, the focal card, the next-project block. If it is violet, it wants a click.
+          </span>
+        </div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px; padding: 19px 22px;
+                  box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18);
+                  display: flex; align-items: flex-start; gap: 16px;">
+        <div style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 11px; background: #0E7C74;"></div>
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span class="wm-disp" style="font-size: 15px; font-weight: 700; color: #191E2E;">Teal is what your code already proved</span>
+          <span style="font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">
+            Skill chips, the level bar, anything a scan produced. Teal is never a button &mdash; evidence
+            is a fact, not an action.
+          </span>
+        </div>
+      </div>
     </div>
 
     <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; align-items: start;">
@@ -85,11 +113,24 @@
               </div>
             </div>
 
-            <!-- A plain sibling, so elevation is judged against something -->
+            <!-- A plain sibling carrying evidence, so both hues are judged in place -->
             <div style="position: relative; margin-top: 12px; background: {{d.cardBg}}; border: {{d.cardBorder}}; border-radius: 13px;
-                        box-shadow: {{d.cardShadow}}; padding: 15px 21px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-              <span class="wm-disp" style="font-size: 14.5px; font-weight: 600; color: #191E2E;">Sensor mesh dashboard</span>
-              <span style="font-size: 13px; color: #8D94A5;">Under review</span>
+                        box-shadow: {{d.cardShadow}}; padding: 16px 21px; display: flex; flex-direction: column; gap: 11px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                <span class="wm-disp" style="font-size: 14.5px; font-weight: 600; color: #191E2E;">37 skills proven</span>
+                <span style="font-size: 13px; color: #8D94A5;">6 advanced</span>
+              </div>
+              <div style="display: flex; height: 7px; border-radius: 999px; overflow: hidden;">
+                <div style="width: 16%; background: #0E7C74;"></div>
+                <div style="width: 38%; background: #4FB8AF;"></div>
+                <div style="width: 46%; background: #CFE5E2;"></div>
+              </div>
+              <div style="display: flex; gap: 6px;">
+                <span style="font-size: 12.5px; font-weight: 600; color: #0B5F58; background: #E4F5F2;
+                             border: 1px solid #C7E7E2; border-radius: 8px; padding: 6px 10px;">TypeScript</span>
+                <span style="font-size: 12.5px; font-weight: 600; color: #0B5F58; background: #E4F5F2;
+                             border: 1px solid #C7E7E2; border-radius: 8px; padding: 6px 10px;">PostgreSQL</span>
+              </div>
             </div>
           </div>
 
@@ -104,7 +145,7 @@
 </div>
 </x-dc>
 
-<script data-dc-script data-props='{"$preview": {"width": 1364, "height": 1000}}'>
+<script data-dc-script data-props='{"$preview": {"width": 1364, "height": 1160}}'>
 class Component extends DCLogic {
   renderVals() {
     return {
