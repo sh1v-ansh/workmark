@@ -185,23 +185,63 @@ async function writeRecommendation(
 }
 
 /**
- * Everyone worth running tonight.
+ * Everyone worth running tonight, neediest first.
  *
- * Students with a GitHub connection and at least one skill: the connection
- * because a recommendation nobody can act on is an advert, and the skill
- * because there is nothing to personalise from without one.
+ * The first version of this took `.limit(120)` straight off
+ * github_connections and asked each of them in turn whether they needed
+ * anything. Two things wrong with that, and the second one is not a
+ * performance note.
+ *
+ * It did 120 round trips a night to discover 120 no-ops once everyone was
+ * topped up — the limit was on students rather than on work.
+ *
+ * And past 120 connected students it starved the rest permanently. An
+ * unordered limit returns whichever rows Postgres finds first, which in
+ * practice is the same rows every night, so student 121 would never have
+ * received a recommendation at all. Not "eventually" — never.
+ *
+ * So the shortlist is built first, in two small queries, and the limit is
+ * applied to people who actually need something. Zero-recommendation
+ * students come first, then whoever has waited longest, so a busy night
+ * that hits the cap resumes with the same people tomorrow rather than
+ * re-serving whoever happens to sort first.
  */
 export async function runRecommendationSweep(supabase: SupabaseClient): Promise<RunSummary> {
-  const { data: connected } = await supabase
-    .from('github_connections')
-    .select('student_id')
-    .limit(MAX_STUDENTS_PER_RUN)
+  const [{ data: connected }, { data: openBriefs }] = await Promise.all([
+    supabase.from('github_connections').select('student_id'),
+    // Covered by project_briefs_open_recommendations_idx.
+    supabase
+      .from('project_briefs')
+      .select('student_id, issued_at')
+      .eq('source', 'recommended')
+      .is('started_at', null),
+  ])
 
   const summary: RunSummary = { considered: 0, skipped: 0, generated: 0, failed: 0 }
+  if (!connected || connected.length === 0) return summary
 
-  for (const row of connected ?? []) {
+  const openCount = new Map<string, number>()
+  const newestOpen = new Map<string, string>()
+  for (const b of openBriefs ?? []) {
+    openCount.set(b.student_id, (openCount.get(b.student_id) ?? 0) + 1)
+    const seen = newestOpen.get(b.student_id)
+    if (!seen || b.issued_at > seen) newestOpen.set(b.student_id, b.issued_at)
+  }
+
+  const due = connected
+    .map((c) => ({
+      studentId: c.student_id,
+      have: openCount.get(c.student_id) ?? 0,
+      // Never recommended to sorts before everyone who has been.
+      waitedSince: newestOpen.get(c.student_id) ?? '',
+    }))
+    .filter((c) => c.have < TARGET_OPEN)
+    .sort((a, b) => a.have - b.have || a.waitedSince.localeCompare(b.waitedSince))
+    .slice(0, MAX_STUDENTS_PER_RUN)
+
+  for (const student of due) {
     summary.considered++
-    const { generated, failed } = await recommendForStudent(supabase, row.student_id)
+    const { generated, failed } = await recommendForStudent(supabase, student.studentId)
     if (generated === 0 && failed === 0) summary.skipped++
     summary.generated += generated
     summary.failed += failed
