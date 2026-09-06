@@ -1,33 +1,41 @@
-import Link from 'next/link'
-import { C, F } from './tokens'
+'use client'
 
+import Link from 'next/link'
+import { Aurora } from './Aurora'
+import { F } from './tokens'
+
+/**
+ * The last thing on the page.
+ *
+ * Named WaitlistSection for historical reasons — there is no waitlist and
+ * has not been one since signup started refusing under-18s outright rather
+ * than holding them. The export is JoinSection; the filename is left alone
+ * because renaming it is churn in a diff about the landing page.
+ *
+ * One action. The old version offered three, which on a closing screen is a
+ * way of admitting you do not know what you want the reader to do.
+ */
 export function JoinSection() {
   return (
-    <section style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '100px 24px', textAlign: 'center', background: C.bgDeep, position: 'relative', overflow: 'hidden' }}>
-      <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 800, height: 500, background: 'radial-gradient(ellipse at center, rgba(62,31,255,0.10) 0%, transparent 65%)', pointerEvents: 'none', zIndex: 0 }} />
+    <section style={{ position: 'relative', overflow: 'hidden', padding: '104px 24px 116px', textAlign: 'center' }}>
+      <Aurora height={620} />
 
-      <div className="reveal-item" style={{ maxWidth: 560, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        <div style={{ fontFamily: F.mono, fontSize: 11, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
-          Join Workmark
-        </div>
-        <h2 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 800, letterSpacing: '-0.03em', color: '#fff', lineHeight: 1.1, marginBottom: 16 }}>
-          Start building your<br />Workmark record.
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 620, margin: '0 auto' }}>
+        <h2
+          style={{
+            fontFamily: F.serif, fontSize: 42, fontWeight: 600, letterSpacing: '-0.026em',
+            lineHeight: 1.12, color: '#0A0A0A', margin: '0 0 16px', textWrap: 'balance',
+          }}
+        >
+          You have already done the work
         </h2>
-        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 40 }}>
-          Students: start stacking real, verified work experience, free, forever. Organizations: post your first project and get real CS help without an agency in the middle.
+        <p style={{ fontFamily: F.sans, fontSize: 17.5, lineHeight: 1.62, color: '#4B4B57', margin: '0 auto 30px', textWrap: 'pretty' }}>
+          It is sitting in repositories nobody is going to read. Connect them and find out what
+          they say about you.
         </p>
-
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
-          <Link href="/login" className="wm-btn wm-btn-primary">
-            I&apos;m a student →
-          </Link>
-          <Link href="/login" className="wm-btn wm-btn-secondary-invert">
-            Post a project
-          </Link>
-        </div>
-
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: F.mono }}>
-          Students always free · Organizations: free to start, no credit card required
+        <Link href="/login" className="wm-cta-primary">Build my record</Link>
+        <p style={{ fontFamily: F.sans, fontSize: 13, color: '#6C6C78', marginTop: 18 }}>
+          Free with a .edu address. You choose which repositories, and you can disconnect at any time.
         </p>
       </div>
     </section>

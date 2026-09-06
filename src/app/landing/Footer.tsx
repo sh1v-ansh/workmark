@@ -22,7 +22,7 @@ export function Footer() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
         <div>
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 6 }}>
-            <Wordmark />
+            <Wordmark height={24} />
           </Link>
           <div style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>Verified work, not just claimed work.</div>
         </div>
@@ -42,7 +42,7 @@ export function Footer() {
       </div>
       <div style={{ paddingTop: 20, borderTop: `1px solid ${C.borderFaint}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 12, color: C.textGhost, fontFamily: F.mono }}>
-          © 2026 Workmark · Built by a student, for students.
+          © 2026 Workmark · Built by students, for students.
         </div>
         {/* Reachable from every page, which is the point of them. A policy
             nobody can find is not a policy anyone agreed to. */}
