@@ -2,47 +2,49 @@
 
 import Link from 'next/link'
 import { Aurora } from './Aurora'
+import { AudienceToggle } from './AudienceToggle'
+import { COPY, type Audience } from './audience'
 import { C, F } from './tokens'
 
 /**
  * The hero.
  *
- * The old one led with "Building the largest database of verified work
- * records to fix hiring", which is a line written for an investor. No
- * student wants to join a database. It also sat under a dotted
- * "constellation" graphic that illustrated a network nobody had mentioned.
+ * Every word of it comes from audience.ts, because the page says two
+ * different things to two different readers and the alternative — a headline
+ * that works for a student and a hiring manager at once — is a headline that
+ * lands with neither.
  *
- * This says what a student gets, in the order they care about: proof, then
- * work, then help when there is none. The promise underneath is the one
- * sentence the whole product is: do real work, build evidence of it, and
- * let the evidence open the door.
+ * The switch sits above the headline rather than below it, so a business
+ * that arrived on the student page sees the way out before it reads a pitch
+ * aimed at somebody else.
  */
+export function MissionHero({
+  audience,
+  onAudienceChange,
+}: {
+  audience: Audience
+  onAudienceChange: (next: Audience) => void
+}) {
+  const copy = COPY[audience]
 
-const PROOF = [
-  ['Free while you are a student', 'A .edu address is all it takes.'],
-  ['You choose what we read', 'Repository by repository, revocable at any time.'],
-  ['Your record, exportable', 'One file, whenever you want it, no asking.'],
-]
-
-export function MissionHero() {
   return (
-    <section style={{ position: 'relative', padding: '150px 24px 92px', overflow: 'hidden' }}>
-      <Aurora height={860} />
+    <section style={{ position: 'relative', padding: '138px 24px 92px', overflow: 'hidden' }}>
+      <Aurora height={900} />
 
-      <div style={{ position: 'relative', zIndex: 1, maxWidth: 860, margin: '0 auto', textAlign: 'center' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 880, margin: '0 auto', textAlign: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 26 }}>
+          <AudienceToggle value={audience} onChange={onAudienceChange} />
+        </div>
+
         <span
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 26,
-            padding: '6px 14px 6px 8px', borderRadius: 999,
+            display: 'inline-block', marginBottom: 22, padding: '6px 14px', borderRadius: 999,
             background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(62,31,255,0.16)',
             backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-            fontSize: 13, color: C.textMuted, fontFamily: F.sans,
+            fontFamily: F.sans, fontSize: 13, color: C.textMuted,
           }}
         >
-          <span style={{ padding: '3px 9px', borderRadius: 999, background: 'rgba(62,31,255,0.10)', color: C.accent, fontSize: 12, fontWeight: 700 }}>
-            For CS students
-          </span>
-          Built at UMass Amherst
+          {copy.eyebrow}
         </span>
 
         <h1
@@ -52,32 +54,30 @@ export function MissionHero() {
             letterSpacing: '-0.028em', color: C.text, margin: '0 0 24px', textWrap: 'balance',
           }}
         >
-          Don&rsquo;t just tell people what you can do.{' '}
+          {copy.headline}{' '}
           <span style={{
             background: 'linear-gradient(103deg, #3E1FFF 0%, #7F5CFF 42%, #EC4899 100%)',
             WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
           }}>
-            Prove it.
+            {copy.headlineAccent}
           </span>
         </h1>
 
-        <p style={{ fontFamily: F.sans, fontSize: 19, lineHeight: 1.6, color: C.textMuted, maxWidth: 640, margin: '0 auto 34px', textWrap: 'pretty' }}>
-          Workmark turns the code you have already written into a record employers can check —
-          then finds you real project work that uses it. When nothing open fits, it writes you
-          something worth building.
+        <p style={{ fontFamily: F.sans, fontSize: 18.5, lineHeight: 1.62, color: C.textMuted, maxWidth: 660, margin: '0 auto 32px', textWrap: 'pretty' }}>
+          {copy.lede}
         </p>
 
-        <div style={{ display: 'flex', gap: 11, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 18 }}>
-          <Link href="/login" className="wm-cta-primary">Build my record</Link>
-          <Link href="/listings" className="wm-cta-ghost">See open projects</Link>
+        <div style={{ display: 'flex', gap: 11, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+          <Link href={copy.primaryCta.href} className="wm-cta-primary">{copy.primaryCta.label}</Link>
+          <Link href={copy.secondaryCta.href} className="wm-cta-ghost">{copy.secondaryCta.label}</Link>
         </div>
 
-        <p style={{ fontFamily: F.sans, fontSize: 13, color: C.textFaint, marginBottom: 52 }}>
-          Takes about two minutes. No CV, no cover letter.
+        <p style={{ fontFamily: F.sans, fontSize: 13, color: C.textFaint, marginBottom: 50 }}>
+          {copy.reassurance}
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18, textAlign: 'left' }} className="mob-1col">
-          {PROOF.map(([title, detail]) => (
+          {copy.proof.map(([title, detail]) => (
             <div
               key={title}
               style={{

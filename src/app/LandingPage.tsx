@@ -1,30 +1,36 @@
 'use client'
 
+import { useState } from 'react'
 import { MarketingLayout } from './landing/MarketingLayout'
 import { MissionHero } from './landing/MissionHero'
 import { TheRecord } from './landing/TheRecord'
 import { TheLoop } from './landing/TheLoop'
-import { ForPosters } from './landing/ForPosters'
+import { CrossLink } from './landing/CrossLink'
 import { JoinSection } from './landing/WaitlistSection'
+import type { Audience } from './landing/audience'
 
 /**
- * Five sections, down from six, and every one about something that exists.
+ * One page, two stories.
  *
- * What came out: HiringProblem, three borrowed statistics arguing that
- * hiring is broken — replaced by TheRecord, which shows the thing instead.
- * Capabilities and Roadmap, both of which described what was coming on a
- * page whose job is to earn enough trust for someone to connect their
- * GitHub; the one genuinely forward-looking thing left is step four of
- * TheLoop, and it is labelled.
+ * The audience lives here rather than in each section, because the switch in
+ * the hero has to move the whole page — a toggle that changed the headline
+ * and left three sections talking to the other reader would be worse than no
+ * toggle at all.
+ *
+ * Students are the default. They are the side that has to exist first: a
+ * project board with nobody on it is worth nothing to a business, while a
+ * record is worth something to a student on their first day.
  */
 export default function LandingPage() {
+  const [audience, setAudience] = useState<Audience>('students')
+
   return (
     <MarketingLayout>
-      <MissionHero />
-      <TheRecord />
-      <TheLoop />
-      <ForPosters />
-      <JoinSection />
+      <MissionHero audience={audience} onAudienceChange={setAudience} />
+      <TheRecord audience={audience} />
+      <TheLoop audience={audience} />
+      <CrossLink audience={audience} onAudienceChange={setAudience} />
+      <JoinSection audience={audience} />
     </MarketingLayout>
   )
 }

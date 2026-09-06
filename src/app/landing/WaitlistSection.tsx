@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { Aurora } from './Aurora'
+import { COPY, type Audience } from './audience'
 import { F } from './tokens'
 
 /**
@@ -15,7 +16,22 @@ import { F } from './tokens'
  * One action. The old version offered three, which on a closing screen is a
  * way of admitting you do not know what you want the reader to do.
  */
-export function JoinSection() {
+const CLOSING: Record<Audience, { headline: string; body: string; note: string }> = {
+  students: {
+    headline: 'You have already done the work',
+    body: 'It is sitting in repositories nobody is going to read. Connect them and find out what they say about you.',
+    note: 'Free with a .edu address. You choose which repositories, and you can disconnect at any time.',
+  },
+  businesses: {
+    headline: 'Post something real and see who turns up',
+    body: 'Describe the work in a few lines. Everyone who applies arrives with a record you can check rather than a page about themselves.',
+    note: 'Free to post. No contract, nothing to install, and nothing to pay.',
+  },
+}
+
+export function JoinSection({ audience }: { audience: Audience }) {
+  const copy = CLOSING[audience]
+  const cta = COPY[audience].primaryCta
   return (
     <section style={{ position: 'relative', overflow: 'hidden', padding: '104px 24px 116px', textAlign: 'center' }}>
       <Aurora height={620} />
@@ -27,15 +43,14 @@ export function JoinSection() {
             lineHeight: 1.12, color: '#0A0A0A', margin: '0 0 16px', textWrap: 'balance',
           }}
         >
-          You have already done the work
+          {copy.headline}
         </h2>
         <p style={{ fontFamily: F.sans, fontSize: 17.5, lineHeight: 1.62, color: '#4B4B57', margin: '0 auto 30px', textWrap: 'pretty' }}>
-          It is sitting in repositories nobody is going to read. Connect them and find out what
-          they say about you.
+          {copy.body}
         </p>
-        <Link href="/login" className="wm-cta-primary">Build my record</Link>
+        <Link href={cta.href} className="wm-cta-primary">{cta.label}</Link>
         <p style={{ fontFamily: F.sans, fontSize: 13, color: '#6C6C78', marginTop: 18 }}>
-          Free with a .edu address. You choose which repositories, and you can disconnect at any time.
+          {copy.note}
         </p>
       </div>
     </section>

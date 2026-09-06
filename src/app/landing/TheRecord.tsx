@@ -1,5 +1,6 @@
 'use client'
 
+import { type Audience } from './audience'
 import { C, F } from './tokens'
 import { LEVELS } from '@/lib/theme/tokens'
 
@@ -40,25 +41,44 @@ const SKILLS: [string, 'advanced' | 'intermediate' | 'beginner'][] = [
 
 const LABEL = { advanced: 'Advanced', intermediate: 'Intermediate', beginner: 'Beginner' } as const
 
-export function TheRecord() {
+/** Same record, two readings of it. The demonstration is identical because
+ *  it is the same artifact — what changes is who is being told what it is
+ *  for, which is exactly the difference the page exists to draw. */
+const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: string; points: [string, string][] }> = {
+  students: {
+    eyebrow: 'What you get',
+    headline: 'A skill record with its working shown',
+    lede: 'Every line says where it came from. Not "proficient in PostgreSQL" — the project, the level, and how it was checked, so a poster can look instead of taking your word for it.',
+    points: [
+      ['We read what your code depends on', 'How it is built, which files import what, and which commits are yours. Never the source itself.'],
+      ['Three levels, and only one is earned easily', 'Advanced means sustained work that survived other people\u2019s code, tests and mistakes.'],
+      ['You can challenge any of it', 'It is your record. If a line is wrong, there is a page for saying so and a person who reads it.'],
+    ],
+  },
+  businesses: {
+    eyebrow: 'What you see',
+    headline: 'What an applicant looks like here',
+    lede: 'This is what arrives instead of a CV. Every skill carries the project it came from, the level it reached and how that was established — so the first question is whether the evidence is enough, not whether the claim is true.',
+    points: [
+      ['Read from repositories, not from a form', 'Dependency graphs, build configuration, commit authorship and test coverage. Nobody types their own skill level.'],
+      ['Levels mean the same thing across candidates', 'Calibrated against every record on the platform, and recalibrated as more work comes in.'],
+      ['The gaps are shown too', 'You see what somebody cannot do yet, which is the half a CV never tells you.'],
+    ],
+  },
+}
+
+export function TheRecord({ audience }: { audience: Audience }) {
+  const framing = FRAMING[audience]
   return (
     <section className="wm-section" style={{ background: '#FBFBFD', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
       <div className="wm-section-inner">
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.05fr)', gap: 60, alignItems: 'center' }} className="mob-1col">
           <div>
-            <span className="wm-eyebrow-2">What you get</span>
-            <h2 className="wm-h2">A skill record with its working shown</h2>
-            <p className="wm-lede" style={{ marginBottom: 22 }}>
-              Every line says where it came from. Not &ldquo;proficient in PostgreSQL&rdquo; — the
-              project, the level, and how it was checked, so a poster can look instead of taking
-              your word for it.
-            </p>
+            <span className="wm-eyebrow-2">{framing.eyebrow}</span>
+            <h2 className="wm-h2">{framing.headline}</h2>
+            <p className="wm-lede" style={{ marginBottom: 22 }}>{framing.lede}</p>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
-                ['We read what your code depends on', 'How it is built, which files import what, and which commits are yours. Never the source itself.'],
-                ['Three levels, and only one is earned easily', 'Advanced means sustained work that survived other people’s code, tests and mistakes.'],
-                ['You can challenge any of it', 'It is your record. If a line is wrong, there is a page for saying so and a person who reads it.'],
-              ].map(([t, d]) => (
+              {framing.points.map(([t, d]) => (
                 <li key={t} style={{ display: 'flex', gap: 11 }}>
                   <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 6, width: 6, height: 6, borderRadius: 999, background: C.accent }} />
                   <span>

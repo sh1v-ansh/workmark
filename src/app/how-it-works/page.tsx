@@ -1,22 +1,12 @@
 import type { Metadata } from 'next'
-import { MarketingLayout } from '../landing/MarketingLayout'
-import { HowItWorks } from '../landing/HowItWorks'
-import { VerificationSection } from '../landing/VerificationSection'
-import { JobMatching } from '../landing/JobMatching'
-import { EngagementTypes } from '../landing/EngagementTypes'
+import HowItWorksPage from './HowItWorksPage'
 
 export const metadata: Metadata = {
   title: 'How it works | Workmark',
-  description: 'Learn how Workmark verifies CS student work through employer attestation, weekly check-ins, and permanent locked records.',
+  description:
+    'How Workmark turns the code you have already written into a skill record an employer can check, and what it reads to do it.',
 }
 
-export default function HowItWorksPage() {
-  return (
-    <MarketingLayout>
-      <HowItWorks />
-      <VerificationSection />
-      <JobMatching />
-      <EngagementTypes />
-    </MarketingLayout>
-  )
+export default function Page() {
+  return <HowItWorksPage />
 }
