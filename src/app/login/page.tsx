@@ -168,12 +168,12 @@ export default function LoginPage() {
           </Link>
 
           <h1 style={{ fontFamily: F.display, fontSize: 34, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, lineHeight: 1.15, marginBottom: 13 }}>
-            {signingUp ? 'Prove what you can build' : 'Welcome back'}
+            {signingUp ? 'A record of what you can actually do' : 'Welcome back'}
           </h1>
 
           <p style={{ fontSize: 15.5, color: C.textMuted, lineHeight: 1.65, maxWidth: '46ch', marginBottom: signingUp ? 26 : 14 }}>
             {signingUp
-              ? 'Workmark reads the code you have already written and turns it into a skill record you can show someone. Then it finds you real project work that needs those skills.'
+              ? 'Workmark builds you a verified record of your skills, then finds you real project work that uses them — and gives you something to build when it does not.'
               : 'Sign in to pick up your record, your applications and the projects you are working on.'}
           </p>
 
@@ -192,10 +192,16 @@ export default function LoginPage() {
 
           {signingUp && (
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 13 }}>
+              {/* What they get, in the order it matters. The first draft of
+                  this listed how the scan works, which is the mechanism and
+                  not the offer — nobody signs up to have their repositories
+                  read. They sign up to have something to show and somewhere
+                  to use it. */}
               {[
-                ['You pick the repositories', 'We read what they depend on, how they are built and which commits are yours. Never the source itself.'],
-                ['Every level is checkable', 'Each skill says which project it came from, so a poster can look rather than take your word for it.'],
-                ['Free while you are a student', 'A .edu address is all it takes to sign up.'],
+                ['A record you can prove', 'Every skill on it says which project it came from and how it was verified, so a poster can check rather than take your word for it.'],
+                ['Real project work', 'Apply to projects from faculty and other students, with your record already attached. No cover letter about your passion for teamwork.'],
+                ['Something to build next', 'When nothing open fits, Workmark writes you a project that closes the gap between what you have and what people are asking for.'],
+                ['Free while you are a student', 'A .edu address is all it takes.'],
               ].map(([title, detail]) => (
                 <li key={title} style={{ display: 'flex', gap: 11 }}>
                   <span aria-hidden="true" style={{ flexShrink: 0, marginTop: 3, color: C.accent, display: 'flex' }}>

@@ -232,7 +232,11 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
   function BriefCard({ b }: { b: BriefRow }) {
     const c = b.targetSkillName ? tagColor(b.targetSkillName) : null
     return (
-      <Card hoverable={false} padding={19.5}>
+      // The anchor an AI project card on Find work links to. Without it that
+      // link lands at the top of this page and leaves the student to find
+      // the one they just clicked, which is the opposite of what a link is
+      // for. scrollMarginTop clears the sticky nav bar.
+      <Card hoverable={false} padding={19.5} id={`brief-${b.id}`} style={{ scrollMarginTop: 82 }}>
         <div style={{ marginBottom: 10 }}>
           <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 5.5 }}>{b.title}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>

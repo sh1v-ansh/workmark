@@ -746,3 +746,58 @@
     max-width: 430px !important;
   }
 }
+
+/* ── AI project cards ─────────────────────────────────────────────────────
+   Projects Workmark wrote, sitting in a grid of projects people posted.
+
+   The entire job of this treatment is that the two are never confused. A
+   real listing is a person who will read what you send them; one of these
+   is an editor waiting to be opened. So this is the one card in the product
+   with a tinted ground and a violet edge — everywhere else violet marks
+   something you can click, and the exception is the signal.
+
+   The gradient runs from a violet wash at the top-left to white at the
+   bottom-right so the card is unmistakable at a glance and still readable
+   where the words are. */
+.nb-ai-card {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  padding: 18px;
+  border-radius: 13px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid #DCD4F7;
+  background:
+    linear-gradient(152deg, #F6F2FF 0%, #FCFBFF 46%, #FFFFFF 100%);
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 32px -18px rgba(97, 66, 245, 0.45);
+  transition: box-shadow 0.2s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+/* Light pooling in the bottom-right, the same move the focal card makes. */
+.nb-ai-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(420px 220px at 96% 108%, rgba(97, 66, 245, 0.13) 0%, rgba(97, 66, 245, 0) 72%);
+}
+.nb-ai-card:hover {
+  border-color: #C3B4F2;
+  transform: translateY(-1px);
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.08), 0 18px 38px -18px rgba(97, 66, 245, 0.55);
+}
+
+/* The band above the grid that says what these are. Full width, once, so
+   the cards themselves do not each have to carry the explanation. */
+.nb-ai-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 13px 17px;
+  margin-bottom: 13px;
+  border-radius: 11px;
+  border: 1px solid #E7E1FB;
+  background: linear-gradient(120deg, rgba(97, 66, 245, 0.06) 0%, rgba(97, 66, 245, 0.015) 60%, rgba(255, 255, 255, 0) 100%);
+}

@@ -8,6 +8,8 @@ import Link from 'next/link'
 // static card that lifts under the cursor promises a click that never
 // happens, which is the most common small dishonesty in card UI.
 interface CardProps {
+  /** For linking to a specific card from another page. */
+  id?: string
   href?: string
   onClick?: () => void
   padding?: number | string
@@ -21,7 +23,7 @@ interface CardProps {
   focal?: boolean
 }
 
-export default function Card({ href, onClick, padding = 20, style, className, children, hoverable, ruled, focal }: CardProps) {
+export default function Card({ id, href, onClick, padding = 20, style, className, children, hoverable, ruled, focal }: CardProps) {
   const interactive = hoverable ?? (!!href || !!onClick)
   const baseStyle: React.CSSProperties = {
     display: 'block',
@@ -40,20 +42,20 @@ export default function Card({ href, onClick, padding = 20, style, className, ch
 
   if (href) {
     return (
-      <Link href={href} className={cls} style={baseStyle}>
+      <Link id={id} href={href} className={cls} style={baseStyle}>
         {children}
       </Link>
     )
   }
   if (onClick) {
     return (
-      <button onClick={onClick} className={cls} style={{ ...baseStyle, width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}>
+      <button id={id} onClick={onClick} className={cls} style={{ ...baseStyle, width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}>
         {children}
       </button>
     )
   }
   return (
-    <div className={cls} style={baseStyle}>
+    <div id={id} className={cls} style={baseStyle}>
       {children}
     </div>
   )

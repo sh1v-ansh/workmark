@@ -3,6 +3,9 @@ import { getFitForListings } from '@/lib/matching/listing'
 import type { FitTier } from '@/lib/matching/fit'
 import ListingsClient, { type ListingCardData } from './ListingsClient'
 import { verifiedFacultyPosterIds } from '@/lib/listings/verified-faculty'
+import type { AiProjectCardData } from '@/components/briefs/AiProjectCard'
+import type { RecommendationReason } from '@/lib/briefs/targets'
+import { splitBriefText } from '@/lib/briefs/format'
 
 /**
  * Open listings. Visible to everyone including logged-out visitors —
@@ -35,13 +38,40 @@ export default async function ListingsPage() {
   const verifiedFaculty = await verifiedFacultyPosterIds(supabase, rows.map((l) => l.poster_id))
 
   let student: { full_name: string | null } | null = null
+  let aiProjects: AiProjectCardData[] = []
   let fitByListing = new Map<string, { missingSkillIds: string[] }>()
   let tierByListing = new Map<string, FitTier>()
   let requirementsByListing = new Map<string, { skillId: string; canonicalName?: string }[]>()
 
   if (user) {
-    const { data: s } = await supabase.from('students').select('full_name').eq('id', user.id).maybeSingle()
+    // The student, and whatever Workmark has written for them and they have
+    // not started. RLS scopes project_briefs to the reader, so this can only
+    // ever return their own — there is no signed-out version of this list
+    // and no way to see anyone else's.
+    const [{ data: s }, { data: briefs }] = await Promise.all([
+      supabase.from('students').select('full_name').eq('id', user.id).maybeSingle(),
+      supabase
+        .from('project_briefs')
+        .select('id, brief_text, difficulty, target_skill_id, recommendation_reason, skills(canonical_name)')
+        .eq('student_id', user.id)
+        .eq('source', 'recommended')
+        .is('started_at', null)
+        .order('issued_at', { ascending: false })
+        .limit(3),
+    ])
     student = s
+    aiProjects = (briefs ?? []).map((b) => {
+      const skill = b.skills as unknown as { canonical_name: string } | null
+      const { title, body } = splitBriefText(b.brief_text)
+      return {
+        id: b.id,
+        title,
+        summary: body,
+        skillName: skill?.canonical_name ?? null,
+        reason: (b.recommendation_reason as RecommendationReason | null) ?? null,
+        difficulty: b.difficulty,
+      }
+    })
   }
 
   if (listingIds.length > 0) {
@@ -78,5 +108,12 @@ export default async function ListingsPage() {
     }
   })
 
-  return <ListingsClient listings={cards} signedIn={!!user} studentName={student?.full_name ?? null} />
+  return (
+    <ListingsClient
+      listings={cards}
+      aiProjects={aiProjects}
+      signedIn={!!user}
+      studentName={student?.full_name ?? null}
+    />
+  )
 }

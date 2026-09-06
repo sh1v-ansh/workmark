@@ -11,6 +11,8 @@ import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
 import { tagColor } from '@/lib/theme/tagColors'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
+import AiProjectCard, { type AiProjectCardData } from '@/components/briefs/AiProjectCard'
+import { Icon } from '@/components/Icon'
 import MultiSelect from '@/components/ui/MultiSelect'
 
 export interface ListingCardData {
@@ -92,8 +94,10 @@ function sentenceCase(v: string): string {
   return v.charAt(0).toUpperCase() + v.slice(1)
 }
 
-export default function ListingsClient({ listings, signedIn, studentName }: {
+export default function ListingsClient({ listings, aiProjects = [], signedIn, studentName }: {
   listings: ListingCardData[]
+  /** Projects Workmark wrote for this student and they have not started. */
+  aiProjects?: AiProjectCardData[]
   signedIn: boolean
   studentName: string | null
 }) {
@@ -174,10 +178,55 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
           )}
         </div>
 
+        {/* ── Projects Workmark wrote ─────────────────────────────────────
+            Above the real postings, and only for a signed-in student who
+            has some. The order is deliberate: on a young marketplace this
+            is often the only thing on the page, and burying it under "No
+            open projects right now" would waste the one section that is
+            never empty.
+
+            The band says once what the cards are, so the cards do not each
+            have to carry a disclaimer. */}
+        {signedIn && aiProjects.length > 0 && (
+          <section aria-label="Projects suggested for you" style={{ marginBottom: 26 }}>
+            <div className="nb-ai-band">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: R.md, background: 'rgba(97,66,245,0.10)', color: C.accent, flexShrink: 0 }}>
+                  <Icon name="spark" size={16} />
+                </span>
+                <span style={{ minWidth: 0 }}>
+                  <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>
+                    Written for you, not posted by anyone
+                  </span>
+                  <span style={{ display: 'block', fontSize: 13, color: C.textMuted, lineHeight: 1.5 }}>
+                    Workmark reads your record every night and writes projects that would move it. Nobody is waiting on these — start one whenever you like.
+                  </span>
+                </span>
+              </div>
+              <Link
+                href="/me/briefs"
+                style={{ fontSize: 13, fontWeight: 600, color: C.accent, textDecoration: 'none', whiteSpace: 'nowrap' }}
+              >
+                Ask for something specific →
+              </Link>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14.5 }} className="mob-1col">
+              {aiProjects.map((p) => (
+                <AiProjectCard key={p.id} project={p} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {listings.length === 0 ? (
           <Card hoverable={false} padding={36}>
-            <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center' }}>
-              No open projects right now.{signedIn ? ' Post the first one.' : ' Sign in to post one.'}
+            <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center', lineHeight: 1.6 }}>
+              {aiProjects.length > 0
+                ? 'Nobody has posted a project yet. The ones above are yours to start in the meantime.'
+                : signedIn
+                  ? 'No open projects right now. Post the first one.'
+                  : 'No open projects right now. Sign in to post one.'}
             </p>
           </Card>
         ) : (
