@@ -10,6 +10,7 @@ import FeedbackLink from '@/components/FeedbackLink'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 import { LAYOUT } from '@/lib/theme/layout'
+import { isTabActive, type Tab } from '@/lib/nav/tabs'
 
 // Everything the navbar needs now comes from the session context, read once
 // in the root layout. Props are still accepted so the fourteen existing call
@@ -21,7 +22,7 @@ interface NavbarProps {
   isAdmin?: boolean
 }
 
-// Three tabs, down from five.
+// Three tabs, down from five (four for admins, who get the console here too).
 //
 // The old nav asked the user to hold our model in their head: Projects,
 // Next steps, My record, Students, Dashboard — three of which were "things
@@ -29,7 +30,7 @@ interface NavbarProps {
 // three questions a student actually arrives with: what needs me, where's
 // the work, what do I have. Everything else is reachable from inside one of
 // them or from the account menu, which is where secondary surfaces belong.
-const STUDENT_TABS = [
+const STUDENT_TABS: Tab[] = [
   { href: '/student/dashboard', label: 'Home',      also: ['/goals'] },
   { href: '/listings',          label: 'Find work', also: [] as string[] },
   { href: '/me',                label: 'My record', also: ['/me/file', '/me/briefs', '/student/github'] },
@@ -38,28 +39,37 @@ const STUDENT_TABS = [
 // Faculty arrive with different questions. "Find work" and "My record" mean
 // nothing to a professor — they don't apply to projects and they have no
 // scanned record. Theirs are: what needs me, who applied, who's building.
-const FACULTY_TABS = [
+const FACULTY_TABS: Tab[] = [
   { href: '/faculty', label: 'Home', also: [] as string[] },
   { href: '/faculty/listings', label: 'My projects', also: ['/listings/new'] },
   { href: '/students', label: 'Students', also: [] as string[] },
 ]
 
+// What's left in the account menu after the actions moved out.
+//
+// It had eight items, which is a list you read rather than a menu you use.
+// Two of them were actions wearing a destination's clothes — "Evidence
+// source & Rescan" and "Project ideas" — and both now sit on the record they
+// change, where the student is already standing when they want them. Admin
+// became a tab. What remains is what a menu is for: the low-traffic places
+// that belong to you rather than to the page you are on.
 const STUDENT_MENU = [
-  { href: '/student/github', label: 'Evidence source & Rescan' },
   { href: '/students', label: 'Student directory' },
-  { href: '/me/briefs', label: 'Project ideas' },
-  { href: '/me/file', label: 'Your file & Disputes' },
+  { href: '/me/file', label: 'Your file & disputes' },
 ]
 
 const FACULTY_MENU = [
-  { href: '/listings/new', label: 'Post a project' },
   { href: '/students', label: 'Student directory' },
 ]
 
-// Appended for staff only. In the account menu rather than a tab: it isn't
-// one of the questions anyone arrives with, and most people who see it are
-// also using the product as themselves.
-const ADMIN_MENU = [{ href: '/admin', label: 'Admin console' }]
+// Admins get a real tab, not a menu entry.
+//
+// It was in the account menu on the reasoning that admin isn't a question
+// anyone arrives with. That was wrong about who these people are: an admin
+// opening Workmark is usually opening it to do admin, and hiding the console
+// behind their own avatar is the one place nobody looks for a workspace
+// switch. Nav bars are where people expect to change what they are doing.
+const ADMIN_TAB: Tab = { href: '/admin', label: 'Admin', also: [], prefix: true }
 
 function initials(name?: string) {
   if (!name) return '·'
@@ -75,7 +85,10 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
   const effectiveRole = role ?? (session.isFaculty && !session.roles.includes('student') ? 'faculty' : 'student')
   const showAdmin = isAdmin ?? session.isAdmin
   const name = userName ?? session.displayName ?? undefined
-  const TABS = effectiveRole === 'faculty' ? FACULTY_TABS : STUDENT_TABS
+  const baseTabs = effectiveRole === 'faculty' ? FACULTY_TABS : STUDENT_TABS
+  // Last, not first — the console is where an admin goes, not where they
+  // start, and the three product tabs stay in the same place for everyone.
+  const TABS = showAdmin ? [...baseTabs, ADMIN_TAB] : baseTabs
   const MENU = effectiveRole === 'faculty' ? FACULTY_MENU : STUDENT_MENU
   const router = useRouter()
   const pathname = usePathname()
@@ -112,8 +125,7 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
     router.refresh()
   }
 
-  const isActive = (tab: (typeof TABS)[number]) =>
-    pathname === tab.href || tab.also.some((p) => pathname === p)
+  const isActive = (tab: Tab) => isTabActive(tab, pathname)
 
   return (
     <header style={{ background: C.bg, position: 'sticky', top: 0, zIndex: 40 }}>
@@ -181,7 +193,7 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                       {name}
                     </p>
                   )}
-                  {[...MENU, ...(showAdmin ? ADMIN_MENU : [])].map((item) => (
+                  {MENU.map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}

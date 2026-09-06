@@ -9,6 +9,7 @@ import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import { type BadgeTone } from '@/components/ui/Badge'
 import { Kicker, Stat } from '@/components/ui/Section'
+import RescanButton from '@/components/RescanButton'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
@@ -26,6 +27,8 @@ export interface DashboardData {
     activeApplicationCount: number
   }
   githubConnected: boolean
+  /** When the last scan finished, so the record can say whether it is stale. */
+  lastScannedAt: string | null
   trackRecord: TrackRecord
   skills: { skillId: string; name: string; bestLevel: number }[]
   applications: {
@@ -116,8 +119,8 @@ const ICON_BG: Record<Todo['kind'], string> = {
   github: '#EDE9FF',
 }
 
-export default function StudentDashboardClient({ data, isAdmin = false }: { data: DashboardData; isAdmin?: boolean }) {
-  const { student, skills, applications, listings, engagements, githubConnected, trackRecord } = data
+export default function StudentDashboardClient({ data }: { data: DashboardData }) {
+  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, trackRecord } = data
   const router = useRouter()
   const { toast } = useToast()
   const [withdrawing, setWithdrawing] = useState<string | null>(null)
@@ -386,9 +389,30 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
                 )}
                 {trackRecord.active > 0 && <Stat value={trackRecord.active} label="In flight" />}
               </div>
-              <Link href="/me" style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                See it all →
-              </Link>
+              {/* Rescan sits on the numbers it changes. It used to be a menu
+                  item two clicks away called "Evidence source & Rescan",
+                  which named the page rather than the act — so the student
+                  looking straight at a stale skill count had no way to tell
+                  that the fix was behind their own avatar. */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
+                {/* Only once connected. Unconnected, RescanButton offers
+                    "Connect GitHub" — which is right everywhere except here,
+                    where the focal to-do above is already that button. Two of
+                    the same call to action on one screen and neither is the
+                    obvious one. */}
+                {githubConnected && (
+                  <RescanButton
+                    githubConnected
+                    lastScannedAt={lastScannedAt}
+                    variant="outline"
+                    size="sm"
+                    showLastScan={false}
+                  />
+                )}
+                <Link href="/me" style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  See it all →
+                </Link>
+              </div>
             </div>
 
             {skills.length === 0 ? (

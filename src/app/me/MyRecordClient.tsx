@@ -14,6 +14,7 @@ import { tagColor } from '@/lib/theme/tagColors'
 import type { StudentRecord } from '@/lib/profile/record'
 import { STAGE_LABEL, type Stage } from '@/lib/engagements/lifecycle'
 import LevelTag from '@/components/ui/LevelTag'
+import RescanButton from '@/components/RescanButton'
 import { LAYOUT } from '@/lib/theme/layout'
 
 interface EvidenceSource {
@@ -48,10 +49,12 @@ const VERIFICATION_LABEL: Record<string, string> = {
   attested: 'Confirmed by a collaborator',
 }
 
-export default function MyRecordClient({ record, sources, suggestedHandle }: {
+export default function MyRecordClient({ record, sources, suggestedHandle, githubConnected, lastScannedAt }: {
   record: StudentRecord
   sources: EvidenceSource[]
   suggestedHandle: string
+  githubConnected: boolean
+  lastScannedAt: string | null
 }) {
   const router = useRouter()
   const { toast } = useToast()
@@ -200,12 +203,60 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
               )}
             </Card>
 
+            {/* Keeping the record current is an action, so it looks like one.
+                It was a text link reading "Evidence source & rescan →" in a
+                stack of three identical text links — the one thing on the
+                panel that did something was dressed exactly like the two
+                that went somewhere. */}
             <Card hoverable={false} padding={19.5}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8.5 }}>
-                <Link href="/me/briefs" style={{ fontSize: 13.5, color: C.textSub, textDecoration: 'none' }}>Project ideas →</Link>
-                <Link href="/me/file" style={{ fontSize: 13.5, color: C.textSub, textDecoration: 'none' }}>Your file &amp; disputes →</Link>
-                <Link href="/student/github" style={{ fontSize: 13.5, color: C.textSub, textDecoration: 'none' }}>Evidence source &amp; rescan →</Link>
-              </div>
+              <Kicker style={{ marginBottom: 9 }}>Keeping this current</Kicker>
+              <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, marginBottom: 13 }}>
+                {githubConnected
+                  ? 'A rescan reads your repositories again and picks up anything you have built since.'
+                  : 'Connect GitHub and we read the code you have already written.'}
+              </p>
+              <RescanButton
+                githubConnected={githubConnected}
+                lastScannedAt={lastScannedAt}
+                variant="ink"
+                size="sm"
+                fullWidth
+              />
+              {githubConnected && (
+                <Link
+                  href="/student/github"
+                  style={{ display: 'inline-block', fontSize: 13, color: C.textMuted, textDecoration: 'none', marginTop: 12 }}
+                >
+                  Choose which repositories →
+                </Link>
+              )}
+            </Card>
+
+            {/* Two places, both of which belong to the student rather than to
+                this page — so they stay links, and stay together. */}
+            <Card hoverable={false} padding="4px 19.5px">
+              {[
+                { href: '/me/briefs', title: 'Project ideas', sub: 'Something to build next' },
+                { href: '/me/file', title: 'Your file & disputes', sub: 'Everything on record, and how to challenge it' },
+              ].map((item, i) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                    padding: '14px 0', textDecoration: 'none',
+                    borderBottom: i === 0 ? `1px solid ${C.borderFaint}` : 'none',
+                  }}
+                >
+                  <span style={{ minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 2 }}>{item.title}</span>
+                    <span style={{ display: 'block', fontSize: 12.5, color: C.textGhost, lineHeight: 1.45 }}>{item.sub}</span>
+                  </span>
+                  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }} aria-hidden="true">
+                    <path d="M6 3.5L10.5 8L6 12.5" stroke={C.textGhost} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </Link>
+              ))}
             </Card>
           </div>
 
@@ -219,11 +270,17 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
                   above the list everyone came to read. */}
               <div style={{ marginBottom: 12 }} />
               {skills.length === 0 ? (
+                /* Text only. There used to be a "Link repos" button here as
+                   well as the one in the panel to the left, going to the same
+                   page under a different name — which reads as two different
+                   things to do rather than one. The panel keeps the button;
+                   this says what will fill the space. */
                 <Card hoverable={false} padding={19.5}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-                    <p style={{ fontSize: 14, color: C.textMuted }}>Nothing yet — link your repositories and scan.</p>
-                    <Button href="/student/github" variant="outline" size="sm">Link repos</Button>
-                  </div>
+                  <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6 }}>
+                    {githubConnected
+                      ? 'Nothing yet. Run a scan and the skills your repositories prove will appear here.'
+                      : 'Nothing yet. Connect GitHub and the skills your repositories prove will appear here.'}
+                  </p>
                 </Card>
               ) : (
                 <Card hoverable={false} padding="3.5px 20px 7px">

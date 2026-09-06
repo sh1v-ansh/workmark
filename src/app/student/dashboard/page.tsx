@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StudentDashboardClient, { type DashboardData } from './StudentDashboardClient'
-import { getAccount, hasRole } from '@/lib/auth/roles'
 import { computeTrackRecord, type Stage } from '@/lib/engagements/lifecycle'
+import { lastScanFinishedAt } from '@/lib/github/last-scan'
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
@@ -22,6 +22,7 @@ export default async function StudentDashboardPage() {
     { data: myEngagements },
     { data: evidenceRows },
     { data: connection },
+    lastScannedAt,
   ] = await Promise.all([
     supabase
       .from('applications')
@@ -43,6 +44,7 @@ export default async function StudentDashboardPage() {
       .select('skill_id, difficulty_cleared')
       .eq('student_id', user.id),
     supabase.from('github_connections').select('student_id').eq('student_id', user.id).maybeSingle(),
+    lastScanFinishedAt(supabase, user.id),
   ])
 
   // Applicant counts for the listings this student posted — a poster's
@@ -91,6 +93,7 @@ export default async function StudentDashboardPage() {
       activeApplicationCount: student.active_application_count ?? 0,
     },
     githubConnected: !!connection,
+    lastScannedAt,
     trackRecord,
     skills: skillIds
       .map((id) => ({ skillId: id, name: nameById.get(id) ?? id, bestLevel: bestBySkill.get(id) ?? 0 }))
@@ -127,9 +130,8 @@ export default async function StudentDashboardPage() {
     }),
   }
 
-  // Staff land here like everyone else, so the queue has to be reachable
-  // from the page they actually arrive on — not only from itself.
-  const account = await getAccount(supabase)
-
-  return <StudentDashboardClient data={data} isAdmin={hasRole(account, 'admin')} />
+  // The admin console is a navbar tab now, drawn from the session context
+  // the root layout already read. This page used to fetch the account again
+  // solely to answer "is this person staff" for a prop nothing rendered.
+  return <StudentDashboardClient data={data} />
 }

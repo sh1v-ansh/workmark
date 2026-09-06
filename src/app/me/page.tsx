@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { loadStudentRecord } from '@/lib/profile/record'
 import { suggestHandle } from '@/lib/profile/handle'
 import MyRecordClient from './MyRecordClient'
+import { lastScanFinishedAt } from '@/lib/github/last-scan'
 
 /**
  * /me — the student's own complete record.
@@ -26,6 +27,14 @@ export default async function MyRecordPage() {
     .from('current_skill_evidence')
     .select('skill_id, difficulty_cleared, verification_method, artifact_id, engagement_id')
     .eq('student_id', user.id)
+
+  // Rescan lives on this page now, so this page has to know whether there is
+  // anything to rescan and when it last happened. Both are single indexed
+  // reads and they run alongside each other rather than in sequence.
+  const [{ data: connection }, lastScannedAt] = await Promise.all([
+    supabase.from('github_connections').select('student_id').eq('student_id', user.id).maybeSingle(),
+    lastScanFinishedAt(supabase, user.id),
+  ])
 
   const artifactIds = Array.from(new Set((evidenceRows ?? []).map((r) => r.artifact_id).filter((id): id is string => !!id)))
   const { data: artifactRows } = artifactIds.length
@@ -54,6 +63,8 @@ export default async function MyRecordPage() {
       record={record}
       sources={sources}
       suggestedHandle={suggestHandle(record.student.fullName, record.student.githubUsername)}
+      githubConnected={!!connection}
+      lastScannedAt={lastScannedAt}
     />
   )
 }
