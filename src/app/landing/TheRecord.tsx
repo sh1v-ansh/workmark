@@ -47,22 +47,22 @@ const LABEL = { advanced: 'Advanced', intermediate: 'Intermediate', beginner: 'B
 const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: string; points: [string, string][] }> = {
   students: {
     eyebrow: 'What you get',
-    headline: 'A skill record with its working shown',
-    lede: 'Every line says where it came from. Not "proficient in PostgreSQL" — the project, the level, and how it was checked, so a poster can look instead of taking your word for it.',
+    headline: 'Every skill, with the receipt attached',
+    lede: 'Not "proficient in PostgreSQL". The project it came from, how good you got, and how that was checked. A poster can go and look.',
     points: [
-      ['We read what your code depends on', 'How it is built, which files import what, and which commits are yours. Never the source itself.'],
-      ['Three levels, and only one is earned easily', 'Advanced means sustained work that survived other people\u2019s code, tests and mistakes.'],
-      ['You can challenge any of it', 'It is your record. If a line is wrong, there is a page for saying so and a person who reads it.'],
+      ['Nothing to write, nothing to inflate', 'Workmark reads your repos and works it out. You never fill in a skills box.'],
+      ['Advanced is worth having', 'It means months of real work that survived other people, tests and mistakes. Most skills never get there.'],
+      ['Wrong? Say so', 'It is your record. Challenge any line on it and a person reads the challenge.'],
     ],
   },
   businesses: {
     eyebrow: 'What you see',
-    headline: 'What an applicant looks like here',
-    lede: 'This is what arrives instead of a CV. Every skill carries the project it came from, the level it reached and how that was established — so the first question is whether the evidence is enough, not whether the claim is true.',
+    headline: 'This arrives instead of a CV',
+    lede: 'Every skill carries the project it came from and how it was verified. The question stops being whether they are telling the truth.',
     points: [
-      ['Read from repositories, not from a form', 'Dependency graphs, build configuration, commit authorship and test coverage. Nobody types their own skill level.'],
-      ['Levels mean the same thing across candidates', 'Calibrated against every record on the platform, and recalibrated as more work comes in.'],
-      ['The gaps are shown too', 'You see what somebody cannot do yet, which is the half a CV never tells you.'],
+      ['Read from repos, not from a form', 'Dependencies, commit authorship, test coverage. No self-assessment anywhere in it.'],
+      ['Comparable across candidates', 'Levels are set against the whole platform, so two records at Advanced really are equivalent.'],
+      ['Shows you what is missing', 'You see what a candidate cannot do yet. A CV never tells you that.'],
     ],
   },
 }

@@ -22,30 +22,30 @@ import { C, F } from './tokens'
 const DETAIL: Record<Audience, { title: string; body: string }[]> = {
   students: [
     {
-      title: 'What we read, exactly',
-      body: 'Manifests and lockfiles, build and CI configuration, which files import what, the dates and authorship of commits, and whether tests exist. Not the contents of your source files.',
+      title: 'We never read your source code',
+      body: 'Manifests, build files, which files import what, commit dates and authorship, whether tests exist. The code itself is never stored or looked at.',
     },
     {
-      title: 'How a level is decided',
-      body: 'How much of the work is yours, how long you stayed with it, whether you came back and reworked things, and how demanding the project was. One weekend and one semester are not the same claim.',
+      title: 'Depth beats volume',
+      body: 'How much of it you wrote, how long you stuck with it, whether you came back and fixed things. One weekend and one semester are not the same claim.',
     },
     {
-      title: 'What stays private',
-      body: 'Private repository names appear in your own scan history and nowhere else. Nothing is published until you claim a handle, and disconnecting stops the reading immediately.',
+      title: 'Private stays private',
+      body: 'Private repo names show up in your own scan history and nowhere else. Nothing is public until you claim a handle. Disconnect and we stop reading immediately.',
     },
   ],
   businesses: [
     {
-      title: 'Where the signal comes from',
-      body: 'Dependency graphs, build configuration, commit authorship and test coverage in repositories the candidate owns. No self-assessment is involved at any point, so there is nothing for a candidate to inflate.',
+      title: 'There is no box to exaggerate in',
+      body: 'Everything comes from repositories the candidate owns. They never rate themselves, so there is nothing to inflate and nothing to take on trust.',
     },
     {
-      title: 'Why the levels compare',
-      body: 'A level is set against every other record on the platform rather than against a fixed rubric, and recalibrated as more work arrives. Advanced on one record means the same thing as Advanced on another.',
+      title: 'Levels move as the platform grows',
+      body: 'A level is set against every other record rather than a rubric written once. As more work arrives, the bar recalibrates and stays meaningful.',
     },
     {
-      title: 'What we will not claim',
-      body: 'A scan tells you what somebody has built, not whether they are pleasant in a stand-up. Levels above Advanced need a person who worked with them to say so, and nothing on the platform can produce that yet.',
+      title: 'What we will not tell you',
+      body: 'A scan shows what someone built, not what they are like to work with. Anything above Advanced needs a person who worked with them to say so, and we cannot produce that yet.',
     },
   ],
 }
@@ -109,7 +109,7 @@ export function HowItWorks({
         <div className="wm-section-inner">
           <span className="wm-eyebrow-2">The detail</span>
           <h2 className="wm-h2" style={{ marginBottom: 32 }}>
-            {audience === 'students' ? 'What we read, and what we do not' : 'What the number is built from'}
+            {audience === 'students' ? 'The bits people ask about' : 'Where the number comes from'}
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 20 }} className="mob-1col">
             {DETAIL[audience].map((item) => (

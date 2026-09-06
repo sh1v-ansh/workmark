@@ -61,8 +61,8 @@ export function Footer() {
               <Wordmark height={22} />
             </Link>
             <p style={{ fontFamily: F.sans, fontSize: 14, color: C.textMuted, lineHeight: 1.6, maxWidth: '34ch', marginBottom: 18 }}>
-              A record of what you have actually built, read from your own code — so the first
-              thing an employer sees is the work rather than a claim about it.
+              Your code, turned into proof. So the first thing an employer sees is what you
+              built, not what you wrote about yourself.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {CONTACT.map(([address, label]) => (

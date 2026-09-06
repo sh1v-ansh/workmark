@@ -18,14 +18,14 @@ import { F } from './tokens'
  */
 const CLOSING: Record<Audience, { headline: string; body: string; note: string }> = {
   students: {
-    headline: 'You have already done the work',
-    body: 'It is sitting in repositories nobody is going to read. Connect them and find out what they say about you.',
-    note: 'Free with a .edu address. You choose which repositories, and you can disconnect at any time.',
+    headline: 'You already did the hard part',
+    body: 'The work is sitting in repos nobody is going to read. Connect them and see what they say about you.',
+    note: 'Free with a .edu address. You pick the repos and can disconnect any time.',
   },
   businesses: {
-    headline: 'Post something real and see who turns up',
-    body: 'Describe the work in a few lines. Everyone who applies arrives with a record you can check rather than a page about themselves.',
-    note: 'Free to post. No contract, nothing to install, and nothing to pay.',
+    headline: 'Post it and see who turns up',
+    body: 'Describe the work in a few lines. Everyone who applies comes with proof of what they have built.',
+    note: 'Free to post. No contract, nothing to install, nothing to pay.',
   },
 }
 

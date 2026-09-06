@@ -56,7 +56,7 @@ export function TeamSection() {
     <section className="wm-section" style={{ position: 'relative' }}>
       <div className="wm-section-inner" style={{ textAlign: 'center' }}>
         <span className="wm-eyebrow-2">Who is building this</span>
-        <h2 className="wm-h2" style={{ marginBottom: 42 }}>Two people, at UMass Amherst</h2>
+        <h2 className="wm-h2" style={{ marginBottom: 42 }}>Built by two people who needed it</h2>
 
         <div style={{ display: 'flex', gap: 44, justifyContent: 'center', flexWrap: 'wrap' }}>
           {TEAM.map((person) => (
