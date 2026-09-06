@@ -39,12 +39,12 @@ export default function AdminShell({ title, lede, queueCount = 0, overdueCount =
   const pathname = usePathname()
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
       <Navbar isAdmin />
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
         <Kicker style={{ marginBottom: 7 }}>Admin</Kicker>
-        <h1 style={{ fontSize: T.h1, fontWeight: 800, letterSpacing: '-0.03em', color: C.text, marginBottom: lede ? 7 : 20 }}>
+        <h1 style={{ fontSize: T.h1, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: lede ? 7 : 20 }}>
           {title}
         </h1>
         {lede && (

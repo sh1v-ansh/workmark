@@ -110,13 +110,13 @@
 .dk-select,
 .dk-textarea {
   background: #FFFFFF;
-  border: 1.5px solid #E7E2D6;
+  border: 1.5px solid #ECEBF3;
   color: #191E2E;
   font-size: 15px;
   padding: 11px 14px;
   outline: none;
   width: 100%;
-  font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
   transition: border-color 0.15s, box-shadow 0.15s;
   border-radius: 10px;
 }
@@ -276,7 +276,7 @@
   align-items: center;
   justify-content: center;
   gap: 7.5px;
-  font-family: var(--font-body), 'Hanken Grotesk', system-ui, sans-serif;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
   font-weight: 600;
   font-size: 14px;
   line-height: 1;
@@ -286,7 +286,7 @@
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
 }
 .nb-btn:disabled,
 .nb-btn[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; }
@@ -294,14 +294,25 @@
 .nb-btn-ink      { background: #191E2E; color: #FFFFFF; border-color: #191E2E; }
 .nb-btn-ink:not(:disabled):hover { background: #262D42; border-color: #262D42; }
 
-.nb-btn-accent   { background: #6142F5; color: #FFFFFF; border-color: #6142F5; }
-.nb-btn-accent:not(:disabled):hover { background: #4E2FD6; border-color: #4E2FD6; }
+/* The accent button throws a little of its own colour onto the page under it.
+   On cream this was invisible; on white it is what makes the one growth
+   action on a screen findable without making it bigger. */
+.nb-btn-accent   {
+  background: #6142F5; color: #FFFFFF; border-color: #6142F5;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.24), 0 8px 18px -8px rgba(97, 66, 245, 0.55);
+}
+.nb-btn-accent:not(:disabled):hover {
+  background: #4E2FD6; border-color: #4E2FD6;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.28), 0 10px 22px -8px rgba(97, 66, 245, 0.62);
+}
+.nb-btn-accent:disabled,
+.nb-btn-accent[aria-disabled='true'] { box-shadow: none; }
 
-.nb-btn-outline  { background: #FFFFFF; color: #191E2E; border-color: #DCD6C8; }
+.nb-btn-outline  { background: #FFFFFF; color: #191E2E; border-color: #DDDCE8; }
 .nb-btn-outline:not(:disabled):hover { border-color: #191E2E; }
 
 .nb-btn-quiet    { background: transparent; color: #5A6172; border-color: transparent; padding-left: 9px; padding-right: 9px; }
-.nb-btn-quiet:not(:disabled):hover { background: #F1EDE3; color: #191E2E; }
+.nb-btn-quiet:not(:disabled):hover { background: #F4F3F8; color: #191E2E; }
 
 /* Destructive. Outlined rather than filled: an irreversible action should
    read as serious, not as the obvious thing to click. */
@@ -316,7 +327,7 @@
 .nb-tab {
   display: inline-flex;
   align-items: center;
-  font-family: var(--font-display), 'Schibsted Grotesk', system-ui, sans-serif;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.075em;
@@ -330,11 +341,11 @@
   position: relative;
   transition: color 0.15s ease, background 0.15s ease;
 }
-.nb-tab:hover { color: #191E2E; background: #F1EDE3; }
+.nb-tab:hover { color: #191E2E; background: #F4F3F8; }
 .nb-tab-active {
   background: #FFFFFF;
   color: #191E2E;
-  border-color: #E7E2D6;
+  border-color: #ECEBF3;
 }
 /* Bridge the 1px rule under the bar so the active tab joins the page. */
 .nb-tab-active::after {
@@ -354,9 +365,53 @@
     to bottom,
     transparent 0,
     transparent 33px,
-    #EDE8DC 33px,
-    #EDE8DC 34px
+    #F0F0F6 33px,
+    #F0F0F6 34px
   );
+}
+
+/* ── The app ground ───────────────────────────────────────────────────────
+   Goes on the outermost element of every signed-in screen.
+
+   The app used to sit on cream, which gave a white card something to be
+   white against. On a white ground that contrast is gone, so the depth has
+   to come from somewhere else: two very soft violet radials in the top
+   corners, and shadow under the cards (E.card).
+
+   The light is decoration and nothing may depend on it — it is fixed to the
+   viewport so it does not smear down a long page, and it sits behind
+   everything at z-index 0. If you cannot find something on this page, the
+   gradient is not the reason and turning it up will not fix it. */
+.wm-app-ground {
+  position: relative;
+  isolation: isolate;
+
+  /* The app's typeface, set once here rather than at ~900 call sites.
+     `body` stays on Inter because the marketing pages are still Inter and
+     still correct that way; anything that does not set a family explicitly
+     used to inherit Inter into the app, which is how half a signed-in page
+     ended up in the wrong face. This is the boundary between the two. */
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+}
+/* Form controls do not inherit font-family, so they need saying twice. */
+.wm-app-ground input,
+.wm-app-ground select,
+.wm-app-ground textarea,
+.wm-app-ground button {
+  font-family: inherit;
+}
+.wm-app-ground::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(900px 420px at 12% -8%, rgba(97, 66, 245, 0.07) 0%, rgba(97, 66, 245, 0) 68%),
+    radial-gradient(700px 380px at 96% 2%, rgba(129, 140, 248, 0.06) 0%, rgba(129, 140, 248, 0) 70%);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .wm-app-ground::before { background: none; }
 }
 
 /* ── The page grid ────────────────────────────────────────────────────────
@@ -411,15 +466,42 @@
 }
 
 /* ── Cards ────────────────────────────────────────────────────────────────
-   Bordered, not floated. A hover lift on a card that isn't clickable is a
-   lie about affordance, so only the link/button variants get it. */
+   White on white, so the edge is carried by a soft shadow as well as a
+   border. This is not a lift — the card is not claiming to float above the
+   page, it is claiming to be a separate sheet on it, which it is.
+
+   A hover lift on a card that isn't clickable is a lie about affordance, so
+   only the link/button variants move. */
 .nb-card {
   background: #FFFFFF;
-  border: 1px solid #E7E2D6;
+  border: 1px solid #ECEBF3;
   border-radius: 13px;
+  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03), 0 8px 20px -12px rgba(25, 30, 46, 0.18);
 }
-.nb-card-interactive { transition: border-color 0.15s ease, background 0.15s ease; }
-.nb-card-interactive:hover { border-color: #C9C2B2; background: #FFFDFA; }
+.nb-card-interactive { transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease; }
+.nb-card-interactive:hover {
+  border-color: #DCD4F7;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 30px -16px rgba(97, 66, 245, 0.38);
+  transform: translateY(-1px);
+}
+
+/* The one card per screen that owns it. Violet edge, violet light pooling in
+   the bottom-right corner. Spending this twice on the same screen spends the
+   effect — if two things are focal, neither is. */
+.nb-card-focal {
+  position: relative;
+  overflow: hidden;
+  border-color: #DCD4F7;
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 16px 36px -20px rgba(97, 66, 245, 0.45);
+}
+.nb-card-focal::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(560px 260px at 88% 108%, rgba(97, 66, 245, 0.10) 0%, rgba(97, 66, 245, 0) 72%);
+}
+.nb-card-focal > * { position: relative; }
 
 /* Respect user's motion preference — WCAG 2.3.3 */
 @media (prefers-reduced-motion: reduce) {
@@ -465,7 +547,7 @@
   cursor: help;
   text-decoration: underline dotted;
   text-underline-offset: 3px;
-  text-decoration-color: #C9C2B2;
+  text-decoration-color: #C6C4D6;
   border-radius: 3px;
 }
 .nb-leveltag-label:focus-visible { outline: 2px solid #6B4EFF; outline-offset: 2px; }
@@ -478,7 +560,7 @@
   width: 264px;
   padding: 11px 13px;
   background: #FFFFFF;
-  border: 1px solid #E7E2D6;
+  border: 1px solid #ECEBF3;
   border-radius: 10px;
   box-shadow: 0 4px 6px rgba(25, 30, 46, 0.04), 0 12px 32px rgba(25, 30, 46, 0.12);
   opacity: 0;
@@ -518,5 +600,5 @@
 .legal-prose strong { color: #191E2E; }
 /* Termly's cookie table is wide and must not push the page sideways. */
 .legal-prose table { width: 100%; border-collapse: collapse; margin: 0 0 20px; font-size: 13.5px; display: block; overflow-x: auto; }
-.legal-prose th, .legal-prose td { border: 1px solid #DCD6C8; padding: 9px 12px; text-align: left; vertical-align: top; }
-.legal-prose th { background: #F1EDE3; color: #191E2E; font-weight: 600; }
+.legal-prose th, .legal-prose td { border: 1px solid #DDDCE8; padding: 9px 12px; text-align: left; vertical-align: top; }
+.legal-prose th { background: #F4F3F8; color: #191E2E; font-weight: 600; }

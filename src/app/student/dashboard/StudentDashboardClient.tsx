@@ -269,7 +269,7 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
   const nudge = (
     <div style={{ background: C.bgDeep, borderRadius: R.lg, padding: 21, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 154 }}>
       <div>
-        <p style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.25, marginBottom: 7 }}>
+        <p style={{ fontFamily: F.display, fontSize: 17, fontWeight: 600, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.25, marginBottom: 7 }}>
           Not sure what to build next?
         </p>
         <p style={{ fontSize: 13.5, color: '#A9B0C2', lineHeight: 1.55 }}>
@@ -284,14 +284,14 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         {/* Header — the answer, not a greeting */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 700, letterSpacing: '-0.025em', color: C.text, marginBottom: 4.5 }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 4.5 }}>
               {todos.length === 0
                 ? `You're all caught up${firstName ? `, ${firstName}` : ''}`
                 : `${todos.length === 1 ? 'One thing needs' : `${todos.length} things need`} you`}
@@ -324,7 +324,7 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
                   </div>
                   <Kicker style={{ color: C.accentInk }}>{lead.eyebrow}</Kicker>
                 </div>
-                <p style={{ fontFamily: F.display, fontSize: 27, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.text, marginBottom: 10.5 }}>
+                <p style={{ fontFamily: F.display, fontSize: 27, fontWeight: 600, letterSpacing: '-0.022em', lineHeight: 1.15, color: C.text, marginBottom: 10.5 }}>
                   {lead.headline}
                 </p>
                 <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 455 }}>
@@ -346,7 +346,7 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
                     </div>
                     <Kicker>{t.eyebrow}</Kicker>
                   </div>
-                  <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.25, color: C.text, marginBottom: 4 }}>
+                  <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.02em', lineHeight: 1.25, color: C.text, marginBottom: 4 }}>
                     {t.headline}
                   </p>
                   <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.45 }}>{t.body}</p>
@@ -444,7 +444,7 @@ export default function StudentDashboardClient({ data, isAdmin = false }: { data
           <Card hoverable={false} padding={23}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
               <div>
-                <p style={{ fontFamily: F.display, fontSize: 17.5, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 4 }}>
+                <p style={{ fontFamily: F.display, fontSize: 17.5, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 4 }}>
                   Nothing out, nothing in flight.
                 </p>
                 <p style={{ fontSize: 14, color: C.textMuted }}>

@@ -71,7 +71,7 @@ export default async function AccountDeletedPage({
           <div style={{ fontSize: 12.5, color: C.textFaint, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>
             Erased for good on
           </div>
-          <div style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, color: C.text }}>{gone}</div>
+          <div style={{ fontFamily: F.display, fontSize: 22, fontWeight: 600, color: C.text }}>{gone}</div>
         </div>
       )}
       <p style={P}>
@@ -89,15 +89,15 @@ export default async function AccountDeletedPage({
 }
 
 const H1: React.CSSProperties = {
-  fontFamily: F.display, fontSize: 24, fontWeight: 700,
-  letterSpacing: '-0.025em', color: C.text, marginBottom: 12,
+  fontFamily: F.display, fontSize: 24, fontWeight: 600,
+  letterSpacing: '-0.02em', color: C.text, marginBottom: 12,
 }
 
 const P: React.CSSProperties = { fontSize: 14.5, color: C.textMuted, lineHeight: 1.65 }
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '44px 24px' }}>
+    <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '44px 24px' }}>
       <div style={{ width: '100%', maxWidth: 550, marginBottom: 36 }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'inline-flex', textDecoration: 'none' }}>
           <Wordmark height={24} />

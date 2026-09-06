@@ -9,4 +9,5 @@
 // so the palette and the font stacks are swappable in one place. Marketing
 // pages import from @/app/landing/tokens instead and are unaffected.
 export { app as C, appFonts as F } from './tokens'
-export { state, R, T, E } from './tokens'
+export { state, R, T, E, ART, LEVELS, FOCAL_BORDER } from './tokens'
+export type { SkillLevel } from './tokens'

@@ -26,7 +26,7 @@ export function StatGrid({ stats }: {
           <p style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: C.textGhost, marginBottom: 6 }}>
             {s.label}
           </p>
-          <p style={{ fontSize: 27, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+          <p style={{ fontSize: 27, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
             {s.value}
           </p>
           {s.note && <p style={{ fontSize: 12.5, color: state.caution, marginTop: 5 }}>{s.note}</p>}

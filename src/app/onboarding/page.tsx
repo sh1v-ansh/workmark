@@ -33,7 +33,7 @@ function RoleChoice({ title, body, onClick }: { title: string; body: string; onC
         padding: '15px 18px',
       }}
     >
-      <span style={{ display: 'block', fontSize: 15, fontWeight: 700, color: C.text, marginBottom: 3 }}>{title}</span>
+      <span style={{ display: 'block', fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 3 }}>{title}</span>
       <span style={{ display: 'block', fontSize: 13.5, color: C.textFaint, lineHeight: 1.5 }}>{body}</span>
     </button>
   )
@@ -366,7 +366,7 @@ export default function OnboardingPage() {
   const eduInvalid = !!userEmail && !validateEdu(userEmail)
 
   return (
-    <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '44px 24px' }}>
+    <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '44px 24px' }}>
       <div style={{ width: '100%', maxWidth: 550, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 36 }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <Wordmark height={24} />
@@ -381,7 +381,7 @@ export default function OnboardingPage() {
 
       <div style={{ width: '100%', maxWidth: 550 }}>
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 30 }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 7.5 }}>Welcome to Workmark</h1>
+          <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 7.5 }}>Welcome to Workmark</h1>
           <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 23, lineHeight: 1.6 }}>
             {role === null
               ? 'First, which are you? This changes what we ask for next.'

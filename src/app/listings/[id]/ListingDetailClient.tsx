@@ -128,7 +128,7 @@ export default function ListingDetailClient({
     : 'apply'
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: `30px 28px ${applyState === 'apply' ? 99 : 66}px` }}>
 
@@ -136,7 +136,7 @@ export default function ListingDetailClient({
 
         <div style={{ maxWidth: 750, margin: '14.5px 0 20px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 9 }}>
-            <h1 style={{ fontFamily: F.display, fontSize: 28, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.15, color: C.text }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 28, fontWeight: 600, letterSpacing: '-0.022em', lineHeight: 1.15, color: C.text }}>
               {listing.title ?? 'Untitled project'}
             </h1>
             {listing.status !== 'open' && <Badge>{listing.status}</Badge>}
@@ -167,7 +167,7 @@ export default function ListingDetailClient({
             <div className="nb-split">
               <div>
                 <Kicker style={{ color: C.accentInk, marginBottom: 9 }}>Where you stand</Kicker>
-                <p style={{ fontFamily: F.display, fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.2, color: C.text, marginBottom: 10.5 }}>
+                <p style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', lineHeight: 1.2, color: C.text, marginBottom: 10.5 }}>
                   {FIT_TIER_LABEL[fit.tier]}{fit.missingNames.length > 0 ? ', one gap.' : '.'}
                 </p>
                 <p style={{ fontSize: 15, lineHeight: 1.6, color: C.textMuted }}>
@@ -280,7 +280,7 @@ export default function ListingDetailClient({
                     const mine = fit.perSkill.find((s) => s.skillId === r.skillId)
                     const isClaimed = claimed.has(r.skillId)
                     return (
-                      <label key={r.skillId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9.5px 13px', background: C.bg, borderRadius: R.md, cursor: 'pointer' }}>
+                      <label key={r.skillId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9.5px 13px', background: C.surfaceAlt, borderRadius: R.md, cursor: 'pointer' }}>
                         <span style={{ display: 'flex', alignItems: 'center', gap: 9.5 }}>
                           <input
                             type="checkbox" checked={isClaimed} className="dk-checkbox"

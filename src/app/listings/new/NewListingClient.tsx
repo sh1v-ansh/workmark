@@ -107,10 +107,10 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
   const gap: React.CSSProperties = { display: 'flex', flexDirection: 'column' }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: 680, margin: '0 auto', padding: '30px 28px 72px' }}>
-        <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
+        <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
           Post a project
         </h1>
         <p style={{ fontSize: 15, color: C.textMuted, marginBottom: 23 }}>

@@ -69,7 +69,7 @@ export default function LegalPage({ params }: { params: { doc: string } }) {
           <Wordmark height={22} />
         </Link>
 
-        <h1 style={{ fontFamily: F.serif, fontSize: 32, fontWeight: 700, letterSpacing: '-0.025em', marginBottom: 8 }}>
+        <h1 style={{ fontFamily: F.serif, fontSize: 32, fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 8 }}>
           {doc.title}
         </h1>
         <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, marginBottom: 30 }}>{doc.blurb}</p>

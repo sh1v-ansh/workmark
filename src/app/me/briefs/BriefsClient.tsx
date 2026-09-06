@@ -234,7 +234,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
     return (
       <Card hoverable={false} padding={19.5}>
         <div style={{ marginBottom: 10 }}>
-          <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, marginBottom: 5.5 }}>{b.title}</p>
+          <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 5.5 }}>{b.title}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
             {b.targetSkillName && c && (
               <span style={{ fontSize: 12, padding: '3px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
@@ -303,13 +303,13 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: 680, margin: '0 auto', padding: '30px 28px 72px' }}>
         <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
         <div style={{ margin: '13px 0 21px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
             Project ideas
           </h1>
           <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.6 }}>

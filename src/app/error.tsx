@@ -27,11 +27,11 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
   }, [error])
 
   return (
-    <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
+    <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24, textAlign: 'center' }}>
       <p style={{ fontFamily: F.mono, fontSize: 12, color: C.textFaint, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
         Something broke
       </p>
-      <h1 style={{ fontFamily: F.serif, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 10 }}>
+      <h1 style={{ fontFamily: F.serif, fontSize: 26, fontWeight: 600, color: C.text, marginBottom: 10 }}>
         That didn&apos;t work
       </h1>
       <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6, maxWidth: 400, marginBottom: 24 }}>

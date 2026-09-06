@@ -152,13 +152,13 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
   const hasAnyFacet = skillOptions.length > 0 || workModeOptions.length > 0 || showHoursFilter || showTierFilter
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
               Find Work
             </h1>
           </div>
@@ -253,7 +253,7 @@ export default function ListingsClient({ listings, signedIn, studentName }: {
                   {filtered.map((l) => (
                     <Card key={l.id} href={`/listings/${l.id}`} padding={18}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 9, flexWrap: 'wrap' }}>
-                        <h2 style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.015em', color: C.text, lineHeight: 1.3 }}>
+                        <h2 style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, lineHeight: 1.3 }}>
                           {l.title ?? 'Untitled project'}
                         </h2>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>

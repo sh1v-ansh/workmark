@@ -95,7 +95,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
@@ -105,7 +105,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14.5 }}>
             <div>
-              <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 7 }}>
+              <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
                 Your record
               </h1>
               <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.55 }}>
@@ -238,7 +238,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
                           aria-expanded={expanded}
                         >
                           <span style={{ flexGrow: 1, minWidth: 0 }}>
-                            <span style={{ fontFamily: F.display, fontSize: 16, fontWeight: 700, letterSpacing: '-0.01em' }}>{s.name}</span>
+                            <span style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.01em' }}>{s.name}</span>
                           </span>
                           <LevelTag level={s.bestLevel} style={{ fontSize: 13, color: C.textMuted, width: 84, flexShrink: 0 }} />
                           <span style={{ fontSize: 13, color: C.textGhost, width: 74, flexShrink: 0, textAlign: 'right' }}>{s.artifactCount} project{s.artifactCount === 1 ? '' : 's'}</span>
@@ -250,7 +250,7 @@ export default function MyRecordClient({ record, sources, suggestedHandle }: {
                         {expanded && (
                           <div style={{ paddingBottom: 14.5, display: 'flex', flexDirection: 'column', gap: 6.5 }}>
                             {from.map((src, j) => (
-                              <div key={`${src.repoFullName}-${j}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9.5px 13px', background: C.bg, borderRadius: R.md, flexWrap: 'wrap' }}>
+                              <div key={`${src.repoFullName}-${j}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9.5px 13px', background: C.surfaceAlt, borderRadius: R.md, flexWrap: 'wrap' }}>
                                 <span style={{ fontSize: 13.5, color: C.textSub }}>{src.repoFullName ?? 'Non-code work'}</span>
                                 <span style={{ fontSize: 12, color: C.textGhost, display: 'inline-flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
                                   <span>{TIER_LABEL[src.tier ?? ''] ?? src.tier}</span>

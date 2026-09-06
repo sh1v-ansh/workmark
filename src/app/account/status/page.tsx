@@ -44,7 +44,7 @@ export default async function AccountStatusPage() {
   const copy = COPY[account.status] ?? COPY.suspended
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column' }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column' }}>
       <header
         style={{
           borderBottom: `1px solid ${C.border}`,
@@ -85,7 +85,7 @@ export default async function AccountStatusPage() {
               gap: 16,
             }}
           >
-            <h1 style={{ fontSize: 25, fontWeight: 700, color: C.text, margin: 0, lineHeight: 1.22 }}>
+            <h1 style={{ fontSize: 25, fontWeight: 600, color: C.text, margin: 0, lineHeight: 1.22 }}>
               {copy.title}
             </h1>
 

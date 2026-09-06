@@ -53,7 +53,7 @@ export default function Section({
 export function Stat({ value, label, suffix }: { value: React.ReactNode; label: string; suffix?: React.ReactNode }) {
   return (
     <div>
-      <div style={{ fontFamily: F.display, fontSize: 34, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', color: C.text }}>
+      <div style={{ fontFamily: F.display, fontSize: 34, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.022em', fontVariantNumeric: 'tabular-nums', color: C.text }}>
         {value}
         {suffix && <span style={{ fontSize: 19, color: C.textGhost }}>{suffix}</span>}
       </div>

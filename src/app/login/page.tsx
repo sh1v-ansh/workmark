@@ -116,7 +116,7 @@ export default function LoginPage() {
 
   if (pendingConfirmEmail) {
     return (
-      <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+      <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 36 }}>
           <Wordmark height={24} />
         </Link>
@@ -128,9 +128,9 @@ export default function LoginPage() {
               <path d="M2 5.5l8 5 8-5" stroke={C.accent} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <h1 style={{ fontFamily: F.display, fontSize: 19.5, fontWeight: 700, letterSpacing: '-0.02em', color: C.text, marginBottom: 11 }}>Check your inbox</h1>
+          <h1 style={{ fontFamily: F.display, fontSize: 19.5, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 11 }}>Check your inbox</h1>
           <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 5.5, lineHeight: 1.6 }}>We sent a confirmation link to</p>
-          <p style={{ fontSize: 14, fontWeight: 700, color: C.text, marginBottom: 13, wordBreak: 'break-all' }}>{pendingConfirmEmail}</p>
+          <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 13, wordBreak: 'break-all' }}>{pendingConfirmEmail}</p>
           <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 23 }}>
             Click the link in that email to activate your account, then come back here and sign in.
           </p>
@@ -149,7 +149,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <Link href="/" aria-label="Workmark home" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 36 }}>
         <Wordmark height={24} />
       </Link>
@@ -157,7 +157,7 @@ export default function LoginPage() {
       <div style={{ width: '100%', maxWidth: 390 }}>
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 29 }}>
           {/* Mode tabs */}
-          <div role="group" aria-label="Sign in or sign up" style={{ display: 'flex', gap: 2, marginBottom: 25, background: C.bg, borderRadius: R.md, padding: 3 }}>
+          <div role="group" aria-label="Sign in or sign up" style={{ display: 'flex', gap: 2, marginBottom: 25, background: C.surfaceAlt, borderRadius: R.md, padding: 3 }}>
             {(['signin', 'signup'] as Mode[]).map((m) => (
               <button
                 key={m}

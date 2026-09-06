@@ -60,8 +60,8 @@ function relativeDays(iso: string) {
 /** One of the three numbers that carry the whole comparison. */
 function Metric({ value, caption, tone }: { value: React.ReactNode; caption: string; tone?: string }) {
   return (
-    <div style={{ background: C.bg, borderRadius: R.md, padding: '13.5px 15.5px' }}>
-      <div style={{ fontFamily: F.display, fontSize: 23, fontWeight: 800, lineHeight: 1, letterSpacing: '-0.03em', fontVariantNumeric: 'tabular-nums', color: tone ?? C.text }}>
+    <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '13.5px 15.5px' }}>
+      <div style={{ fontFamily: F.display, fontSize: 23, fontWeight: 600, lineHeight: 1, letterSpacing: '-0.022em', fontVariantNumeric: 'tabular-nums', color: tone ?? C.text }}>
         {value}
       </div>
       <div style={{ fontSize: 13, color: C.textFaint, marginTop: 4 }}>{caption}</div>
@@ -117,7 +117,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
   const evidencedCount = selected ? selected.perSkill.filter((s) => s.present).length : 0
 
   return (
-    <div style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
@@ -127,7 +127,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
 
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, margin: '13px 0 20px', flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 700, letterSpacing: '-0.03em', color: C.text }}>
+            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text }}>
               {applicants.length === 0 ? 'No applicants yet' : `${applicants.length} applicant${applicants.length === 1 ? '' : 's'}`}
             </h1>
             {applicants.length > 0 && (
@@ -200,7 +200,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
               {/* Head */}
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 19, paddingBottom: 18, borderBottom: `1px solid ${C.borderFaint}`, marginBottom: 20, flexWrap: 'wrap' }}>
                 <div>
-                  <h2 style={{ fontFamily: F.display, fontSize: 23, fontWeight: 700, letterSpacing: '-0.03em', color: C.text, marginBottom: 4.5 }}>
+                  <h2 style={{ fontFamily: F.display, fontSize: 23, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 4.5 }}>
                     {selected.fullName}
                   </h2>
                   <p style={{ fontSize: 14, color: C.textMuted }}>
@@ -312,7 +312,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
               {selected.responseText && (
                 <div style={{ marginBottom: 22 }}>
                   <Kicker style={{ marginBottom: 10 }}>In their words</Kicker>
-                  <div style={{ background: C.bg, borderRadius: R.md, padding: '16.5px 18.5px', fontSize: 15, lineHeight: 1.65, color: C.textSub, whiteSpace: 'pre-wrap' }}>
+                  <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '16.5px 18.5px', fontSize: 15, lineHeight: 1.65, color: C.textSub, whiteSpace: 'pre-wrap' }}>
                     {selected.responseText}
                   </div>
                 </div>
