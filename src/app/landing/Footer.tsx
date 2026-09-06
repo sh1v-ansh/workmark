@@ -2,62 +2,99 @@ import Link from 'next/link'
 import { C, F } from './tokens'
 import { Wordmark } from './Wordmark'
 
-const links: [string, string][] = [
-  ['/', 'Mission'],
-  ['/marketplace', 'Marketplace'],
-  ['/how-it-works', 'How it works'],
-  ['/about', 'About'],
-  ['/login', 'Sign in'],
+/**
+ * The footer.
+ *
+ * It was a logo and one flat row of every link on the site, which is a
+ * sitemap rather than a footer — "Terms" and "Marketplace" carried the same
+ * weight, and a reader looking for a way to contact us found nothing at all.
+ *
+ * Four columns instead, grouped by what somebody is actually trying to do:
+ * find out what this is, use it, get help, or check the legal position. The
+ * contact addresses are the real addition. A product asking students to
+ * connect their GitHub and then offering no way to reach a human is asking
+ * for a trust it has not earned.
+ */
+
+const COLUMNS: { title: string; links: [string, string][] }[] = [
+  {
+    title: 'Product',
+    links: [
+      ['/', 'Mission'],
+      ['/how-it-works', 'How it works'],
+      ['/listings', 'Open projects'],
+      ['/levels', 'How levels work'],
+    ],
+  },
+  {
+    title: 'Get started',
+    links: [
+      ['/login', 'Create a record'],
+      ['/listings/new', 'Post a project'],
+      ['/marketplace', 'For organisations'],
+      ['/about', 'About us'],
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      ['/legal/privacy', 'Privacy policy'],
+      ['/legal/terms', 'Terms of service'],
+      ['/legal/cookies', 'Cookie policy'],
+    ],
+  },
 ]
 
-const legalLinks: [string, string][] = [
-  ['/legal/privacy', 'Privacy'],
-  ['/legal/terms', 'Terms'],
-  ['/legal/cookies', 'Cookies'],
+/** Both real inboxes. Neither is a form that goes nowhere. */
+const CONTACT: [string, string][] = [
+  ['support@workmark.org', 'Support'],
+  ['privacy@workmark.org', 'Privacy requests'],
 ]
 
 export function Footer() {
   return (
-    <footer style={{ borderTop: `1px solid ${C.border}`, padding: '40px 24px', maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
-        <div>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 6 }}>
-            <Wordmark />
-          </Link>
-          <div style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>Verified work, not just claimed work.</div>
-        </div>
-        <div style={{ display: 'flex', gap: 28 }}>
-          {links.map(([href, label]) => (
-            <Link
-              key={href}
-              href={href}
-              style={{ fontSize: 13, fontFamily: F.sans, color: C.textFaint, textDecoration: 'none', transition: 'color 0.2s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = C.textMuted)}
-              onMouseLeave={e => (e.currentTarget.style.color = C.textFaint)}
-            >
-              {label}
+    <footer className="wm-footer">
+      <div className="wm-footer-inner">
+        <div className="wm-footer-grid">
+          <div>
+            <Link href="/" style={{ display: 'inline-flex', alignItems: 'center', textDecoration: 'none', marginBottom: 12 }}>
+              <Wordmark height={22} />
             </Link>
+            <p style={{ fontFamily: F.sans, fontSize: 14, color: C.textMuted, lineHeight: 1.6, maxWidth: '34ch', marginBottom: 18 }}>
+              Your code, turned into proof. So the first thing an employer sees is what you
+              built, not what you wrote about yourself.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {CONTACT.map(([address, label]) => (
+                <a
+                  key={address}
+                  href={`mailto:${address}`}
+                  style={{ fontFamily: F.sans, fontSize: 13.5, color: C.accent, textDecoration: 'none' }}
+                >
+                  {address}
+                  <span style={{ color: C.textGhost, marginLeft: 7 }}>{label}</span>
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {COLUMNS.map((column) => (
+            <div key={column.title}>
+              <p className="wm-footer-col-title">{column.title}</p>
+              {column.links.map(([href, label]) => (
+                <Link key={href} href={href} className="wm-footer-link">{label}</Link>
+              ))}
+            </div>
           ))}
         </div>
-      </div>
-      <div style={{ paddingTop: 20, borderTop: `1px solid ${C.borderFaint}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-        <div style={{ fontSize: 12, color: C.textGhost, fontFamily: F.mono }}>
-          © 2026 Workmark · Built by a student, for students.
-        </div>
-        {/* Reachable from every page, which is the point of them. A policy
-            nobody can find is not a policy anyone agreed to. */}
-        <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap' }}>
-          {legalLinks.map(([href, label]) => (
-            <Link
-              key={href}
-              href={href}
-              style={{ fontSize: 12, fontFamily: F.mono, color: C.textGhost, textDecoration: 'none', transition: 'color 0.2s' }}
-              onMouseEnter={e => (e.currentTarget.style.color = C.textFaint)}
-              onMouseLeave={e => (e.currentTarget.style.color = C.textGhost)}
-            >
-              {label}
-            </Link>
-          ))}
+
+        <div className="wm-footer-base">
+          <span style={{ fontFamily: F.sans, fontSize: 12.5, color: C.textGhost }}>
+            © {new Date().getFullYear()} Workmark · Built by students, for students, at UMass Amherst.
+          </span>
+          <span style={{ fontFamily: F.sans, fontSize: 12.5, color: C.textGhost }}>
+            Made in Amherst, Massachusetts
+          </span>
         </div>
       </div>
     </footer>

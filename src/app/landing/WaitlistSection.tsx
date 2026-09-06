@@ -1,33 +1,56 @@
+'use client'
+
 import Link from 'next/link'
-import { C, F } from './tokens'
+import { Aurora } from './Aurora'
+import { COPY, type Audience } from './audience'
+import { F } from './tokens'
 
-export function JoinSection() {
+/**
+ * The last thing on the page.
+ *
+ * Named WaitlistSection for historical reasons — there is no waitlist and
+ * has not been one since signup started refusing under-18s outright rather
+ * than holding them. The export is JoinSection; the filename is left alone
+ * because renaming it is churn in a diff about the landing page.
+ *
+ * One action. The old version offered three, which on a closing screen is a
+ * way of admitting you do not know what you want the reader to do.
+ */
+const CLOSING: Record<Audience, { headline: string; body: string; note: string }> = {
+  students: {
+    headline: 'You already did the hard part',
+    body: 'The work is sitting in repos nobody is going to read. Connect them and see what they say about you.',
+    note: 'Free with a .edu address. You pick the repos and can disconnect any time.',
+  },
+  businesses: {
+    headline: 'Post it and see who turns up',
+    body: 'Describe the work in a few lines. Everyone who applies comes with proof of what they have built.',
+    note: 'Free to post. No contract, nothing to install, nothing to pay.',
+  },
+}
+
+export function JoinSection({ audience }: { audience: Audience }) {
+  const copy = CLOSING[audience]
+  const cta = COPY[audience].primaryCta
   return (
-    <section style={{ borderTop: '1px solid rgba(255,255,255,0.08)', padding: '100px 24px', textAlign: 'center', background: C.bgDeep, position: 'relative', overflow: 'hidden' }}>
-      <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', width: 800, height: 500, background: 'radial-gradient(ellipse at center, rgba(62,31,255,0.10) 0%, transparent 65%)', pointerEvents: 'none', zIndex: 0 }} />
+    <section style={{ position: 'relative', overflow: 'hidden', padding: '104px 24px 116px', textAlign: 'center' }}>
+      <Aurora height={620} />
 
-      <div className="reveal-item" style={{ maxWidth: 560, margin: '0 auto', position: 'relative', zIndex: 1 }}>
-        <div style={{ fontFamily: F.mono, fontSize: 11, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 20 }}>
-          Join Workmark
-        </div>
-        <h2 className="mob-text-h1" style={{ fontFamily: F.serif, fontSize: 48, fontWeight: 800, letterSpacing: '-0.03em', color: '#fff', lineHeight: 1.1, marginBottom: 16 }}>
-          Start building your<br />Workmark record.
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 620, margin: '0 auto' }}>
+        <h2
+          style={{
+            fontFamily: F.serif, fontSize: 42, fontWeight: 600, letterSpacing: '-0.026em',
+            lineHeight: 1.12, color: '#0A0A0A', margin: '0 0 16px', textWrap: 'balance',
+          }}
+        >
+          {copy.headline}
         </h2>
-        <p style={{ fontSize: 16, color: 'rgba(255,255,255,0.7)', lineHeight: 1.7, marginBottom: 40 }}>
-          Students: start stacking real, verified work experience, free, forever. Organizations: post your first project and get real CS help without an agency in the middle.
+        <p style={{ fontFamily: F.sans, fontSize: 17.5, lineHeight: 1.62, color: '#4B4B57', margin: '0 auto 30px', textWrap: 'pretty' }}>
+          {copy.body}
         </p>
-
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
-          <Link href="/login" className="wm-btn wm-btn-primary">
-            I&apos;m a student →
-          </Link>
-          <Link href="/login" className="wm-btn wm-btn-secondary-invert">
-            Post a project
-          </Link>
-        </div>
-
-        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', fontFamily: F.mono }}>
-          Students always free · Organizations: free to start, no credit card required
+        <Link href={cta.href} className="wm-cta-primary">{cta.label}</Link>
+        <p style={{ fontFamily: F.sans, fontSize: 13, color: '#6C6C78', marginTop: 18 }}>
+          {copy.note}
         </p>
       </div>
     </section>
