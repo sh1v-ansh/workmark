@@ -7,11 +7,11 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
   <style>
-    body { margin: 0; font-family: 'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
     a { color: #4E2FD6; text-decoration: none; } a:hover { color: #3B22A8; }
-    .wm-disp { font-family: 'Schibsted Grotesk', system-ui, sans-serif; }
+    .wm-disp { font-family: 'Instrument Sans', system-ui, sans-serif; }
     .wm-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
     .wm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px;
       font-weight: 600; font-size: 15px; line-height: 1; padding: 15px 24px; border-radius: 10px; }
@@ -28,7 +28,7 @@
     <!-- HEADER — states the job, not a greeting -->
     <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 2px;">
       <div style="display: flex; flex-direction: column; gap: 5px;">
-        <h1 class="wm-disp" style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.025em; color: #191E2E;">One step to a verified record</h1>
+        <h1 class="wm-disp" style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E;">One step to a verified record</h1>
         <p style="margin: 0; font-size: 14px; color: #5A6172;">BS Computer Science · University of Massachusetts Amherst</p>
       </div>
       <span style="font-size: 14px; color: #8D94A5; white-space: nowrap; padding-top: 4px;">Saturday, 6 September</span>
@@ -59,7 +59,7 @@
 
         <div style="display: flex; flex-direction: column; gap: 13px;">
           <span class="wm-eyebrow" style="color: #6142F5;">Step 1 of 3</span>
-          <h2 class="wm-disp" style="margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.025em; color: #191E2E; line-height: 1.24; text-wrap: pretty;">
+          <h2 class="wm-disp" style="margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E; line-height: 1.24; text-wrap: pretty;">
             Connect GitHub and we&rsquo;ll read the code you&rsquo;ve already written
           </h2>
           <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.65; max-width: 54ch; text-wrap: pretty;">
@@ -83,11 +83,11 @@
           <div style="position: relative; background: #FDFDFE; border: 1px solid #EDECF3; border-radius: 13px; padding: 20px 22px; overflow: hidden;">
             <div style="display: flex; gap: 30px; margin-bottom: 16px;">
               <div style="display: flex; flex-direction: column; gap: 2px;">
-                <span class="wm-disp" style="font-size: 27px; font-weight: 700; letter-spacing: -0.03em; color: #B9BCC8; line-height: 1;">14</span>
+                <span class="wm-disp" style="font-size: 27px; font-weight: 600; letter-spacing: -0.022em; color: #B9BCC8; line-height: 1;">14</span>
                 <span style="font-size: 12px; color: #B9BCC8;">Skills proven</span>
               </div>
               <div style="display: flex; flex-direction: column; gap: 2px;">
-                <span class="wm-disp" style="font-size: 27px; font-weight: 700; letter-spacing: -0.03em; color: #B9BCC8; line-height: 1;">6</span>
+                <span class="wm-disp" style="font-size: 27px; font-weight: 600; letter-spacing: -0.022em; color: #B9BCC8; line-height: 1;">6</span>
                 <span style="font-size: 12px; color: #B9BCC8;">Repositories read</span>
               </div>
             </div>
@@ -118,7 +118,7 @@
         <div style="background: #FFFFFF; border: 1px solid #ECEBF3; border-radius: 13px;
                     box-shadow: 0 1px 1px rgba(25,30,46,0.03), 0 8px 20px -12px rgba(25,30,46,0.18);
                     padding: 19px 21px; display: flex; flex-direction: column; gap: 7px;">
-          <span class="wm-disp" style="font-size: 14.5px; font-weight: 700; color: #191E2E;">{{a.q}}</span>
+          <span class="wm-disp" style="font-size: 14.5px; font-weight: 600; color: #191E2E;">{{a.q}}</span>
           <span style="font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">{{a.a}}</span>
         </div>
       </sc-for>

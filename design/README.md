@@ -20,6 +20,23 @@ and is git-ignored, since it is rebuilt from these on every change.
   current face one weight step lighter, which may be the whole fix.
 - `canvas.json` — where each artboard sits on the canvas.
 
+## Type
+
+Instrument Sans, one family, everywhere. Headings at 600 — the reason this
+face was chosen over the alternatives is that its semibold holds a heading on
+its own, which is the specific thing Schibsted Grotesk lacked: its 600 and
+700 sit close together, so reaching for emphasis meant reaching for 700 and
+getting more weight than anyone wanted.
+
+Small uppercase labels keep 700. Thickness was never the complaint at 11.5px.
+
+Display tracking was loosened when the face changed (-0.03em → -0.022em,
+-0.025em → -0.02em). Instrument Sans sets tighter than Schibsted, so the old
+negative tracking closed the counters.
+
+`Type.dc.html` is deliberately left on the old faces — it is the specimen
+sheet, and it needs to keep showing what is being compared against.
+
 ## The two colours
 
 Violet is what Workmark is asking you to do — buttons, the focal card, the

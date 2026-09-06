@@ -7,11 +7,11 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
   <style>
-    body { margin: 0; font-family: 'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
     a { color: #4E2FD6; text-decoration: none; } a:hover { color: #3B22A8; }
-    .wm-disp { font-family: 'Schibsted Grotesk', system-ui, sans-serif; }
+    .wm-disp { font-family: 'Instrument Sans', system-ui, sans-serif; }
     .wm-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
     .wm-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7.5px;
       font-weight: 600; font-size: 14px; line-height: 1; padding: 13px 20px; border-radius: 10px; }
@@ -23,7 +23,7 @@
   <div style="max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px;">
 
     <div style="display: flex; flex-direction: column; gap: 7px;">
-      <h1 class="wm-disp" style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: #191E2E;">Name the offer, not the doubt</h1>
+      <h1 class="wm-disp" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E;">Name the offer, not the doubt</h1>
       <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.6; max-width: 80ch; text-wrap: pretty;">
         &ldquo;Not sure what to build next?&rdquo; asks the reader a question and describes nothing. All three
         below say the same thing instead: we compared what open projects ask for against what your
@@ -44,7 +44,7 @@
                       background: radial-gradient(circle, rgba(167,139,250,0.55) 0%, rgba(167,139,250,0) 70%);"></div>
           <div style="position: relative; display: flex; flex-direction: column; gap: 10px;">
             <span class="wm-eyebrow" style="color: #C7B8FF;">Your next project</span>
-            <h3 class="wm-disp" style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: #FFFFFF; line-height: 1.3; text-wrap: pretty;">
+            <h3 class="wm-disp" style="margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #FFFFFF; line-height: 1.3; text-wrap: pretty;">
               3 open projects want Docker. Your record doesn&rsquo;t have it.
             </h3>
             <p style="margin: 0; font-size: 13.5px; color: #C6C2E4; line-height: 1.6; text-wrap: pretty;">
@@ -74,7 +74,7 @@
                       background: radial-gradient(420px 240px at 100% 108%, rgba(97,66,245,0.14) 0%, rgba(97,66,245,0) 70%);"></div>
           <div style="position: relative; display: flex; flex-direction: column; gap: 10px;">
             <span class="wm-eyebrow" style="color: #6142F5;">Your next project</span>
-            <h3 class="wm-disp" style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; color: #191E2E; line-height: 1.3; text-wrap: pretty;">
+            <h3 class="wm-disp" style="margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E; line-height: 1.3; text-wrap: pretty;">
               3 open projects want Docker. Your record doesn&rsquo;t have it.
             </h3>
             <p style="margin: 0; font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">
@@ -102,14 +102,14 @@
                     display: flex; flex-direction: column;">
           <div style="padding: 22px 24px 18px; background: linear-gradient(180deg, #F6F2FF 0%, #FFFFFF 100%); border-bottom: 1px solid #F0EDF9;">
             <span class="wm-eyebrow" style="color: #6142F5;">Your next project</span>
-            <h3 class="wm-disp" style="margin: 8px 0 0; font-size: 19px; font-weight: 700; letter-spacing: -0.02em; color: #191E2E; line-height: 1.3; text-wrap: pretty;">
+            <h3 class="wm-disp" style="margin: 8px 0 0; font-size: 19px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E; line-height: 1.3; text-wrap: pretty;">
               The skill you&rsquo;re missing most is Docker
             </h3>
           </div>
           <div style="padding: 18px 24px; display: flex; flex-direction: column; gap: 13px; flex-grow: 1;">
             <sc-for list="{{gaps}}" as="g" hint-placeholder-count="3">
               <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="flex-shrink: 0; width: 26px; font-size: 15px; font-weight: 700; color: #191E2E; font-family: 'Schibsted Grotesk', system-ui, sans-serif;">{{g.count}}</span>
+                <span style="flex-shrink: 0; width: 26px; font-size: 15px; font-weight: 600; color: #191E2E; font-family: 'Instrument Sans', system-ui, sans-serif;">{{g.count}}</span>
                 <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 5px;">
                   <span style="font-size: 13.5px; color: #191E2E; font-weight: 600;">{{g.name}}</span>
                   <div style="height: 5px; border-radius: 999px; background: #F0EDF9; overflow: hidden;">

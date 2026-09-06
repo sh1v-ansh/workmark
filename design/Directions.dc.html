@@ -7,11 +7,11 @@
 <body>
 <x-dc>
 <helmet>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700;800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap">
   <style>
-    body { margin: 0; font-family: 'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { margin: 0; font-family: 'Instrument Sans', system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
     a { color: #4E2FD6; text-decoration: none; } a:hover { color: #3B22A8; }
-    .wm-disp { font-family: 'Schibsted Grotesk', system-ui, sans-serif; }
+    .wm-disp { font-family: 'Instrument Sans', system-ui, sans-serif; }
     .wm-sw { width: 100%; height: 42px; border-radius: 8px; }
     .wm-swlab { font-size: 10.5px; color: #8D94A5; letter-spacing: 0.02em; }
   </style>
@@ -22,7 +22,7 @@
   <div style="max-width: 1300px; margin: 0 auto; display: flex; flex-direction: column; gap: 26px;">
 
     <div style="display: flex; flex-direction: column; gap: 7px;">
-      <h1 class="wm-disp" style="margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.025em; color: #191E2E;">Three grounds to pick from</h1>
+      <h1 class="wm-disp" style="margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E;">Three grounds to pick from</h1>
       <p style="margin: 0; font-size: 15px; color: #5A6172; line-height: 1.6; max-width: 74ch; text-wrap: pretty;">
         Same card, same type, same violet. What changes is how cool the paper is, whether gradient
         does any work, and how a card earns its separation from the page &mdash; border, shadow, or both.
@@ -38,7 +38,7 @@
                   display: flex; align-items: flex-start; gap: 16px;">
         <div style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 11px; background: #6142F5;"></div>
         <div style="display: flex; flex-direction: column; gap: 4px;">
-          <span class="wm-disp" style="font-size: 15px; font-weight: 700; color: #191E2E;">Violet is what we&rsquo;re asking you to do</span>
+          <span class="wm-disp" style="font-size: 15px; font-weight: 600; color: #191E2E;">Violet is what we&rsquo;re asking you to do</span>
           <span style="font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">
             Every button, the focal card, the next-project block. If it is violet, it wants a click.
           </span>
@@ -49,7 +49,7 @@
                   display: flex; align-items: flex-start; gap: 16px;">
         <div style="flex-shrink: 0; width: 44px; height: 44px; border-radius: 11px; background: linear-gradient(145deg, #F9E4AE 0%, #EBCB74 44%, #D9A93C 100%); border: 1px solid #CE9F32;"></div>
         <div style="display: flex; flex-direction: column; gap: 4px;">
-          <span class="wm-disp" style="font-size: 15px; font-weight: 700; color: #191E2E;">Gold is what your code already proved</span>
+          <span class="wm-disp" style="font-size: 15px; font-weight: 600; color: #191E2E;">Gold is what your code already proved</span>
           <span style="font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">
             The top tier of your skill record, and nothing else. Gold is never a button, and never
             the whole ramp &mdash; six of thirty-seven is what makes it read as earned.
@@ -66,7 +66,7 @@
           <div style="display: flex; flex-direction: column; gap: 5px; padding-left: 2px;">
             <div style="display: flex; align-items: baseline; gap: 9px;">
               <span class="wm-disp" style="font-size: 12px; font-weight: 700; color: #8D94A5; letter-spacing: 0.06em;">{{d.tag}}</span>
-              <h2 class="wm-disp" style="margin: 0; font-size: 19.5px; font-weight: 700; letter-spacing: -0.02em; color: #191E2E;">{{d.name}}</h2>
+              <h2 class="wm-disp" style="margin: 0; font-size: 19.5px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E;">{{d.name}}</h2>
             </div>
             <p style="margin: 0; font-size: 13.5px; color: #5A6172; line-height: 1.55; text-wrap: pretty;">{{d.pitch}}</p>
           </div>
@@ -98,7 +98,7 @@
             <div style="position: relative; background: {{d.cardBg}}; border: {{d.cardBorder}}; border-radius: 13px;
                         box-shadow: {{d.cardShadow}}; padding: 20px 21px; display: flex; flex-direction: column; gap: 10px;">
               <span style="font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #6142F5;">Waiting on you</span>
-              <h3 class="wm-disp" style="margin: 0; font-size: 17px; font-weight: 700; letter-spacing: -0.02em; color: #191E2E; line-height: 1.3; text-wrap: pretty;">
+              <h3 class="wm-disp" style="margin: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; color: #191E2E; line-height: 1.3; text-wrap: pretty;">
                 Agree the description of what you built
               </h3>
               <p style="margin: 0; font-size: 13.5px; color: #5A6172; line-height: 1.6; text-wrap: pretty;">
