@@ -1406,3 +1406,63 @@
 @media (max-width: 520px) {
   .wm-footer-grid { grid-template-columns: 1fr; }
 }
+
+/* ── The externship section ───────────────────────────────────────────────
+   Its own panel rather than another flat band, because it is the part of
+   the page that answers the hardest objection a student has — everyone
+   wants experience and nobody will give you any — and it was previously a
+   clause inside somebody else's paragraph. */
+.wm-externship {
+  position: relative;
+  overflow: hidden;
+  padding: 44px 44px 46px;
+  border-radius: 22px;
+  border: 1px solid #E2DBFA;
+  background: linear-gradient(140deg, #F7F4FF 0%, #FCFBFF 46%, #FFFFFF 100%);
+  box-shadow: 0 1px 2px rgba(62, 31, 255, 0.05), 0 30px 70px -40px rgba(62, 31, 255, 0.42);
+}
+.wm-externship::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(520px 300px at 100% 0%, rgba(236, 72, 153, 0.10) 0%, rgba(236, 72, 153, 0) 68%),
+    radial-gradient(560px 320px at 0% 100%, rgba(56, 189, 248, 0.10) 0%, rgba(56, 189, 248, 0) 68%);
+}
+@media (max-width: 720px) {
+  .wm-externship { padding: 30px 22px 32px; border-radius: 18px; }
+}
+
+/* The AI project card, in the clothes it actually wears in the product. A
+   picture of the feature beats a paragraph about it. */
+.wm-ai-demo {
+  position: relative;
+  overflow: hidden;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid #DCD4F7;
+  background: linear-gradient(152deg, #F6F2FF 0%, #FCFBFF 46%, #FFFFFF 100%);
+  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 18px 40px -20px rgba(97, 66, 245, 0.5);
+}
+.wm-ai-demo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(400px 200px at 96% 108%, rgba(97, 66, 245, 0.13) 0%, rgba(97, 66, 245, 0) 70%);
+}
+
+/* The four beats under the card. Same dashed treatment as the loop's
+   unbuilt step, so "not yet" looks identical wherever it appears. */
+.wm-ext-step {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid #EAE6F8;
+  border-radius: 12px;
+  padding: 13px 15px;
+}
+.wm-ext-step-soon {
+  background: rgba(255, 255, 255, 0.4);
+  border-style: dashed;
+  border-color: #DCDAE8;
+}

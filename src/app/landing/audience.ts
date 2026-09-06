@@ -92,16 +92,16 @@ export const COPY: Record<Audience, AudienceCopy> = {
       },
       {
         n: '02',
-        title: 'Real experience, not another tutorial',
+        title: 'Get an externship without applying for one',
         body:
-          'Apply to projects from faculty, labs and student teams who genuinely need the work done. Nothing open that fits? Workmark writes you a project that closes your biggest gap.',
+          'Workmark writes you a real project aimed at the exact skill you are missing. Build it in your own repo and it lands on your record like any other work.',
         now: true,
       },
       {
         n: '03',
         title: 'Stop applying into the void',
         body:
-          'Your record is matched against every project the moment it goes up. You see your fit before you apply, and posters see your evidence before they reply.',
+          'Real projects from faculty, labs and student teams, matched to your record the moment they go up. You see your fit before you apply. They see your evidence before they reply.',
         now: true,
       },
       {
