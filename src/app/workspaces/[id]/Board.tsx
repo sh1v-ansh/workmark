@@ -11,7 +11,7 @@ import {
   BOARD_COLUMNS, COLUMN_LABEL, COLUMN_HINT, canMoveTo, byBoardOrder,
   type TaskStatus,
 } from '@/lib/workspace/tasks'
-import type { BoardTask, TeamMember } from '@/lib/workspace/queries'
+import type { BoardTask, TeamMember, TaskVerdict } from '@/lib/workspace/queries'
 
 const ROLE_LABEL: Record<WorkRole, string> = {
   backend: 'Backend', frontend: 'Frontend', fullstack: 'Full-stack', mobile: 'Mobile',
@@ -36,13 +36,23 @@ const EMPTY: Draft = {
   estimateHours: '', difficulty: '', dueOn: '', priority: 'normal', verifiable: true,
 }
 
+const VERDICT_TONE: Record<string, { colour: string; label: string }> = {
+  verified: { colour: '#14663D', label: 'Verified' },
+  needs_work: { colour: '#94500F', label: 'Needs work' },
+  unverifiable: { colour: '#5A6172', label: 'Needs a person' },
+  human_verified: { colour: '#14663D', label: 'Confirmed by a teammate' },
+  pending: { colour: '#5A6172', label: 'Waiting to be checked' },
+}
+
 export default function Board({
   workspaceId,
   tasks,
+  verdicts,
   members,
 }: {
   workspaceId: string
   tasks: BoardTask[]
+  verdicts: TaskVerdict[]
   members: TeamMember[]
 }) {
   const router = useRouter()
@@ -56,6 +66,9 @@ export default function Board({
   const [blocking, setBlocking] = useState<BoardTask | null>(null)
   const [blockReason, setBlockReason] = useState('')
   const [planning, setPlanning] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const verdictFor = new Map(verdicts.map((v) => [v.taskId, v]))
+  const submittedCount = tasks.filter((t) => t.status === 'submitted').length
 
   const nameOf = (id: string | null) =>
     id ? members.find((m) => m.accountId === id)?.name ?? 'Someone' : null
@@ -142,6 +155,26 @@ export default function Board({
     }
   }
 
+  async function checkWork() {
+    setChecking(true)
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/verify`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Could not run the check.')
+      toast(
+        data.queued
+          ? data.message
+          : `${data.verified} verified, ${data.needsWork} needing work, ${data.toAPerson} for a teammate.`,
+        'success',
+      )
+      router.refresh()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
+    } finally {
+      setChecking(false)
+    }
+  }
+
   function openEdit(task: BoardTask) {
     setEditing(task)
     setReason('')
@@ -169,6 +202,11 @@ export default function Board({
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
         <h2 style={{ fontSize: T.h2, fontWeight: 600, color: C.text }}>Board</h2>
         <div style={{ display: 'flex', gap: 8 }}>
+          {submittedCount > 0 && (
+            <Button size="sm" onClick={checkWork} disabled={checking}>
+              {checking ? 'Checking…' : `Check my work (${submittedCount})`}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={draftPlan} disabled={planning}>
             {planning ? 'Drafting…' : tasks.length === 0 ? 'Draft a plan' : 'Suggest more tasks'}
           </Button>
@@ -247,6 +285,33 @@ export default function Board({
                         </p>
                       )}
                     </button>
+
+                    {(() => {
+                      const v = verdictFor.get(task.id)
+                      if (!v || v.verdict === 'pending') return null
+                      const tone = VERDICT_TONE[v.verdict] ?? VERDICT_TONE.pending
+                      return (
+                        <div style={{ marginBottom: 7 }}>
+                          <p style={{ fontSize: T.meta, fontWeight: 600, color: tone.colour, marginBottom: 2 }}>
+                            {tone.label}
+                            {v.confidence !== null && ` · ${Math.round(v.confidence * 100)}% sure`}
+                          </p>
+                          {v.notes && (
+                            <p style={{ fontSize: T.meta, color: C.textMuted, lineHeight: 1.45 }}>{v.notes}</p>
+                          )}
+                          {/* The free checks, shown as themselves. A student
+                              who disagrees with the verdict can see exactly
+                              which fact it was resting on. */}
+                          <ul style={{ listStyle: 'none', margin: '5px 0 0', padding: 0 }}>
+                            {v.checks.map((c) => (
+                              <li key={c.id} style={{ fontSize: T.meta, color: C.textGhost, lineHeight: 1.5 }}>
+                                {c.status === 'pass' ? '✓' : c.status === 'fail' ? '✕' : '?'} {c.label}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )
+                    })()}
 
                     {task.blockedAt && (
                       <p style={{ fontSize: T.meta, color: '#94500F', lineHeight: 1.45, marginBottom: 6 }}>

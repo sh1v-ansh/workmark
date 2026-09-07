@@ -669,7 +669,8 @@ create table review_requests (
 
 create table agent_calls (
   id           uuid default gen_random_uuid() primary key,
-  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'taxonomy', 'work_summary', 'planner')),
+  agent_type   text not null check (agent_type in (
+                 'posting', 'brief', 'goals', 'taxonomy', 'work_summary', 'planner', 'verification')),
   student_id   uuid references students(id) on delete cascade,
   poster_id    uuid,
   input        jsonb not null,
@@ -2346,11 +2347,52 @@ create table verification_runs (
   error         text,
   queued_at     timestamptz default now(),
   started_at    timestamptz,
-  finished_at   timestamptz
+  finished_at   timestamptz,
+
+  -- The lease. This table is a queue as well as a record: the manual button
+  -- and the nightly sweep both reach for whatever is waiting, and a double
+  -- run would spend twice and could write two verdicts for one submission.
+  -- Same shape as jobs.locked_at, for the same reason. See v05_0032.
+  locked_at     timestamptz,
+  attempts      int not null default 0
 );
+
+/**
+ * Claim one run, or return nothing.
+ *
+ * A single statement on purpose. Reading a queued row and then updating it
+ * is two statements with a gap in the middle, and that gap is exactly where
+ * two workers both decide the run is theirs.
+ *
+ * Claimable when queued, or running for more than ten minutes — long enough
+ * that any real run has finished, short enough that a crash does not strand
+ * a student's submission for an hour.
+ */
+create or replace function claim_verification_run(p_run uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_claimed int;
+begin
+  update verification_runs
+     set status = 'running',
+         locked_at = now(),
+         started_at = coalesce(started_at, now()),
+         attempts = attempts + 1
+   where id = p_run
+     and (status = 'queued'
+          or (status = 'running' and locked_at < now() - interval '10 minutes'));
+  get diagnostics v_claimed = row_count;
+  return v_claimed > 0;
+end;
+$$;
 
 create index verification_runs_workspace_idx on verification_runs (workspace_id, queued_at desc);
 create index verification_runs_pending_idx   on verification_runs (status) where status in ('queued', 'running');
+create index verification_runs_claimable_idx on verification_runs (queued_at) where status in ('queued', 'running');
 
 -- ─── Verification ───────────────────────────────────────────────────────────
 create table task_submissions (

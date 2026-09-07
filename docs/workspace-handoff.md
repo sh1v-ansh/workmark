@@ -4,7 +4,7 @@ Everything a second person needs to pick this up. Kept current as the feature
 is built; if it disagrees with the code, the code is right and this file is
 stale — say so in the PR.
 
-Last updated: the planner (step 4 of 6).
+Last updated: batch verification (step 5 of 6).
 
 ---
 
@@ -161,7 +161,7 @@ forward does not restart the clock.
 
 ## 4. Schema map
 
-Migrations `v05_0025` → `v05_0031`. All applied.
+Migrations `v05_0025` → `v05_0032`. All applied.
 
 | Table | What it holds |
 |---|---|
@@ -228,9 +228,12 @@ src/lib/workspace/
   events.ts       GitHub webhook payload → work_event rows (pure, tested)
   ingest.ts       writes those rows, resolves attribution + consent
   tasks.ts        board rules: legal moves, ordering, revisions, time-in-Doing
+  verify.ts       evidence window, the four free checks, confidence ceiling
+  run-verification.ts  orchestration: claim, settle, one call, write verdicts
 
 src/lib/agents/
   planner.ts      project → drafted tasks (prompt, schema, re-validation)
+  verifier.ts     one call for a batch of submitted tasks
 
 src/app/api/workspaces/
   route.ts                        POST   create a draft
@@ -243,6 +246,9 @@ src/app/api/workspaces/
   [id]/tasks/[taskId]/route.ts    PATCH  edit / move / block
                                   DELETE only from Backlog or Planned
   [id]/plan/route.ts              POST   draft a plan (one model call)
+  [id]/verify/route.ts            POST   queue and run a batch check
+
+src/app/api/cron/verify/route.ts  the nightly sweep + stuck-run recovery
 
 src/app/workspaces/
   page.tsx + WorkspacesClient.tsx        list, create, answer invitations
@@ -258,7 +264,8 @@ cannot do that" in a sentence and the UI can disable a button before anyone
 clicks it. **If the two disagree, fix the TypeScript.**
 
 Tests: `tests/workspace-membership.test.ts`, `tests/work-events.test.ts`,
-`tests/workspace-tasks.test.ts`, `tests/planner.test.ts`.
+`tests/workspace-tasks.test.ts`, `tests/planner.test.ts`,
+`tests/verify.test.ts`.
 
 ---
 
@@ -304,13 +311,44 @@ there is no scheduled re-plan, and `dependsOn` comes back from the model but
 is **not yet written to `task_dependencies`** — the table exists and nothing
 fills it.
 
-### Step 5 — Batch verification
-A `verification_runs` job: gather submitted tasks, group by repo, run the free
-deterministic checks (CI green? tests touched? changed paths overlap what the
-task named?), then **one model call** for the judgement. Produces a confidence
-score and a per-check list, never a bare yes/no. Cap at two automatic attempts
-before a person decides — a board somebody cannot get a card out of is worse
-than no checking.
+### Step 5 — Batch verification — DONE
+Submitting queues a task; it triggers nothing. A run — manual button or the
+nightly sweep — checks everything waiting at once, because the expensive part
+is context and ten tasks share a repository.
+
+**Order matters.** Claim the run, settle everything arithmetic can settle,
+then spend one model call on what is left. Most submissions never reach the
+call: a task with no commits is refused for free, and work marked as having
+no code goes straight to a person.
+
+Four free checks (`verify.ts`): commits, tests touched, CI conclusion,
+reviewed/merged. Missing tests and absent CI are **unknown, not fail** —
+saying "fail" would push students to write token tests on tasks that do not
+want them.
+
+`confidenceCeiling` caps the model afterwards: 0 with no commits, 0.5 on red
+CI, 0.75 when nothing corroborates either way. The checks are facts; the
+judgement sits on top. A persuasive commit message cannot talk a task past
+red CI.
+
+Verdicts are matched back **by task id, never by position** — a model that
+reorders or drops one would otherwise assign somebody else's judgement to a
+task, which is the worst failure available here. A task the model skips gets
+no verdict rather than a guessed one.
+
+After two failed automatic attempts a task goes to a person
+(`needsHumanReview`). Verified tasks move to Verified; needs-work moves back
+to Doing so the board shows outstanding work; unverifiable stays in Submitted
+because it is waiting on a person, not the student.
+
+`claim_verification_run` is a single UPDATE — the manual button and the sweep
+both reach for whatever is queued, and a read-then-write has a gap where both
+decide the run is theirs. A run stuck over ten minutes becomes claimable
+again.
+
+Still missing: **human verification has no UI**. `task_submissions.human_verdict`
+and `human_actor_id` exist and nothing writes them, so a task that reaches
+"needs a person" currently sits there. That is the first thing to build next.
 
 ### Step 6 — Plan-vs-reality rollups
 A nightly job writing one row per student per project. **Never computed on
@@ -362,9 +400,9 @@ than the others, and should say so.
 
 - **Should the planner ever re-run on its own?** Today it is a button. A
   scheduled re-plan would be more useful and costs a call each time.
-- **What triggers a batch run?** Nightly cron per active workspace, manual
-  button, or both? Nightly across every active workspace is the line item that
-  shows up on the Anthropic bill.
+- **The nightly sweep needs a cron entry.** `/api/cron/verify` exists and
+  nothing calls it. Same pattern as the other cron routes: `CRON_SECRET` in
+  the Authorization header. Until it is scheduled, only the button works.
 - **Does the planner re-run mid-project?** Once at the start is cheap and
   predictable. Re-planning is more useful and costs a call each time.
   Suggested: once, plus a manual "suggest more tasks".
@@ -389,6 +427,7 @@ than the others, and should say so.
 - A new agent type needs a migration — `agent_calls.agent_type` is a CHECK,
   and that friction is intended: it is the audit trail for everything that
   costs money, and a typo'd type would create a category nobody counts.
+- Verdicts are matched by task id, never by array position.
 - Never trust structured output without re-checking it. `normalisePlannedTask`
   exists because a task with an empty title or a 400-hour estimate would go
   straight into somebody's evidence.

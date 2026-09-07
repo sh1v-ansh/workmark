@@ -10,7 +10,7 @@ import { useToast } from '@/components/Toast'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import { WORK_ROLES, MAX_WORKSPACE_MEMBERS, type WorkRole } from '@/lib/workspace/membership'
 import Board from './Board'
-import type { WorkspaceDetail, TeamMember, BoardTask } from '@/lib/workspace/queries'
+import type { WorkspaceDetail, TeamMember, BoardTask, TaskVerdict } from '@/lib/workspace/queries'
 
 const ROLE_LABEL: Record<WorkRole, string> = {
   backend: 'Backend', frontend: 'Frontend', fullstack: 'Full-stack', mobile: 'Mobile',
@@ -24,11 +24,13 @@ function displayName(m: TeamMember): string {
 export default function WorkspaceClient({
   workspace,
   tasks,
+  verdicts,
   userId,
   repoOptions,
 }: {
   workspace: WorkspaceDetail
   tasks: BoardTask[]
+  verdicts: TaskVerdict[]
   userId: string
   repoOptions: { fullName: string; isPrivate: boolean }[]
 }) {
@@ -98,7 +100,7 @@ export default function WorkspaceClient({
             move below it — they are read once and the board is read daily. */}
         {!isDraft && (
           <div style={{ marginBottom: 26 }}>
-            <Board workspaceId={workspace.id} tasks={tasks} members={workspace.members} />
+            <Board workspaceId={workspace.id} tasks={tasks} verdicts={verdicts} members={workspace.members} />
           </div>
         )}
 

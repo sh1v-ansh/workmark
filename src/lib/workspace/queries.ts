@@ -304,3 +304,47 @@ export async function loadBoard(
     startedAt: t.started_at as string | null,
   }))
 }
+
+export interface TaskVerdict {
+  taskId: string
+  verdict: 'pending' | 'verified' | 'needs_work' | 'unverifiable' | 'human_verified'
+  confidence: number | null
+  notes: string | null
+  checks: { id: string; label: string; status: string; detail: string }[]
+  attempt: number
+  decidedAt: string | null
+}
+
+/**
+ * The most recent answer for each task.
+ *
+ * One query for the whole board rather than one per card. Ordered newest
+ * first and deduped in memory: a task can have several submissions and only
+ * the last one is what the board should show.
+ */
+export async function loadVerdicts(
+  supabase: SupabaseClient,
+  workspaceId: string,
+): Promise<Map<string, TaskVerdict>> {
+  const { data } = await supabase
+    .from('task_submissions')
+    .select('task_id, verdict, confidence, notes, checks, attempt, decided_at, submitted_at')
+    .eq('workspace_id', workspaceId)
+    .order('submitted_at', { ascending: false })
+
+  const latest = new Map<string, TaskVerdict>()
+  for (const row of data ?? []) {
+    const taskId = row.task_id as string
+    if (latest.has(taskId)) continue
+    latest.set(taskId, {
+      taskId,
+      verdict: row.verdict as TaskVerdict['verdict'],
+      confidence: row.confidence === null ? null : Number(row.confidence),
+      notes: row.notes as string | null,
+      checks: Array.isArray(row.checks) ? row.checks as TaskVerdict['checks'] : [],
+      attempt: Number(row.attempt ?? 1),
+      decidedAt: row.decided_at as string | null,
+    })
+  }
+  return latest
+}

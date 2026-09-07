@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { loadWorkspace, loadBoard } from '@/lib/workspace/queries'
+import { loadWorkspace, loadBoard, loadVerdicts } from '@/lib/workspace/queries'
 import WorkspaceClient from './WorkspaceClient'
 
 export const metadata = { title: 'Project' }
@@ -20,7 +20,9 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
   // The board is only worth loading once the project has actually started —
   // a draft has no tasks and the query would be a round trip for an empty
   // array on every visit during setup.
-  const tasks = workspace.status === 'draft' ? [] : await loadBoard(supabase, id)
+  const [tasks, verdicts] = workspace.status === 'draft'
+    ? [[], new Map()]
+    : await Promise.all([loadBoard(supabase, id), loadVerdicts(supabase, id)])
 
   // The repo picker only ever offers repositories Workmark can already read.
   // Anything else would record a link to something that can never be scanned.
@@ -35,6 +37,7 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
     <WorkspaceClient
       workspace={workspace}
       tasks={tasks}
+      verdicts={Array.from(verdicts.values())}
       userId={user.id}
       repoOptions={(grants ?? []).map((g) => ({
         fullName: g.repo_full_name as string,
