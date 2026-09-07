@@ -48,6 +48,29 @@ export const LIMITS = {
   profile: { limit: 30, windowSeconds: 3600 },
   /** The data export. Assembles seventeen queries; not a page to refresh. */
   export: { limit: 5, windowSeconds: 3600 },
+
+  // ── Before anyone is signed in ──
+  // These four are keyed on an IP or an email address rather than a user id,
+  // because the whole point is that no user exists yet. Everything above
+  // sits behind a session, so an attacker has to get through these first —
+  // which is exactly why there was a hole here: the sign-in form posted
+  // straight to Supabase from the browser and never touched a Workmark
+  // route that could count it.
+
+  /** New accounts from one address. A real person makes one, maybe two. */
+  authSignup: { limit: 5, windowSeconds: 3600 },
+  /** Sign-in attempts from one address. Fat fingers, a forgotten password,
+   *  then a password manager — fifteen covers all of it and stops nothing
+   *  a person would actually do. */
+  authSignin: { limit: 15, windowSeconds: 900 },
+  /** Attempts against ONE account, counted across every address they come
+   *  from. The per-IP limit above does nothing against credential stuffing
+   *  spread over a proxy pool; this is the limit that does. */
+  authSigninEmail: { limit: 8, windowSeconds: 900 },
+  /** Resending a confirmation email. Each one is a message Workmark pays to
+   *  send to an address chosen by whoever asked, which is the definition of
+   *  a mail bomb if nothing counts them. */
+  authResend: { limit: 4, windowSeconds: 3600 },
 } as const
 
 export type LimitName = keyof typeof LIMITS
@@ -96,17 +119,23 @@ export async function checkRateLimit(args: {
 }
 
 /**
- * Apply a named limit to one user, and return a ready 429 if they're over.
+ * Apply a named limit to one subject, and return a ready 429 if they're over.
+ *
+ * The subject is a user id nearly everywhere, and an IP address or an email
+ * for the four pre-auth limits — the key is built the same way either way,
+ * so nothing here needed to change to support them. It is named `subject`
+ * rather than `userId` only so the next person reading it doesn't assume a
+ * session exists.
  *
  * Returning the Response rather than throwing keeps the call site a two-line
  * early return, which is the shape that actually gets added to new routes.
  */
 export async function enforce(
   name: LimitName,
-  userId: string,
+  subject: string,
 ): Promise<Response | null> {
   const { limit, windowSeconds } = LIMITS[name]
-  const result = await checkRateLimit({ key: `${name}:${userId}`, limit, windowSeconds })
+  const result = await checkRateLimit({ key: `${name}:${subject}`, limit, windowSeconds })
   if (result.allowed) return null
 
   const minutes = Math.ceil(result.retryAfter / 60)

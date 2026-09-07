@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/Toast'
 import Button from '@/components/ui/Button'
 import { C, F, R, E } from '@/lib/theme/dark-tokens'
@@ -36,6 +35,10 @@ export default function LoginPage() {
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null)
   const [resending, setResending] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
+  // The honeypot. Never shown, never focusable, never filled by a person —
+  // so anything in it came from something that parsed the form and completed
+  // every input it found. See the signup route for what happens then.
+  const [honeypot, setHoneypot] = useState('')
 
   useEffect(() => {
     if (resendCooldown <= 0) return
@@ -43,19 +46,31 @@ export default function LoginPage() {
     return () => clearTimeout(t)
   }, [resendCooldown])
 
+  /**
+   * Both of these used to call Supabase straight from the page.
+   *
+   * That is why the .edu rule was decoration and why nothing counted the
+   * attempts: no Workmark server was in the path, so there was nowhere to
+   * put either check. They post to /api/auth/* now, which enforces the rule
+   * and rate limits the attempt before an email is sent or a password is
+   * tested. See the notes in those routes.
+   */
+  async function postAuth(path: string, payload: Record<string, unknown>) {
+    const res = await fetch(`/api/auth/${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error ?? 'Something went wrong. Please try again.')
+    return data as { redirectTo?: string }
+  }
+
   async function handleResend() {
     if (!pendingConfirmEmail) return
     setResending(true)
-    const supabase = createClient()
     try {
-      const { error: resendError } = await supabase.auth.resend({
-        type: 'signup',
-        email: pendingConfirmEmail,
-        options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/confirmed`,
-        },
-      })
-      if (resendError) throw resendError
+      await postAuth('resend', { email: pendingConfirmEmail })
       toast('Confirmation email resent.', 'success')
       setResendCooldown(30)
     } catch (err: unknown) {
@@ -73,39 +88,25 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const supabase = createClient()
 
     try {
       if (mode === 'signup') {
+        // Kept, even though the server now enforces it too. This one is here
+        // to answer instantly instead of after a round trip; the one that
+        // decides anything is on the server.
         if (!validateEdu(email)) {
           setError('Student accounts require a university (.edu) email address.')
           return
         }
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { role },
-            emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin}/auth/confirmed`,
-          },
-        })
-        if (signUpError) throw signUpError
+        await postAuth('signup', { email, password, role, website: honeypot })
         setPendingConfirmEmail(email)
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
-        if (signInError) {
-          if (signInError.message.toLowerCase().includes('invalid') || signInError.message.toLowerCase().includes('credentials')) {
-            throw new Error('Invalid email or password. Please try again.')
-          }
-          if (signInError.message.toLowerCase().includes('email not confirmed')) {
-            throw new Error('Please confirm your email address before signing in. Check your inbox for the confirmation link.')
-          }
-          throw signInError
-        }
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) throw new Error('Authentication failed.')
-        const { data: student } = await supabase.from('students').select('id').eq('id', user.id).maybeSingle()
-        router.push(student ? '/student/dashboard' : '/onboarding')
+        const { redirectTo } = await postAuth('signin', { email, password })
+        // The server already held the session and both rows when it answered,
+        // so it decided where this person belongs rather than the page
+        // guessing from a student row alone — which sent faculty to the
+        // wrong place when the page owned this rule.
+        router.push(redirectTo ?? '/student/dashboard')
         router.refresh()
       }
     } catch (err: unknown) {
@@ -246,6 +247,24 @@ export default function LoginPage() {
                 Requires a university <strong style={{ color: C.textMuted }}>.edu</strong> email address.
               </p>
             )}
+
+            {/* Off-screen rather than display:none, and aria-hidden with a
+                negative tabindex so no keyboard or screen-reader user can
+                ever land in it. Naive bots fill every input; the better ones
+                skip anything hidden with CSS display, which is exactly why
+                this is positioned away instead. */}
+            <div aria-hidden="true" style={{ position: 'absolute', left: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
+              <label htmlFor="login-website">Leave this field empty</label>
+              <input
+                id="login-website"
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+              />
+            </div>
 
             <div>
               <FieldLabel htmlFor="login-email">Email</FieldLabel>

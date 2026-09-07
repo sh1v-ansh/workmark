@@ -3,6 +3,8 @@ import { Playfair_Display, Inter, IBM_Plex_Mono, Instrument_Sans } from 'next/fo
 import './globals.css'
 import { ToastProvider } from '@/components/Toast'
 import { CookieNotice } from '@/components/CookieNotice'
+import { Analytics } from '@vercel/analytics/next'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { SessionProvider, type SessionValue } from '@/components/SessionProvider'
 import { createClient } from '@/lib/supabase/server'
 import { getAccount, hasRole, isVerifiedFaculty } from '@/lib/auth/roles'
@@ -156,6 +158,17 @@ export default async function RootLayout({
           <ToastProvider>{children}</ToastProvider>
         </SessionProvider>
         <CookieNotice />
+        {/* Cookieless, and chosen for that. Vercel counts a visit by hashing
+            the request server-side, keeps nothing that survives the day, and
+            sets nothing in the browser — so it sits outside the consent gate
+            in CookieNotice rather than behind it, and the notice can go on
+            saying one cookie and mean it.
+
+            Both are inert off Vercel: the scripts only load in production on
+            a deployment, so local development and the test build stay
+            silent. */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   )

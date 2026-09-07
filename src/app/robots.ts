@@ -34,6 +34,11 @@ export default function robots(): MetadataRoute.Robots {
           '/engagements/',
           // Applicant lists name real people who applied to something.
           '/listings/*/applicants',
+          // The opt-in student directory. It already requires a session, so
+          // a crawler gets a redirect to /login rather than any names — but
+          // a directory of students is not a thing to have a search engine
+          // probing at all, and the page has no business being discovered.
+          '/students',
         ],
       },
     ],
