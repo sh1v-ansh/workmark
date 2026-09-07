@@ -10,16 +10,23 @@ type Choice = 'accepted' | 'rejected'
 /**
  * Whether the visitor has agreed to non-essential cookies.
  *
- * Read this before loading anything that sets one — analytics, a session
- * recorder, an embedded video. Nothing calls it yet, which is the honest
- * state of things: Workmark currently sets exactly one cookie, the Supabase
- * session, and a login cookie is "strictly necessary" under both the ePrivacy
- * Directive and CCPA. There is nothing to ask permission for.
+ * Read this before loading anything that sets one — a session recorder, an
+ * embedded video, any analytics that works by tagging a browser. Nothing
+ * calls it yet, and that is still honest: Workmark sets exactly one cookie,
+ * the Supabase session, which is "strictly necessary" under both the
+ * ePrivacy Directive and CCPA.
  *
- * So this file is the gate, built before the thing it gates. The failure
- * mode it exists to prevent is the usual one: analytics gets added in a
- * hurry one afternoon, starts firing on page load, and consent becomes a
- * banner that lies.
+ * Analytics arrived and did not change that, because the one chosen is
+ * cookieless — Vercel counts a visit by hashing the request, keeps nothing
+ * that survives the day, and sets nothing in the browser. That was most of
+ * the reason to choose it. Something like Google Analytics would have to be
+ * loaded behind this gate instead, and the banner would have to become a
+ * real question.
+ *
+ * So this file is still the gate, built before the thing it gates. The
+ * failure mode it exists to prevent is the usual one: a tracker gets added
+ * in a hurry one afternoon, starts firing on page load, and consent becomes
+ * a banner that lies.
  */
 export function hasCookieConsent(): boolean {
   if (typeof window === 'undefined') return false
@@ -36,9 +43,9 @@ export function hasCookieConsent(): boolean {
  *
  * Written as a notice rather than a consent wall, because that is what the
  * situation actually is today — telling someone their login cookie is
- * required and offering them a button to refuse it would be theatre. When
- * analytics arrives, the Reject button starts meaning something and the
- * wording changes with it.
+ * required and offering them a button to refuse it would be theatre. The
+ * Reject button starts meaning something the day anything cookie-based is
+ * loaded behind hasCookieConsent(), and the wording changes with it.
  *
  * Not a modal, doesn't block the page, and doesn't come back once
  * dismissed. Every dark pattern in this genre comes from treating the
@@ -85,8 +92,9 @@ export function CookieNotice() {
       }}
     >
       <p style={{ flex: '1 1 260px', fontSize: 13, color: '#5A6172', lineHeight: 1.55, margin: 0 }}>
-        Workmark uses one cookie, to keep you signed in. We don&apos;t use advertising or
-        tracking cookies, and there&apos;s no analytics on this site.{' '}
+        Workmark uses one cookie, to keep you signed in. Our analytics counts page
+        views without cookies and can&apos;t follow you to other sites. We don&apos;t
+        use advertising or tracking cookies.{' '}
         <Link href="/legal/cookies" style={{ color: '#191E2E' }}>Cookie Policy</Link>
         {' · '}
         <Link href="/legal/privacy" style={{ color: '#191E2E' }}>Privacy Policy</Link>

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import MarketplaceClient from './MarketplaceClient'
 
 export const metadata: Metadata = {
-  title: 'For organisations | Workmark',
+  title: 'For businesses',
   description:
     'Post real work and see applicants arrive with a record built from code they actually shipped — every skill with the project behind it.',
 }

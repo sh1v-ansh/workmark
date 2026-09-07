@@ -7,7 +7,7 @@ import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { LAYOUT } from '@/lib/theme/layout'
 
 export const metadata: Metadata = {
-  title: 'What the levels mean · Workmark',
+  title: 'What the levels mean',
   description: 'How Workmark grades a skill, and why the scale currently stops at Strong.',
 }
 

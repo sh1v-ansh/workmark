@@ -897,6 +897,37 @@ create policy "Students: insert own row"
 create policy "Students: update own row"
   on students for update using (auth.uid() = id);
 
+-- The policy above answers "which rows"; RLS has no way to answer "which
+-- columns", so that half is a GRANT. Without it, the anon key in any browser
+-- could write any column of the signed-in student's own row — including
+-- active_application_count (the number the application cap is enforced
+-- against), edu_domain / edu_verified_at (the record of how the account was
+-- verified as a student) and github_username (written only by the App
+-- callback). See v05_0024 for the full reasoning.
+--
+-- The service role bypasses both RLS and column grants, so the server routes
+-- that legitimately write those columns are unaffected.
+revoke update on public.students from authenticated;
+
+grant update (
+  full_name,
+  university,
+  major,
+  degree_type,
+  graduation_year,
+  gpa,
+  is_international,
+  visa_type,
+  skills,
+  github_url,
+  linkedin_url,
+  availability,
+  hours_per_week,
+  available_from,
+  open_to_collab,
+  handle
+) on public.students to authenticated;
+
 -- Posters need to read applicant profile basics; scoped narrowly to actual
 -- applicants on their own listings, not a general "any signed-in user"
 -- grant.

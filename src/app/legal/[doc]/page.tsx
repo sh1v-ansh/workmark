@@ -53,7 +53,7 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const doc = DOCS[params.doc as Slug]
   if (!doc) return {}
-  return { title: `${doc.title} · Workmark`, description: doc.blurb }
+  return { title: doc.title, description: doc.blurb }
 }
 
 export default function LegalPage({ params }: { params: { doc: string } }) {

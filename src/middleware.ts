@@ -1,5 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import {
+  destinationAfterSignIn,
+  landingForStatus,
+  STATUS_PAGE,
+  DELETED_PAGE,
+} from '@/lib/auth/post-signin'
 
 type CookieToSet = {
   name: string
@@ -69,15 +75,9 @@ export async function middleware(request: NextRequest) {
   //
   // This predates the faculty work: suspending anyone already did it. One
   // page that says what happened ends the loop for every reason at once.
-  const STATUS_PAGE = '/account/status'
-
   // A deletion inside its grace period is also "not active", but the page it
   // needs is the one with the Restore button on it rather than one about
-  // suspended and declined accounts.
-  const DELETED_PAGE = '/account/deleted'
-  const landingFor = (status: string) =>
-    status === 'deleting' ? DELETED_PAGE : STATUS_PAGE
-
+  // suspended and declined accounts. landingForStatus knows which.
   const EXEMPT = new Set([STATUS_PAGE, DELETED_PAGE])
 
   if (user && requiresAuth && !EXEMPT.has(pathname)) {
@@ -89,7 +89,7 @@ export async function middleware(request: NextRequest) {
 
     if (current && current.status !== 'active') {
       const url = request.nextUrl.clone()
-      url.pathname = landingFor(current.status)
+      url.pathname = landingForStatus(current.status)
       return NextResponse.redirect(url)
     }
   }
@@ -100,29 +100,16 @@ export async function middleware(request: NextRequest) {
       supabase.from('accounts').select('roles, status').eq('id', user.id).maybeSingle(),
     ])
 
-    // Faculty land on their own home. The student dashboard asks about
-    // skills, a record and a GitHub connection, none of which a professor
-    // has — and someone who also holds the student role is a student first,
-    // since that's the side of the product they're being scored on.
-    const roles = (account?.roles ?? []) as string[]
-    const facultyOnly = roles.includes('faculty') && !roles.includes('student')
-
-    // "Has an account row" is what finished onboarding means, not "has a
-    // student row". Faculty have no student row by design, so keying off
-    // `students` sent every professor back to the signup form forever.
+    // The same rule the sign-in route answers with, from the same function —
+    // it used to be written out here and nowhere else, and then the sign-in
+    // route needed it too.
     const url = request.nextUrl.clone()
-    url.pathname = !account
-      ? '/onboarding'
-      : account.status !== 'active'
-        ? landingFor(account.status)
-        : facultyOnly
-          ? '/faculty'
-          : student
-            ? '/student/dashboard'
-            // An account with the student role but no profile is a signup
-            // that stopped halfway. Finish it rather than landing on a
-            // dashboard with nothing behind it.
-            : '/onboarding'
+    url.pathname = destinationAfterSignIn({
+      hasAccount: !!account,
+      status: (account?.status as string | undefined) ?? null,
+      roles: (account?.roles ?? []) as string[],
+      hasStudentProfile: !!student,
+    })
     return NextResponse.redirect(url)
   }
 

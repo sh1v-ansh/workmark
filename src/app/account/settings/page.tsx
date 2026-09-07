@@ -5,7 +5,7 @@ import SettingsClient from './SettingsClient'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Settings · Workmark' }
+export const metadata = { title: 'Settings' }
 
 /**
  * Confirms what a one-click unsubscribe just did.
