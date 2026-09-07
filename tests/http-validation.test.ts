@@ -11,6 +11,10 @@ import {
   requireEmail,
   isEduAddress,
   emailDomain,
+  requireUuid,
+  optionalUuid,
+  requireArray,
+  readFields,
 } from '../src/lib/http/validate'
 import { clientIp } from '../src/lib/http/request-ip'
 import { destinationAfterSignIn, landingForStatus } from '../src/lib/auth/post-signin'
@@ -104,6 +108,55 @@ describe('requireOneOf / requireBoolean / requireInt', () => {
     expect(requireInt(3, 'Hours', { min: 1, max: 5 })).toBe(3)
     expect(() => requireInt(3.7, 'Hours', { min: 1, max: 5 })).toThrow(ValidationError)
     expect(() => requireInt(9, 'Hours', { min: 1, max: 5 })).toThrow(ValidationError)
+  })
+})
+
+describe('requireUuid / requireArray', () => {
+  const uuid = '3f2504e0-4f89-11d3-9a0c-0305e82c3301'
+
+  it('accepts a real uuid in either case', () => {
+    expect(requireUuid(uuid, 'Id')).toBe(uuid)
+    expect(requireUuid(uuid.toUpperCase(), 'Id')).toBe(uuid.toUpperCase())
+  })
+
+  // These go straight into .eq(). Postgres answers a malformed uuid with
+  // 22P02, which surfaces as a 500 for a row that was never going to exist.
+  it.each(['', 'not-a-uuid', '3f2504e0-4f89-11d3-9a0c', 123, null, {}])(
+    'rejects %s', (value) => {
+      expect(() => requireUuid(value, 'Id')).toThrow(ValidationError)
+    })
+
+  it('treats missing as null when optional, but still checks a present one', () => {
+    expect(optionalUuid(undefined, 'Id')).toBeNull()
+    expect(optionalUuid('', 'Id')).toBeNull()
+    expect(() => optionalUuid('nope', 'Id')).toThrow(ValidationError)
+  })
+
+  it('refuses a non-array before anything calls .filter on it', () => {
+    expect(requireArray([1, 2], 'Items', { max: 5 })).toEqual([1, 2])
+    expect(() => requireArray('nope', 'Items', { max: 5 })).toThrow(ValidationError)
+    expect(() => requireArray({ 0: 'a' }, 'Items', { max: 5 })).toThrow(ValidationError)
+    expect(() => requireArray([1, 2, 3], 'Items', { max: 2 })).toThrow(ValidationError)
+  })
+})
+
+describe('readFields', () => {
+  it('returns the values when every check passes', () => {
+    const result = readFields(() => ({ name: requireString('  x  ', 'Name', { max: 5 }) }))
+    expect(result.ok && result.values.name).toBe('x')
+  })
+
+  it('turns the first failure into a 400 carrying that field’s message', async () => {
+    const result = readFields(() => ({ name: requireString(9, 'Name', { max: 5 }) }))
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.response.status).toBe(400)
+    expect(await result.response.json()).toEqual({ error: 'Name is required.' })
+  })
+
+  // A bug in the route must not be reported to the caller as their mistake.
+  it('lets a non-validation error through rather than calling it a 400', () => {
+    expect(() => readFields(() => { throw new TypeError('a real bug') })).toThrow(TypeError)
   })
 })
 

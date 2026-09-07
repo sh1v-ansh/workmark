@@ -28,7 +28,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } catch {
     return NextResponse.json({ error: 'Invalid body.' }, { status: 400 })
   }
-  if (!repoFullName) return NextResponse.json({ error: 'Pick a repo.' }, { status: 400 })
+  // owner/name, and nothing else — this is matched against a granted repo
+  // and would otherwise reach the query as whatever was posted.
+  if (typeof repoFullName !== 'string' || !/^[\w.-]{1,100}\/[\w.-]{1,100}$/.test(repoFullName)) {
+    return NextResponse.json({ error: 'Pick a repo.' }, { status: 400 })
+  }
 
   // RLS restricts this to the student's own briefs, so a bad id is a 404
   // rather than someone else's row.

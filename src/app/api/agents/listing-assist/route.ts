@@ -50,13 +50,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
   }
 
-  const description = body.description?.trim()
-  if (!description || description.length < 20) {
+  if (typeof body.description !== 'string' || body.description.trim().length < 20) {
     return NextResponse.json(
       { error: 'Describe the project in a sentence or two first — there is nothing to work from yet.' },
       { status: 400 },
     )
   }
+  const description = body.description.trim()
   if (description.length > 4000) {
     return NextResponse.json({ error: 'That description is too long — trim it to the essentials.' }, { status: 400 })
   }

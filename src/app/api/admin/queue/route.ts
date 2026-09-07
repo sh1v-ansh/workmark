@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   }
 
   const { kind, id, action } = body
-  if (!kind || !id || !action) {
+  if (typeof kind !== 'string' || typeof id !== 'string' || typeof action !== 'string' || !kind || !id || !action) {
     return NextResponse.json({ error: 'kind, id and action are required.' }, { status: 400 })
   }
 

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { getAccount, hasRole } from '@/lib/auth/roles'
+import { readFields, requireString, requireArray } from '@/lib/http/validate'
 
 /**
  * POST /api/listings
@@ -41,12 +42,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
   }
 
-  const title = body.title?.trim()
-  const brief = body.brief?.trim()
-  if (!title) return NextResponse.json({ error: 'A title is required.' }, { status: 400 })
-  if (!brief) return NextResponse.json({ error: 'A brief is required.' }, { status: 400 })
+  // requirements was read as an array without being one. A string or an
+  // object here threw inside .filter, which is a 500 for what is really a
+  // malformed request.
+  const fields = readFields(() => ({
+    title: requireString(body.title, 'A title', { max: 200 }),
+    brief: requireString(body.brief, 'A brief', { max: 8000 }),
+    requirements: requireArray(body.requirements ?? [], 'Requirements', { max: 20 }),
+  }))
+  if (!fields.ok) return fields.response
+  const { title, brief } = fields.values
 
-  const requirements = (body.requirements ?? []).filter((r) => r.skillId && r.requiredLevel >= 1 && r.requiredLevel <= 5)
+  const requirements = (fields.values.requirements as { skillId?: unknown; requiredLevel?: unknown }[])
+    .filter((r) =>
+      r && typeof r === 'object' &&
+      typeof r.skillId === 'string' && r.skillId.length > 0 && r.skillId.length <= 120 &&
+      typeof r.requiredLevel === 'number' && Number.isInteger(r.requiredLevel) &&
+      r.requiredLevel >= 1 && r.requiredLevel <= 5)
   if (requirements.length === 0) {
     return NextResponse.json({ error: 'Add at least one required skill so applicants can be matched.' }, { status: 400 })
   }

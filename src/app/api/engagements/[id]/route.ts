@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { readFields, optionalString } from '@/lib/http/validate'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { canTransition, isTerminal, type Stage, type Actor } from '@/lib/engagements/lifecycle'
 import { workSubmitted } from '@/lib/notify/email'
@@ -52,7 +53,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (isTerminal(currentStage)) {
       return NextResponse.json({ error: 'This engagement is closed — the description can no longer change.' }, { status: 400 })
     }
-    const next = body.description.trim()
+    // .trim() on whatever arrived was a 500 for a number or an object, and
+    // the column had no ceiling at all.
+    const described = readFields(() => optionalString(body.description, 'Description', { max: 8000 }))
+    if (!described.ok) return described.response
+    const next = described.values ?? ''
     if (next !== (engagement.description ?? '')) {
       patch.description = next || null
       patch.description_agreed_by_student_at = null

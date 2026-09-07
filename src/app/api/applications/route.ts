@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { readFields, requireUuid } from '@/lib/http/validate'
 import { getStudentDepth } from '@/lib/matching/depth'
 import { getListingRequirements, getApplicantPools } from '@/lib/matching/listing'
 import { computeFit, assignTier } from '@/lib/matching/fit'
@@ -57,14 +58,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
   }
 
-  const listingId = body.listingId
-  if (!listingId) return NextResponse.json({ error: 'Missing listing.' }, { status: 400 })
+  // The id goes into a .eq() below; a malformed uuid there is a Postgres
+  // 22P02 and a 500 rather than the 404 it means.
+  const ids = readFields(() => ({ listingId: requireUuid(body.listingId, 'Listing') }))
+  if (!ids.ok) return ids.response
+  const { listingId } = ids.values
 
   // §8: the response is the application cost, and it's the right kind —
   // cheaper to write for a student who has the skill than one who
   // doesn't. Bounded on both ends: a floor so it can't degenerate back
   // into one-click apply, a ceiling so it can't become a cover letter.
-  const responseText = body.responseText?.trim() ?? ''
+  const responseText = typeof body.responseText === 'string' ? body.responseText.trim() : ''
   const wordCount = responseText ? responseText.split(/\s+/).length : 0
   if (wordCount < MIN_RESPONSE_WORDS) {
     return NextResponse.json(
