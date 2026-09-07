@@ -5,6 +5,7 @@ import { MarketingLayout } from '../landing/MarketingLayout'
 import { MissionHero } from '../landing/MissionHero'
 import { TheRecord } from '../landing/TheRecord'
 import { TheLoop } from '../landing/TheLoop'
+import { TheExternship } from '../landing/TheExternship'
 import { CrossLink } from '../landing/CrossLink'
 import { JoinSection } from '../landing/WaitlistSection'
 import type { Audience } from '../landing/audience'
@@ -30,6 +31,7 @@ export default function MarketplaceClient() {
       <MissionHero audience={audience} onAudienceChange={setAudience} />
       <TheRecord audience={audience} />
       <TheLoop audience={audience} />
+      <TheExternship audience={audience} />
       <CrossLink audience={audience} onAudienceChange={setAudience} />
       <JoinSection audience={audience} />
     </MarketingLayout>

@@ -63,17 +63,22 @@ export const COPY: Record<Audience, AudienceCopy> = {
     // Not "For CS students" — the toggle two lines above already says that,
     // and a badge repeating the control next to it is a wasted line.
     eyebrow: 'Built at UMass Amherst',
-    headline: 'Your code is better than your résumé.',
-    headlineAccent: 'Use it.',
+    // The sentence every CS student has already said out loud. They do not
+    // need to be sold the problem, so the headline skips straight to the
+    // answer — and it sets up the whole page: the record answers
+    // "experience", the externship answers "get", the marketplace answers
+    // what happens next.
+    headline: 'You need experience to get experience.',
+    headlineAccent: 'Not any more.',
     lede:
-      'Workmark reads the projects you have already built and turns them into proof an employer can check. Then it brings you real work that uses it.',
-    primaryCta: { label: 'Build my record', href: '/login' },
+      'The application system wants experience nobody ever gave you a chance to get. Workmark hands you the projects instead, then turns what you build into proof an employer can check.',
+    primaryCta: { label: 'Start my first project', href: '/login' },
     secondaryCta: { label: 'See open projects', href: '/listings' },
-    reassurance: 'Two minutes to set up. No CV. No cover letter.',
+    reassurance: 'Free with a .edu address. No CV, no cover letter, no waiting to hear back.',
     proof: [
-      ['Free while you study', 'A .edu address is all you need.'],
-      ['You pick the repos', 'Turn any of them off whenever you want.'],
-      ['Yours to take anywhere', 'Download the whole record in one file.'],
+      ['Start today, no application', 'Workmark writes you a project and you begin.'],
+      ['You pick what we read', 'Repo by repo. Turn any of them off whenever.'],
+      ['The record is yours', 'Download the whole thing in one file, any time.'],
     ],
     loopEyebrow: 'How it works',
     // Not "to signed offer". That promises a result Workmark does not
@@ -92,16 +97,16 @@ export const COPY: Record<Audience, AudienceCopy> = {
       },
       {
         n: '02',
-        title: 'Real experience, not another tutorial',
+        title: 'Get an externship without applying for one',
         body:
-          'Apply to projects from faculty, labs and student teams who genuinely need the work done. Nothing open that fits? Workmark writes you a project that closes your biggest gap.',
+          'Workmark writes you a real project aimed at the exact skill you are missing. Build it in your own repo and it lands on your record like any other work.',
         now: true,
       },
       {
         n: '03',
         title: 'Stop applying into the void',
         body:
-          'Your record is matched against every project the moment it goes up. You see your fit before you apply, and posters see your evidence before they reply.',
+          'Real projects from faculty, labs and student teams, matched to your record the moment they go up. You see your fit before you apply. They see your evidence before they reply.',
         now: true,
       },
       {
@@ -170,8 +175,8 @@ export const COPY: Record<Audience, AudienceCopy> = {
     ],
     crossLink: {
       eyebrow: 'Looking for work instead?',
-      headline: 'Your code is better than your résumé',
-      body: 'Workmark turns the projects you have built into proof employers can check, then brings you work that uses it.',
+      headline: 'You need experience to get experience',
+      body: 'Workmark hands you the projects, reads what you build, and turns it into proof an employer can check.',
       cta: 'See it from that side',
     },
   },
