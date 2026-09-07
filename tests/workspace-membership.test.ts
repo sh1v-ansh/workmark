@@ -8,6 +8,9 @@ import {
   canInvite,
   canRemove,
   canDemote,
+  approvalsNeeded,
+  removalCarried,
+  assigneeForRole,
   canCloseWorkspace,
   type MemberRow,
   type MemberRole,
@@ -80,30 +83,83 @@ describe('canRemove', () => {
   const owner = member('a', 'owner')
   const other = member('b', 'member')
 
-  it('lets an owner remove a member', () => {
-    expect(canRemove([owner, other], 'a', 'b')).toBeNull()
+  it('lets an owner remove someone who never contributed', () => {
+    expect(canRemove([owner, other], 'a', 'b', false)).toBeNull()
+  })
+
+  // The rule that matters: the person who created the project must not be
+  // able to drop a teammate the day before it closes and keep the work.
+  it('will not let an owner remove a contributor on their own', () => {
+    expect(canRemove([owner, other], 'a', 'b', true))
+      .toBe('This person has contributed work. Open a removal request so the team can agree.')
   })
 
   it('does not let a member remove anyone else', () => {
-    expect(canRemove([owner, other], 'b', 'a')).toBe('Only an owner can remove someone.')
+    expect(canRemove([owner, other], 'b', 'a', false)).toBe('Only an owner can remove someone.')
   })
 
-  // Leaving is a different act from being removed, and needs no permission.
+  // Leaving is a different act from being removed, and needs no permission —
+  // including for somebody who has contributed plenty.
   it('lets a plain member leave on their own', () => {
-    expect(canRemove([owner, other], 'b', 'b')).toBeNull()
+    expect(canRemove([owner, other], 'b', 'b', true)).toBeNull()
   })
 
   it('will not let the last owner walk out', () => {
-    expect(canRemove([owner, other], 'a', 'a'))
+    expect(canRemove([owner, other], 'a', 'a', false))
       .toBe('A workspace needs at least one owner — make someone else an owner first.')
   })
 
   it('lets an owner leave once there is a second one', () => {
-    expect(canRemove([owner, member('b', 'owner')], 'a', 'a')).toBeNull()
+    expect(canRemove([owner, member('b', 'owner')], 'a', 'a', false)).toBeNull()
   })
 
   it('refuses to remove somebody who was never on the team', () => {
-    expect(canRemove([owner], 'a', 'ghost')).toBe('That person is not on this team.')
+    expect(canRemove([owner], 'a', 'ghost', false)).toBe('That person is not on this team.')
+  })
+})
+
+describe('removal by agreement', () => {
+  // The person being removed neither counts nor votes. On a team of four
+  // that is two of the remaining three.
+  it('needs a majority of the other members', () => {
+    const four = [member('a', 'owner'), member('b'), member('c'), member('d')]
+    expect(approvalsNeeded(four, 'b')).toBe(2)
+    expect(removalCarried(four, 'b', 1)).toBe(false)
+    expect(removalCarried(four, 'b', 2)).toBe(true)
+  })
+
+  it('on a pair, the other person alone is enough', () => {
+    const two = [member('a', 'owner'), member('b')]
+    expect(approvalsNeeded(two, 'b')).toBe(1)
+    expect(removalCarried(two, 'b', 1)).toBe(true)
+  })
+})
+
+describe('assigneeForRole', () => {
+  const team = [
+    member('a', 'owner'),
+    member('b'),
+    member('c'),
+  ]
+  team[0].work_role = 'fullstack'
+  team[1].work_role = 'backend'
+  team[2].work_role = 'design'
+
+  it('prefers an exact match', () => {
+    expect(assigneeForRole(team, 'backend')).toBe('b')
+  })
+
+  it('falls back to a generalist', () => {
+    expect(assigneeForRole(team, 'ml')).toBe('a')
+  })
+
+  // Better unassigned than dumped on whoever happens to be listed first.
+  it('leaves a task unassigned when nobody fits', () => {
+    const specialists = [member('b'), member('c')]
+    specialists[0].work_role = 'backend'
+    specialists[1].work_role = 'design'
+    expect(assigneeForRole(specialists, 'ml')).toBeNull()
+    expect(assigneeForRole(team, null)).toBeNull()
   })
 })
 

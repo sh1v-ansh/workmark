@@ -13,9 +13,35 @@
 
 export type MemberRole = 'owner' | 'member'
 
+/**
+ * What somebody actually does, as opposed to what they may manage.
+ *
+ * MemberRole is permission. This is the job, agreed between the students
+ * themselves — the planner reads it to put each task on the right person,
+ * and anyone can reassign afterwards. Not exclusive: two people can both be
+ * backend, and 'fullstack' matches anything.
+ */
+export const WORK_ROLES = [
+  'backend', 'frontend', 'fullstack', 'mobile',
+  'data', 'ml', 'infra', 'design', 'other',
+] as const
+export type WorkRole = (typeof WORK_ROLES)[number]
+
+/** Who a task wants. A task with no match stays unassigned rather than
+ *  landing on whoever happens to be listed first. */
+export function assigneeForRole(rows: MemberRow[], wanted: WorkRole | null): string | null {
+  if (!wanted) return null
+  const active = activeMembers(rows)
+  const exact = active.find((r) => r.work_role === wanted)
+  if (exact) return exact.account_id
+  const generalist = active.find((r) => r.work_role === 'fullstack')
+  return generalist ? generalist.account_id : null
+}
+
 export interface MemberRow {
   account_id: string
   role: MemberRole
+  work_role?: WorkRole | null
   accepted_at: string | null
   removed_at: string | null
 }
@@ -28,7 +54,7 @@ export interface MemberRow {
  * says nothing about any of them — and the project stops being something a
  * student can point at and claim.
  */
-export const MAX_WORKSPACE_MEMBERS = 6
+export const MAX_WORKSPACE_MEMBERS = 4
 
 /** On the team right now: accepted the invitation, and not since removed. */
 export function isActiveMember(row: MemberRow): boolean {
@@ -67,15 +93,48 @@ export function canInvite(rows: MemberRow[], actorId: string): Refusal {
   return null
 }
 
-export function canRemove(rows: MemberRow[], actorId: string, targetId: string): Refusal {
-  // Leaving is not the same act as removing somebody, and an owner is not
-  // needed to do it. Anyone on the team may leave.
+/**
+ * These are peers, not employees.
+ *
+ * "The owner can remove you" is the wrong rule between students, and the one
+ * most open to abuse — the person who created the project could drop a
+ * teammate the day before it closes and keep the work. So it depends on
+ * whether the person has actually done anything:
+ *
+ *   leaving           always allowed, by anyone
+ *   never contributed an owner may remove them, with a reason on the record
+ *   has contributed   needs a majority of the OTHER members to agree
+ *
+ * Mirrors remove_workspace_member in v05_0029. Removal never erases
+ * evidence — whatever they finished stays theirs.
+ */
+export function canRemove(
+  rows: MemberRow[],
+  actorId: string,
+  targetId: string,
+  targetHasContributed: boolean,
+): Refusal {
+  // Leaving is not the same act as being removed, and needs no permission.
   if (actorId === targetId) {
     return lastOwnerGuard(rows, actorId)
   }
   if (!isOwner(rows, actorId)) return 'Only an owner can remove someone.'
   if (roleOf(rows, targetId) === null) return 'That person is not on this team.'
+  if (targetHasContributed) {
+    return 'This person has contributed work. Open a removal request so the team can agree.'
+  }
   return null
+}
+
+/** How many approvals a removal request still needs. Majority of the others;
+ *  the person being removed does not count and does not vote. */
+export function approvalsNeeded(rows: MemberRow[], targetId: string): number {
+  const others = activeMembers(rows).filter((r) => r.account_id !== targetId).length
+  return Math.floor(others / 2) + 1
+}
+
+export function removalCarried(rows: MemberRow[], targetId: string, approvals: number): boolean {
+  return approvals >= approvalsNeeded(rows, targetId)
 }
 
 export function canDemote(rows: MemberRow[], actorId: string, targetId: string): Refusal {
