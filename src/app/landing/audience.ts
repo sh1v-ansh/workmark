@@ -60,9 +60,10 @@ interface AudienceCopy {
 export const COPY: Record<Audience, AudienceCopy> = {
   students: {
     tab: 'For students',
-    // Not "For CS students" — the toggle two lines above already says that,
-    // and a badge repeating the control next to it is a wasted line.
-    eyebrow: 'Built at UMass Amherst',
+    // Empty on purpose. The toggle directly above already says who this is
+    // for, and a second badge under it was a line spent saying nothing.
+    // MissionHero skips the badge when this is blank.
+    eyebrow: '',
     // The sentence every CS student has already said out loud. They do not
     // need to be sold the problem, so the headline skips straight to the
     // answer — and it sets up the whole page: the record answers

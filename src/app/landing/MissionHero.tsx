@@ -36,16 +36,18 @@ export function MissionHero({
           <AudienceToggle value={audience} onChange={onAudienceChange} />
         </div>
 
-        <span
-          style={{
-            display: 'inline-block', marginBottom: 22, padding: '6px 14px', borderRadius: 999,
-            background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(62,31,255,0.16)',
-            backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
-            fontFamily: F.sans, fontSize: 13, color: C.textMuted,
-          }}
-        >
-          {copy.eyebrow}
-        </span>
+        {copy.eyebrow && (
+          <span
+            style={{
+              display: 'inline-block', marginBottom: 22, padding: '6px 14px', borderRadius: 999,
+              background: 'rgba(255,255,255,0.72)', border: '1px solid rgba(62,31,255,0.16)',
+              backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
+              fontFamily: F.sans, fontSize: 13, color: C.textMuted,
+            }}
+          >
+            {copy.eyebrow}
+          </span>
+        )}
 
         <h1
           className="mob-text-hero"
