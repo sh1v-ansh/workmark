@@ -36,6 +36,10 @@ export const AGENT_LIMITS: Record<AgentType, RateLimit> = {
   // Closing out an engagement is rare and the notes are short, but people
   // do regenerate a couple of times to get the wording right.
   work_summary: { max: 15, windowHours: 24 },
+  // A project gets planned once, then topped up occasionally as it grows.
+  // Six a day covers a student with three projects who redrafts one of them,
+  // and stops a loop that would draft eight tasks a second.
+  planner: { max: 6, windowHours: 24 },
 }
 
 export interface RateLimitResult {

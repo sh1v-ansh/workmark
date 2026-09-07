@@ -669,7 +669,7 @@ create table review_requests (
 
 create table agent_calls (
   id           uuid default gen_random_uuid() primary key,
-  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'taxonomy', 'work_summary')),
+  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'taxonomy', 'work_summary', 'planner')),
   student_id   uuid references students(id) on delete cascade,
   poster_id    uuid,
   input        jsonb not null,
@@ -2120,6 +2120,12 @@ create table tasks (
   -- renumbering the column.
   position            numeric not null default 0,
 
+  -- Which plan proposed this task, when one did. `origin` above says whether
+  -- it was proposed, edited or hand-written; this says which run it came
+  -- from, which is what makes "of the nine tasks that plan suggested, how
+  -- many survived" answerable. See v05_0031.
+  plan_call_id        uuid references agent_calls(id) on delete set null,
+
   -- ── Blocked ──
   -- A status flag rather than a board column: a blocked task is still in
   -- Doing, and moving it elsewhere loses where it actually was.
@@ -2144,6 +2150,7 @@ create index tasks_assignee_idx on tasks (assignee_id) where assignee_id is not 
 create index tasks_sprint_idx   on tasks (sprint_id) where sprint_id is not null;
 create index tasks_parent_idx   on tasks (parent_task_id) where parent_task_id is not null;
 create index tasks_blocked_idx  on tasks (workspace_id) where blocked_at is not null;
+create index tasks_plan_call_idx on tasks (plan_call_id) where plan_call_id is not null;
 
 -- ─── Dependencies ───────────────────────────────────────────────────────────
 create table task_dependencies (

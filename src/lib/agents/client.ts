@@ -35,7 +35,7 @@ const MAX_TOKENS = 16000
 // right design for the one decision on this platform that affects whether
 // somebody gets work. A reserved name for an agent that does not exist is
 // how a reader concludes the opposite.
-export type AgentType = 'posting' | 'brief' | 'goals' | 'taxonomy' | 'work_summary'
+export type AgentType = 'posting' | 'brief' | 'goals' | 'taxonomy' | 'work_summary' | 'planner'
 
 let cached: Anthropic | null = null
 

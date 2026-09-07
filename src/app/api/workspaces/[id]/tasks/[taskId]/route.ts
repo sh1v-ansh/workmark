@@ -61,7 +61,7 @@ export async function PATCH(request: Request, { params }: Params) {
   // rather than as a refusal that confirms it exists.
   const { data: current } = await supabase
     .from('tasks')
-    .select('id, status, title, acceptance_criteria, estimate_hours, difficulty, due_on, assignee_id, sprint_id, priority')
+    .select('id, status, origin, title, detail, acceptance_criteria, estimate_hours, difficulty, due_on, assignee_id, sprint_id, priority')
     .eq('id', taskId)
     .eq('workspace_id', workspaceId)
     .maybeSingle()
@@ -126,6 +126,20 @@ export async function PATCH(request: Request, { params }: Params) {
   if (patch.status) {
     const refusal = canMoveTo(current.status as TaskStatus, patch.status as TaskStatus)
     if (refusal) return NextResponse.json({ error: refusal }, { status: 400 })
+  }
+
+  // A task the planner proposed becomes 'ai_edited' the moment somebody
+  // changes what it says. That distinction is the measurement: whether a
+  // student takes an AI plan wholesale, reshapes it, or throws it out is one
+  // of the clearest signals in the product about how they turn a vague
+  // problem into work they can actually do.
+  //
+  // Only the substance counts. Moving a card, scheduling it or handing it to
+  // a teammate is using the plan, not rewriting it.
+  const SUBSTANCE = ['title', 'detail', 'acceptance_criteria', 'estimate_hours', 'difficulty'] as const
+  if (current.origin === 'ai_proposed'
+      && SUBSTANCE.some((f) => f in patch && String(patch[f] ?? '') !== String(current[f] ?? ''))) {
+    patch.origin = 'ai_edited'
   }
 
   const { data: updated, error } = await supabase

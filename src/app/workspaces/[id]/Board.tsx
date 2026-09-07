@@ -55,6 +55,7 @@ export default function Board({
   const [dragging, setDragging] = useState<string | null>(null)
   const [blocking, setBlocking] = useState<BoardTask | null>(null)
   const [blockReason, setBlockReason] = useState('')
+  const [planning, setPlanning] = useState(false)
 
   const nameOf = (id: string | null) =>
     id ? members.find((m) => m.accountId === id)?.name ?? 'Someone' : null
@@ -126,6 +127,21 @@ export default function Board({
     if (ok) setBlocking(null)
   }
 
+  async function draftPlan() {
+    setPlanning(true)
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/plan`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Could not draft a plan.')
+      toast(`${data.count} tasks drafted — edit or delete whatever does not fit.`, 'success')
+      router.refresh()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
+    } finally {
+      setPlanning(false)
+    }
+  }
+
   function openEdit(task: BoardTask) {
     setEditing(task)
     setReason('')
@@ -152,8 +168,23 @@ export default function Board({
     <section>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
         <h2 style={{ fontSize: T.h2, fontWeight: 600, color: C.text }}>Board</h2>
-        <Button size="sm" onClick={() => { setDraft(EMPTY); setCreating(true) }}>Add task</Button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="outline" size="sm" onClick={draftPlan} disabled={planning}>
+            {planning ? 'Drafting…' : tasks.length === 0 ? 'Draft a plan' : 'Suggest more tasks'}
+          </Button>
+          <Button size="sm" onClick={() => { setDraft(EMPTY); setCreating(true) }}>Add task</Button>
+        </div>
       </div>
+
+      {/* Said once, above the board, rather than on every card. The point is
+          that the plan is theirs from the moment it lands — what they keep,
+          reshape and throw out is the thing worth measuring. */}
+      {tasks.length === 0 && (
+        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 14, maxWidth: '62ch' }}>
+          Workmark can draft a first plan from what this project is. It will get some of it wrong —
+          edit it, reorder it, throw tasks out and add your own. The plan is yours once it lands.
+        </p>
+      )}
 
       <div className="nb-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
         {BOARD_COLUMNS.map((column) => {
@@ -210,6 +241,11 @@ export default function Board({
                       <p style={{ fontSize: T.bodySm, fontWeight: 500, color: C.text, lineHeight: 1.45, marginBottom: 6 }}>
                         {task.title}
                       </p>
+                      {task.origin === 'ai_proposed' && (
+                        <p style={{ fontSize: T.meta, color: C.textGhost, marginBottom: 6 }}>
+                          Suggested — edit it or throw it out
+                        </p>
+                      )}
                     </button>
 
                     {task.blockedAt && (

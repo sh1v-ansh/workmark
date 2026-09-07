@@ -4,7 +4,7 @@ Everything a second person needs to pick this up. Kept current as the feature
 is built; if it disagrees with the code, the code is right and this file is
 stale — say so in the PR.
 
-Last updated: tasks and the board (step 3 of 6).
+Last updated: the planner (step 4 of 6).
 
 ---
 
@@ -161,7 +161,7 @@ forward does not restart the clock.
 
 ## 4. Schema map
 
-Migrations `v05_0025` → `v05_0030`. All applied.
+Migrations `v05_0025` → `v05_0031`. All applied.
 
 | Table | What it holds |
 |---|---|
@@ -229,6 +229,9 @@ src/lib/workspace/
   ingest.ts       writes those rows, resolves attribution + consent
   tasks.ts        board rules: legal moves, ordering, revisions, time-in-Doing
 
+src/lib/agents/
+  planner.ts      project → drafted tasks (prompt, schema, re-validation)
+
 src/app/api/workspaces/
   route.ts                        POST   create a draft
   [id]/route.ts                   PATCH  edit / start
@@ -239,6 +242,7 @@ src/app/api/workspaces/
   [id]/tasks/route.ts             POST   create a task
   [id]/tasks/[taskId]/route.ts    PATCH  edit / move / block
                                   DELETE only from Backlog or Planned
+  [id]/plan/route.ts              POST   draft a plan (one model call)
 
 src/app/workspaces/
   page.tsx + WorkspacesClient.tsx        list, create, answer invitations
@@ -254,7 +258,7 @@ cannot do that" in a sentence and the UI can disable a button before anyone
 clicks it. **If the two disagree, fix the TypeScript.**
 
 Tests: `tests/workspace-membership.test.ts`, `tests/work-events.test.ts`,
-`tests/workspace-tasks.test.ts`.
+`tests/workspace-tasks.test.ts`, `tests/planner.test.ts`.
 
 ---
 
@@ -273,12 +277,32 @@ exists, no UI), and **realtime**. Realtime is Supabase `postgres_changes` on
 `tasks` filtered by `workspace_id` — RLS already gates it, so no new
 authorization is needed. Keep drag-in-progress state out of Postgres.
 
-### Step 4 — The planner
-One AI call turns a project into 6–12 tasks, each tagged with a
-`suggested_role`. Assignment is then a lookup (`assigneeForRole`), not a
-guess. **AI proposes, the student commits** — they can accept, edit, reorder,
-delete, add. `tasks.origin` records which of those happened, and that is
-itself evidence.
+### Step 4 — The planner — DONE
+One model call drafts 5–12 tasks with acceptance criteria, estimates,
+difficulty and a `suggested_role`. Assignment is a lookup (`assigneeForRole`),
+and a task nobody matches stays unassigned rather than landing on whoever is
+listed first.
+
+**AI proposes, the student commits.** Tasks are stored `ai_proposed` and flip
+to `ai_edited` the moment somebody changes the substance — title, detail,
+acceptance criteria, estimate or difficulty. Moving, scheduling or reassigning
+a card does not count: that is using the plan, not rewriting it. Those three
+origin values are the decomposition evidence.
+
+`tasks.plan_call_id` points at the `agent_calls` row, which is what makes "of
+the nine tasks that plan suggested, how many survived" answerable.
+
+Rate limited three ways, and the third is the one that matters:
+`checkAgentRateLimit` counts rows in `agent_calls` and **fails closed**, at 6
+runs per 24 hours. The other two fail open by design.
+
+Existing task titles are sent with the request, so a second run tops the board
+up instead of proposing the same eight tasks again.
+
+Still missing: re-planning is manual only (a "Suggest more tasks" button),
+there is no scheduled re-plan, and `dependsOn` comes back from the model but
+is **not yet written to `task_dependencies`** — the table exists and nothing
+fills it.
 
 ### Step 5 — Batch verification
 A `verification_runs` job: gather submitted tasks, group by repo, run the free
@@ -336,6 +360,8 @@ than the others, and should say so.
 
 ## 8. Open questions
 
+- **Should the planner ever re-run on its own?** Today it is a button. A
+  scheduled re-plan would be more useful and costs a call each time.
 - **What triggers a batch run?** Nightly cron per active workspace, manual
   button, or both? Nightly across every active workspace is the line item that
   shows up on the Anthropic bill.
@@ -360,6 +386,12 @@ than the others, and should say so.
 - `prefix: true` on the Projects nav tab is safe **because** `/workspaces`
   owns everything beneath it. Do not copy that flag onto `/listings` —
   `/listings/new` belongs to a different tab.
+- A new agent type needs a migration — `agent_calls.agent_type` is a CHECK,
+  and that friction is intended: it is the audit trail for everything that
+  costs money, and a typo'd type would create a category nobody counts.
+- Never trust structured output without re-checking it. `normalisePlannedTask`
+  exists because a task with an empty title or a 400-hour estimate would go
+  straight into somebody's evidence.
 - A webhook that 500s is one GitHub retries for days, against the same
   endpoint the grant sync depends on. Event ingest is wrapped in a try/catch
   and logs rather than throws. **Keep it that way.**
