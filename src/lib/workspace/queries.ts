@@ -8,6 +8,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MemberRole, WorkRole } from './membership'
 import type { TaskStatus, TaskPriority } from './tasks'
+import type { WorkspaceMetrics } from './metrics'
 
 export type WorkspaceStatus = 'draft' | 'active' | 'submitted' | 'closed' | 'abandoned'
 
@@ -347,4 +348,30 @@ export async function loadVerdicts(
     })
   }
   return latest
+}
+
+/**
+ * This person's plan-vs-reality row for one project.
+ *
+ * Read, never computed. The nightly rollup writes it; a page that
+ * recalculated on load would be slowest for the students who had done the
+ * most work, which is precisely backwards.
+ */
+export async function loadMetrics(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  accountId: string,
+): Promise<{ metrics: WorkspaceMetrics; computedAt: string } | null> {
+  const { data } = await supabase
+    .from('workspace_metrics')
+    .select('metrics, computed_at')
+    .eq('workspace_id', workspaceId)
+    .eq('account_id', accountId)
+    .maybeSingle()
+
+  if (!data?.metrics) return null
+  return {
+    metrics: data.metrics as unknown as WorkspaceMetrics,
+    computedAt: data.computed_at as string,
+  }
 }

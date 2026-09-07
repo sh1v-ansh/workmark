@@ -4,7 +4,8 @@ Everything a second person needs to pick this up. Kept current as the feature
 is built; if it disagrees with the code, the code is right and this file is
 stale — say so in the PR.
 
-Last updated: batch verification (step 5 of 6).
+Last updated: plan-vs-reality rollups (step 6 of 6). All six steps of the
+build plan are done; **§7 is the complete list of what is left**.
 
 ---
 
@@ -161,7 +162,7 @@ forward does not restart the clock.
 
 ## 4. Schema map
 
-Migrations `v05_0025` → `v05_0032`. All applied.
+Migrations `v05_0025` → `v05_0033`.
 
 | Table | What it holds |
 |---|---|
@@ -230,6 +231,8 @@ src/lib/workspace/
   tasks.ts        board rules: legal moves, ordering, revisions, time-in-Doing
   verify.ts       evidence window, the four free checks, confidence ceiling
   run-verification.ts  orchestration: claim, settle, one call, write verdicts
+  metrics.ts      plan vs reality: bias, spread, capability frontier (pure)
+  rollup.ts       the nightly job that writes workspace_metrics
 
 src/lib/agents/
   planner.ts      project → drafted tasks (prompt, schema, re-validation)
@@ -248,12 +251,14 @@ src/app/api/workspaces/
   [id]/plan/route.ts              POST   draft a plan (one model call)
   [id]/verify/route.ts            POST   queue and run a batch check
 
-src/app/api/cron/verify/route.ts  the nightly sweep + stuck-run recovery
+src/app/api/cron/verify/route.ts   the nightly sweep + stuck-run recovery
+src/app/api/cron/rollups/route.ts  the nightly plan-vs-reality rollup
 
 src/app/workspaces/
   page.tsx + WorkspacesClient.tsx        list, create, answer invitations
   [id]/page.tsx + WorkspaceClient.tsx    setup, repo, role, team
   [id]/Board.tsx                         the six-column board
+  [id]/PlanVsReality.tsx                 the measured figures
 
 src/app/api/github/app/webhook/route.ts  extended to record work events
 ```
@@ -265,13 +270,28 @@ clicks it. **If the two disagree, fix the TypeScript.**
 
 Tests: `tests/workspace-membership.test.ts`, `tests/work-events.test.ts`,
 `tests/workspace-tasks.test.ts`, `tests/planner.test.ts`,
-`tests/verify.test.ts`.
+`tests/verify.test.ts`, `tests/metrics.test.ts`.
 
 ---
 
-## 6. Still to build
+## 6. What was built, and why it works that way
 
-### Step 3 — Tasks and the board — DONE
+Six steps, in the order they had to happen. Each notes what it deliberately
+left out; §7 collects all of that in one place.
+
+### Step 1 — Projects, repos and invitations
+Create a draft, link a repository, pick a work role, invite up to three
+others. Invitations appear at the top of `/workspaces` — the half that gets
+forgotten, and without it the whole table does nothing.
+
+### Step 2 — The event ledger
+The GitHub webhook records commits, pull requests, reviews, CI and releases
+into `work_events`. Trimmed on the way in; attributed by commit author rather
+than pusher, so a push containing two people's commits becomes two rows.
+**Built before the verifier on purpose** — the other order makes every check a
+repository scan.
+
+### Step 3 — Tasks and the board
 Six-column board, create/edit/move/delete, blockers, estimates, difficulty,
 due dates, assignment, `suggested_role`, and the revision prompt on estimate
 and deadline changes. Native HTML5 drag plus a select control on every card,
@@ -284,7 +304,7 @@ exists, no UI), and **realtime**. Realtime is Supabase `postgres_changes` on
 `tasks` filtered by `workspace_id` — RLS already gates it, so no new
 authorization is needed. Keep drag-in-progress state out of Postgres.
 
-### Step 4 — The planner — DONE
+### Step 4 — The planner
 One model call drafts 5–12 tasks with acceptance criteria, estimates,
 difficulty and a `suggested_role`. Assignment is a lookup (`assigneeForRole`),
 and a task nobody matches stays unassigned rather than landing on whoever is
@@ -311,7 +331,7 @@ there is no scheduled re-plan, and `dependsOn` comes back from the model but
 is **not yet written to `task_dependencies`** — the table exists and nothing
 fills it.
 
-### Step 5 — Batch verification — DONE
+### Step 5 — Batch verification
 Submitting queues a task; it triggers nothing. A run — manual button or the
 nightly sweep — checks everything waiting at once, because the expensive part
 is context and ten tasks share a repository.
@@ -359,9 +379,129 @@ Notifications (invited, assigned, verdict landed), file uploads to Supabase
 Storage, checkpoints UI, the calendar, the daily queue, cross-project
 capability estimates.
 
+### Step 6 — Plan-vs-reality rollups
+A nightly job (`/api/cron/rollups`) writes one `workspace_metrics` row per
+person per project. **Never computed on page load** — the figures come from
+every task, board move, revision and submission somebody has, which would
+make the page slowest for the students who had done the most work.
+
+Three rules hold throughout, and they are the difference between a measurement
+and a scoreboard:
+
+- **Difficulty is the multiplier.** The headline is the *capability frontier*
+  — the hardest level somebody still finishes reliably — not a total.
+- **A wrong estimate is studied, not punished.** Bias and spread are reported
+  separately: consistently 50% under is easy to work with, randomly wrong is
+  not. `estimatorProfile` says which one somebody is.
+- **Nothing is reported below `MIN_SAMPLE` (4).** Every figure carries the
+  sample it came from and shows "3 so far — needs a few more" rather than a
+  number that looks like knowledge.
+
+A bug worth knowing about, because the same mistake is easy to reintroduce:
+`capabilityFrontier` originally walked levels 1–10, and levels above the
+hardest real task had the same cumulative set as the one below, so the
+frontier ratcheted through empty levels and reported **8 for somebody whose
+hardest finished task was a 6**. It now iterates only difficulties actually
+attempted. Overclaiming is the one direction this must never fail in.
+
+Still missing: metrics are **per project**. Nothing aggregates them across
+projects onto `/me`, and `workspace_metrics` is designed for exactly that —
+`account_id` plus the lifted columns are there to be queried across rows.
+
 ---
 
-## 7. The metrics, for when step 6 arrives
+## 7. What is left
+
+Everything below is unbuilt. Ordered by what blocks what.
+
+### 7.1 Operational — nothing works until these are done
+
+- [ ] **Run migrations `0031`, `0032`, `0033`.** (`0025`–`0030` are applied.)
+- [ ] **GitHub App permissions:** add **Checks** and **Issues**, both
+      read-only. Then subscribe to six events: Push, Pull request, Pull
+      request review, Check suite, Issue comment, Release. Until this is
+      done `work_events` stays empty and verification has nothing to read.
+- [ ] **Schedule `/api/cron/verify`** — nightly. Picks up runs whose request
+      died partway, and queues a run for any project with work waiting that
+      nobody asked about. `CRON_SECRET` in the Authorization header.
+- [ ] **Schedule `/api/cron/rollups`** — nightly, *after* verify, so the
+      day's verdicts are included. Same auth.
+
+### 7.2 The gap that matters most
+
+- [ ] **Verified work does not reach the student's record.** Nothing writes
+      `skill_evidence` from a verified task. This is the whole point of the
+      feature — a project produces a board full of Verified cards and none of
+      it appears on `/me`. Needs a decision on how a task maps to skills
+      (from changed file paths? from the project's declared skills? from the
+      task text?) and it should reuse the existing evidence pipeline rather
+      than growing a second one.
+- [ ] **Human verification has no UI.** `task_submissions.human_verdict` and
+      `human_actor_id` exist and nothing writes them, so a task that reaches
+      "needs a person" — after two failed automatic attempts, or any task
+      marked as having no code — sits there permanently. This is the escape
+      hatch the attempt cap depends on. Build it first.
+
+### 7.3 Tables that exist with no UI
+
+Each of these is a migration already applied and nothing writing to it.
+
+- [ ] **Subtasks** — `tasks.parent_task_id`
+- [ ] **Sprints** — `sprints`
+- [ ] **Dependencies** — `task_dependencies`. The planner already returns
+      `dependsOn` and it is discarded; wiring that up is the cheapest win here.
+- [ ] **Checkpoints** — `task_checkpoints`. The short before/blocked/after
+      questions. Keep them rare; a workspace that interrogates you is one
+      people stop opening.
+- [ ] **Messages** — `workspace_messages`. Project-wide and per-task.
+- [ ] **Files and presentations** — `workspace_files` holds metadata; the
+      Supabase Storage bucket does not exist yet. Needs a bucket, a storage
+      policy calling `is_workspace_member`, a type allowlist, a size cap and
+      a malware scan.
+- [ ] **Removal requests** — `workspace_removal_requests` /
+      `workspace_removal_approvals`. The SQL enforces the rules; there is no
+      screen to open a request or vote on one, so removing a contributor is
+      currently impossible through the UI.
+
+### 7.4 Missing behaviour
+
+- [ ] **Closing a project out.** `workspaces.status` has `submitted` and
+      `closed` and nothing moves it there. No end-of-project summary.
+- [ ] **Notifications.** An invitation only appears if you visit
+      `/workspaces`. Nothing emails on invited / assigned / verdict landed.
+      The whole point of an invitation is reaching somebody who is *not*
+      looking at the site. `src/lib/notify/email.ts` is the pattern.
+- [ ] **Realtime board.** Supabase `postgres_changes` on `tasks` filtered by
+      `workspace_id`. RLS already gates it, so no new authorization. Keep
+      drag-in-progress state out of Postgres; if it gets hot, the migration
+      path is Broadcast.
+- [ ] **Calendar.** Tasks, deadlines and sprints on one timeline. Build the
+      grid; do not pull in FullCalendar.
+- [ ] **Daily "what to work on today".** Try plain arithmetic first — what is
+      due, blocked and depended-on is a sort, not a model. Only reach for AI
+      if the sorted list reads thin. A call a day per student is a bill.
+- [ ] **Cross-project metrics on `/me`.** `workspace_metrics.account_id` and
+      the lifted columns exist for this.
+- [ ] **Scheduled re-planning.** Currently a "Suggest more tasks" button only.
+
+### 7.5 Known limits, not bugs
+
+- **Technical judgment is the weakest of the six dimensions.** Architecture
+  decisions largely are not visible in a diff. It should carry lower
+  confidence than the others and should say so.
+- **`MIN_SAMPLE = 4` is unvalidated**, like every other constant here.
+- **One repository per project.** More raises attribution questions nothing
+  downstream is ready to answer.
+- **Attribution depends on `students.github_username`** matching the commit
+  author login. When `work_events.author_account_id` comes back null, that
+  mismatch is almost always why.
+- **`plan_call_id` is matched by a "most recent planner call for this
+  student" lookup**, so two concurrent plans could mis-attribute. Only
+  affects the acceptance-rate metric; documented in `planner.ts`.
+
+---
+
+## 8. What the metrics mean
 
 Nothing is ever asked of the student. Every number comes from timestamps the
 board already produces.
@@ -396,13 +536,10 @@ than the others, and should say so.
 
 ---
 
-## 8. Open questions
+## 9. Open questions
 
 - **Should the planner ever re-run on its own?** Today it is a button. A
   scheduled re-plan would be more useful and costs a call each time.
-- **The nightly sweep needs a cron entry.** `/api/cron/verify` exists and
-  nothing calls it. Same pattern as the other cron routes: `CRON_SECRET` in
-  the Authorization header. Until it is scheduled, only the button works.
 - **Does the planner re-run mid-project?** Once at the start is cheap and
   predictable. Re-planning is more useful and costs a call each time.
   Suggested: once, plus a manual "suggest more tasks".
@@ -414,11 +551,13 @@ than the others, and should say so.
 
 ---
 
-## 9. Traps
+## 10. Traps
 
 - Do not remove `security definer` from the membership functions (recursion).
 - Do not add `github_username` to writable column grants (forged identity).
 - Do not compute metrics on page load (that is what the nightly rollup is for).
+- A capability frontier must never be reported above the hardest difficulty
+  somebody actually attempted. See §6, step 6.
 - Do not let clients write `task_transitions` (the measurement stops being
   honest).
 - `prefix: true` on the Projects nav tab is safe **because** `/workspaces`

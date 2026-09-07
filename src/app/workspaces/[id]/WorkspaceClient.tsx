@@ -10,7 +10,9 @@ import { useToast } from '@/components/Toast'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import { WORK_ROLES, MAX_WORKSPACE_MEMBERS, type WorkRole } from '@/lib/workspace/membership'
 import Board from './Board'
+import PlanVsReality from './PlanVsReality'
 import type { WorkspaceDetail, TeamMember, BoardTask, TaskVerdict } from '@/lib/workspace/queries'
+import type { WorkspaceMetrics } from '@/lib/workspace/metrics'
 
 const ROLE_LABEL: Record<WorkRole, string> = {
   backend: 'Backend', frontend: 'Frontend', fullstack: 'Full-stack', mobile: 'Mobile',
@@ -25,12 +27,14 @@ export default function WorkspaceClient({
   workspace,
   tasks,
   verdicts,
+  measured,
   userId,
   repoOptions,
 }: {
   workspace: WorkspaceDetail
   tasks: BoardTask[]
   verdicts: TaskVerdict[]
+  measured: { metrics: WorkspaceMetrics; computedAt: string } | null
   userId: string
   repoOptions: { fullName: string; isPrivate: boolean }[]
 }) {
@@ -102,6 +106,11 @@ export default function WorkspaceClient({
           <div style={{ marginBottom: 26 }}>
             <Board workspaceId={workspace.id} tasks={tasks} verdicts={verdicts} members={workspace.members} />
           </div>
+        )}
+
+        {/* Below the board: read occasionally, where the board is read daily. */}
+        {!isDraft && (
+          <PlanVsReality metrics={measured?.metrics ?? null} computedAt={measured?.computedAt ?? null} />
         )}
 
         {/* Setup, and only while it is needed. Once the project has started
