@@ -4,7 +4,7 @@ import { C, F } from '@/lib/theme/dark-tokens'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Email confirmed — Workmark',
+  title: 'Email confirmed',
 }
 
 export default function ConfirmedPage() {

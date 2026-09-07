@@ -35,12 +35,12 @@ async function resolveHandle(handle: string) {
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const { handle } = await params
   const { admin, studentId } = await resolveHandle(handle)
-  if (!studentId) return { title: 'Profile not found · Workmark' }
+  if (!studentId) return { title: 'Profile not found' }
 
   const { data: student } = await admin.from('students').select('full_name, major, university').eq('id', studentId).maybeSingle()
   const name = student?.full_name ?? 'Student'
   return {
-    title: `${name} · Workmark`,
+    title: name,
     description: [student?.major, student?.university].filter(Boolean).join(' · ') || 'Verified work record on Workmark.',
   }
 }

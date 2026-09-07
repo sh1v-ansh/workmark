@@ -1,14 +1,6 @@
 'use client'
 
-import { useState } from 'react'
-import { MarketingLayout } from '../landing/MarketingLayout'
-import { MissionHero } from '../landing/MissionHero'
-import { TheRecord } from '../landing/TheRecord'
-import { TheLoop } from '../landing/TheLoop'
-import { TheExternship } from '../landing/TheExternship'
-import { CrossLink } from '../landing/CrossLink'
-import { JoinSection } from '../landing/WaitlistSection'
-import type { Audience } from '../landing/audience'
+import { AudienceLanding } from '../landing/AudienceLanding'
 
 /**
  * /marketplace, which is the home page opened on the other side.
@@ -19,21 +11,12 @@ import type { Audience } from '../landing/audience'
  * copy of an argument the home page was already making differently. Two
  * pages saying overlapping things about one product is how they drift.
  *
- * So this is the same page with the switch pre-set to businesses. The URL
- * keeps working, the nav link keeps meaning something, and there is one
- * story to maintain instead of two.
+ * So this is the same page with the switch pre-set to businesses, and the
+ * nav link that points here now says "For businesses" rather than
+ * "Marketplace" — the actual marketplace is /listings, and a nav that
+ * promised a board and delivered a pitch was the reason this page looked
+ * like a duplicate of the home page rather than the other half of it.
  */
 export default function MarketplaceClient() {
-  const [audience, setAudience] = useState<Audience>('businesses')
-
-  return (
-    <MarketingLayout>
-      <MissionHero audience={audience} onAudienceChange={setAudience} />
-      <TheRecord audience={audience} />
-      <TheLoop audience={audience} />
-      <TheExternship audience={audience} />
-      <CrossLink audience={audience} onAudienceChange={setAudience} />
-      <JoinSection audience={audience} />
-    </MarketingLayout>
-  )
+  return <AudienceLanding initial="businesses" />
 }

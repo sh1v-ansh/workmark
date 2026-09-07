@@ -44,6 +44,52 @@ const instrument = Instrument_Sans({
   display: 'swap',
 })
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://www.workmark.org'
+
+/**
+ * The defaults every page inherits.
+ *
+ * There was nothing here before, which meant the home page — the one a
+ * stranger actually lands on — had no title and no description at all, and
+ * a pasted link rendered as a bare grey box. Ten pages set their own title
+ * and each picked its own brand separator (·, —, |), so the site read as
+ * three different sites depending on which tab you were looking at.
+ *
+ * `template` fixes that for good: pages now set only their own name and the
+ * suffix is appended here, in one place. A page that genuinely wants no
+ * suffix says so with `title: { absolute: '…' }`.
+ *
+ * `metadataBase` is what makes the relative OG image path below resolve to
+ * an absolute URL. Without it Next warns and social cards silently fall
+ * back to no image, which is the failure mode this block exists to prevent.
+ */
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
+  title: {
+    default: 'Workmark — proof of what you can build',
+    template: '%s · Workmark',
+  },
+  description:
+    'Workmark reads the code you actually wrote and turns it into a skill record an employer can check. Free for students with a .edu address.',
+  applicationName: 'Workmark',
+  openGraph: {
+    type: 'website',
+    siteName: 'Workmark',
+    url: SITE,
+    title: 'Workmark — proof of what you can build',
+    description:
+      'You need experience to get experience. Workmark hands you the projects instead, then turns what you build into proof an employer can check.',
+    images: ['/opengraph-image.png'],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Workmark — proof of what you can build',
+    description:
+      'You need experience to get experience. Workmark hands you the projects instead, then turns what you build into proof an employer can check.',
+    images: ['/opengraph-image.png'],
+  },
+}
+
 
 /**
  * Read once here rather than per page.

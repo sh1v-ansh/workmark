@@ -4,7 +4,7 @@ import { C, F } from '../landing/tokens'
 import Link from 'next/link'
 
 export const metadata: Metadata = {
-  title: 'Pricing | Workmark',
+  title: 'Pricing',
   description: 'Workmark is free for students, always. No payments on the platform during early access.',
 }
 
