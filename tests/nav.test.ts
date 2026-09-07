@@ -69,3 +69,20 @@ describe('lastScanLabel', () => {
     expect(lastScanLabel(ago(86_400_000 + 1000))).toBe('Scanned 1 day ago')
   })
 })
+
+describe('the Projects tab', () => {
+  const projects: Tab = { href: '/workspaces', label: 'Projects', also: [], prefix: true }
+
+  it('lights up on the list and on one project', () => {
+    expect(isTabActive(projects, '/workspaces')).toBe(true)
+    expect(isTabActive(projects, '/workspaces/3f2504e0-4f89-11d3-9a0c-0305e82c3301')).toBe(true)
+  })
+
+  // prefix is only safe on a tab that owns everything beneath it, and
+  // /workspaces does. The trailing slash is what stops it claiming a
+  // sibling route that merely starts with the same letters.
+  it('does not claim a route that only starts the same way', () => {
+    expect(isTabActive(projects, '/workspaces-archive')).toBe(false)
+    expect(isTabActive(projects, '/me')).toBe(false)
+  })
+})
