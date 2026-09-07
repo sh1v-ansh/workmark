@@ -152,6 +152,50 @@ export function requireInt(
   return value
 }
 
+/**
+ * A number that may be absent, in a range.
+ *
+ * Accepts the string a number input actually posts as well as a real number,
+ * because <input type="number"> gives you '4' and an empty box gives you ''.
+ */
+export function optionalNumber(
+  value: unknown,
+  field: string,
+  options: { min: number; max: number },
+): number | null {
+  if (value === undefined || value === null || value === '') return null
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n)) throw new ValidationError(`${field} must be a number.`)
+  if (n < options.min || n > options.max) {
+    throw new ValidationError(`${field} must be between ${options.min} and ${options.max}.`)
+  }
+  return Math.round(n * 100) / 100
+}
+
+/** A whole number that may be absent. Rejects a float rather than rounding. */
+export function optionalInt(
+  value: unknown,
+  field: string,
+  options: { min: number; max: number },
+): number | null {
+  if (value === undefined || value === null || value === '') return null
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(n)) throw new ValidationError(`${field} must be a whole number.`)
+  if (n < options.min || n > options.max) {
+    throw new ValidationError(`${field} must be between ${options.min} and ${options.max}.`)
+  }
+  return n
+}
+
+/** A plain calendar date, which is what a date column and a date input both use. */
+export function optionalDate(value: unknown, field: string): string | null {
+  if (value === undefined || value === null || value === '') return null
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new ValidationError(`${field} is not a valid date.`)
+  }
+  return value
+}
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**

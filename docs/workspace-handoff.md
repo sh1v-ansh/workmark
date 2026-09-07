@@ -4,7 +4,7 @@ Everything a second person needs to pick this up. Kept current as the feature
 is built; if it disagrees with the code, the code is right and this file is
 stale — say so in the PR.
 
-Last updated: the `work_events` webhook (step 2 of 6).
+Last updated: tasks and the board (step 3 of 6).
 
 ---
 
@@ -191,6 +191,13 @@ Migrations `v05_0025` → `v05_0030`. All applied.
   move a message to another task (column grant).
 - `work_events` is **read-only to every signed-in user**. An event a client
   can insert is an event a client can invent.
+- **Nobody may move a card into Verified.** That is the verifier's answer; a
+  board where you can mark your own work verified produces evidence worth
+  nothing. Enforced in `canMoveTo` and, once the verifier exists, by the fact
+  that only the service role writes a verdict.
+- A task that has been started **cannot be deleted**, only moved back to
+  Backlog. A task abandoned halfway is a fact about how the project went, and
+  deleting it is how a board becomes a highlight reel.
 - The last owner cannot leave or demote themselves.
 
 ### Removal rules
@@ -220,6 +227,7 @@ src/lib/workspace/
   queries.ts      server reads: list, load one, pending invitations
   events.ts       GitHub webhook payload → work_event rows (pure, tested)
   ingest.ts       writes those rows, resolves attribution + consent
+  tasks.ts        board rules: legal moves, ordering, revisions, time-in-Doing
 
 src/app/api/workspaces/
   route.ts                        POST   create a draft
@@ -228,10 +236,14 @@ src/app/api/workspaces/
   [id]/members/route.ts           POST   invite by handle or .edu email
   [id]/members/[account]/route.ts PATCH  accept / decline / set work role
                                   DELETE leave or remove
+  [id]/tasks/route.ts             POST   create a task
+  [id]/tasks/[taskId]/route.ts    PATCH  edit / move / block
+                                  DELETE only from Backlog or Planned
 
 src/app/workspaces/
   page.tsx + WorkspacesClient.tsx        list, create, answer invitations
   [id]/page.tsx + WorkspaceClient.tsx    setup, repo, role, team
+  [id]/Board.tsx                         the six-column board
 
 src/app/api/github/app/webhook/route.ts  extended to record work events
 ```
@@ -241,18 +253,25 @@ database is the authority; the TypeScript exists so a route can answer "you
 cannot do that" in a sentence and the UI can disable a button before anyone
 clicks it. **If the two disagree, fix the TypeScript.**
 
-Tests: `tests/workspace-membership.test.ts`, `tests/work-events.test.ts`.
+Tests: `tests/workspace-membership.test.ts`, `tests/work-events.test.ts`,
+`tests/workspace-tasks.test.ts`.
 
 ---
 
 ## 6. Still to build
 
-### Step 3 — Tasks and the board
-CRUD for tasks and subtasks, the six-column board
-(Backlog → Planned → Doing → Submitted → Verified → Accepted), drag between
-columns, blockers, sprints, dependencies. **No AI.** Realtime via Supabase
-`postgres_changes` on `tasks` filtered by `workspace_id` — RLS already gates
-it, so no new authorization. Keep drag-in-progress state out of Postgres.
+### Step 3 — Tasks and the board — DONE
+Six-column board, create/edit/move/delete, blockers, estimates, difficulty,
+due dates, assignment, `suggested_role`, and the revision prompt on estimate
+and deadline changes. Native HTML5 drag plus a select control on every card,
+because drag is unreachable by keyboard and unusable on a phone. No
+dependency was added for this.
+
+Still missing from step 3, deliberately: **subtasks** (the column exists,
+there is no UI), **sprints** (table exists, no UI), **dependencies** (table
+exists, no UI), and **realtime**. Realtime is Supabase `postgres_changes` on
+`tasks` filtered by `workspace_id` — RLS already gates it, so no new
+authorization is needed. Keep drag-in-progress state out of Postgres.
 
 ### Step 4 — The planner
 One AI call turns a project into 6–12 tasks, each tagged with a

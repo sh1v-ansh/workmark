@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { MemberRole, WorkRole } from './membership'
+import type { TaskStatus, TaskPriority } from './tasks'
 
 export type WorkspaceStatus = 'draft' | 'active' | 'submitted' | 'closed' | 'abandoned'
 
@@ -238,4 +239,68 @@ export async function pendingInvitations(
       invitedByName: names.get(r.invited_by as string)?.name ?? null,
     }]
   })
+}
+
+export interface BoardTask {
+  id: string
+  title: string
+  detail: string | null
+  acceptanceCriteria: string | null
+  status: TaskStatus
+  priority: TaskPriority
+  assigneeId: string | null
+  suggestedRole: WorkRole | null
+  estimateHours: number | null
+  difficulty: number | null
+  dueOn: string | null
+  verifiable: boolean
+  position: number
+  blockedAt: string | null
+  blockedReason: string | null
+  origin: string
+  createdAt: string | null
+  startedAt: string | null
+}
+
+/**
+ * Every task on a project, in one query.
+ *
+ * The board is not paginated and should not become so. Four people and a
+ * cap on how much work fits in a student project means a few dozen rows;
+ * the index on (workspace_id, status, position) makes this a single scan,
+ * and splitting it per column would be six round trips to render one screen.
+ */
+export async function loadBoard(
+  supabase: SupabaseClient,
+  workspaceId: string,
+): Promise<BoardTask[]> {
+  const { data } = await supabase
+    .from('tasks')
+    // One literal, not a concatenation: supabase-js infers the row type from
+    // the select string, and joining two pieces at runtime leaves it with
+    // nothing to read.
+    .select('id, title, detail, acceptance_criteria, status, priority, assignee_id, suggested_role, estimate_hours, difficulty, due_on, verifiable, position, blocked_at, blocked_reason, origin, created_at, started_at')
+    .eq('workspace_id', workspaceId)
+    .order('position')
+
+  return (data ?? []).map((t) => ({
+    id: t.id as string,
+    title: t.title as string,
+    detail: t.detail as string | null,
+    acceptanceCriteria: t.acceptance_criteria as string | null,
+    status: t.status as TaskStatus,
+    priority: t.priority as TaskPriority,
+    assigneeId: t.assignee_id as string | null,
+    suggestedRole: t.suggested_role as WorkRole | null,
+    estimateHours: t.estimate_hours === null ? null : Number(t.estimate_hours),
+    difficulty: t.difficulty as number | null,
+    dueOn: t.due_on as string | null,
+    verifiable: t.verifiable as boolean,
+    position: Number(t.position),
+    blockedAt: t.blocked_at as string | null,
+    blockedReason: t.blocked_reason as string | null,
+    origin: t.origin as string,
+    createdAt: t.created_at as string | null,
+    startedAt: t.started_at as string | null,
+  }))
 }

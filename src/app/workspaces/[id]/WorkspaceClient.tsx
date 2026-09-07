@@ -9,7 +9,8 @@ import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import { WORK_ROLES, MAX_WORKSPACE_MEMBERS, type WorkRole } from '@/lib/workspace/membership'
-import type { WorkspaceDetail, TeamMember } from '@/lib/workspace/queries'
+import Board from './Board'
+import type { WorkspaceDetail, TeamMember, BoardTask } from '@/lib/workspace/queries'
 
 const ROLE_LABEL: Record<WorkRole, string> = {
   backend: 'Backend', frontend: 'Frontend', fullstack: 'Full-stack', mobile: 'Mobile',
@@ -22,10 +23,12 @@ function displayName(m: TeamMember): string {
 
 export default function WorkspaceClient({
   workspace,
+  tasks,
   userId,
   repoOptions,
 }: {
   workspace: WorkspaceDetail
+  tasks: BoardTask[]
   userId: string
   repoOptions: { fullName: string; isPrivate: boolean }[]
 }) {
@@ -90,6 +93,14 @@ export default function WorkspaceClient({
             <p style={{ fontSize: T.body, color: C.textMuted, lineHeight: 1.65, maxWidth: '62ch' }}>{workspace.summary}</p>
           )}
         </header>
+
+        {/* The board is the page once work has started. Setup and settings
+            move below it — they are read once and the board is read daily. */}
+        {!isDraft && (
+          <div style={{ marginBottom: 26 }}>
+            <Board workspaceId={workspace.id} tasks={tasks} members={workspace.members} />
+          </div>
+        )}
 
         {/* Setup, and only while it is needed. Once the project has started
             this whole block disappears rather than sitting there ticked. */}
