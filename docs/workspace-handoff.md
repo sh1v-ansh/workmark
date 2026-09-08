@@ -657,6 +657,37 @@ Each of these is a migration already applied and nothing writing to it.
       the lifted columns exist for this.
 - [ ] **Scheduled re-planning.** Currently a "Suggest more tasks" button only.
 
+### 7.6 Found by the walkthrough, still open
+
+`tests/workspace-e2e.test.ts` drives create → plan → submit → check → confirm →
+close against a real database and repository. Run it deliberately:
+
+    WORKMARK_E2E=1 E2E_STUDENT_ID=… E2E_REPO=owner/name \
+      E2E_INSTALLATION=… E2E_LOGIN=… npx vitest run tests/workspace-e2e.test.ts
+
+It counts the student's record before and after and fails if the two differ,
+and it deletes `RESEND_API_KEY` from its own environment so a run cannot email
+a real person about a project that exists for nine seconds.
+
+- [ ] **`RESEND_API_KEY` is rejected by Resend.** The walkthrough logged
+      `401 … "API key is invalid"`. The key is well-formed (`re_`, 36 chars),
+      so it has been revoked or belongs to another account — this is not a
+      placeholder. **Check what Vercel has**, because if production carries
+      the same value then every transactional email in Workmark is failing
+      right now: acceptance, rejection, work submitted, engagement closed, and
+      all five workspace kinds.
+
+      The reason nobody noticed is by design and worth keeping in mind.
+      `email.ts` is best-effort and never blocks the action that triggered it,
+      which is right — an acceptance that 500s because a notification bounced
+      is worse than an acceptance nobody was emailed about. But it means a
+      completely dead mailer is invisible outside server logs. Worth routing
+      repeated send failures into `error_log`, which the admin console already
+      surfaces.
+
+- [ ] **The walkthrough proves the mailer is *called*, not that it works.**
+      It disables sending on purpose. Nothing tests that an email arrives.
+
 ### 7.5 Known limits, not bugs
 
 - **Technical judgment is the weakest of the six dimensions.** Architecture

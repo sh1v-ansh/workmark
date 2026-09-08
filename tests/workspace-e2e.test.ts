@@ -64,7 +64,22 @@ function loadEnv(): void {
 }
 
 const LIVE = process.env.WORKMARK_E2E === '1'
-if (LIVE) loadEnv()
+if (LIVE) {
+  loadEnv()
+  // Nothing here may reach a real person.
+  //
+  // The walkthrough runs against a real account on a real database, and the
+  // paths it drives send mail: a verdict digest to whoever submitted the
+  // work, and a review request to the rest of the team. Left alone it would
+  // email a student about a project that exists for nine seconds and is then
+  // deleted. emailAvailable() is false without these two, and every sender
+  // checks it first.
+  //
+  // This is also why the run is not proof the mailer works — see the note in
+  // the handoff doc.
+  delete process.env.RESEND_API_KEY
+  delete process.env.EMAIL_FROM
+}
 
 /** Who the throwaway project belongs to, and which repo it reads. */
 const STUDENT_ID = process.env.E2E_STUDENT_ID ?? ''
