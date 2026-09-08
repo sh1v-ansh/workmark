@@ -16,7 +16,7 @@
 // all of them in one call costs roughly what two separate calls would.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { callStructuredAgent } from './client'
+import { callStructuredAgentLogged } from './client'
 import { untrusted, untrustedList } from './untrusted'
 import type { CaseFile } from '@/lib/workspace/verify'
 
@@ -103,8 +103,8 @@ export async function verifyBatch(
   studentId: string,
   projectTitle: string,
   tasks: VerifierTask[],
-): Promise<VerifierVerdict[] | null> {
-  if (tasks.length === 0) return []
+): Promise<{ verdicts: VerifierVerdict[]; callId: string | null } | null> {
+  if (tasks.length === 0) return { verdicts: [], callId: null }
 
   const userContent = [
     untrusted('Project', projectTitle),
@@ -112,7 +112,7 @@ export async function verifyBatch(
     ...tasks.map(describe),
   ].join('\n\n')
 
-  const response = await callStructuredAgent<AgentResponse>(supabase, {
+  const logged = await callStructuredAgentLogged<AgentResponse>(supabase, {
     agentType: 'verification',
     system: SYSTEM,
     userContent,
@@ -125,7 +125,8 @@ export async function verifyBatch(
     studentId,
   })
 
-  if (!response || !Array.isArray(response.verdicts)) return null
+  if (!logged || !Array.isArray(logged.value.verdicts)) return null
+  const response = logged.value
 
   // Matched back by id rather than by position. A model that returns the
   // verdicts in a different order, or drops one, would otherwise assign
@@ -149,5 +150,7 @@ export async function verifyBatch(
     })
   }
 
-  return out
+  // The call id travels with the verdicts so each submission can point at the
+  // exact prompt and response that decided it. agent_calls holds both.
+  return { verdicts: out, callId: logged.callId }
 }

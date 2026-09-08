@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -11,7 +12,14 @@ import {
   BOARD_COLUMNS, COLUMN_LABEL, COLUMN_HINT, canMoveTo, byBoardOrder,
   type TaskStatus,
 } from '@/lib/workspace/tasks'
-import type { BoardTask, TeamMember, TaskVerdict } from '@/lib/workspace/queries'
+import {
+  canReview, outcomeFor, HUMAN_VERDICTS, HUMAN_VERDICT_LABEL, HUMAN_VERDICT_HINT,
+  type HumanVerdict, type ReviewableTask,
+} from '@/lib/workspace/review'
+import type { MemberRow } from '@/lib/workspace/membership'
+import type {
+  BoardTask, TeamMember, TaskVerdict, TaskDependency, TaskDecision,
+} from '@/lib/workspace/queries'
 
 const ROLE_LABEL: Record<WorkRole, string> = {
   backend: 'Backend', frontend: 'Frontend', fullstack: 'Full-stack', mobile: 'Mobile',
@@ -49,11 +57,20 @@ export default function Board({
   tasks,
   verdicts,
   members,
+  dependencies,
+  decisions,
+  userId,
+  readOnly = false,
 }: {
   workspaceId: string
   tasks: BoardTask[]
   verdicts: TaskVerdict[]
   members: TeamMember[]
+  dependencies: TaskDependency[]
+  decisions: TaskDecision[]
+  userId: string
+  /** A closed project. The board becomes the record of what happened. */
+  readOnly?: boolean
 }) {
   const router = useRouter()
   const { toast } = useToast()
@@ -67,8 +84,62 @@ export default function Board({
   const [blockReason, setBlockReason] = useState('')
   const [planning, setPlanning] = useState(false)
   const [checking, setChecking] = useState(false)
+  const [reviewing, setReviewing] = useState<BoardTask | null>(null)
+  const [reviewVerdict, setReviewVerdict] = useState<HumanVerdict | null>(null)
+  const [reviewNote, setReviewNote] = useState('')
   const verdictFor = new Map(verdicts.map((v) => [v.taskId, v]))
   const submittedCount = tasks.filter((t) => t.status === 'submitted').length
+
+  // workspace.members is already only the people actually on the team, so
+  // every row here is active by construction. Shaped into MemberRow so the
+  // board and the API answer "may I review this" with the same function
+  // rather than two implementations that drift.
+  const memberRows: MemberRow[] = members.map((m) => ({
+    account_id: m.accountId,
+    role: m.role,
+    work_role: m.workRole,
+    accepted_at: m.acceptedAt,
+    removed_at: null,
+  }))
+
+  const reviewableOf = (task: BoardTask): ReviewableTask => {
+    const v = verdictFor.get(task.id)
+    return {
+      id: task.id,
+      status: task.status,
+      assigneeId: task.assigneeId,
+      latestVerdict: v?.verdict ?? null,
+      humanVerdict: v?.humanVerdict ?? null,
+    }
+  }
+
+  const mayReview = (task: BoardTask) =>
+    !readOnly && canReview(memberRows, userId, reviewableOf(task)) === null
+
+  // Work somebody else is blocked on. Surfaced at the top rather than left to
+  // be found among six columns: a queue nobody can see is a queue nobody
+  // clears, and every card in it is a student waiting.
+  const needsYou = tasks.filter(mayReview)
+
+  // What a card is still waiting on, shown rather than enforced. Only
+  // unfinished blockers count: a dependency that is done is history, and
+  // listing it would leave a warning on the card forever.
+  const decisionsFor = new Map<string, TaskDecision[]>()
+  for (const d of decisions) {
+    decisionsFor.set(d.taskId, [...(decisionsFor.get(d.taskId) ?? []), d])
+  }
+
+  const titleOf = new Map(tasks.map((t) => [t.id, t.title]))
+  const doneIds = new Set(
+    tasks.filter((t) => t.status === 'verified' || t.status === 'accepted').map((t) => t.id),
+  )
+  const blockersFor = new Map<string, string[]>()
+  for (const edge of dependencies) {
+    if (doneIds.has(edge.dependsOnId)) continue
+    const title = titleOf.get(edge.dependsOnId)
+    if (!title) continue
+    blockersFor.set(edge.taskId, [...(blockersFor.get(edge.taskId) ?? []), title])
+  }
 
   const nameOf = (id: string | null) =>
     id ? members.find((m) => m.accountId === id)?.name ?? 'Someone' : null
@@ -140,6 +211,29 @@ export default function Board({
     if (ok) setBlocking(null)
   }
 
+  function openReview(task: BoardTask) {
+    setReviewing(task)
+    setReviewVerdict(null)
+    setReviewNote('')
+  }
+
+  /**
+   * Record one person's answer.
+   *
+   * The note and the choice are deliberately not cleared on failure — a
+   * reviewer who typed three sentences and hit a network error should find
+   * them still there.
+   */
+  async function submitReview() {
+    if (!reviewing || !reviewVerdict) return
+    const ok = await send(
+      `/api/workspaces/${workspaceId}/tasks/${reviewing.id}/review`,
+      { method: 'POST', body: JSON.stringify({ verdict: reviewVerdict, note: reviewNote || null }) },
+      outcomeFor(reviewVerdict).message,
+    )
+    if (ok) setReviewing(null)
+  }
+
   async function draftPlan() {
     setPlanning(true)
     try {
@@ -202,17 +296,68 @@ export default function Board({
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
         <h2 style={{ fontSize: T.h2, fontWeight: 600, color: C.text }}>Board</h2>
         <div style={{ display: 'flex', gap: 8 }}>
-          {submittedCount > 0 && (
+          {readOnly && (
+            <span style={{ fontSize: T.meta, color: C.textGhost, alignSelf: 'center' }}>
+              Finished — this is the record now
+            </span>
+          )}
+          {!readOnly && submittedCount > 0 && (
             <Button size="sm" onClick={checkWork} disabled={checking}>
               {checking ? 'Checking…' : `Check my work (${submittedCount})`}
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={draftPlan} disabled={planning}>
-            {planning ? 'Drafting…' : tasks.length === 0 ? 'Draft a plan' : 'Suggest more tasks'}
-          </Button>
-          <Button size="sm" onClick={() => { setDraft(EMPTY); setCreating(true) }}>Add task</Button>
+          {!readOnly && (
+            <Button variant="outline" size="sm" onClick={draftPlan} disabled={planning}>
+              {planning ? 'Drafting…' : tasks.length === 0 ? 'Draft a plan' : 'Suggest more tasks'}
+            </Button>
+          )}
+          {!readOnly && (
+            <Button size="sm" onClick={() => { setDraft(EMPTY); setCreating(true) }}>Add task</Button>
+          )}
         </div>
       </div>
+
+      {/* Work other people are blocked on, put where somebody will see it.
+          The checker sends two kinds of task here — work with no code to
+          look at, and work it has already failed twice — and both stop dead
+          until a person answers. */}
+      {needsYou.length > 0 && (
+        <div style={{
+          background: C.surfaceAlt, border: `1px solid ${C.accentBorder}`, borderRadius: R.lg,
+          padding: '13px 15px', marginBottom: 16,
+        }}>
+          <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text, marginBottom: 3 }}>
+            {needsYou.length === 1
+              ? 'One task needs you to look at it'
+              : `${needsYou.length} tasks need you to look at them`}
+          </p>
+          <p style={{ fontSize: T.meta, color: C.textMuted, lineHeight: 1.5, marginBottom: 11, maxWidth: '64ch' }}>
+            Workmark could not check these on its own. A teammate has to say whether the work
+            does what the task asked — until somebody does, they are stuck.
+          </p>
+          <div style={{ display: 'grid', gap: 7 }}>
+            {needsYou.map((task) => (
+              <div
+                key={task.id}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: 12, background: C.surface, border: `1px solid ${C.border}`,
+                  borderRadius: R.md, padding: '9px 11px',
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <p style={{ fontSize: T.bodySm, color: C.text, lineHeight: 1.45 }}>{task.title}</p>
+                  <p style={{ fontSize: T.meta, color: C.textGhost, marginTop: 2 }}>
+                    {nameOf(task.assigneeId) ?? 'Unassigned'}
+                    {!task.verifiable && ' · marked as having no code'}
+                  </p>
+                </div>
+                <Button size="sm" onClick={() => openReview(task)} disabled={busy}>Review</Button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Said once, above the board, rather than on every card. The point is
           that the plan is theirs from the moment it lands — what they keep,
@@ -263,8 +408,8 @@ export default function Board({
                 {inColumn.map((task) => (
                   <article
                     key={task.id}
-                    draggable
-                    onDragStart={() => setDragging(task.id)}
+                    draggable={!readOnly}
+                    onDragStart={() => { if (!readOnly) setDragging(task.id) }}
                     onDragEnd={() => setDragging(null)}
                     style={{
                       background: C.surface, border: `1px solid ${task.blockedAt ? '#E4B9A6' : C.border}`,
@@ -309,6 +454,36 @@ export default function Board({
                               </li>
                             ))}
                           </ul>
+
+                          {/* Who answered, when a person did. An answer from
+                              the person who did the work is a different claim
+                              from a teammate's, and the card should not blur
+                              the two. */}
+                          {v.humanVerdict && v.humanActorId && (
+                            <p style={{ fontSize: T.meta, color: C.textGhost, marginTop: 5, lineHeight: 1.5 }}>
+                              {v.humanActorId === userId
+                                ? 'You answered this'
+                                : `${nameOf(v.humanActorId)} answered this`}
+                            </p>
+                          )}
+
+                          {mayReview(task) && (
+                            <div style={{ marginTop: 8 }}>
+                              <Button size="sm" onClick={() => openReview(task)} disabled={busy}>
+                                Review this
+                              </Button>
+                            </div>
+                          )}
+
+                          {/* Said plainly, because the alternative is somebody
+                              waiting on a button that is never going to appear
+                              for them. */}
+                          {v.verdict === 'unverifiable' && !v.humanVerdict && task.assigneeId === userId && (
+                            <p style={{ fontSize: T.meta, color: C.textMuted, marginTop: 6, lineHeight: 1.5 }}>
+                              A teammate has to confirm this one. If nobody on the project can,
+                              Workmark will look at it.
+                            </p>
+                          )}
                         </div>
                       )
                     })()}
@@ -316,6 +491,16 @@ export default function Board({
                     {task.blockedAt && (
                       <p style={{ fontSize: T.meta, color: '#94500F', lineHeight: 1.45, marginBottom: 6 }}>
                         Blocked — {task.blockedReason}
+                      </p>
+                    )}
+
+                    {/* Said, not enforced. Starting this anyway is allowed and
+                        is itself worth knowing about. */}
+                    {(blockersFor.get(task.id)?.length ?? 0) > 0 && (
+                      <p style={{ fontSize: T.meta, color: C.textGhost, lineHeight: 1.45, marginBottom: 6 }}>
+                        Waiting on {blockersFor.get(task.id)!.slice(0, 2).join(', ')}
+                        {blockersFor.get(task.id)!.length > 2
+                          && ` and ${blockersFor.get(task.id)!.length - 2} more`}
                       </p>
                     )}
 
@@ -329,8 +514,10 @@ export default function Board({
                     </div>
 
                     {/* Drag is not reachable by keyboard or on a phone, so the
-                        same moves exist as a plain control. */}
-                    <div style={{ display: 'flex', gap: 6, marginTop: 9, alignItems: 'center' }}>
+                        same moves exist as a plain control. Both go away once
+                        the project is closed — the board stops being a place
+                        to work and becomes the record of what happened. */}
+                    <div hidden={readOnly} style={{ display: 'flex', gap: 6, marginTop: 9, alignItems: 'center' }}>
                       <select
                         value={task.status}
                         onChange={(e) => {
@@ -390,9 +577,12 @@ export default function Board({
         saveLabel="Add task"
       />
 
+      {/* Still openable on a closed project — being unable to read the
+          acceptance criteria of your own finished work would be a real loss.
+          Just not saveable. */}
       <TaskDialog
         open={editing !== null}
-        title="Edit task"
+        title={readOnly ? 'Task' : 'Edit task'}
         draft={draft}
         setDraft={setDraft}
         members={members}
@@ -403,7 +593,107 @@ export default function Board({
         reason={reason}
         setReason={setReason}
         askReason={!!(estimateChanged || deadlineChanged)}
+        readOnly={readOnly}
+        history={editing ? decisionsFor.get(editing.id) ?? [] : []}
+        nameOf={nameOf}
       />
+
+      {/* One question, four answers, one button. The answers are ordered by
+          how often each is the true one, and only the first is styled as a
+          primary action — the dialog should not read as though confirming is
+          what a good teammate does. */}
+      <Modal
+        open={reviewing !== null}
+        onClose={() => setReviewing(null)}
+        title={reviewing ? `Does this work?` : 'Review'}
+      >
+        {reviewing && (
+          <>
+            <p style={{ fontSize: T.bodySm, fontWeight: 500, color: C.text, lineHeight: 1.5, marginBottom: 4 }}>
+              {reviewing.title}
+            </p>
+            <p style={{ fontSize: T.meta, color: C.textGhost, marginBottom: 12 }}>
+              {nameOf(reviewing.assigneeId) ?? 'Somebody'} submitted this
+            </p>
+
+            {reviewing.acceptanceCriteria && (
+              <div style={{
+                background: C.surfaceAlt, borderRadius: R.md, padding: '10px 12px', marginBottom: 14,
+              }}>
+                <p style={{ fontSize: T.meta, fontWeight: 600, color: C.textSub, marginBottom: 4 }}>
+                  What it was supposed to do
+                </p>
+                <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.55, whiteSpace: 'pre-wrap' }}>
+                  {reviewing.acceptanceCriteria}
+                </p>
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gap: 7, marginBottom: 14 }}>
+              {HUMAN_VERDICTS.map((verdict) => {
+                const selected = reviewVerdict === verdict
+                return (
+                  <button
+                    key={verdict}
+                    type="button"
+                    onClick={() => setReviewVerdict(verdict)}
+                    aria-pressed={selected}
+                    style={{
+                      textAlign: 'left', cursor: 'pointer', width: '100%',
+                      background: selected ? C.surfaceAlt : C.surface,
+                      border: `1px solid ${selected ? C.accentBorder : C.border}`,
+                      borderRadius: R.md, padding: '11px 13px',
+                      transition: 'border-color 120ms ease, background 120ms ease',
+                    }}
+                  >
+                    <span style={{
+                      display: 'block', fontSize: T.bodySm,
+                      fontWeight: selected ? 600 : 500, color: C.text, marginBottom: 2,
+                    }}>
+                      {HUMAN_VERDICT_LABEL[verdict]}
+                    </span>
+                    <span style={{ display: 'block', fontSize: T.meta, color: C.textMuted, lineHeight: 1.5 }}>
+                      {HUMAN_VERDICT_HINT[verdict]}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+
+            <Field
+              label="Anything to add?"
+              hint={reviewVerdict === 'works' ? 'optional' : 'what needs fixing'}
+            >
+              <textarea
+                className="dk-input"
+                value={reviewNote}
+                onChange={(e) => setReviewNote(e.target.value)}
+                rows={3}
+                maxLength={2000}
+                placeholder="Signed in fine on my machine, but the redirect drops the query string."
+                style={{ resize: 'vertical' }}
+              />
+            </Field>
+
+            {/* Said before the button rather than after the click. Confirming
+                is the one action here that puts something on somebody's
+                permanent record. */}
+            {reviewVerdict === 'works' && (
+              <p style={{ fontSize: T.meta, color: C.textMuted, lineHeight: 1.5, marginBottom: 14 }}>
+                This moves the task to Verified and counts toward{' '}
+                {nameOf(reviewing.assigneeId) ?? 'their'} record.
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <Button variant="quiet" onClick={() => setReviewing(null)}>Cancel</Button>
+              <Button onClick={submitReview} disabled={busy || reviewVerdict === null}>
+                {busy ? 'Saving…' : 'Save answer'}
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
 
       <Modal open={blocking !== null} onClose={() => setBlocking(null)} title="What is blocking this?">
         <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 14 }}>
@@ -442,7 +732,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 function TaskDialog({
   open, title, draft, setDraft, members, busy, onClose, onSave, saveLabel,
-  reason, setReason, askReason,
+  reason, setReason, askReason, readOnly = false, history = [], nameOf,
 }: {
   open: boolean
   title: string
@@ -456,6 +746,10 @@ function TaskDialog({
   reason?: string
   setReason?: (r: string) => void
   askReason?: boolean
+  readOnly?: boolean
+  /** Every answer ever given about this task, oldest first. */
+  history?: TaskDecision[]
+  nameOf?: (id: string | null) => string | null
 }) {
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft({ ...draft, [key]: value })
 
@@ -524,9 +818,49 @@ function TaskDialog({
         </Field>
       )}
 
+      {/* How the answer was reached, not just what it was.
+          A student who disagrees with a verdict needs to be able to see what
+          it rested on and who changed it — a dispute you cannot see the basis
+          of is one you cannot make. Trigger-written, so nothing here is a
+          summary somebody chose to show. */}
+      {history.length > 0 && (
+        <div style={{ borderTop: `1px solid ${C.borderFaint}`, paddingTop: 13, marginBottom: 14 }}>
+          <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>
+            How this was decided
+          </p>
+          <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 9 }}>
+            {history.map((d, i) => (
+              <li key={`${d.decidedAt}-${i}`} style={{ fontSize: T.meta, lineHeight: 1.55 }}>
+                <span style={{ color: C.text, fontWeight: 500 }}>
+                  {VERDICT_TONE[d.verdict]?.label ?? d.verdict}
+                </span>
+                <span style={{ color: C.textGhost }}>
+                  {' · '}
+                  {d.decidedBy === 'person'
+                    ? `${nameOf?.(d.actorId) ?? 'A person'} answered`
+                    : 'Workmark checked it'}
+                  {d.confidence !== null && ` · ${Math.round(d.confidence * 100)}% sure`}
+                  {' · '}
+                  {new Date(d.decidedAt).toLocaleDateString()}
+                </span>
+                {d.note && (
+                  <span style={{ display: 'block', color: C.textMuted, marginTop: 2 }}>{d.note}</span>
+                )}
+              </li>
+            ))}
+          </ol>
+          <p style={{ fontSize: T.meta, color: C.textGhost, lineHeight: 1.55, marginTop: 9 }}>
+            If something here is wrong, you can challenge it from{' '}
+            <Link href="/me/file" style={{ color: C.textMuted }}>your file</Link>.
+          </p>
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-        <Button variant="quiet" onClick={onClose}>Cancel</Button>
-        <Button onClick={onSave} disabled={busy || draft.title.trim().length < 2}>{saveLabel}</Button>
+        <Button variant="quiet" onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Button>
+        {!readOnly && (
+          <Button onClick={onSave} disabled={busy || draft.title.trim().length < 2}>{saveLabel}</Button>
+        )}
       </div>
     </Modal>
   )

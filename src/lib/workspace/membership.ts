@@ -164,3 +164,25 @@ function lastOwnerGuard(rows: MemberRow[], accountId: string): Refusal {
   }
   return null
 }
+
+/**
+ * Statuses in which a project no longer accepts work.
+ *
+ * Closing writes everyone's verified work to their record, and that record is
+ * a claim about what the project contained at the moment it ended. A board
+ * that keeps accepting cards afterwards makes the claim quietly untrue —
+ * somebody could close a project, collect the evidence, and then keep
+ * changing what the evidence was supposedly about.
+ *
+ * Enforced in the routes rather than only in the UI, because the promise is
+ * made to the person closing ("the board stops accepting new work") and a
+ * promise the API does not keep is worse than one never made.
+ */
+export const FINISHED_WORKSPACE_STATUSES = ['closed', 'abandoned'] as const
+
+export function workspaceAcceptsWork(status: string): Refusal {
+  if (status === 'closed') return 'This project is closed. Its record has already been written.'
+  if (status === 'abandoned') return 'This project was abandoned.'
+  if (status === 'draft') return 'This project has not started yet.'
+  return null
+}

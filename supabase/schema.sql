@@ -382,11 +382,19 @@ create table artifacts (
   id                  uuid default gen_random_uuid() primary key,
   student_id          uuid references students(id) on delete cascade not null,
   engagement_id       uuid references engagements(id) on delete cascade,
+  -- The project this came from, when it came from one. SET NULL rather than
+  -- CASCADE: evidence is a claim about what somebody did at a moment in time,
+  -- and deleting a workspace row does not make the work not have happened.
+  workspace_id        uuid references workspaces(id) on delete set null,
   type                text not null check (type in ('repo', 'url', 'file')),
   source              text,
   repo_full_name      text,
   access_grant_id     uuid references github_repo_grants(id),
-  tier                text not null check (tier in ('tier_0', 'tier_0_5', 'listing_driven')),
+  -- 'workspace_verified' is the strongest, and what earns it is not that the
+  -- work is harder: it is that the acceptance criteria were written down
+  -- BEFORE the work started. Every other tier judges a finished repository
+  -- against itself. See v05_0034.
+  tier                text not null check (tier in ('tier_0', 'tier_0_5', 'listing_driven', 'workspace_verified')),
   -- 'repo_link' is the baseline: student explicitly linked this repo via
   -- the GitHub App grant, commits are attributed to them, complexity was
   -- extracted (§5) — that alone is evidence. Deployment isn't required;
@@ -432,6 +440,9 @@ create table skill_evidence (
   skill_id              text references skills(id) not null,
   artifact_id           uuid references artifacts(id) on delete cascade,
   engagement_id         uuid references engagements(id) on delete cascade,  -- DEFERRED-populated for attested tiers; denormalized convenience today
+  -- Denormalized the same way engagement_id is, so "what did this project put
+  -- on people's records" is one query rather than a join through artifacts.
+  workspace_id          uuid references workspaces(id) on delete set null,
   rater_id              uuid,  -- DEFERRED: null until faculty/employer attestation exists
   base                  numeric not null,
   independence          numeric not null default 1.0,  -- DEFERRED: always 1.0 in MVP
@@ -1678,6 +1689,16 @@ create table workspaces (
   started_at      timestamptz,
   closed_at       timestamptz,
 
+  -- When the closing scan finished writing people's records.
+  --
+  -- Separate from closed_at because the two are separate acts: closing is one
+  -- fast write somebody decided on, and minting is a repository scan per
+  -- member that can outlast a 60-second function on a four-person team. A
+  -- closed project with a null here is one the nightly pass retries. Folded
+  -- into closed_at, a timeout would be indistinguishable from a project whose
+  -- members simply earned nothing. See v05_0034.
+  evidence_minted_at timestamptz,
+
   -- The only combination that is never legitimate: a workspace cannot be
   -- both somebody's private brief and a posted job.
   constraint workspaces_single_parent check (not (brief_id is not null and listing_id is not null))
@@ -1685,6 +1706,8 @@ create table workspaces (
 
 create index workspaces_brief_idx      on workspaces (brief_id) where brief_id is not null;
 create index workspaces_listing_idx    on workspaces (listing_id) where listing_id is not null;
+create index workspaces_awaiting_evidence_idx
+  on workspaces (closed_at) where status = 'closed' and evidence_minted_at is null;
 
 -- ─── Membership ─────────────────────────────────────────────────────────────
 -- An invitation and a membership are the same row at different times.
@@ -2442,6 +2465,41 @@ create index task_submissions_task_idx on task_submissions (task_id, submitted_a
 -- directly, and the spec is right that they should be rare: the primary
 -- evidence is the work, and a workspace that interrogates you is one people
 -- stop opening.
+-- ─── Every answer, kept ─────────────────────────────────────────────────────
+-- task_submissions.verdict is updated in place: the checker writes
+-- 'unverifiable', a teammate later writes 'human_verified', and the first
+-- answer is gone. For a dispute that is the wrong half to lose — "the checker
+-- could not tell, then Priya confirmed it on the 4th" is the story, and the
+-- row only remembers the ending.
+--
+-- Trigger-written, like task_transitions and for the same reason: a caller
+-- that forgets to log a decision, or shades one, corrupts the only record a
+-- student has to argue with. See v05_0035.
+create table task_decisions (
+  id               uuid default gen_random_uuid() primary key,
+  workspace_id     uuid references workspaces(id) on delete cascade not null,
+  task_id          uuid references tasks(id) on delete cascade not null,
+  submission_id    uuid references task_submissions(id) on delete cascade not null,
+  -- 'checker' is the automatic pass, 'person' a teammate or staff. Stored
+  -- rather than inferred from a null actor: "nobody was recorded" and "a
+  -- machine decided" are different facts and only one is a bug.
+  decided_by       text not null check (decided_by in ('checker', 'person')),
+  actor_id         uuid references accounts(id) on delete set null,
+  verdict          text not null,
+  previous_verdict text,
+  human_verdict    text,
+  confidence       numeric(3,2),
+  checks           jsonb,
+  note             text,
+  -- agent_calls holds the full prompt and parsed output, so this links "your
+  -- task was marked needs_work" to the exact text that decided it.
+  agent_call_id    uuid references agent_calls(id) on delete set null,
+  decided_at       timestamptz default now() not null
+);
+
+create index task_decisions_task_idx       on task_decisions (task_id, decided_at);
+create index task_decisions_submission_idx on task_decisions (submission_id, decided_at);
+
 create table task_checkpoints (
   id            uuid default gen_random_uuid() primary key,
   workspace_id  uuid references workspaces(id) on delete cascade not null,

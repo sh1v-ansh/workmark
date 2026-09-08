@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { enforce } from '@/lib/rate-limit'
@@ -140,11 +141,66 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     created_by: user.id,
   }))
 
-  const { error } = await supabase.from('tasks').insert(rows)
+  // Ids come back in insert order, which is what makes the planner's
+  // dependsOn indices resolvable. Without the select this is a fire-and-forget
+  // insert and the dependency graph the model just worked out is thrown away.
+  const { data: inserted, error } = await supabase.from('tasks').insert(rows).select('id')
   if (error) {
     console.error('[api/workspaces/:id/plan] insert failed:', error)
     return NextResponse.json({ error: 'Drafted the plan but could not save it.' }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, count: rows.length })
+  const dependencies = await recordDependencies(supabase, workspaceId, plan.tasks, inserted ?? [])
+
+  return NextResponse.json({ ok: true, count: rows.length, dependencies })
+}
+
+/**
+ * Write down what the planner said has to happen first.
+ *
+ * Recorded, not enforced. Nothing stops somebody starting a task whose
+ * dependency is unfinished, and that is on purpose twice over: a board that
+ * refuses moves is a board people work around, and "declared a dependency,
+ * then hit a different one anyway" is a more interesting fact about how
+ * somebody plans than a graph that was obeyed because it had to be.
+ *
+ * The comparison this makes possible — dependencies declared up front versus
+ * dependencies discovered halfway through — is one of the clearer signals in
+ * the product about whether somebody can see the shape of a problem before
+ * starting it.
+ *
+ * Best-effort: the plan is saved either way. Losing the edges costs a metric;
+ * failing the request would cost the student their whole plan.
+ */
+async function recordDependencies(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  planned: { dependsOn: number[] }[],
+  inserted: { id: string }[],
+): Promise<number> {
+  if (inserted.length !== planned.length) return 0
+
+  const edges: { workspace_id: string; task_id: string; depends_on_id: string }[] = []
+  planned.forEach((task, index) => {
+    for (const dependency of task.dependsOn) {
+      // An index the model invented, or one pointing at itself. Both are
+      // normal enough from a language model that neither is worth an error;
+      // the edge is simply not written.
+      if (dependency === index || dependency >= inserted.length) continue
+      edges.push({
+        workspace_id: workspaceId,
+        task_id: inserted[index].id,
+        depends_on_id: inserted[dependency].id,
+      })
+    }
+  })
+
+  if (edges.length === 0) return 0
+
+  const { error } = await supabase.from('task_dependencies').insert(edges)
+  if (error) {
+    console.error('[api/workspaces/:id/plan] dependencies not saved:', error)
+    return 0
+  }
+  return edges.length
 }

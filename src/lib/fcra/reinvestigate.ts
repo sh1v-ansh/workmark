@@ -61,7 +61,7 @@ export async function reinvestigate(
 
   const { data: evidence } = await supabase
     .from('skill_evidence')
-    .select('id, student_id, skill_id, artifact_id, base, difficulty_cleared, verification_method, engagement_id')
+    .select('id, student_id, skill_id, artifact_id, base, difficulty_cleared, verification_method, engagement_id, workspace_id')
     .eq('id', dispute.evidence_id)
     .maybeSingle()
   if (!evidence) {
@@ -73,17 +73,47 @@ export async function reinvestigate(
   }
 
   const { data: artifact } = evidence.artifact_id
-    ? await supabase.from('artifacts').select('id, repo_full_name').eq('id', evidence.artifact_id).maybeSingle()
+    ? await supabase
+        .from('artifacts')
+        .select('id, repo_full_name, workspace_id')
+        .eq('id', evidence.artifact_id)
+        .maybeSingle()
     : { data: null }
+
   const { data: connection } = await supabase
     .from('github_connections')
     .select('installation_id, github_login')
     .eq('student_id', evidence.student_id)
     .maybeSingle()
 
+  // Project evidence was read through the WORKSPACE's installation — one
+  // person on the team linked the repository and everyone's commits are read
+  // through it. Rescanning through the disputing student's own installation
+  // asks a different question of a repository they may have no personal
+  // access to, gets back "cannot see it", and — before this — treated that as
+  // "no commits are yours" and retracted their evidence.
+  //
+  // A dispute filed to ask a question must never be the thing that deletes
+  // the record.
+  const workspaceId = (artifact?.workspace_id as string | null) ?? evidence.workspace_id ?? null
+  let installationId = connection?.installation_id ?? null
+
+  if (workspaceId) {
+    const { data: repo } = await supabase
+      .from('workspace_repos')
+      .select('installation_id')
+      .eq('workspace_id', workspaceId)
+      .is('unlinked_at', null)
+      .limit(1)
+      .maybeSingle()
+    if (repo?.installation_id) installationId = repo.installation_id as string
+  }
+
   // Can't rescan without a repo and a live connection — route to a human
-  // rather than guessing, and never silently leave the dispute open.
-  if (!artifact?.repo_full_name || !connection?.github_login) {
+  // rather than guessing, and never silently leave the dispute open. The
+  // login is still the student's: the question is what THEY committed, read
+  // through whichever installation can see the repository.
+  if (!artifact?.repo_full_name || !connection?.github_login || !installationId) {
     return finish({
       status: 'resolved_manual',
       note: 'This evidence has no re-readable repository on file, so it needs a person to review it.',
@@ -96,8 +126,22 @@ export async function reinvestigate(
   let recomputedLevel: number | null = null
 
   try {
-    const scan = await scanRepo(connection.installation_id, connection.github_login, artifact.repo_full_name)
-    if (!scan.skip) {
+    const scan = await scanRepo(installationId, connection.github_login, artifact.repo_full_name)
+
+    // A skipped scan is "we could not read it", not "there is nothing there",
+    // and the two must never collapse. Falling through with
+    // hasAttributedCommits still false would retract the evidence of anybody
+    // whose repository went private, was renamed, or whose App install was
+    // removed — on a dispute they may have filed only to ask a question.
+    if (scan.skip) {
+      return finish({
+        status: 'resolved_manual',
+        note: 'The repository could not be read on this pass, so nothing about your record has been changed. A person will review this.',
+        correctionEvidenceId: null,
+      })
+    }
+
+    {
       hasAttributedCommits = scan.studentCommitCount > 0
 
       // Must mirror processRepo exactly, implications included. A skill that
@@ -178,6 +222,10 @@ export async function reinvestigate(
       skill_id: evidence.skill_id,
       artifact_id: evidence.artifact_id,
       engagement_id: evidence.engagement_id,
+      // Carried through, or a correction silently detaches the row from the
+      // project that produced it and /me stops being able to say where it
+      // came from.
+      workspace_id: evidence.workspace_id,
       base: evidence.base,
       difficulty_cleared: retracting ? evidence.difficulty_cleared : recomputedLevel,
       verification_method: evidence.verification_method,

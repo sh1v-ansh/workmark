@@ -19,6 +19,7 @@ const KIND_LABEL: Record<QueueKind, string> = {
   unresolved_skill: 'Unmatched skills',
   failed_job: 'Failed scans',
   feedback: 'Bugs & ideas',
+  task_verification: 'Tasks needing a person',
 }
 
 /** Why each kind is here — shown once per group rather than on every row. */
@@ -29,9 +30,10 @@ const KIND_BLURB: Record<QueueKind, string> = {
   unresolved_skill: 'Names the scanner couldn\'t place. Mapping one fixes it for every future scan.',
   failed_job: 'A scan that stopped. Retrying resumes from where it left off.',
   feedback: 'Reported by someone using the product. The page and browser were captured automatically.',
+  task_verification: 'Project work the checker could not settle on its own. A teammate normally answers these, but a solo student has nobody who is allowed to — the person who did the work never confirms it. Until somebody answers, the card cannot move.',
 }
 
-const ORDER: QueueKind[] = ['dispute', 'review_request', 'feedback', 'faculty_verification', 'unresolved_skill', 'failed_job']
+const ORDER: QueueKind[] = ['dispute', 'task_verification', 'review_request', 'feedback', 'faculty_verification', 'unresolved_skill', 'failed_job']
 
 function relativeDays(iso: string): string {
   const days = Math.floor((Date.now() - Date.parse(iso)) / 86_400_000)
@@ -266,10 +268,15 @@ export default function AdminQueueClient({ items, counts, failedSources, taxonom
               </div>
             )}
 
-            {(open.kind === 'dispute' || open.kind === 'review_request' || open.kind === 'feedback') && (
+            {(open.kind === 'dispute' || open.kind === 'review_request'
+              || open.kind === 'feedback' || open.kind === 'task_verification') && (
               <div>
                 <Kicker style={{ marginBottom: 6 }}>
-                  {open.kind === 'dispute' ? 'Your decision (the student reads this)' : 'Note (optional)'}
+                  {open.kind === 'dispute'
+                    ? 'Your decision (the student reads this)'
+                    : open.kind === 'task_verification'
+                      ? 'What you found (the student reads this)'
+                      : 'Note (optional)'}
                 </Kicker>
                 <textarea
                   value={note}
@@ -349,6 +356,18 @@ function Actions({ item, act, busy, skillId, note }: {
         <div style={row}>
           <Button variant="accent" onClick={() => act('approve')} disabled={busy}>Confirm faculty</Button>
           <Button variant="outline" onClick={() => act('decline')} disabled={busy}>Couldn&apos;t confirm</Button>
+        </div>
+      )
+    // The same four answers a teammate gets, because it is the same question.
+    // Confirming is the only one that puts something on a record, so it is
+    // the only one styled as the primary action.
+    case 'task_verification':
+      return (
+        <div style={row}>
+          <Button variant="accent" onClick={() => act('works')} disabled={busy}>Works</Button>
+          <Button variant="outline" onClick={() => act('partly_works')} disabled={busy}>Partly works</Button>
+          <Button variant="outline" onClick={() => act('does_not_work')} disabled={busy}>Doesn&apos;t work</Button>
+          <Button variant="quiet" onClick={() => act('not_checked')} disabled={busy}>Can&apos;t tell</Button>
         </div>
       )
   }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { notifyInvited } from '@/lib/workspace/notify'
 import { enforce } from '@/lib/rate-limit'
 import { MAX_WORKSPACE_MEMBERS } from '@/lib/workspace/membership'
 import {
@@ -133,6 +134,26 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     console.error('[api/workspaces/:id/members] invite failed:', error)
     return NextResponse.json({ error: 'Could not send that invitation.' }, { status: 500 })
   }
+
+  // The half that makes an invitation an invitation. Without it the row only
+  // surfaces if the person happens to visit /workspaces, which is precisely
+  // the audience an invitation exists to reach.
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+  const { data: workspace } = await admin
+    .from('workspaces')
+    .select('title')
+    .eq('id', id)
+    .maybeSingle()
+
+  await notifyInvited(admin, {
+    workspaceId: id,
+    inviteeId: targetId,
+    inviterId: user.id,
+    projectTitle: (workspace?.title as string) ?? 'a project',
+  })
 
   return NextResponse.json({ ok: true })
 }

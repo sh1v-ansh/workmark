@@ -3,16 +3,31 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { rollupAll } from '@/lib/workspace/rollup'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 300
 
 /**
- * POST /api/cron/rollups — recompute plan versus reality.
+ * 60 is the value that is safe on every Vercel plan: a deployment whose
+ * maxDuration exceeds the plan limit fails to build rather than being
+ * clamped. This route shipped at 300, which is fine on Pro and breaks a
+ * Hobby deploy — and nothing in the repo settles which one this is.
  *
- * Nightly. Nothing here costs money: no model call, no GitHub request, just
- * arithmetic over rows that already exist. It is a cron job rather than a
- * page-load computation because the figures come from every task, board move,
- * revision and submission a person has on a project — which would make the
- * page slowest for exactly the students who have done the most work.
+ * 60 with a bounded sweep is the choice that cannot fail either way. If the
+ * project is on Pro, raising this and MAX_RUNS_PER_SWEEP together clears a
+ * backlog faster; the durable fix is a background job, not a bigger number.
+ */
+export const maxDuration = 60
+
+/**
+ * POST /api/cron/rollups — recompute plan versus reality, by hand.
+ *
+ * Nothing here costs money: no model call, no GitHub request, just arithmetic
+ * over rows that already exist. It is a job rather than a page-load
+ * computation because the figures come from every task, board move, revision
+ * and submission a person has on a project — which would make the page
+ * slowest for exactly the students who have done the most work.
+ *
+ * The scheduled path is /api/cron/nightly, which runs this *after* the
+ * verification sweep so the day's verdicts are in the figures. This endpoint
+ * is for running it now.
  */
 export async function POST(request: Request) {
   const secret = process.env.CRON_SECRET

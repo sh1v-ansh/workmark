@@ -11,7 +11,11 @@ import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import { WORK_ROLES, MAX_WORKSPACE_MEMBERS, type WorkRole } from '@/lib/workspace/membership'
 import Board from './Board'
 import PlanVsReality from './PlanVsReality'
-import type { WorkspaceDetail, TeamMember, BoardTask, TaskVerdict } from '@/lib/workspace/queries'
+import Modal from '@/components/ui/Modal'
+import type {
+  WorkspaceDetail, TeamMember, BoardTask, TaskVerdict, CloseSummary, TaskDependency,
+  TaskDecision,
+} from '@/lib/workspace/queries'
 import type { WorkspaceMetrics } from '@/lib/workspace/metrics'
 
 const ROLE_LABEL: Record<WorkRole, string> = {
@@ -28,6 +32,9 @@ export default function WorkspaceClient({
   tasks,
   verdicts,
   measured,
+  dependencies,
+  decisions,
+  closeSummary,
   userId,
   repoOptions,
 }: {
@@ -35,6 +42,9 @@ export default function WorkspaceClient({
   tasks: BoardTask[]
   verdicts: TaskVerdict[]
   measured: { metrics: WorkspaceMetrics; computedAt: string } | null
+  dependencies: TaskDependency[]
+  decisions: TaskDecision[]
+  closeSummary: CloseSummary | null
   userId: string
   repoOptions: { fullName: string; isPrivate: boolean }[]
 }) {
@@ -43,9 +53,12 @@ export default function WorkspaceClient({
   const [busy, setBusy] = useState<string | null>(null)
   const [invitee, setInvitee] = useState('')
   const [repo, setRepo] = useState(workspace.repoFullName ?? '')
+  const [closing, setClosing] = useState(false)
 
   const isOwner = workspace.yourRole === 'owner'
   const isDraft = workspace.status === 'draft'
+  const isClosed = workspace.status === 'closed'
+  const finishedCount = tasks.filter((t) => t.status === 'verified' || t.status === 'accepted').length
   const you = workspace.members.find((m) => m.isYou)
   const teamSize = workspace.members.length + workspace.invited.length
 
@@ -84,6 +97,11 @@ export default function WorkspaceClient({
   const leave = () => call('leave', `/api/workspaces/${workspace.id}/members/${userId}`,
     { method: 'DELETE', body: JSON.stringify({}) }, 'You left the project.')
 
+  async function closeProject() {
+    const ok = await call('close', `/api/workspaces/${workspace.id}/close`, { method: 'POST' })
+    if (ok) setClosing(false)
+  }
+
   return (
     <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, padding: '32px 24px 72px' }}>
       <div style={{ maxWidth: 760, margin: '0 auto' }}>
@@ -100,11 +118,83 @@ export default function WorkspaceClient({
           )}
         </header>
 
+        {/* A finished project opens on what it produced, not on the board it
+            was worked from. This is the one screen the whole feature exists
+            to be able to show — and a project that ended on a blank page
+            would waste the moment the student is proudest of. */}
+        {isClosed && closeSummary && (
+          <Card focal style={{ marginBottom: 26 }}>
+            <p style={{ fontSize: T.h3, fontWeight: 600, color: C.text, marginBottom: 5 }}>
+              This project is finished
+            </p>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 18, maxWidth: '60ch' }}>
+              Everything below came from work that was checked — not from anything anybody
+              typed about themselves.
+            </p>
+
+            <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap', marginBottom: 18 }}>
+              <div>
+                <p style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, color: C.text, lineHeight: 1.1 }}>
+                  {closeSummary.yoursFinished}
+                </p>
+                <p style={{ fontSize: T.meta, color: C.textMuted, marginTop: 3 }}>
+                  {closeSummary.yoursFinished === 1 ? 'task you finished' : 'tasks you finished'}
+                </p>
+              </div>
+              <div>
+                <p style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, color: C.text, lineHeight: 1.1 }}>
+                  {closeSummary.finishedTasks}
+                </p>
+                <p style={{ fontSize: T.meta, color: C.textMuted, marginTop: 3 }}>verified across the team</p>
+              </div>
+              <div>
+                <p style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, color: C.text, lineHeight: 1.1 }}>
+                  {closeSummary.skillsAdded.length}
+                </p>
+                <p style={{ fontSize: T.meta, color: C.textMuted, marginTop: 3 }}>
+                  {closeSummary.skillsAdded.length === 1 ? 'skill on your record' : 'skills on your record'}
+                </p>
+              </div>
+            </div>
+
+            {/* Null evidence_minted_at on a closed project means the scan has
+                not finished. Saying so beats showing a zero that reads as a
+                verdict on their work. */}
+            {workspace.evidenceMintedAt === null ? (
+              <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, maxWidth: '60ch' }}>
+                Your record is still updating — reading the repository takes a few minutes and
+                finishes overnight at the latest. Nothing is lost; check back tomorrow.
+              </p>
+            ) : closeSummary.skillsAdded.length > 0 ? (
+              <div>
+                <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 12, maxWidth: '60ch' }}>
+                  These are now part of your record, with this project as the evidence behind them.
+                </p>
+                <Button href="/me">See your record</Button>
+              </div>
+            ) : (
+              <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, maxWidth: '60ch' }}>
+                No skills were added from this one. That usually means the repository had no
+                commits under your GitHub account, or none of your tasks were verified.
+              </p>
+            )}
+          </Card>
+        )}
+
         {/* The board is the page once work has started. Setup and settings
             move below it — they are read once and the board is read daily. */}
         {!isDraft && (
           <div style={{ marginBottom: 26 }}>
-            <Board workspaceId={workspace.id} tasks={tasks} verdicts={verdicts} members={workspace.members} />
+            <Board
+              workspaceId={workspace.id}
+              tasks={tasks}
+              verdicts={verdicts}
+              members={workspace.members}
+              dependencies={dependencies}
+              decisions={decisions}
+              userId={userId}
+              readOnly={isClosed}
+            />
           </div>
         )}
 
@@ -267,7 +357,47 @@ export default function WorkspaceClient({
             </p>
           )}
         </Card>
+
+        {/* Finishing the project, and only where finishing belongs: below the
+            team, after everything else, where nobody reaches it by accident.
+            Quiet styling on purpose — this is not the action the page is
+            encouraging, it is the one available when the work is done. */}
+        {isOwner && !isDraft && !isClosed && (
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: `1px solid ${C.borderFaint}` }}>
+            <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 4 }}>
+              Finished with this project?
+            </p>
+            <p style={{ fontSize: T.meta, color: C.textGhost, lineHeight: 1.6, marginBottom: 11, maxWidth: '60ch' }}>
+              Closing writes everyone&apos;s verified work to their record. The board stops
+              accepting new work, so finish anything outstanding first.
+            </p>
+            <Button variant="outline" onClick={() => setClosing(true)} disabled={busy === 'close'}>
+              Close this project
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* What it does, before it is done, in the words somebody would use.
+          The count is in the dialog rather than only on the button because
+          "6 tasks" is the fact that tells an owner whether they are closing
+          too early. */}
+      <Modal open={closing} onClose={() => setClosing(false)} title="Close this project?">
+        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 14 }}>
+          {finishedCount === 0
+            ? 'Nothing here has been verified yet, so there is nothing to put on anybody\u2019s record. Submit your finished work and run a check first.'
+            : `${finishedCount} ${finishedCount === 1 ? 'task has' : 'tasks have'} been verified. Closing reads the repository once for each person and writes what they demonstrated to their record.`}
+        </p>
+        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 18 }}>
+          This cannot be undone from here, and the board stops accepting new work.
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="quiet" onClick={() => setClosing(false)}>Not yet</Button>
+          <Button onClick={closeProject} disabled={busy === 'close' || finishedCount === 0}>
+            {busy === 'close' ? 'Closing…' : 'Close the project'}
+          </Button>
+        </div>
+      </Modal>
     </main>
   )
 }

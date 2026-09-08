@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
+import { notifyAssigned } from '@/lib/workspace/notify'
 import { enforce } from '@/lib/rate-limit'
-import { WORK_ROLES, type WorkRole } from '@/lib/workspace/membership'
+import { WORK_ROLES, workspaceAcceptsWork, type WorkRole } from '@/lib/workspace/membership'
 import { canMoveTo, revisionsFor, type TaskStatus, BOARD_COLUMNS } from '@/lib/workspace/tasks'
 import {
   parseBody, readFields, requireString, optionalString, optionalUuid,
@@ -67,6 +69,18 @@ export async function PATCH(request: Request, { params }: Params) {
     .maybeSingle()
 
   if (!current) return NextResponse.json({ error: 'Task not found.' }, { status: 404 })
+
+  // A closed project's record has already been written, and it is a claim
+  // about what the project contained when it ended. Letting the board carry
+  // on afterwards would make that claim quietly untrue.
+  const { data: workspaceRow } = await supabase
+    .from('workspaces')
+    .select('status')
+    .eq('id', workspaceId)
+    .maybeSingle()
+
+  const shut = workspaceRow ? workspaceAcceptsWork(workspaceRow.status as string) : null
+  if (shut) return NextResponse.json({ error: shut }, { status: 400 })
 
   const patch: Record<string, unknown> = {}
 
@@ -175,6 +189,24 @@ export async function PATCH(request: Request, { params }: Params) {
     // Logged, not surfaced. The edit succeeded; losing its footnote is not
     // worth telling somebody their save failed when it did not.
     if (revisionError) console.error('[api/tasks/:id] revision insert failed:', revisionError)
+  }
+
+  // Handing work to somebody is one of the few board changes worth an email:
+  // it creates an obligation they did not have a moment ago and may not be
+  // looking at the board to discover. notifyAssigned drops it when they
+  // assigned it to themselves.
+  if ('assignee_id' in patch && patch.assignee_id && patch.assignee_id !== current.assignee_id) {
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    await notifyAssigned(admin, {
+      workspaceId,
+      assigneeId: patch.assignee_id as string,
+      actorId: user.id,
+      taskTitle: (patch.title as string) ?? (current.title as string),
+      dueOn: ('due_on' in patch ? patch.due_on : current.due_on) as string | null,
+    })
   }
 
   return NextResponse.json({ ok: true, status: updated[0].status })

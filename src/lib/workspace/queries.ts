@@ -22,6 +22,12 @@ export interface WorkspaceSummary {
   startedAt: string | null
   memberCount: number
   repoFullName: string | null
+  /**
+   * When the closing scan finished writing people's records. Null on a closed
+   * project means it is still coming — the nightly pass retries it — and the
+   * page says so rather than showing an empty result as if it were the answer.
+   */
+  evidenceMintedAt: string | null
 }
 
 export interface TeamMember {
@@ -98,7 +104,7 @@ export async function listWorkspaces(
   const [{ data: workspaces }, { data: allMembers }, { data: repos }] = await Promise.all([
     supabase
       .from('workspaces')
-      .select('id, title, summary, status, deadline, created_at, started_at')
+      .select('id, title, summary, status, deadline, created_at, started_at, evidence_minted_at')
       .in('id', ids)
       .order('created_at', { ascending: false }),
     supabase
@@ -131,6 +137,7 @@ export async function listWorkspaces(
     startedAt: w.started_at as string | null,
     memberCount: counts.get(w.id as string) ?? 0,
     repoFullName: repoByWorkspace.get(w.id as string) ?? null,
+    evidenceMintedAt: w.evidence_minted_at as string | null,
   }))
 }
 
@@ -142,7 +149,7 @@ export async function loadWorkspace(
 ): Promise<WorkspaceDetail | null> {
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('id, title, summary, status, deadline, created_at, started_at')
+    .select('id, title, summary, status, deadline, created_at, started_at, evidence_minted_at')
     .eq('id', workspaceId)
     .maybeSingle()
   if (!workspace) return null
@@ -192,6 +199,7 @@ export async function loadWorkspace(
     startedAt: workspace.started_at as string | null,
     memberCount: members.length,
     repoFullName: (repos ?? [])[0]?.repo_full_name as string ?? null,
+    evidenceMintedAt: workspace.evidence_minted_at as string | null,
     members,
     invited,
     yourRole: members.find((m) => m.isYou)?.role ?? null,
@@ -308,12 +316,22 @@ export async function loadBoard(
 
 export interface TaskVerdict {
   taskId: string
+  /** The submission this answer belongs to — what a review writes back to. */
+  submissionId: string
   verdict: 'pending' | 'verified' | 'needs_work' | 'unverifiable' | 'human_verified'
   confidence: number | null
   notes: string | null
   checks: { id: string; label: string; status: string; detail: string }[]
   attempt: number
   decidedAt: string | null
+  /** A person's answer, when one was asked for. */
+  humanVerdict: string | null
+  /**
+   * Who gave it. Load-bearing rather than decorative: an answer from the
+   * person who did the work is not the same claim as one from a teammate,
+   * and the board has to be able to say which it is looking at.
+   */
+  humanActorId: string | null
 }
 
 /**
@@ -329,7 +347,7 @@ export async function loadVerdicts(
 ): Promise<Map<string, TaskVerdict>> {
   const { data } = await supabase
     .from('task_submissions')
-    .select('task_id, verdict, confidence, notes, checks, attempt, decided_at, submitted_at')
+    .select('id, task_id, verdict, confidence, notes, checks, attempt, decided_at, submitted_at, human_verdict, human_actor_id')
     .eq('workspace_id', workspaceId)
     .order('submitted_at', { ascending: false })
 
@@ -339,12 +357,15 @@ export async function loadVerdicts(
     if (latest.has(taskId)) continue
     latest.set(taskId, {
       taskId,
+      submissionId: row.id as string,
       verdict: row.verdict as TaskVerdict['verdict'],
       confidence: row.confidence === null ? null : Number(row.confidence),
       notes: row.notes as string | null,
       checks: Array.isArray(row.checks) ? row.checks as TaskVerdict['checks'] : [],
       attempt: Number(row.attempt ?? 1),
       decidedAt: row.decided_at as string | null,
+      humanVerdict: row.human_verdict as string | null,
+      humanActorId: row.human_actor_id as string | null,
     })
   }
   return latest
@@ -374,4 +395,135 @@ export async function loadMetrics(
     metrics: data.metrics as unknown as WorkspaceMetrics,
     computedAt: data.computed_at as string,
   }
+}
+
+export interface CloseSummary {
+  /** Tasks that reached Verified or Accepted, across the whole team. */
+  finishedTasks: number
+  /** Of those, the ones this person was assigned. */
+  yoursFinished: number
+  /** Distinct skills this project put on THIS person's record. */
+  skillsAdded: string[]
+}
+
+/**
+ * What a finished project actually produced, for the person looking at it.
+ *
+ * Only loaded once a project is closed. The point is the Peak-End moment: a
+ * project that ends on the same board it started on wastes the one screen the
+ * student is proudest of, and "27 tasks, 4 skills on your record" is the
+ * sentence the whole feature exists to be able to write.
+ *
+ * Read through the caller's session, so the skills are theirs and nobody
+ * else's — RLS on skill_evidence already guarantees that, and asking for
+ * anyone else's would be the wrong question anyway.
+ */
+export async function loadCloseSummary(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  accountId: string,
+): Promise<CloseSummary> {
+  const [{ data: finished }, { data: evidence }] = await Promise.all([
+    supabase
+      .from('tasks')
+      .select('id, assignee_id')
+      .eq('workspace_id', workspaceId)
+      .in('status', ['verified', 'accepted']),
+    supabase
+      .from('skill_evidence')
+      .select('skill_id')
+      .eq('workspace_id', workspaceId)
+      .eq('student_id', accountId)
+      .is('retracted_at', null),
+  ])
+
+  const rows = finished ?? []
+  return {
+    finishedTasks: rows.length,
+    yoursFinished: rows.filter((t) => t.assignee_id === accountId).length,
+    skillsAdded: Array.from(new Set((evidence ?? []).map((e) => e.skill_id as string))),
+  }
+}
+
+export interface TaskDependency {
+  taskId: string
+  dependsOnId: string
+}
+
+/**
+ * What has to happen before what.
+ *
+ * Written by the planner and never enforced — a board that refuses moves is a
+ * board people work around. The value is in the comparison it makes possible
+ * later: dependencies declared before the work started, against the ones
+ * discovered halfway through.
+ *
+ * A separate query rather than an embed on tasks, because a task has any
+ * number of these and folding them into the board query would turn one flat
+ * scan into a join whose row count is no longer the number of cards.
+ */
+export async function loadDependencies(
+  supabase: SupabaseClient,
+  workspaceId: string,
+): Promise<TaskDependency[]> {
+  const { data } = await supabase
+    .from('task_dependencies')
+    .select('task_id, depends_on_id')
+    .eq('workspace_id', workspaceId)
+
+  return (data ?? []).map((d) => ({
+    taskId: d.task_id as string,
+    dependsOnId: d.depends_on_id as string,
+  }))
+}
+
+export interface TaskDecision {
+  taskId: string
+  decidedBy: 'checker' | 'person'
+  actorId: string | null
+  verdict: string
+  previousVerdict: string | null
+  humanVerdict: string | null
+  confidence: number | null
+  note: string | null
+  decidedAt: string
+}
+
+/**
+ * Every answer ever given about a task, oldest first.
+ *
+ * Trigger-written and read-only, which is what makes it worth showing: a
+ * student looking at a verdict they disagree with can see how it was reached
+ * — what the checker said, what it rested on, who changed it and when —
+ * rather than a single word with no history behind it.
+ *
+ * A dispute you cannot see the basis of is one you cannot make.
+ */
+export async function loadDecisions(
+  supabase: SupabaseClient,
+  workspaceId: string,
+): Promise<Map<string, TaskDecision[]>> {
+  const { data } = await supabase
+    .from('task_decisions')
+    .select('task_id, decided_by, actor_id, verdict, previous_verdict, human_verdict, confidence, note, decided_at')
+    .eq('workspace_id', workspaceId)
+    .order('decided_at')
+
+  const byTask = new Map<string, TaskDecision[]>()
+  for (const row of data ?? []) {
+    const taskId = row.task_id as string
+    const decision: TaskDecision = {
+      taskId,
+      decidedBy: row.decided_by as 'checker' | 'person',
+      actorId: row.actor_id as string | null,
+      verdict: row.verdict as string,
+      previousVerdict: row.previous_verdict as string | null,
+      humanVerdict: row.human_verdict as string | null,
+      confidence: row.confidence === null ? null : Number(row.confidence),
+      note: row.note as string | null,
+      decidedAt: row.decided_at as string,
+    }
+    byTask.set(taskId, [...(byTask.get(taskId) ?? []), decision])
+  }
+  return byTask
 }

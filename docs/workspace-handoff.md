@@ -4,8 +4,12 @@ Everything a second person needs to pick this up. Kept current as the feature
 is built; if it disagrees with the code, the code is right and this file is
 stale — say so in the PR.
 
-Last updated: plan-vs-reality rollups (step 6 of 6). All six steps of the
-build plan are done; **§7 is the complete list of what is left**.
+Last updated: step 7 — the evidence loop is closed. Verified project work now
+reaches the student's record, a task the checker cannot settle has somewhere to
+go, and the nightly jobs are actually scheduled. **§7 is the complete list of
+what is left.**
+
+Migrations `v05_0034` and `v05_0035` are applied.
 
 ---
 
@@ -182,6 +186,11 @@ Migrations `v05_0025` → `v05_0033`.
 | `workspace_files` | presentation and attachment metadata (bytes in Storage) |
 | `workspace_messages` | project and per-task chat |
 
+Plus two columns added to tables that predate all of this (`v05_0034`):
+`artifacts.workspace_id` / `skill_evidence.workspace_id`, and
+`workspaces.evidence_minted_at`. The last one is separate from `closed_at`
+because closing and minting are separate acts — see step 7.
+
 ### Rules enforced in the database, not just the UI
 
 - A workspace cannot leave `draft` without a linked repo.
@@ -233,6 +242,9 @@ src/lib/workspace/
   run-verification.ts  orchestration: claim, settle, one call, write verdicts
   metrics.ts      plan vs reality: bias, spread, capability frontier (pure)
   rollup.ts       the nightly job that writes workspace_metrics
+  review.ts       who may answer for a task the checker could not settle (pure)
+  evidence.ts     verified project work -> skill_evidence, at close-out
+  notify.ts       the five moments worth an email
 
 src/lib/agents/
   planner.ts      project → drafted tasks (prompt, schema, re-validation)
@@ -250,9 +262,13 @@ src/app/api/workspaces/
                                   DELETE only from Backlog or Planned
   [id]/plan/route.ts              POST   draft a plan (one model call)
   [id]/verify/route.ts            POST   queue and run a batch check
+  [id]/close/route.ts             POST   end the project, write the records
+  [id]/tasks/[taskId]/review/route.ts
+                                  POST   a person's answer on a stuck task
 
-src/app/api/cron/verify/route.ts   the nightly sweep + stuck-run recovery
-src/app/api/cron/rollups/route.ts  the nightly plan-vs-reality rollup
+src/app/api/cron/nightly/route.ts  THE SCHEDULED ONE. verify -> mint -> roll up
+src/app/api/cron/verify/route.ts   the same sweep, on its own
+src/app/api/cron/rollups/route.ts  the same rollup, on its own
 
 src/app/workspaces/
   page.tsx + WorkspacesClient.tsx        list, create, answer invitations
@@ -270,7 +286,18 @@ clicks it. **If the two disagree, fix the TypeScript.**
 
 Tests: `tests/workspace-membership.test.ts`, `tests/work-events.test.ts`,
 `tests/workspace-tasks.test.ts`, `tests/planner.test.ts`,
-`tests/verify.test.ts`, `tests/metrics.test.ts`.
+`tests/verify.test.ts`, `tests/metrics.test.ts`,
+`tests/workspace-review.test.ts`, `tests/workspace-evidence.test.ts`.
+
+`tests/schema-consistency.test.ts` is not a workspace test but will fail on
+workspace work: it checks every column the app names against `schema.sql`. Add
+new columns there as well as in a migration. Its write-scan also needs an
+`.update({ ... })` spread over lines — a single-line object runs past its
+terminator and it reports the next object literal's keys as columns.
+
+`scripts/seed-work-events.mjs` writes the rows the webhook would, so the
+submit -> check -> confirm path is testable without real GitHub traffic. It is
+a fixture, not a repair tool.
 
 ---
 
@@ -375,9 +402,8 @@ A nightly job writing one row per student per project. **Never computed on
 page load.** See §7.
 
 ### Not started, deliberately
-Notifications (invited, assigned, verdict landed), file uploads to Supabase
-Storage, checkpoints UI, the calendar, the daily queue, cross-project
-capability estimates.
+File uploads to Supabase Storage, checkpoints UI, the calendar, the daily
+queue, cross-project capability estimates.
 
 ### Step 6 — Plan-vs-reality rollups
 A nightly job (`/api/cron/rollups`) writes one `workspace_metrics` row per
@@ -408,6 +434,101 @@ Still missing: metrics are **per project**. Nothing aggregates them across
 projects onto `/me`, and `workspace_metrics` is designed for exactly that —
 `account_id` plus the lifted columns are there to be queried across rows.
 
+### Step 7 — The evidence loop
+Six steps produced a board full of Verified cards that appeared nowhere. This
+step is the payoff, and it is four things that only work together.
+
+**Human verification.** The checker leaves two kinds of task unsettled — work
+marked as having no code, and work that has failed twice — and both land as
+`unverifiable`, meaning "waiting on a person". `review.ts` holds the rule, and
+one rule matters more than the rest: **the assignee never confirms their own
+work.** Verified evidence somebody can write about themselves is worth nothing,
+and this is the one path where a human answer becomes a Verified card.
+
+A solo student therefore has nobody who is *allowed* to answer. Those go to
+staff through the admin queue (a seventh adapter in `src/lib/admin/queue.ts`),
+which resolves them through the same `outcomeFor` the teammate path uses — a
+card must not behave differently depending on who looked at it.
+
+**Evidence at close-out.** `mintWorkspaceEvidence` decides *who* is owed
+evidence and hands each person to the existing `processRepo`. It deliberately
+does not grow a second pipeline: two would mean two definitions of what a
+skill level means and two places for a dispute to argue with.
+
+Three refusals, none of them a bug: no verified work (nothing to attest to),
+no `scan_consent_at` (the same gate `ingest.ts` applies), no
+`github_username` (nothing to attribute).
+
+The tier is `workspace_verified`, base 0.6, and what earns it is **not** that
+the work is harder. It is that the acceptance criteria were written down
+before the work started. Every other tier judges a finished repository against
+itself.
+
+`difficulty_cleared` is still whatever `computeDifficultyLevel` derives from
+the repository — deliberately not raised by task difficulty, because a student
+setting their own task to difficulty 9 must never be able to move their own
+record. What the verified-task history buys instead is `source_agreement: 2`.
+
+**Closing and minting are separate writes.** Closing is one fast update;
+minting is a repository scan per member and can outlast 60 seconds on a
+four-person team. So the close commits first and `evidence_minted_at` records
+whether the slow half finished. A null there on a closed project is retried by
+the nightly pass. Folded into one write, a timeout would have meant a project
+that refuses to close because GitHub was slow.
+
+**The nightly job now runs.** `/api/cron/verify` and `/api/cron/rollups`
+existed and nothing scheduled them. `/api/cron/nightly` is the scheduled one
+(`v05_0036`, pg_cron, like every other job here): verify, then mint, then roll
+up. The order is required, not cosmetic — rollups run before the verdicts land
+would describe a day in which nothing was ever verified. Three staggered
+pg_cron entries would express that ordering as a hope about clock time; one
+call expresses it as sequence. Both older routes stay for running a sweep on
+its own.
+
+Also in this step: the planner's `dependsOn` is finally written to
+`task_dependencies` and shown as "Waiting on …" — recorded, never enforced.
+And five email kinds, one digest per check rather than one per task.
+
+### Step 8 — The record a dispute argues with
+
+Workmark decides what goes on a student's record, which makes a dispute a
+**§611 reinvestigation with a 30-day clock**, not a support ticket. That is
+what `disputes`, `evidence_audit` and `src/lib/fcra/` already exist for.
+Workspace evidence had no equivalent trail, and one live bug.
+
+**The bug, which mattered more than the logging.** `reinvestigate` rescans
+through the *disputing student's own* GitHub installation. Project evidence is
+read through the *workspace's* installation — a teammate's. So the rescan
+could not see the repository, `scanRepo` returned `skip`, and the code fell
+through with `hasAttributedCommits` still false, which
+`reinvestigationOutcome` reads as "the commits are not theirs" and retracts.
+
+**A student who filed a dispute to ask a question would have had their
+evidence deleted.** Two fixes: workspace evidence rescans through
+`workspace_repos.installation_id`, and a **skipped scan never retracts** — it
+routes to a person. The second one protects every kind of evidence, not just
+this one; anybody whose repository went private had the same exposure.
+
+**`task_decisions` (`v05_0035`).** `task_submissions.verdict` is updated in
+place, so a human confirmation erased the checker's original answer. For a
+dispute that is the wrong half to lose. Trigger-written, like
+`task_transitions`, for the same reason: a caller that forgets to log a
+decision corrupts the only record the student has to argue with. Read-only to
+members; no insert policy exists, and none should.
+
+**`task_submissions.agent_call_id` is finally populated.** The column shipped
+with the verification migration and nothing ever wrote it, because the only
+way to get a call id was to guess. `callStructuredAgentLogged` returns it now.
+`agent_calls` already stores the full prompt, the parsed output and the model
+version — so a verdict can be traced to the exact text that produced it.
+
+**The basis is recorded and shown.** Minting writes an `evidence_audit` row
+naming the tasks, their acceptance criteria, verdicts, confidence and who
+confirmed them — rather than the `{artifact_id, raw_composite}` a plain scan
+leaves. `/me/file` shows it (its signal query filtered `skill_source:%` and
+was silently dropping the one signal that explains why project evidence
+outranks a scan), and the task dialog shows the decision history.
+
 ---
 
 ## 7. What is left
@@ -416,31 +537,72 @@ Everything below is unbuilt. Ordered by what blocks what.
 
 ### 7.1 Operational — nothing works until these are done
 
-- [ ] **Run migrations `0031`, `0032`, `0033`.** (`0025`–`0030` are applied.)
-- [ ] **GitHub App permissions:** add **Checks** and **Issues**, both
-      read-only. Then subscribe to six events: Push, Pull request, Pull
-      request review, Check suite, Issue comment, Release. Until this is
-      done `work_events` stays empty and verification has nothing to read.
-- [ ] **Schedule `/api/cron/verify`** — nightly. Picks up runs whose request
-      died partway, and queues a run for any project with work waiting that
-      nobody asked about. `CRON_SECRET` in the Authorization header.
-- [ ] **Schedule `/api/cron/rollups`** — nightly, *after* verify, so the
-      day's verdicts are included. Same auth.
+- [x] Migrations `0025`–`0035` are applied.
+- [ ] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
+      pg_cron. Until it runs, verification only happens when somebody presses
+      the button, and no closed project's evidence is ever retried.
+- [x] GitHub App permissions and the six event subscriptions are set.
+**Scheduling lives in pg_cron, not `vercel.json`.** `v05_0016` moved it there
+and said why: Vercel's Hobby plan allows one cron run per day, which is
+useless as a recovery mechanism, while pg_cron runs every minute on every
+Supabase tier. Every scheduled job since has followed the same shape — a
+`security definer` function that reads `site_url` and `cron_secret` from
+`private_config` and **POSTs** to its route through `pg_net`.
 
-### 7.2 The gap that matters most
+That is why every `/api/cron/*` route here is a POST handler. Do not "fix"
+one to GET for Vercel Cron; nothing calls them that way.
 
-- [ ] **Verified work does not reach the student's record.** Nothing writes
-      `skill_evidence` from a verified task. This is the whole point of the
-      feature — a project produces a board full of Verified cards and none of
-      it appears on `/me`. Needs a decision on how a task maps to skills
-      (from changed file paths? from the project's declared skills? from the
-      task text?) and it should reuse the existing evidence pipeline rather
-      than growing a second one.
-- [ ] **Human verification has no UI.** `task_submissions.human_verdict` and
-      `human_actor_id` exist and nothing writes them, so a task that reaches
-      "needs a person" — after two failed automatic attempts, or any task
-      marked as having no code — sits there permanently. This is the escape
-      hatch the attempt cap depends on. Build it first.
+    workmark-sweep-jobs              * * * * *   v05_0016
+    workmark-nightly-workspace-pass  17 3 * * *  v05_0036
+    workmark-purge-rate-limits       41 3 * * *  v05_0019
+    workmark-purge-accounts          23 4 * * *  v05_0018
+    workmark-recommend-projects      41 4 * * *  v05_0022
+    workmark-release-waitlist         7 5 * * *  v05_0017
+
+`vercel.json` still carries `/api/cron/jobs` and that is the only entry in it.
+
+**`private_config` must be populated** or every one of these returns silently.
+See the block at the top of `v05_0016`.
+
+**Watch `maxDuration`.** A deployment whose value exceeds the plan limit
+**fails to build** rather than being clamped. 60 is safe on every plan; the
+verify and rollup routes shipped at 300, which is fine on Pro and breaks a
+Hobby deploy, and nothing in the repo settles which plan this is. They are at
+60 now with the sweep bounded to match — raise both together if the project
+is on Pro.
+
+### 7.2 The gap that mattered most — closed
+
+Both items are done; see step 7. What is worth knowing about how:
+
+- Verified work reaches the record **at close-out**, not per task. A repo scan
+  per verified task would be dozens of GitHub round trips for a picture that
+  barely changes between them.
+- Skills come from the existing scan pipeline restricted to files that person
+  touched, **not** from task text. Task text is a claim; changed files are a
+  fact.
+- Human verification exists in two places on purpose: teammates first, staff
+  as the backstop. Both go through `outcomeFor`.
+
+What is still thin here:
+
+- [ ] **Nothing re-mints when a record should change.** A project closed
+      before a member connected GitHub, or before they consented, is stamped
+      `evidence_minted_at` and never revisited. The skip reasons are recorded
+      per member in the close response but not stored, so nothing can offer
+      "three people were skipped, want to try again".
+- [ ] **`workspace_verified` base 0.6 is unvalidated**, like every other
+      constant here. It says this evidence outranks listing-driven work. That
+      is defensible and it is still a guess.
+- [ ] **`reinvestigate` does not reconsider the tasks.** It rescans the
+      repository, which is the right check for a scan-derived row and only
+      half the story for a project one: the acceptance criteria, the verdicts
+      and the human confirmations are now recorded in `evidence_audit` and
+      nothing reads them back. A dispute on project evidence gets a repo
+      answer to a project claim.
+- [ ] **Nothing shows a student their own `task_decisions` outside a project
+      they can still open.** After a workspace is deleted the log cascades
+      with it. That is probably right, and it is worth deciding on purpose.
 
 ### 7.3 Tables that exist with no UI
 
@@ -448,8 +610,13 @@ Each of these is a migration already applied and nothing writing to it.
 
 - [ ] **Subtasks** — `tasks.parent_task_id`
 - [ ] **Sprints** — `sprints`
-- [ ] **Dependencies** — `task_dependencies`. The planner already returns
-      `dependsOn` and it is discarded; wiring that up is the cheapest win here.
+- [x] **Dependencies** — `task_dependencies`. The planner's `dependsOn` is
+      written on plan, and shown on the card as "Waiting on …". Recorded,
+      never enforced: a board that refuses moves is a board people work
+      around, and "declared a dependency, then hit a different one" is the
+      more interesting fact. Only the planner writes these — there is still
+      no UI for adding one by hand, which is what the decomposition metric
+      wants in order to compare declared against discovered.
 - [ ] **Checkpoints** — `task_checkpoints`. The short before/blocked/after
       questions. Keep them rare; a workspace that interrogates you is one
       people stop opening.
@@ -465,12 +632,18 @@ Each of these is a migration already applied and nothing writing to it.
 
 ### 7.4 Missing behaviour
 
-- [ ] **Closing a project out.** `workspaces.status` has `submitted` and
-      `closed` and nothing moves it there. No end-of-project summary.
-- [ ] **Notifications.** An invitation only appears if you visit
-      `/workspaces`. Nothing emails on invited / assigned / verdict landed.
-      The whole point of an invitation is reaching somebody who is *not*
-      looking at the site. `src/lib/notify/email.ts` is the pattern.
+- [x] **Closing a project out.** An owner closes; the summary panel replaces
+      the board with what the project produced. `submitted` as a workspace
+      status is still unused — nothing moves a project there, and it is not
+      obvious it should exist.
+- [x] **Notifications.** Five kinds: invited, assigned, verdict, review
+      needed, closed. One digest per check rather than one per task — a batch
+      that emails five times is a batch people mute, and then the message
+      that needed them gets muted with it. Only `workspace_invited` is
+      essential; the rest are switchable.
+- [ ] **Nothing chases a stale review.** A task waiting on a teammate emails
+      once and then waits forever. It reaches the admin queue, where its age
+      is visible, and that is the only backstop.
 - [ ] **Realtime board.** Supabase `postgres_changes` on `tasks` filtered by
       `workspace_id`. RLS already gates it, so no new authorization. Keep
       drag-in-progress state out of Postgres; if it gets hot, the migration
@@ -575,3 +748,26 @@ than the others, and should say so.
   and logs rather than throws. **Keep it that way.**
 - `next.config.js` and `next.config.mjs` both used to exist; Next loaded one
   and silently ignored the other. There is now only `.js`.
+- **Scheduling is pg_cron, not Vercel cron** (`v05_0016` moved it and says
+  why). pg_net POSTs, which is why every `/api/cron/*` route is a POST
+  handler. Converting one to GET for Vercel Cron breaks it, and nothing
+  reports the breakage — the job simply stops running.
+- **A new scheduled job needs a migration**, not a `vercel.json` edit: a
+  `security definer` function reading `private_config`, plus a
+  `cron.schedule`. Copy `request_account_purge` in `v05_0018`.
+- **`maxDuration` above the plan limit fails the build**, it is not clamped.
+  60 is safe everywhere.
+- **The assignee never confirms their own work** (`canReview`). It is the only
+  thing standing between "verified evidence" and "evidence a student wrote
+  about themselves". A future "solo students can self-confirm" convenience
+  would quietly destroy the value of every Verified card in the product.
+- **Task difficulty must never raise `difficulty_cleared`.** Students set
+  their own difficulty. Wiring it into evidence would let anyone move their
+  own record by typing a 9.
+- Do not add a second evidence pipeline. `processRepo` is the one place that
+  decides prior-versus-evidence, dedup and audit; a parallel path means two
+  definitions of a skill level and two things for a dispute to argue with.
+- `tests/schema-consistency.test.ts` reads `schema.sql`, so a new column needs
+  adding **there** as well as in a migration. Its write-scan also stops at the
+  first `\n  }` — keep `.update({ ... })` objects spread over lines or it
+  reads the next object literal's keys as column names.

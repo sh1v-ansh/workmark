@@ -46,6 +46,19 @@ export interface ProcessRepoResult {
  * too, so a repo that already produced Tier 0 evidence on its own gets a
  * SECOND artifact for the engagement rather than having its solo-work
  * record overwritten — the two are different claims about different work.
+ *
+ * options.workspaceId does the same for a project workspace, one tier
+ * higher. What earns it is not that the work is harder but that the
+ * acceptance criteria were written down BEFORE the work started: every
+ * other tier judges a finished repository against itself, and this one has
+ * a claim made in advance and a check against it. That also makes the
+ * verified-task history a second independent reading of the same work, which
+ * is what source_agreement counts.
+ *
+ * grantId is nullable because a workspace holds its repository at workspace
+ * level (workspace_repos, one installation for the whole team) rather than
+ * through a per-student grant. artifacts.access_grant_id has always allowed
+ * null; nothing had reason to pass it before.
  */
 export async function processRepo(
   supabase: SupabaseClient,
@@ -53,8 +66,8 @@ export async function processRepo(
   installationId: string,
   githubLogin: string,
   repoFullName: string,
-  grantId: string,
-  options: { engagementId?: string } = {},
+  grantId: string | null,
+  options: { engagementId?: string; workspaceId?: string } = {},
 ): Promise<ProcessRepoResult> {
   const scanResult = await scanRepo(installationId, githubLogin, repoFullName)
   if (scanResult.skip) {
@@ -107,19 +120,25 @@ export async function processRepo(
   }
 
   const engagementId = options.engagementId ?? null
+  const workspaceId = options.workspaceId ?? null
   // Listing-driven work carries base 0.5 regardless of contributor count:
   // the weight comes from it having been real work someone asked for and
   // accepted, not from how many people happened to commit to the repo.
-  const tier: ArtifactTier = engagementId
-    ? 'listing_driven'
-    : (scanResult.distinctContributors ?? 1) > 1 ? 'tier_0_5' : 'tier_0'
-  const base = tier === 'tier_0' ? 0.4 : 0.5
+  // Workspace work carries 0.6 for the reason in the doc comment above — the
+  // criteria existed before the code did.
+  const tier: ArtifactTier = workspaceId
+    ? 'workspace_verified'
+    : engagementId
+      ? 'listing_driven'
+      : (scanResult.distinctContributors ?? 1) > 1 ? 'tier_0_5' : 'tier_0'
+  const base = tier === 'workspace_verified' ? 0.6 : tier === 'tier_0' ? 0.4 : 0.5
 
   const deployment = await verifyDeployment(installationId, repoFullName, scanResult.defaultBranch)
   const verificationMethod = deployment.verified ? deployment.method! : 'repo_link'
 
   const artifactId = await getOrCreateArtifact(
-    supabase, studentId, repoFullName, grantId, tier, verificationMethod, deployment.url, engagementId,
+    supabase, studentId, repoFullName, grantId, tier, verificationMethod, deployment.url,
+    engagementId, workspaceId,
   )
 
   const { rawComposite } = extractComplexity(scanResult, resolvedSkillIds.length)
@@ -177,7 +196,8 @@ export async function processRepo(
     const skillComposite = scaleComposite(rawComposite, relevance)
     const { difficultyCleared } = await computeDifficultyLevel(supabase, skillId, skillComposite)
     const changed = await writeOrCorrectEvidence(supabase, {
-      studentId, skillId, artifactId, base, rawComposite: skillComposite, difficultyCleared, verificationMethod, engagementId,
+      studentId, skillId, artifactId, base, rawComposite: skillComposite, difficultyCleared,
+      verificationMethod, engagementId, workspaceId,
     })
     evidenceWritten.push({ skillId, difficultyCleared, changed })
   }
@@ -237,28 +257,35 @@ async function writePriors(supabase: SupabaseClient, studentId: string, skillIds
   if (error) throw error
 }
 
-type ArtifactTier = 'tier_0' | 'tier_0_5' | 'listing_driven'
+type ArtifactTier = 'tier_0' | 'tier_0_5' | 'listing_driven' | 'workspace_verified'
 
 async function getOrCreateArtifact(
   supabase: SupabaseClient,
   studentId: string,
   repoFullName: string,
-  grantId: string,
+  grantId: string | null,
   tier: ArtifactTier,
   verificationMethod: string,
   deploymentUrl: string | null,
   engagementId: string | null,
+  workspaceId: string | null,
 ): Promise<string> {
-  // Scoped to the engagement (or explicitly to no engagement) — `.is`
-  // rather than `.eq` for the null case, since PostgREST renders
+  // Scoped to the engagement or the workspace — or explicitly to neither.
+  // `.is` rather than `.eq` for each null case, since PostgREST renders
   // `eq.null` as a comparison against the literal string, which never
   // matches and would create a duplicate artifact on every scan.
+  //
+  // Both are pinned, not just the one that is set. A repo scanned solo, then
+  // used on a project, is two claims about two pieces of work and wants two
+  // artifacts; leaving the other column unconstrained would let the second
+  // scan find the first row and overwrite the student's own record of it.
   let query = supabase
     .from('artifacts')
     .select('id')
     .eq('student_id', studentId)
     .eq('repo_full_name', repoFullName)
   query = engagementId ? query.eq('engagement_id', engagementId) : query.is('engagement_id', null)
+  query = workspaceId ? query.eq('workspace_id', workspaceId) : query.is('workspace_id', null)
   const { data: existing } = await query.maybeSingle()
 
   const patch = {
@@ -268,6 +295,7 @@ async function getOrCreateArtifact(
     repo_full_name: repoFullName,
     access_grant_id: grantId,
     engagement_id: engagementId,
+    workspace_id: workspaceId,
     tier,
     verification_method: verificationMethod,
     deployment_url: deploymentUrl,
@@ -296,7 +324,7 @@ async function getOrCreateArtifact(
  */
 async function writeOrCorrectEvidence(
   supabase: SupabaseClient,
-  args: { studentId: string; skillId: string; artifactId: string; base: number; rawComposite: number; difficultyCleared: number; verificationMethod: string; engagementId: string | null },
+  args: { studentId: string; skillId: string; artifactId: string; base: number; rawComposite: number; difficultyCleared: number; verificationMethod: string; engagementId: string | null; workspaceId: string | null },
 ): Promise<boolean> {
   const { data: existing } = await supabase
     .from('current_skill_evidence')
@@ -315,11 +343,16 @@ async function writeOrCorrectEvidence(
     skill_id: args.skillId,
     artifact_id: args.artifactId,
     engagement_id: args.engagementId,
+    workspace_id: args.workspaceId,
     base: args.base,
     raw_composite: args.rawComposite,
     difficulty_cleared: args.difficultyCleared,
     verification_method: args.verificationMethod,
-    source_agreement: 1, // MVP: the scan is the only source — see levels.ts / §5
+    // Elsewhere the scan is the only source, so this is 1. Workspace work has
+    // a second, genuinely independent one: acceptance criteria written before
+    // the code existed, and a check against them. Two readings of the same
+    // work, which is exactly what this column counts.
+    source_agreement: args.workspaceId ? 2 : 1,
     corrects_evidence_id: existing?.id ?? null,
   }
   const { data: inserted, error } = await supabase.from('skill_evidence').insert(row).select('id').single()

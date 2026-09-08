@@ -73,10 +73,40 @@ export interface StructuredCallArgs {
  * nothing here is a disclosure to a third party — the output goes back
  * to the person who asked for it.
  */
+/**
+ * The same call, plus the id of the audit row it wrote.
+ *
+ * `task_submissions.agent_call_id` has existed since the verification
+ * migration and nothing ever filled it, because the only way to get a call id
+ * was to guess — look up "the most recent call by this student", which
+ * planner.ts still does and which two concurrent runs would get wrong.
+ *
+ * A verdict that cannot be traced to the exact prompt and response that
+ * produced it is a verdict a student cannot argue with, and arguing with it
+ * is a right rather than a courtesy here. So the id comes back.
+ *
+ * callStructuredAgent stays as it was — five other agents use it and none of
+ * them needs the id.
+ */
+export async function callStructuredAgentLogged<T>(
+  supabase: SupabaseClient,
+  args: StructuredCallArgs,
+): Promise<{ value: T; callId: string | null } | null> {
+  return callInternal<T>(supabase, args)
+}
+
 export async function callStructuredAgent<T>(
   supabase: SupabaseClient,
   args: StructuredCallArgs,
 ): Promise<T | null> {
+  const logged = await callInternal<T>(supabase, args)
+  return logged ? logged.value : null
+}
+
+async function callInternal<T>(
+  supabase: SupabaseClient,
+  args: StructuredCallArgs,
+): Promise<{ value: T; callId: string | null } | null> {
   const client = getAnthropic()
   if (!client) return null
 
@@ -118,15 +148,23 @@ export async function callStructuredAgent<T>(
     return null
   }
 
-  const { error } = await supabase.from('agent_calls').insert({
-    agent_type: args.agentType,
-    student_id: args.studentId ?? null,
-    poster_id: args.posterId ?? null,
-    input: { ...args.inputForAudit, system: args.system, user: args.userContent },
-    output: parsed as Record<string, unknown>,
-    model_version: AGENT_MODEL,
-  })
+  const { data: logged, error } = await supabase
+    .from('agent_calls')
+    .insert({
+      agent_type: args.agentType,
+      student_id: args.studentId ?? null,
+      poster_id: args.posterId ?? null,
+      input: { ...args.inputForAudit, system: args.system, user: args.userContent },
+      output: parsed as Record<string, unknown>,
+      model_version: AGENT_MODEL,
+    })
+    .select('id')
+    .maybeSingle()
+
+  // Logged, not thrown. The answer is already computed and paid for; losing
+  // its audit row is worth a loud console line, not throwing away a verdict
+  // the student is waiting on.
   if (error) console.error('[agents] agent_calls insert failed:', error)
 
-  return parsed
+  return { value: parsed, callId: (logged?.id as string | undefined) ?? null }
 }

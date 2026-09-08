@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { workspaceAcceptsWork } from '@/lib/workspace/membership'
 import { createClient } from '@/lib/supabase/server'
 import { enforce } from '@/lib/rate-limit'
 import { WORK_ROLES, type WorkRole } from '@/lib/workspace/membership'
@@ -59,6 +60,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }))
   if (!fields.ok) return fields.response
   const v = fields.values
+
+  // A closed project's record is already written and is a claim about what
+  // the project contained when it ended. A new card afterwards makes that
+  // claim quietly untrue.
+  const { data: workspaceRow } = await supabase
+    .from('workspaces')
+    .select('status')
+    .eq('id', workspaceId)
+    .maybeSingle()
+
+  const shut = workspaceRow ? workspaceAcceptsWork(workspaceRow.status as string) : null
+  if (shut) return NextResponse.json({ error: shut }, { status: 400 })
 
   // New tasks land at the bottom of Backlog. Reading the current maximum
   // rather than counting rows, because positions are fractional after the
