@@ -117,7 +117,11 @@ export async function mintWorkspaceEvidence(
       .is('removed_at', null),
     admin
       .from('tasks')
-      .select('assignee_id')
+      // id as well as assignee_id: the counts only need the assignee, but the
+      // justification needs to look each task up. Selecting one and reading
+      // the other is how the audit trail came back saying "0 tasks" while the
+      // evidence it was explaining had just been written.
+      .select('id, assignee_id')
       .eq('workspace_id', workspaceId)
       .in('status', FINISHED_STATUSES as unknown as string[]),
   ])

@@ -69,7 +69,7 @@ export default async function MyFilePage() {
   const [{ data: skillRows }, { data: artifactRows }, { data: auditRows }, { data: signalRows }] = await Promise.all([
     skillIds.length ? supabase.from('skills').select('id, canonical_name').in('id', skillIds) : Promise.resolve({ data: [] }),
     artifactIds.length ? supabase.from('artifacts').select('id, repo_full_name, tier').in('id', artifactIds) : Promise.resolve({ data: [] }),
-    evidenceIds.length ? supabase.from('evidence_audit').select('evidence_id, source, raw_input, extracted_at').in('evidence_id', evidenceIds) : Promise.resolve({ data: [] }),
+    evidenceIds.length ? supabase.from('evidence_audit').select('evidence_id, source, raw_input, extracted_at').in('evidence_id', evidenceIds).order('extracted_at') : Promise.resolve({ data: [] }),
     // Which files each skill was found in. §609 entitles the student to know
     // what's in their file; "PostgreSQL, level 3" without saying where that
     // came from is not really an answer, and it's the thing a dispute needs
