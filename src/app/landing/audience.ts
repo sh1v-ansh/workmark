@@ -67,18 +67,25 @@ export const COPY: Record<Audience, AudienceCopy> = {
     // The sentence every CS student has already said out loud. They do not
     // need to be sold the problem, so the headline skips straight to the
     // answer — and it sets up the whole page: the record answers
-    // "experience", the externship answers "get", the marketplace answers
-    // what happens next.
+    // "experience", the guided project answers "get", the marketplace
+    // answers what happens next.
     headline: 'You need experience to get experience.',
     headlineAccent: 'Not any more.',
+    // The lede is where the empathy goes, and it has to name the number
+    // rather than gesture at it. Every student reading this has a real count
+    // in their head. Saying it back is what makes them believe the rest.
+    //
+    // Then the reframe, immediately: it is not that they are not good
+    // enough, it is that nothing in the process can tell. That is the honest
+    // diagnosis and it is also what Workmark actually fixes.
     lede:
-      'The application system wants experience nobody ever gave you a chance to get. Workmark hands you the projects instead, then turns what you build into proof an employer can check.',
+      'Two hundred applications. Four replies. Not because you cannot do the work — because a CV gives nobody any way to tell. Workmark hands you real projects, reads the code you write, and turns it into proof somebody can check.',
     primaryCta: { label: 'Start my first project', href: '/login' },
     secondaryCta: { label: 'See open projects', href: '/listings' },
     reassurance: 'Free with a .edu address. No CV, no cover letter, no waiting to hear back.',
     proof: [
       ['Start today, no application', 'Workmark writes you a project and you begin.'],
-      ['You pick what we read', 'Repo by repo. Turn any of them off whenever.'],
+      ['Nobody screens you out first', 'The work is the application. There is no pile to get to the top of.'],
       ['The record is yours', 'Download the whole thing in one file, any time.'],
     ],
     loopEyebrow: 'How it works',
@@ -87,7 +94,11 @@ export const COPY: Record<Audience, AudienceCopy> = {
     // overstate. The arc is still the reward; it just stops where the
     // product does.
     loopHeadline: 'From side project to real work',
-    loopLede: 'Four steps. You are already done with the first one.',
+    // Names what is actually broken, in one line, without a lecture. Entry
+    // level is the only rung where nobody can see what you can do — and that
+    // is a measurement problem, not a talent one.
+    loopLede:
+      'Entry-level hiring is broken because there is nothing to measure. Four steps that give it something. You are already done with the first one.',
     steps: [
       {
         n: '01',
@@ -98,16 +109,16 @@ export const COPY: Record<Audience, AudienceCopy> = {
       },
       {
         n: '02',
-        title: 'Get an externship without applying for one',
+        title: 'Get a guided project without applying for one',
         body:
-          'Workmark writes you a real project aimed at the exact skill you are missing. Build it in your own repo and it lands on your record like any other work.',
+          'Workmark writes you a real project aimed at the exact skill you are missing, then plans it with you like a senior dev would. Build it in your own repo and it lands on your record like any other work.',
         now: true,
       },
       {
         n: '03',
         title: 'Stop applying into the void',
         body:
-          'Real projects from faculty, labs and student teams, matched to your record the moment they go up. You see your fit before you apply. They see your evidence before they reply.',
+          'Real projects from faculty, labs and student teams, matched to your record the moment they go up. You see your fit before you apply. They see your evidence before they reply. Nobody is filtered out by a keyword.',
         now: true,
       },
       {
@@ -131,8 +142,11 @@ export const COPY: Record<Audience, AudienceCopy> = {
     eyebrow: 'For startups, SMBs, nonprofits and labs',
     headline: 'Stop reading CVs.',
     headlineAccent: 'Read the work.',
+    // The problem named from their side: entry level is the one hire where
+    // every candidate looks identical on paper, so the screen is a coin
+    // toss with extra steps.
     lede:
-      'A CV is a claim someone wrote about themselves. Workmark shows you what a candidate actually built, which project it came from, and how good it was.',
+      'Entry-level candidates all look the same on paper, so screening them is guesswork. Workmark shows you what somebody actually built, which project it came from, and how good it was.',
     primaryCta: { label: 'Post a project', href: '/listings/new' },
     secondaryCta: { label: 'See how the record works', href: '/how-it-works' },
     reassurance: 'Free to post. No contract. Nothing to install.',
@@ -141,9 +155,10 @@ export const COPY: Record<Audience, AudienceCopy> = {
       ['Nobody grades themselves', 'Levels come from the code, not the candidate.'],
       ['You see the gaps too', 'Including what they cannot do yet.'],
     ],
-    loopEyebrow: 'Why this beats a CV',
+    loopEyebrow: 'A signal that did not exist',
     loopHeadline: 'Know what they can do before you call them',
-    loopLede: 'Everything below comes out of work that already exists.',
+    loopLede:
+      'Not a better-formatted CV. A different kind of evidence, read out of work that already exists.',
     steps: [
       {
         n: '01',
@@ -177,7 +192,7 @@ export const COPY: Record<Audience, AudienceCopy> = {
     crossLink: {
       eyebrow: 'Looking for work instead?',
       headline: 'You need experience to get experience',
-      body: 'Workmark hands you the projects, reads what you build, and turns it into proof an employer can check.',
+      body: 'Sending applications into the void does not work. Workmark hands you the projects instead, reads what you build, and turns it into proof somebody can check.',
       cta: 'See it from that side',
     },
   },

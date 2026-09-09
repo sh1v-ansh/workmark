@@ -5,7 +5,7 @@ import { MarketingLayout } from './MarketingLayout'
 import { MissionHero } from './MissionHero'
 import { TheRecord } from './TheRecord'
 import { TheLoop } from './TheLoop'
-import { TheExternship } from './TheExternship'
+import { TheGuidedProject } from './TheGuidedProject'
 import { CrossLink } from './CrossLink'
 import { JoinSection } from './WaitlistSection'
 import { AudienceProvider, AUDIENCE_ROUTES } from './audience-context'
@@ -51,7 +51,7 @@ export function AudienceLanding({ initial }: { initial: Audience }) {
         <MissionHero audience={audience} onAudienceChange={changeAudience} />
         <TheRecord audience={audience} />
         <TheLoop audience={audience} />
-        <TheExternship audience={audience} />
+        <TheGuidedProject audience={audience} />
         <CrossLink audience={audience} onAudienceChange={changeAudience} />
         <JoinSection audience={audience} />
       </MarketingLayout>

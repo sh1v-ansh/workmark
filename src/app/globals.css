@@ -1407,12 +1407,12 @@
   .wm-footer-grid { grid-template-columns: 1fr; }
 }
 
-/* ── The externship section ───────────────────────────────────────────────
+/* ── The guided-project section ───────────────────────────────────────────────
    Its own panel rather than another flat band, because it is the part of
    the page that answers the hardest objection a student has — everyone
    wants experience and nobody will give you any — and it was previously a
    clause inside somebody else's paragraph. */
-.wm-externship {
+.wm-guided {
   position: relative;
   overflow: hidden;
   padding: 44px 44px 46px;
@@ -1421,7 +1421,7 @@
   background: linear-gradient(140deg, #F7F4FF 0%, #FCFBFF 46%, #FFFFFF 100%);
   box-shadow: 0 1px 2px rgba(62, 31, 255, 0.05), 0 30px 70px -40px rgba(62, 31, 255, 0.42);
 }
-.wm-externship::before {
+.wm-guided::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -1431,7 +1431,7 @@
     radial-gradient(560px 320px at 0% 100%, rgba(56, 189, 248, 0.10) 0%, rgba(56, 189, 248, 0) 68%);
 }
 @media (max-width: 720px) {
-  .wm-externship { padding: 30px 22px 32px; border-radius: 18px; }
+  .wm-guided { padding: 30px 22px 32px; border-radius: 18px; }
 }
 
 /* The AI project card, in the clothes it actually wears in the product. A
@@ -1467,7 +1467,7 @@
   border-color: #DCDAE8;
 }
 
-/* ── The unbuilt half of the externship ───────────────────────────────────
+/* ── The unbuilt half of the guided project ───────────────────────────────────
    Everything under here describes the workspace, which does not exist yet.
    It is separated by a rule, carries one unmistakable "Being built" badge,
    and every card in it wears the same dashed treatment the loop's unbuilt
