@@ -40,6 +40,24 @@ export interface Step {
   now: boolean
 }
 
+/**
+ * The ways to use Workmark.
+ *
+ * The page read as one product — get evidence — and that is the reason to
+ * sign up, not the reason to come back next month. These are the reasons to
+ * come back.
+ *
+ * `now` matters more here than anywhere else on the page. Three of these
+ * exist and one does not, and the honest label on the fourth is what makes
+ * the first three believable. A page listing four things a reader can only
+ * verify three of teaches them to discount all four.
+ */
+export interface Mode {
+  title: string
+  body: string
+  now: boolean
+}
+
 interface AudienceCopy {
   tab: string
   eyebrow: string
@@ -50,6 +68,10 @@ interface AudienceCopy {
   secondaryCta: { label: string; href: string }
   reassurance: string
   proof: [string, string][]
+  modesEyebrow: string
+  modesHeadline: string
+  modesLede: string
+  modes: Mode[]
   loopEyebrow: string
   loopHeadline: string
   loopLede: string
@@ -85,8 +107,41 @@ export const COPY: Record<Audience, AudienceCopy> = {
     reassurance: 'Free with a .edu address. No CV, no cover letter, no waiting to hear back.',
     proof: [
       ['Start today, no application', 'Workmark writes you a project and you begin.'],
-      ['Nobody screens you out first', 'The work is the application. There is no pile to get to the top of.'],
+      ['Stop waiting to hear back', 'Every week you spend applying, you can spend building something that counts.'],
       ['The record is yours', 'Download the whole thing in one file, any time.'],
+    ],
+    modesEyebrow: 'What you can do here',
+    modesHeadline: 'Four ways in. None of them start with a CV.',
+    // The line that separates Workmark from every job board: those are
+    // waiting rooms. This is the one claim here that is emotionally true
+    // AND true today, so it carries the section.
+    modesLede:
+      'Job boards were built for people who already have a career. Here you can work on the thing you are missing and go after real work at the same time.',
+    modes: [
+      {
+        title: 'Get a guided project',
+        body: 'Workmark writes you a project aimed at the skill you are short on, plans it with you like a senior dev would, and reads what you build.',
+        now: true,
+      },
+      {
+        title: 'Get paid for real work',
+        body: 'Research labs, startups and nonprofits post projects that pay. You see how well you fit before you spend an evening applying.',
+        now: true,
+      },
+      {
+        title: 'Build something with other students',
+        body: 'Find people to build with, on your idea or theirs. Everyone on the project gets credit for the part they actually wrote.',
+        now: true,
+      },
+      {
+        // Said plainly, including the part most companies would hide: this
+        // needs students here first. Being early is a reason to join, not
+        // something to apologise for — and a reader who is told the
+        // chicken-and-egg problem out loud believes the rest of the page.
+        title: 'Get put in front of internships',
+        body: 'The goal is to walk into a company and vouch for you by name. That takes a few hundred students with records strong enough to stand behind — so the earlier you build one, the earlier we can.',
+        now: false,
+      },
     ],
     loopEyebrow: 'How it works',
     // Not "to signed offer". That promises a result Workmark does not
@@ -154,6 +209,32 @@ export const COPY: Record<Audience, AudienceCopy> = {
       ['Proof, not adjectives', 'Every skill names the project behind it.'],
       ['Nobody grades themselves', 'Levels come from the code, not the candidate.'],
       ['You see the gaps too', 'Including what they cannot do yet.'],
+    ],
+    modesEyebrow: 'Where the work comes from',
+    modesHeadline: 'Four reasons a student is already building',
+    modesLede:
+      'Every one of these produces the same record, read the same way. Whichever door somebody came in through, you are looking at comparable evidence.',
+    modes: [
+      {
+        title: 'Guided projects',
+        body: 'Workmark sets the brief against a skill gap, so the work was scoped by somebody other than the candidate.',
+        now: true,
+      },
+      {
+        title: 'Paid project work',
+        body: 'Real briefs from labs, startups and nonprofits, with a person on the other end who accepted the result.',
+        now: true,
+      },
+      {
+        title: 'Student teams',
+        body: 'Several people, one repository, contributions attributed by commit author. You see what each of them did.',
+        now: true,
+      },
+      {
+        title: 'Internship placement',
+        body: 'Candidates put in front of you because their record supports it, not because they found your posting.',
+        now: false,
+      },
     ],
     loopEyebrow: 'A signal that did not exist',
     loopHeadline: 'Know what they can do before you call them',

@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react'
 import { MarketingLayout } from './MarketingLayout'
 import { MissionHero } from './MissionHero'
+import { TheModes } from './TheModes'
 import { TheRecord } from './TheRecord'
 import { TheLoop } from './TheLoop'
 import { TheGuidedProject } from './TheGuidedProject'
@@ -49,6 +50,7 @@ export function AudienceLanding({ initial }: { initial: Audience }) {
     <AudienceProvider value={{ audience, setAudience: changeAudience }}>
       <MarketingLayout>
         <MissionHero audience={audience} onAudienceChange={changeAudience} />
+        <TheModes audience={audience} />
         <TheRecord audience={audience} />
         <TheLoop audience={audience} />
         <TheGuidedProject audience={audience} />
