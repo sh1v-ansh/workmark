@@ -1346,6 +1346,72 @@
   background: radial-gradient(420px 220px at 96% 120%, rgba(236, 72, 153, 0.10) 0%, rgba(236, 72, 153, 0) 70%);
 }
 
+/* ── The skills map ───────────────────────────────────────────────────────
+   One panel, full width, no shadow. It is the only section on this page
+   that is not a heading over a two-column grid, and that is the point: even
+   with card borders gone, a page where every section keeps the same meter
+   still reads as generated. One section breaking the rhythm is worth more
+   than another that keeps it.
+
+   The zones are divided by hairlines rather than made into three cards, for
+   the same reason as .wm-step — three rectangles side by side would give
+   equal weight to "what you have proven" and "what you have never touched",
+   which is exactly the distinction the picture exists to draw. */
+.wm-map {
+  border: 1px solid #E7E6EF;
+  border-radius: 18px;
+  background: #FFFFFF;
+  padding: 30px 34px 26px;
+}
+.wm-map-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding-bottom: 26px;
+  border-bottom: 1px solid #EFEEF5;
+}
+/* Four bars, and the last one is gold. The shape carries the whole idea —
+   a record is something that moves — so it needs no axis and no legend. */
+.wm-terms {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-left: auto;
+}
+.wm-map-tag {
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 12px;
+  color: #8A8A94;
+  align-self: flex-start;
+}
+.wm-map-zones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0;
+}
+.wm-map-zone { padding: 24px 26px 4px; }
+.wm-map-zone + .wm-map-zone { border-left: 1px solid #EFEEF5; }
+.wm-map-zone:first-child { padding-left: 0; }
+.wm-map-zone:last-child { padding-right: 0; }
+.wm-map-foot {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #EFEEF5;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 14.5px;
+  color: #4B4B57;
+}
+
+@media (max-width: 860px) {
+  .wm-map { padding: 24px 22px 22px; border-radius: 16px; }
+  .wm-map-zones { grid-template-columns: 1fr; }
+  .wm-map-zone { padding: 22px 0 4px; }
+  .wm-map-zone + .wm-map-zone { border-left: 0; border-top: 1px solid #EFEEF5; }
+  .wm-terms { margin-left: 0; gap: 14px; }
+}
+
 /* ── Footer ───────────────────────────────────────────────────────────────
    Four columns rather than a logo and a row of links. The old one put every
    destination in one flat list, which is a sitemap rather than a footer —
