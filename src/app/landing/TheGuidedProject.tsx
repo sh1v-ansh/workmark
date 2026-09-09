@@ -108,7 +108,7 @@ const FRAMING: Record<Audience, {
     // never reaches.
     headline: 'A technical screen you didn’t have to run',
     lede:
-      'Every guided project is a scoped brief, worked in the open against a deadline, and checked against its own acceptance criteria. What reaches you is not only whether somebody can build the thing — it is how they planned it, what they did when it slipped, and whether they finished.',
+      'Every guided project is a scoped brief, worked in the open against a deadline, and checked against its own acceptance criteria. What reaches you is not only whether somebody can build the thing. It is how they planned it, what they did when it slipped, and whether they finished.',
     steps: [
       {
         title: 'The brief is not theirs to pick',
@@ -124,7 +124,7 @@ const FRAMING: Record<Audience, {
       },
     ],
     soonEyebrow: 'Being built',
-    soonHeadline: 'And soon, how they work — not just what they shipped',
+    soonHeadline: 'And soon, how they work, not just what they shipped',
     soonLede:
       'The questions you ask on a reference call, answered by what actually happened rather than by someone remembering it kindly.',
     soonPoints: [

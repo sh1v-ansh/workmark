@@ -101,7 +101,7 @@ export const COPY: Record<Audience, AudienceCopy> = {
     // enough, it is that nothing in the process can tell. That is the honest
     // diagnosis and it is also what Workmark actually fixes.
     lede:
-      'Two hundred applications. Four replies. Not because you cannot do the work — because a CV gives nobody any way to tell. Workmark hands you real projects, reads the code you write, and turns it into proof somebody can check.',
+      'Two hundred applications. Four replies. Not because you cannot do the work. Because a CV gives nobody any way to tell. Workmark hands you real projects, reads the code you write, and turns it into proof somebody can check.',
     primaryCta: { label: 'Start my first project', href: '/login' },
     secondaryCta: { label: 'See open projects', href: '/listings' },
     reassurance: 'Free with a .edu address. No CV, no cover letter, no waiting to hear back.',
@@ -120,7 +120,7 @@ export const COPY: Record<Audience, AudienceCopy> = {
     modes: [
       {
         title: 'Get a guided project',
-        body: 'The closest thing to a first job that does not require having had one. A brief, a board, deadlines, and someone senior breaking the work down — except the someone is Workmark and nobody had to hire you. Aim it at a gap we spot, or name the skill you want to get better at and we will write it around that.',
+        body: 'The closest thing to a first job that does not require having had one. A brief, a board, deadlines, and someone senior breaking the work down. The difference is that the someone is Workmark, and nobody had to hire you. Aim it at a gap we spot, or name the skill you want to get better at and we will write it around that.',
         now: true,
       },
       {
@@ -139,7 +139,7 @@ export const COPY: Record<Audience, AudienceCopy> = {
         // something to apologise for — and a reader who is told the
         // chicken-and-egg problem out loud believes the rest of the page.
         title: 'Get put in front of internships',
-        body: 'The goal is to walk into a company and vouch for you by name. That takes a few hundred students with records strong enough to stand behind — so the earlier you build one, the earlier we can.',
+        body: 'The goal is to walk into a company and vouch for you by name. That takes a few hundred students with records strong enough to stand behind, so the earlier you build one, the earlier we can.',
         now: false,
       },
     ],
@@ -206,7 +206,7 @@ export const COPY: Record<Audience, AudienceCopy> = {
     // qualified applications are in there somewhere and there is no way to
     // find them without reading all of it.
     lede:
-      'Three hundred applications and no way to tell which four are worth an hour. Workmark shows you what somebody actually built, how good it was, and how they work — before you decide whether to reply.',
+      'Three hundred applications and no way to tell which four are worth an hour. Workmark shows you what somebody actually built, how good it was, and how they work, before you decide whether to reply.',
     primaryCta: { label: 'Post a project', href: '/listings/new' },
     secondaryCta: { label: 'See how the record works', href: '/how-it-works' },
     reassurance: 'Free to post. No contract. Nothing to install.',
@@ -221,7 +221,7 @@ export const COPY: Record<Audience, AudienceCopy> = {
     // competing with a brand here, and if the skill they need is scarce,
     // the platform does something about it rather than shrugging.
     modesLede:
-      'Nobody here is chasing a logo, so a ten-person company reads the same as a famous one. Every route below produces the same record, read the same way — whichever door somebody came in through, the evidence is comparable.',
+      'Nobody here is chasing a logo, so a ten-person company reads the same as a famous one. Every route below produces the same record, read the same way. Whichever door somebody came in through, the evidence is comparable.',
     modes: [
       {
         title: 'Guided projects',
@@ -245,7 +245,7 @@ export const COPY: Record<Audience, AudienceCopy> = {
       },
     ],
     loopEyebrow: 'A signal that did not exist',
-    loopHeadline: 'Know what they can do — and how they work — before you call them',
+    loopHeadline: 'Know what they can do, and how they work, before you call them',
     // Two halves, and the second is the one nobody else has. A reference
     // call exists to find out whether somebody finishes things and says so
     // when they are slipping. That is observed here rather than asked about.

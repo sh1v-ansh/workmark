@@ -53,7 +53,7 @@ const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: strin
     // most certain, and there is no way to prove anything either way. The
     // relief is not having to play that game.
     headline: 'Nothing left to oversell',
-    lede: 'Everyone inflates a CV, because sounding confident is the only lever it gives you. Here the work is already on the record — the project it came from, how good you got, how it was checked — so you can just say what happened.',
+    lede: 'Everyone inflates a CV, because sounding confident is the only lever it gives you. Here the work is already on the record. The project it came from, how good you got, how it was checked. So you can just say what happened.',
     points: [
       ['Nothing to write, nothing to inflate', 'Workmark reads your repos and works it out. You never fill in a skills box.'],
       ['Advanced is worth having', 'It means months of real work that survived other people, tests and mistakes. Most skills never get there.'],
@@ -63,7 +63,7 @@ const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: strin
   businesses: {
     eyebrow: 'What you see',
     headline: 'You stop having to take their word for it',
-    lede: 'Every skill carries the project it came from and how it was checked. The question is no longer whether somebody is overselling — it is whether the work is the work you need.',
+    lede: 'Every skill carries the project it came from and how it was checked. The question is no longer whether somebody is overselling. It is whether the work is the work you need.',
     points: [
       ['Read from repos, not from a form', 'Dependencies, commit authorship, test coverage. No self-assessment anywhere in it.'],
       ['Comparable across candidates', 'Levels are set against the whole platform, so two records at Advanced really are equivalent.'],

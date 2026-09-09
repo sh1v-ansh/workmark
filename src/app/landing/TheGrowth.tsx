@@ -43,12 +43,13 @@ const ZONES: Zone[] = [
     label: 'Proven',
     hint: 'Read out of work you already did',
     tone: 'proven',
+    // Three each. An earlier version had five here against three in the
+    // other two columns, which left the right two thirds of the panel empty
+    // and made the picture look like it had failed to load.
     skills: [
       ['TypeScript', 'advanced'],
       ['PostgreSQL', 'intermediate'],
       ['React', 'intermediate'],
-      ['Python', 'intermediate'],
-      ['pytest', 'beginner'],
     ],
   },
   {
@@ -67,24 +68,28 @@ const ZONES: Zone[] = [
 
 const LABEL = { advanced: 'Advanced', intermediate: 'Intermediate', beginner: 'Beginner' } as const
 
-/** Advanced skills at the end of each term. The shape is the point: the
- *  record is something that moves, and the movement is the evidence. */
+/** Advanced skills at the end of each year. The shape is the point: the
+ *  record is something that moves, and the movement is the evidence.
+ *
+ *  Drawn as a full-height track with a fill inside it, not as a bare bar.
+ *  A bare bar for a value of zero is either invisible or a three-pixel
+ *  sliver that reads as a rendering fault, and giving it a minimum height
+ *  would draw something where nothing happened. An empty track says zero. */
 const TERMS: [string, number][] = [['1st yr', 0], ['2nd yr', 1], ['3rd yr', 3], ['Now', 6]]
 const PEAK = 6
+const TRACK = 40
 
 const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: string; footer: string }> = {
   students: {
     eyebrow: 'Where you are going',
     headline: 'See the edge of what you can do',
-    lede:
-      'Your record is not a list, it is a map. It shows what you have proven, what is one project away, and what real work keeps asking for that you have not touched — so the next thing to learn is never a guess.',
+    lede: 'Your record is a map, not a list. It shows what is one project away, so the next thing to learn is never a guess.',
     footer: 'Two more projects in PostgreSQL and it moves to Advanced.',
   },
   businesses: {
     eyebrow: 'What you can see',
     headline: 'Including what they cannot do yet',
-    lede:
-      'A CV only ever shows you the good half. This shows the edge as well — where somebody is reliable, where they are still climbing, and what they have never touched. You find that out now rather than in month two.',
+    lede: 'A CV only shows you the good half. This shows the edge as well, so you find out now rather than in month two.',
     footer: 'Two more projects in PostgreSQL and it moves to Advanced.',
   },
 }
@@ -125,9 +130,13 @@ export function TheGrowth({ audience }: { audience: Audience }) {
   const framing = FRAMING[audience]
 
   return (
-    <section className="wm-section" style={{ paddingTop: 0 }}>
+    // Same tint as the record section above and no top padding, so the two
+    // read as one block rather than colliding. Previously the tint edge cut
+    // straight through this heading, which is a boundary drawn through a
+    // line of text.
+    <section className="wm-section" style={{ background: '#FBFBFD', paddingTop: 0, paddingBottom: 76 }}>
       <div className="wm-section-inner">
-        <div style={{ maxWidth: 640, marginBottom: 40 }}>
+        <div style={{ maxWidth: 620, marginBottom: 34 }}>
           <span className="wm-eyebrow-2">{framing.eyebrow}</span>
           <h2 className="wm-h2">{framing.headline}</h2>
           <p className="wm-lede">{framing.lede}</p>
@@ -150,12 +159,15 @@ export function TheGrowth({ audience }: { audience: Audience }) {
             <div className="wm-terms" aria-hidden="true">
               {TERMS.map(([term, count]) => (
                 <div key={term} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 7 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', height: 44 }}>
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-end',
+                    width: 26, height: TRACK, borderRadius: 4,
+                    background: '#EDEBF4', overflow: 'hidden',
+                  }}>
                     <div style={{
-                      width: 26,
-                      height: `${Math.max(3, (count / PEAK) * 44)}px`,
-                      borderRadius: 3,
-                      background: count === PEAK ? LEVELS.advanced.bar : '#E4E1F0',
+                      width: '100%',
+                      height: `${(count / PEAK) * TRACK}px`,
+                      background: count === PEAK ? LEVELS.advanced.bar : '#C9C3E8',
                     }} />
                   </div>
                   <span style={{ fontFamily: F.sans, fontSize: 11.5, color: C.textFaint }}>{term}</span>

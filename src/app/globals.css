@@ -1357,12 +1357,12 @@
    the same reason as .wm-step — three rectangles side by side would give
    equal weight to "what you have proven" and "what you have never touched",
    which is exactly the distinction the picture exists to draw. */
-.wm-map {
-  border: 1px solid #E7E6EF;
-  border-radius: 18px;
-  background: #FFFFFF;
-  padding: 30px 34px 26px;
-}
+/* No border, no fill, no radius. The panel sits flat on the section tint.
+   Below it the page already stacks a cross-link box and a join panel, both
+   rounded rectangles of the same radius — a third one above them is what
+   makes the bottom of this page read as a component gallery. The hairlines
+   inside the map are enough structure on their own. */
+.wm-map { padding: 0; }
 .wm-map-head {
   display: flex;
   align-items: flex-start;
@@ -1389,6 +1389,7 @@
 .wm-map-zones {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
   gap: 0;
 }
 .wm-map-zone { padding: 24px 26px 4px; }
