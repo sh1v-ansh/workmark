@@ -197,27 +197,31 @@ export const COPY: Record<Audience, AudienceCopy> = {
     eyebrow: 'For startups, SMBs, nonprofits and labs',
     headline: 'Stop reading CVs.',
     headlineAccent: 'Read the work.',
-    // The problem named from their side: entry level is the one hire where
-    // every candidate looks identical on paper, so the screen is a coin
-    // toss with extra steps.
+    // The pain named the way they actually experience it. Not "CVs are
+    // vague" — that is the diagnosis. The felt problem is volume: the
+    // qualified applications are in there somewhere and there is no way to
+    // find them without reading all of it.
     lede:
-      'Entry-level candidates all look the same on paper, so screening them is guesswork. Workmark shows you what somebody actually built, which project it came from, and how good it was.',
+      'Three hundred applications and no way to tell which four are worth an hour. Workmark shows you what somebody actually built, how good it was, and how they work — before you decide whether to reply.',
     primaryCta: { label: 'Post a project', href: '/listings/new' },
     secondaryCta: { label: 'See how the record works', href: '/how-it-works' },
     reassurance: 'Free to post. No contract. Nothing to install.',
     proof: [
-      ['Proof, not adjectives', 'Every skill names the project behind it.'],
-      ['Nobody grades themselves', 'Levels come from the code, not the candidate.'],
-      ['You see the gaps too', 'Including what they cannot do yet.'],
+      ['Read five, not three hundred', 'Only candidates whose record fits the role reach you.'],
+      ['Nobody grades themselves', 'Skills come out of the code, not out of a text box.'],
+      ['Try before you hire', 'Start with one real project. No contract, no headcount.'],
     ],
     modesEyebrow: 'Where the work comes from',
     modesHeadline: 'Four reasons a student is already building',
+    // Two things a small employer needs to hear early. They are not
+    // competing with a brand here, and if the skill they need is scarce,
+    // the platform does something about it rather than shrugging.
     modesLede:
-      'Every one of these produces the same record, read the same way. Whichever door somebody came in through, you are looking at comparable evidence.',
+      'Nobody here is chasing a logo, so a ten-person company reads the same as a famous one. Every route below produces the same record, read the same way — whichever door somebody came in through, the evidence is comparable.',
     modes: [
       {
         title: 'Guided projects',
-        body: 'Workmark sets the brief against a skill gap, so the work was scoped by somebody other than the candidate.',
+        body: 'Workmark sets the brief against a skill gap, so the work was scoped by somebody other than the candidate. When a skill keeps going unfilled, that is the gap students get pointed at.',
         now: true,
       },
       {
@@ -237,37 +241,40 @@ export const COPY: Record<Audience, AudienceCopy> = {
       },
     ],
     loopEyebrow: 'A signal that did not exist',
-    loopHeadline: 'Know what they can do before you call them',
+    loopHeadline: 'Know what they can do — and how they work — before you call them',
+    // Two halves, and the second is the one nobody else has. A reference
+    // call exists to find out whether somebody finishes things and says so
+    // when they are slipping. That is observed here rather than asked about.
     loopLede:
-      'Not a better-formatted CV. A different kind of evidence, read out of work that already exists.',
+      'Not a better-formatted CV. Verified technical evidence, plus the things a reference call tries to get at and usually cannot.',
     steps: [
       {
         n: '01',
-        title: 'Nobody can talk themselves up',
+        title: 'The pile sorts itself',
         body:
-          'Skills are read out of the repositories a candidate owns: what the code depends on, who wrote which commits, whether it was tested. There is no box to exaggerate in.',
+          'Candidates are matched against what the role actually needs before they ever reach you. You read a handful of records that fit instead of screening out the rest by hand.',
         now: true,
       },
       {
         n: '02',
-        title: 'A weekend hack never outranks a real project',
+        title: 'Nobody can talk themselves up',
         body:
-          'How much of the work was theirs, how long they stayed with it, and how hard it was all change the level. Scale is part of the score, not a footnote.',
+          'Skills are read out of the repositories a candidate owns: what the code depends on, who wrote which commits, whether it was tested. There is no box to exaggerate in. A weekend hack never outranks a real project.',
         now: true,
       },
       {
         n: '03',
-        title: 'Advanced means the same thing every time',
+        title: 'See how they work, not just what they shipped',
         body:
-          'Levels are set against every other record on the platform and move as more work comes in. Two candidates at the same level really are comparable.',
+          'Did they hit their estimates? Flag problems early? Finish what they started? Measured while the work happened, from a board they were using anyway.',
         now: true,
       },
       {
         n: '04',
-        title: 'See how they work, not just what they shipped',
+        title: 'Find out before you commit to anything',
         body:
-          'Did they hit their estimates? Flag problems early? Finish what they started? The things a reference call tries to find out, observed while the work happens.',
-        now: false,
+          'Post one real project and work with somebody on it. A few weeks of actual output tells you more than any interview, and nobody has to be hired to find out.',
+        now: true,
       },
     ],
     crossLink: {
