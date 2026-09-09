@@ -74,8 +74,13 @@ const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: strin
 
 export function TheRecord({ audience }: { audience: Audience }) {
   const framing = FRAMING[audience]
+  // The tint already separates this section from the ones either side. It
+  // used to carry a top and bottom border as well, which was a second
+  // separator doing the same job — and the bottom one landed two pixels above
+  // the cross-link card's own top border. Two hairlines almost touching reads
+  // as a rendering fault, not a divider.
   return (
-    <section className="wm-section" style={{ background: '#FBFBFD', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+    <section className="wm-section" style={{ background: '#FBFBFD' }}>
       <div className="wm-section-inner">
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.05fr)', gap: 60, alignItems: 'center' }} className="mob-1col">
           <div>
