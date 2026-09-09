@@ -804,25 +804,20 @@
   border-radius: 13px;
   text-decoration: none;
   color: inherit;
-  border: 1px solid #DCD4F7;
-  background:
-    linear-gradient(152deg, #F6F2FF 0%, #FCFBFF 46%, #FFFFFF 100%);
+  /* Was a violet gradient with a sheen sweeping across it. Nothing about
+     the card being AI-written justifies more visual weight than the work
+     itself, and a gradient used to mean "special" is the cheapest signal
+     there is. A plain surface and a small label say the same thing without
+     asking to be looked at. */
+  border: 1px solid #E8E6F0;
+  background: #FFFFFF;
   box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 32px -18px rgba(97, 66, 245, 0.45);
   transition: box-shadow 0.2s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 /* Light pooling in the bottom-right, the same move the focal card makes. */
-.nb-ai-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(420px 220px at 96% 108%, rgba(97, 66, 245, 0.13) 0%, rgba(97, 66, 245, 0) 72%);
-}
-.nb-ai-card:hover {
-  border-color: #C3B4F2;
-  transform: translateY(-1px);
-  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.08), 0 18px 38px -18px rgba(97, 66, 245, 0.55);
-}
+/* The violet wash in the corner and the lift on hover both went with the
+   gradient. It is a link to a project; it should read as one. */
+.nb-ai-card:hover { border-color: #CFCBE6; }
 
 /* The band above the grid that says what these are. Full width, once, so
    the cards themselves do not each have to carry the explanation. */
@@ -1244,30 +1239,26 @@
    dashed rather than solid, no shadow, no lift. Honest by construction —
    a reader can tell which of these they can have today without reading the
    badge. */
+/* Text, not a card.
+ *
+ * This used to be a white box with a border, a radius, a drop shadow and a
+ * hover that lifted it and glowed violet — and every block of content on the
+ * page got the same treatment. That is the look of a page assembled from a
+ * component library rather than designed: identical rectangles in a grid,
+ * a shadow under everything so nothing is actually emphasised, and a border
+ * around text that needed no border to be readable.
+ *
+ * A hairline above each item and real space around it does the same job.
+ * Grouping comes from alignment and whitespace, hierarchy comes from type.
+ * Nothing lifts on hover, because none of these are buttons and pretending
+ * otherwise is the tell. */
 .wm-step {
-  background: #FFFFFF;
-  border: 1px solid #E5E4EF;
-  border-radius: 16px;
-  padding: 24px 25px;
-  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03), 0 12px 28px -18px rgba(25, 30, 46, 0.25);
-  transition: box-shadow 0.22s ease, transform 0.16s ease, border-color 0.16s ease;
+  padding: 26px 0 4px;
+  border-top: 1px solid #E9E8F0;
 }
-.wm-step:hover {
-  transform: translateY(-2px);
-  border-color: #C7B8FF;
-  box-shadow: 0 1px 2px rgba(62, 31, 255, 0.06), 0 18px 36px -18px rgba(62, 31, 255, 0.34);
-}
-.wm-step-soon {
-  background: rgba(255, 255, 255, 0.5);
-  border-style: dashed;
-  border-color: #DCDAE8;
-  box-shadow: none;
-}
-.wm-step-soon:hover {
-  transform: none;
-  border-color: #C7C4D8;
-  box-shadow: none;
-}
+/* Not built: muted rather than boxed off. The badge already says it, and a
+   dashed rectangle says it a second time in a louder voice. */
+.wm-step-soon { border-top-color: #F0EFF5; }
 
 /* The record demonstration in TheRecord. Elevated more than an ordinary
    card because it is the one thing on the page a reader should look at. */
@@ -1455,17 +1446,12 @@
 
 /* The four beats under the card. Same dashed treatment as the loop's
    unbuilt step, so "not yet" looks identical wherever it appears. */
+/* Same reasoning as .wm-step above: a rule and space, not a rectangle. */
 .wm-ext-step {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid #EAE6F8;
-  border-radius: 12px;
-  padding: 13px 15px;
+  padding: 15px 0 3px;
+  border-top: 1px solid #E7E2F5;
 }
-.wm-ext-step-soon {
-  background: rgba(255, 255, 255, 0.4);
-  border-style: dashed;
-  border-color: #DCDAE8;
-}
+.wm-ext-step-soon { border-top-color: #EDEAF6; }
 
 /* ── The unbuilt half of the guided project ───────────────────────────────────
    Everything under here describes the workspace, which does not exist yet.

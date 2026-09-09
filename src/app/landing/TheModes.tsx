@@ -36,7 +36,7 @@ export function TheModes({ audience }: { audience: Audience }) {
 
         <div
           className="mob-1col"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 18 }}
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: 56, rowGap: 30 }}
         >
           {copy.modes.map((mode) => (
             <div key={mode.title} className={`wm-step${mode.now ? '' : ' wm-step-soon'}`}>

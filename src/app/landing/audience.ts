@@ -120,7 +120,7 @@ export const COPY: Record<Audience, AudienceCopy> = {
     modes: [
       {
         title: 'Get a guided project',
-        body: 'Workmark writes you a project aimed at the skill you are short on, plans it with you like a senior dev would, and reads what you build.',
+        body: 'The closest thing to a first job that does not require having had one. A brief, a board, deadlines, and someone senior breaking the work down — except the someone is Workmark and nobody had to hire you. Aim it at a gap we spot, or name the skill you want to get better at and we will write it around that.',
         now: true,
       },
       {
@@ -149,11 +149,11 @@ export const COPY: Record<Audience, AudienceCopy> = {
     // overstate. The arc is still the reward; it just stops where the
     // product does.
     loopHeadline: 'From side project to real work',
-    // Names what is actually broken, in one line, without a lecture. Entry
-    // level is the only rung where nobody can see what you can do — and that
-    // is a measurement problem, not a talent one.
+    // The most reassuring true thing on the page. A student's biggest
+    // private fear is that the semester they spent learning something did
+    // not count for anything, because nothing ever asked them to prove it.
     loopLede:
-      'Entry-level hiring is broken because there is nothing to measure. Four steps that give it something. You are already done with the first one.',
+      'Every hour you have already spent learning something counts here, and so does every hour you spend next. Four steps, and the first one is already behind you.',
     steps: [
       {
         n: '01',
@@ -195,8 +195,12 @@ export const COPY: Record<Audience, AudienceCopy> = {
   businesses: {
     tab: 'For businesses',
     eyebrow: 'For startups, SMBs, nonprofits and labs',
-    headline: 'Stop reading CVs.',
-    headlineAccent: 'Read the work.',
+    // Not "stop reading CVs" — that tells somebody what to do without
+    // saying what is wrong, and nobody changes a process because a website
+    // used the imperative. This states the problem they already have and
+    // lets the fix be the short half.
+    headline: 'Every CV says the same things.',
+    headlineAccent: 'The work doesn’t.',
     // The pain named the way they actually experience it. Not "CVs are
     // vague" — that is the diagnosis. The felt problem is volume: the
     // qualified applications are in there somewhere and there is no way to

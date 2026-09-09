@@ -102,9 +102,13 @@ const FRAMING: Record<Audience, {
 
   businesses: {
     eyebrow: 'Where the work comes from',
-    headline: 'Candidates who have shipped something on purpose',
+    // Not "shipped something on purpose" — that describes the student and
+    // says nothing about what the employer gets. What they get is an
+    // assessment they did not have to run, covering the half a take-home
+    // never reaches.
+    headline: 'A technical screen you didn’t have to run',
     lede:
-      'A student with no internship is not a student with no evidence. Workmark writes them scoped projects aimed at real gaps and reads the result exactly as it reads anything else, so what reaches you is finished work against a brief.',
+      'Every guided project is a scoped brief, worked in the open against a deadline, and checked against its own acceptance criteria. What reaches you is not only whether somebody can build the thing — it is how they planned it, what they did when it slipped, and whether they finished.',
     steps: [
       {
         title: 'The brief is not theirs to pick',

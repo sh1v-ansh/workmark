@@ -51,9 +51,9 @@ export function AudienceLanding({ initial }: { initial: Audience }) {
       <MarketingLayout>
         <MissionHero audience={audience} onAudienceChange={changeAudience} />
         <TheModes audience={audience} />
-        <TheRecord audience={audience} />
-        <TheLoop audience={audience} />
         <TheGuidedProject audience={audience} />
+        <TheLoop audience={audience} />
+        <TheRecord audience={audience} />
         <CrossLink audience={audience} onAudienceChange={changeAudience} />
         <JoinSection audience={audience} />
       </MarketingLayout>
