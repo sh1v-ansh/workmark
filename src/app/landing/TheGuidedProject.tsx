@@ -170,7 +170,7 @@ export function TheGuidedProject({ audience }: { audience: Audience }) {
   const copy = FRAMING[audience]
 
   return (
-    <section className="wm-section" style={{ paddingTop: 0 }}>
+    <section className="wm-section">
       <div className="wm-section-inner">
         <div className="wm-guided">
           {/* ── Live today ─────────────────────────────────────────────── */}

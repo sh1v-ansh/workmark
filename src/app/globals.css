@@ -1170,7 +1170,19 @@
 /* ── Marketing section rhythm ─────────────────────────────────────────────
    One class so every section below the hero breathes identically. The old
    page had six different vertical paddings. */
-.wm-section { padding: 92px 24px; }
+/* One value, everywhere.
+ *
+ * Section spacing used to be set per section: 92 here, 0 there, 72 before
+ * the cross-link, 104 before the join. Because adjacent sections both
+ * contribute padding, those produced gaps of 92, 184, 148 and 196 down the
+ * same page — no reader can name that, but everyone feels it as the page
+ * lurching.
+ *
+ * Every section now uses this and nothing overrides it, except one
+ * deliberate zero where the map continues the record section it shares a
+ * tint with. Consistent by construction rather than by remembering. */
+:root { --wm-section-y: 88px; }
+.wm-section { padding: var(--wm-section-y) 24px; }
 .wm-section-inner { max-width: 1080px; margin: 0 auto; }
 .wm-eyebrow-2 {
   display: inline-block;
@@ -1201,7 +1213,8 @@
   text-wrap: pretty;
 }
 @media (max-width: 720px) {
-  .wm-section { padding: 62px 20px; }
+  :root { --wm-section-y: 60px; }
+  .wm-section { padding: var(--wm-section-y) 20px; }
   .wm-h2 { font-size: 30px; }
 }
 
@@ -1252,13 +1265,12 @@
  * Grouping comes from alignment and whitespace, hierarchy comes from type.
  * Nothing lifts on hover, because none of these are buttons and pretending
  * otherwise is the tell. */
-.wm-step {
-  padding: 26px 0 4px;
-  border-top: 1px solid #E9E8F0;
-}
-/* Not built: muted rather than boxed off. The badge already says it, and a
-   dashed rectangle says it a second time in a louder voice. */
-.wm-step-soon { border-top-color: #F0EFF5; }
+/* No rule at all. In a two-column grid a per-cell top border stops at the
+   gutter, so a row reads as one line with a hole in it — a divider that
+   divides nothing. The 01/02/03/04 numerals already give each item an
+   anchor and the column gap does the separating. */
+.wm-step { padding: 4px 0; }
+.wm-step-soon { opacity: 0.86; }
 
 /* The record demonstration in TheRecord. Elevated more than an ordinary
    card because it is the one thing on the page a reader should look at. */
@@ -1344,6 +1356,27 @@
   inset: 0;
   pointer-events: none;
   background: radial-gradient(420px 220px at 96% 120%, rgba(236, 72, 153, 0.10) 0%, rgba(236, 72, 153, 0) 70%);
+}
+
+/* ── A ruled list ─────────────────────────────────────────────────────────
+   Full-width rules, so each one separates one item from the next rather
+   than underlining half of one. The fixed label column gives every row the
+   same left edge, and that alignment is what contains the text — the job
+   the floating borders were failing at. */
+.wm-rows { border-top: 1px solid #E9E8F0; }
+.wm-row {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+  padding: 24px 0 26px;
+  border-bottom: 1px solid #E9E8F0;
+}
+.wm-row-label { display: flex; align-items: baseline; gap: 10px; }
+.wm-row-soon { border-bottom-color: #F0EFF5; }
+
+@media (max-width: 860px) {
+  .wm-row { grid-template-columns: 1fr; gap: 8px; padding: 20px 0 22px; }
 }
 
 /* ── The skills map ───────────────────────────────────────────────────────

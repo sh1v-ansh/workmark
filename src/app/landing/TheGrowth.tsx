@@ -134,7 +134,7 @@ export function TheGrowth({ audience }: { audience: Audience }) {
     // read as one block rather than colliding. Previously the tint edge cut
     // straight through this heading, which is a boundary drawn through a
     // line of text.
-    <section className="wm-section" style={{ background: '#FBFBFD', paddingTop: 0, paddingBottom: 76 }}>
+    <section className="wm-section" style={{ background: '#FBFBFD', paddingTop: 0 }}>
       <div className="wm-section-inner">
         <div style={{ maxWidth: 620, marginBottom: 34 }}>
           <span className="wm-eyebrow-2">{framing.eyebrow}</span>
