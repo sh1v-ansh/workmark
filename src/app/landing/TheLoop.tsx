@@ -30,7 +30,7 @@ export function TheLoop({ audience }: { audience: Audience }) {
           <p className="wm-lede">{copy.loopLede}</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 20 }} className="mob-1col">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', columnGap: 56, rowGap: 30 }} className="mob-1col">
           {copy.steps.map((step) => (
             <div key={step.n} className={`wm-step${step.now ? '' : ' wm-step-soon'}`}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 }}>

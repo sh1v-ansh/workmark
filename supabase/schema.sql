@@ -23,6 +23,23 @@ create extension if not exists vector;
 
 -- ─── Destructive teardown ─────────────────────────────────────────────────────
 
+drop table if exists workspace_metrics          cascade;
+drop table if exists verification_runs             cascade;
+drop table if exists workspace_removal_approvals   cascade;
+drop table if exists workspace_removal_requests    cascade;
+drop table if exists workspace_messages    cascade;
+drop table if exists workspace_files       cascade;
+drop table if exists task_checkpoints      cascade;
+drop table if exists task_submissions      cascade;
+drop table if exists work_events           cascade;
+drop table if exists task_transitions      cascade;
+drop table if exists task_revisions        cascade;
+drop table if exists task_dependencies     cascade;
+drop table if exists tasks                 cascade;
+drop table if exists sprints               cascade;
+drop table if exists workspace_repos       cascade;
+drop table if exists workspace_members     cascade;
+drop table if exists workspaces            cascade;
 drop table if exists agent_calls           cascade;
 drop table if exists fit_tier_impressions  cascade;
 drop table if exists project_briefs        cascade;
@@ -365,11 +382,19 @@ create table artifacts (
   id                  uuid default gen_random_uuid() primary key,
   student_id          uuid references students(id) on delete cascade not null,
   engagement_id       uuid references engagements(id) on delete cascade,
+  -- The project this came from, when it came from one. SET NULL rather than
+  -- CASCADE: evidence is a claim about what somebody did at a moment in time,
+  -- and deleting a workspace row does not make the work not have happened.
+  workspace_id        uuid references workspaces(id) on delete set null,
   type                text not null check (type in ('repo', 'url', 'file')),
   source              text,
   repo_full_name      text,
   access_grant_id     uuid references github_repo_grants(id),
-  tier                text not null check (tier in ('tier_0', 'tier_0_5', 'listing_driven')),
+  -- 'workspace_verified' is the strongest, and what earns it is not that the
+  -- work is harder: it is that the acceptance criteria were written down
+  -- BEFORE the work started. Every other tier judges a finished repository
+  -- against itself. See v05_0034.
+  tier                text not null check (tier in ('tier_0', 'tier_0_5', 'listing_driven', 'workspace_verified')),
   -- 'repo_link' is the baseline: student explicitly linked this repo via
   -- the GitHub App grant, commits are attributed to them, complexity was
   -- extracted (§5) — that alone is evidence. Deployment isn't required;
@@ -415,6 +440,9 @@ create table skill_evidence (
   skill_id              text references skills(id) not null,
   artifact_id           uuid references artifacts(id) on delete cascade,
   engagement_id         uuid references engagements(id) on delete cascade,  -- DEFERRED-populated for attested tiers; denormalized convenience today
+  -- Denormalized the same way engagement_id is, so "what did this project put
+  -- on people's records" is one query rather than a join through artifacts.
+  workspace_id          uuid references workspaces(id) on delete set null,
   rater_id              uuid,  -- DEFERRED: null until faculty/employer attestation exists
   base                  numeric not null,
   independence          numeric not null default 1.0,  -- DEFERRED: always 1.0 in MVP
@@ -653,7 +681,8 @@ create table review_requests (
 
 create table agent_calls (
   id           uuid default gen_random_uuid() primary key,
-  agent_type   text not null check (agent_type in ('posting', 'brief', 'goals', 'taxonomy', 'work_summary')),
+  agent_type   text not null check (agent_type in (
+                 'posting', 'brief', 'goals', 'taxonomy', 'work_summary', 'planner', 'verification')),
   student_id   uuid references students(id) on delete cascade,
   poster_id    uuid,
   input        jsonb not null,
@@ -1616,3 +1645,1265 @@ alter table error_log enable row level security;
 
 create policy "Admins: read errors" on error_log
   for select using (is_admin());
+
+
+-- ═══════════════════════════════════════════════════════════════════════════
+-- Workspaces (v05_0025)
+-- ═══════════════════════════════════════════════════════════════════════════
+-- The first membership-based tables in this schema. Every table above answers
+-- "which student owns this row"; these answer "who is on this team", which is
+-- what a project two people work on requires. See the migration for the three
+-- decisions that keep company accounts an additive change later.
+create table workspaces (
+  id              uuid default gen_random_uuid() primary key,
+  title           text not null,
+  summary         text,
+
+  -- At most one of these is set, and both may be null: a self-started
+  -- project — a student connecting a repo of something they are already
+  -- building — has no parent row at all. Neither is a required parent
+  -- either, because a workspace outlives what started it; a brief can be
+  -- deleted and the record of the work done must not vanish with it.
+  brief_id        uuid references project_briefs(id) on delete set null,
+  listing_id      uuid references listings(id) on delete set null,
+
+  -- brief_id and listing_id are provenance only. Whether the idea was
+  -- AI-suggested, the student's own, or a posting they were hired onto
+  -- changes nothing about how the workspace behaves; the only structural
+  -- fact is whether one person is doing it or several. See v05_0029.
+
+  created_by      uuid references accounts(id) on delete cascade not null,
+  deadline        date,
+
+  -- Mirrors engagements.stage deliberately, including 'abandoned'. A
+  -- workspace that sits at 'active' forever is indistinguishable from one
+  -- still genuinely in flight, and the difference is the whole point of
+  -- measuring follow-through.
+  -- Drafted before it starts: name and summary first, then a repo and the
+  -- people. A workspace born active has no state in which it is being set
+  -- up. Leaving draft requires a linked repo — see require_repo_before_starting.
+  status          text not null default 'draft'
+                    check (status in ('draft', 'active', 'submitted', 'closed', 'abandoned')),
+
+  created_at      timestamptz default now(),
+  started_at      timestamptz,
+  closed_at       timestamptz,
+
+  -- When the closing scan finished writing people's records.
+  --
+  -- Separate from closed_at because the two are separate acts: closing is one
+  -- fast write somebody decided on, and minting is a repository scan per
+  -- member that can outlast a 60-second function on a four-person team. A
+  -- closed project with a null here is one the nightly pass retries. Folded
+  -- into closed_at, a timeout would be indistinguishable from a project whose
+  -- members simply earned nothing. See v05_0034.
+  evidence_minted_at timestamptz,
+
+  -- The only combination that is never legitimate: a workspace cannot be
+  -- both somebody's private brief and a posted job.
+  constraint workspaces_single_parent check (not (brief_id is not null and listing_id is not null))
+);
+
+create index workspaces_brief_idx      on workspaces (brief_id) where brief_id is not null;
+create index workspaces_listing_idx    on workspaces (listing_id) where listing_id is not null;
+create index workspaces_awaiting_evidence_idx
+  on workspaces (closed_at) where status = 'closed' and evidence_minted_at is null;
+
+-- ─── Membership ─────────────────────────────────────────────────────────────
+-- An invitation and a membership are the same row at different times.
+-- Separate tables would mean the same person can hold both, and then
+-- "is this person on the team" has two answers.
+create table workspace_members (
+  id            uuid default gen_random_uuid() primary key,
+  workspace_id  uuid references workspaces(id) on delete cascade not null,
+  account_id    uuid references accounts(id) on delete cascade not null,
+
+  -- Two roles, not five. An owner can invite, remove and close; a member
+  -- can do the work. Anything finer than that is a permission system
+  -- nobody asked for on a team of three.
+  role          text not null default 'member' check (role in ('owner', 'member')),
+
+  invited_by    uuid references accounts(id) on delete set null,
+  invited_at    timestamptz default now(),
+  -- Null until they accept. Nobody is added to a team without agreeing:
+  -- an unaccepted row grants nothing, which is what is_workspace_member
+  -- below enforces.
+  accepted_at   timestamptz,
+  -- Set rather than deleted. Who was on a team and when they left is part
+  -- of the record of how the work went.
+  removed_at    timestamptz,
+
+  -- That member's own engagement, when they were hired onto a posted
+  -- project. The workspace is the project; the engagement is one person's
+  -- relationship with the poster, and where their verified skills attach.
+  engagement_id uuid references engagements(id) on delete set null,
+  -- Consent to having their commits read, per member rather than per repo:
+  -- one person grants the repo, everyone in it agrees separately.
+  scan_consent_at timestamptz,
+  -- What they actually do, as opposed to what they may manage. `role` above
+  -- is permission; this is the job, agreed between the students. The planner
+  -- reads it to put each task on the right person. See v05_0029.
+  work_role       text check (work_role is null or work_role in (
+                    'backend', 'frontend', 'fullstack', 'mobile',
+                    'data', 'ml', 'infra', 'design', 'other')),
+  removed_by      uuid references accounts(id) on delete set null,
+  removed_reason  text,
+
+  unique (workspace_id, account_id)
+);
+
+create index workspace_members_account_idx
+  on workspace_members (account_id)
+  where accepted_at is not null and removed_at is null;
+
+create index workspace_members_pending_idx
+  on workspace_members (account_id)
+  where accepted_at is null and removed_at is null;
+
+-- ─── The membership test ────────────────────────────────────────────────────
+-- SECURITY DEFINER is not optional here, and not a shortcut.
+--
+-- The policy on workspace_members has to ask "is the caller a member of this
+-- workspace", which means reading workspace_members — and a policy that
+-- reads the table it is protecting recurses until Postgres gives up with
+-- "infinite recursion detected in policy". A definer function runs as its
+-- owner, so the inner read is not itself policed, and the recursion never
+-- starts.
+--
+-- The function is safe to run as its owner because it takes no data from
+-- the caller beyond a workspace id and returns only a boolean about
+-- auth.uid(). It cannot be used to read anybody's rows.
+create or replace function is_workspace_member(p_workspace uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from workspace_members
+     where workspace_id = p_workspace
+       and account_id = auth.uid()
+       and accepted_at is not null
+       and removed_at is null
+  );
+$$;
+
+create or replace function is_workspace_owner(p_workspace uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from workspace_members
+     where workspace_id = p_workspace
+       and account_id = auth.uid()
+       and role = 'owner'
+       and accepted_at is not null
+       and removed_at is null
+  );
+$$;
+
+-- ─── The creator is a member ────────────────────────────────────────────────
+-- A trigger rather than two inserts from the API, because a workspace with
+-- no members is unreachable by its own policies — including by the person
+-- who just made it. If that ever depends on the second insert succeeding,
+-- one failed request leaves an orphan nobody can see or delete.
+--
+-- Definer for the same reason as above: the members insert policy requires
+-- being an owner, and at this instant there is no owner yet.
+create or replace function add_workspace_creator_as_owner()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into workspace_members (workspace_id, account_id, role, accepted_at)
+  values (new.id, new.created_by, 'owner', now());
+  return new;
+end;
+$$;
+
+create trigger workspaces_creator_is_owner
+  after insert on workspaces
+  for each row execute function add_workspace_creator_as_owner();
+
+-- ─── RLS ────────────────────────────────────────────────────────────────────
+alter table workspaces        enable row level security;
+alter table workspace_members enable row level security;
+
+-- ── workspaces ──
+create policy "Members: read their workspaces"
+  on workspaces for select using (is_workspace_member(id));
+
+-- created_by is pinned to the caller so a workspace cannot be created in
+-- somebody else's name — the trigger above would then make THEM the owner
+-- and lock the creator out of the row they just made.
+create policy "Users: create a workspace"
+  on workspaces for insert with check (created_by = auth.uid());
+
+create policy "Owners: update their workspace"
+  on workspaces for update using (is_workspace_owner(id)) with check (is_workspace_owner(id));
+
+-- An invitation you cannot read is not an invitation.
+--
+-- The select policy on workspaces is is_workspace_member(id), and that
+-- function deliberately requires accepted_at to be set — an unanswered
+-- invitation grants nothing. Correct, and it made the invite flow useless:
+-- somebody invited to a project could read their own membership row and
+-- nothing else, so the screen asking them to accept had no title, no
+-- summary, and nothing to decide on.
+--
+-- Nobody should have to answer an invitation blind.
+--
+-- Narrow on purpose. It grants the workspace row only, only while an
+-- invitation is genuinely outstanding, and only to the person invited.
+-- Accepting moves them to the ordinary member policy; declining or being
+-- removed sets removed_at and this stops matching. Tasks, messages and
+-- events remain unreadable throughout — an invitee sees what the project is
+-- called, not what is in it.
+--
+-- No recursion risk: this is a policy on `workspaces` reading
+-- `workspace_members`, which is a different table.
+create policy "Invitees: read the workspace they were invited to"
+  on workspaces for select
+  using (
+    exists (
+      select 1 from workspace_members m
+       where m.workspace_id = workspaces.id
+         and m.account_id = auth.uid()
+         and m.accepted_at is null
+         and m.removed_at is null
+    )
+  );
+
+create policy "Admins: read all workspaces"
+  on workspaces for select using (is_admin());
+
+-- ── workspace_members ──
+-- A member sees the whole team. An invitee whose row is still pending is
+-- not a member yet by the function above, so the second clause is what lets
+-- somebody see the invitation they have been sent.
+create policy "Members: read the team"
+  on workspace_members for select
+  using (is_workspace_member(workspace_id) or account_id = auth.uid());
+
+create policy "Owners: invite"
+  on workspace_members for insert
+  with check (is_workspace_owner(workspace_id) and account_id <> auth.uid());
+
+-- Deliberately two policies rather than one with an OR. An owner managing
+-- the team and a person answering their own invitation are different
+-- actions, and collapsing them makes it hard to see that a member cannot
+-- promote themselves.
+create policy "Owners: manage the team"
+  on workspace_members for update
+  using (is_workspace_owner(workspace_id))
+  with check (is_workspace_owner(workspace_id));
+
+create policy "Invitees: answer their own invitation"
+  on workspace_members for update
+  using (account_id = auth.uid())
+  with check (account_id = auth.uid());
+
+create policy "Admins: read all memberships"
+  on workspace_members for select using (is_admin());
+
+-- The role column is the one an invitee must not write while accepting.
+-- RLS cannot say "these columns only" — that half is a grant.
+revoke update on public.workspace_members from authenticated;
+grant update (accepted_at, removed_at, scan_consent_at, work_role) on public.workspace_members to authenticated;
+
+-- Owners change roles through a definer function instead, which checks the
+-- caller is an owner and refuses to leave a workspace with none.
+create or replace function set_workspace_member_role(
+  p_workspace uuid,
+  p_account   uuid,
+  p_role      text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_workspace_owner(p_workspace) then
+    raise exception 'Only an owner can change roles.' using errcode = '42501';
+  end if;
+  if p_role not in ('owner', 'member') then
+    raise exception 'Unknown role.' using errcode = '22023';
+  end if;
+
+  -- The last owner cannot demote themselves. Without this the workspace
+  -- becomes unmanageable: nobody left who can invite, remove or close it.
+  if p_role = 'member' and p_account = auth.uid() and (
+    select count(*) from workspace_members
+     where workspace_id = p_workspace and role = 'owner'
+       and accepted_at is not null and removed_at is null
+  ) <= 1 then
+    raise exception 'A workspace needs at least one owner.' using errcode = '23514';
+  end if;
+
+  update workspace_members
+     set role = p_role
+   where workspace_id = p_workspace and account_id = p_account and removed_at is null;
+end;
+$$;
+
+-- ─── The repo belongs to the workspace ──────────────────────────────────────
+-- github_repo_grants is per student, which is right for a personal record and
+-- wrong for a team: one repo, several contributors, and only the owner has
+-- installed the App on it. The workspace holds the repo; contributions are
+-- attributed back to people by commit author.
+create table workspace_repos (
+  id              uuid default gen_random_uuid() primary key,
+  workspace_id    uuid references workspaces(id) on delete cascade not null,
+  repo_full_name  text not null,
+  -- Copied from the grant at link time so a scan does not have to work out
+  -- whose installation to read through on every run.
+  installation_id text,
+  granted_by      uuid references accounts(id) on delete set null,
+  linked_at       timestamptz default now(),
+  unlinked_at     timestamptz,
+  unique (workspace_id, repo_full_name)
+);
+
+create index workspace_repos_active_idx
+  on workspace_repos (workspace_id) where unlinked_at is null;
+
+alter table workspace_repos enable row level security;
+
+create policy "Members: read workspace repos"
+  on workspace_repos for select using (is_workspace_member(workspace_id));
+create policy "Owners: link a repo"
+  on workspace_repos for insert with check (is_workspace_owner(workspace_id));
+create policy "Owners: unlink a repo"
+  on workspace_repos for update
+  using (is_workspace_owner(workspace_id)) with check (is_workspace_owner(workspace_id));
+
+-- ─── GitHub is required before joining a team ───────────────────────────────
+-- Someone whose commits cannot be attributed would do a whole project and
+-- generate evidence for everybody except themselves. Better to stop at the
+-- door than explain it afterwards.
+--
+-- Scoped narrowly to accepting an INVITATION. A workspace creator and a hired
+-- student arrive with accepted_at already set, and both are checked in the
+-- API where the message can be useful ("connect GitHub to apply") rather than
+-- as an exception in the middle of somebody else's accept.
+create or replace function require_github_before_accepting()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.accepted_at is not null and old.accepted_at is null then
+    if not exists (select 1 from github_connections where student_id = new.account_id) then
+      raise exception 'Connect your GitHub account before joining a project.'
+        using errcode = '42501';
+    end if;
+    -- Accepting is the consent. Recorded as its own timestamp because
+    -- "when did they agree to be scanned" is a different question from
+    -- "when did they join", even when the answers match today.
+    if new.scan_consent_at is null then
+      new.scan_consent_at := new.accepted_at;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger workspace_members_require_github
+  before update on workspace_members
+  for each row execute function require_github_before_accepting();
+
+grant update (accepted_at, removed_at, scan_consent_at) on public.workspace_members to authenticated;
+
+-- ─── A hire lands in the workspace automatically ────────────────────────────
+-- An accepted application with no workspace is a dead end, and a second
+-- explicit step is one the poster forgets. The first hire creates the
+-- workspace; later hires join the one that exists.
+create or replace function attach_engagement_to_workspace()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_workspace uuid;
+  v_title     text;
+begin
+  select id into v_workspace from workspaces where listing_id = new.listing_id limit 1;
+
+  if v_workspace is null then
+    select title into v_title from listings where id = new.listing_id;
+    insert into workspaces (title, listing_id, origin, created_by)
+    values (coalesce(v_title, 'Project'), new.listing_id, 'listing', new.poster_id)
+    returning id into v_workspace;
+    -- workspaces_creator_is_owner has now made the poster an owner.
+  end if;
+
+  -- accepted_at is set outright: they applied and were hired, which is the
+  -- agreement. There is no second invitation to answer.
+  insert into workspace_members (workspace_id, account_id, role, engagement_id, invited_by, accepted_at, scan_consent_at)
+  values (v_workspace, new.student_id, 'member', new.id, new.poster_id, now(), now())
+  on conflict (workspace_id, account_id)
+    do update set engagement_id = excluded.engagement_id, removed_at = null;
+
+  return new;
+end;
+$$;
+
+create trigger engagements_join_workspace
+  after insert on engagements
+  for each row execute function attach_engagement_to_workspace();
+
+-- Sprints, tasks, and the record of how the plan changed.
+--
+-- The single most valuable thing this schema can capture is the gap between
+-- what somebody expected and what happened. That only becomes answerable if
+-- change is RECORDED rather than overwritten: an estimate edited in place
+-- destroys the fact that it was ever different, and "they saw the slip
+-- coming, said so early and renegotiated" — the behaviour worth more to an
+-- employer than hitting the original date — becomes invisible.
+--
+-- Hence three tables where one would do: tasks holds the current state,
+-- task_revisions holds every deliberate change to the plan, task_transitions
+-- holds every move across the board. Estimate-versus-actual then falls out of
+-- the timestamps and nobody is ever asked how long something took.
+--
+-- Every table here carries workspace_id directly, even where it could be
+-- reached by joining through tasks. That denormalisation is on purpose: an
+-- RLS policy runs per row, and a policy containing a subquery is the usual
+-- reason a Supabase table gets slow. One column buys a policy that is a
+-- single indexed function call.
+
+create table sprints (
+  id            uuid default gen_random_uuid() primary key,
+  workspace_id  uuid references workspaces(id) on delete cascade not null,
+  name          text not null,
+  goal          text,
+  starts_on     date not null,
+  ends_on       date not null,
+  created_at    timestamptz default now(),
+  check (ends_on >= starts_on)
+);
+
+create index sprints_workspace_idx on sprints (workspace_id, starts_on desc);
+
+-- Sprints are optional by design. A two-person project does not need
+-- ceremony, and a mandatory sprint is a form to fill in before any work can
+-- begin — which is how a planning tool becomes the thing people avoid.
+
+create table tasks (
+  id                  uuid default gen_random_uuid() primary key,
+  workspace_id        uuid references workspaces(id) on delete cascade not null,
+  sprint_id           uuid references sprints(id) on delete set null,
+  -- Subtasks are tasks. A separate table would mean two places to look for
+  -- "what is assigned to me" and two answers to "is this done".
+  parent_task_id      uuid references tasks(id) on delete cascade,
+
+  title               text not null,
+  detail              text,
+  -- What "done" means for this task, written before it starts. The
+  -- verification engine compares evidence against this and nothing else.
+  acceptance_criteria text,
+
+  status              text not null default 'backlog'
+                        check (status in ('backlog', 'planned', 'doing', 'submitted', 'verified', 'accepted')),
+
+  assignee_id         uuid references accounts(id) on delete set null,
+
+  -- ── The plan ──
+  estimate_hours      numeric(5,2) check (estimate_hours is null or estimate_hours > 0),
+  difficulty          int check (difficulty is null or difficulty between 1 and 10),
+  priority            text not null default 'normal' check (priority in ('low', 'normal', 'high')),
+  due_on              date,
+
+  -- Who wrote this task. The distinction is itself evidence: whether a
+  -- student accepts an AI plan wholesale, edits it, or writes their own says
+  -- more about them than whether the tasks got done.
+  origin              text not null default 'student_created'
+                        check (origin in ('ai_proposed', 'ai_edited', 'student_created')),
+
+  -- What kind of person this task wants. The planner sets it; assignment is
+  -- then a lookup rather than a guess, and a task with no match stays
+  -- unassigned instead of landing on whoever happens to be first.
+  suggested_role      text check (suggested_role is null or suggested_role in (
+                        'backend', 'frontend', 'fullstack', 'mobile',
+                        'data', 'ml', 'infra', 'design', 'other')),
+
+  -- Design work, research, talking to a user. False means the verifier must
+  -- never look for commits — otherwise it fails honest work for having no
+  -- code, which reads as an insult rather than a bug.
+  verifiable          boolean not null default true,
+
+  -- Fractional so a card can be dropped between two others without
+  -- renumbering the column.
+  position            numeric not null default 0,
+
+  -- Which plan proposed this task, when one did. `origin` above says whether
+  -- it was proposed, edited or hand-written; this says which run it came
+  -- from, which is what makes "of the nine tasks that plan suggested, how
+  -- many survived" answerable. See v05_0031.
+  plan_call_id        uuid references agent_calls(id) on delete set null,
+
+  -- ── Blocked ──
+  -- A status flag rather than a board column: a blocked task is still in
+  -- Doing, and moving it elsewhere loses where it actually was.
+  blocked_at          timestamptz,
+  blocked_reason      text,
+
+  created_by          uuid references accounts(id) on delete set null,
+  created_at          timestamptz default now(),
+  -- Stamped by trigger on the matching transition, never by the client.
+  started_at          timestamptz,
+  submitted_at        timestamptz,
+  verified_at         timestamptz,
+  accepted_at         timestamptz,
+
+  -- A task cannot be its own parent. Deeper cycles are prevented in the API;
+  -- this catches the one that happens by accident.
+  check (parent_task_id is null or parent_task_id <> id)
+);
+
+create index tasks_board_idx    on tasks (workspace_id, status, position);
+create index tasks_assignee_idx on tasks (assignee_id) where assignee_id is not null;
+create index tasks_sprint_idx   on tasks (sprint_id) where sprint_id is not null;
+create index tasks_parent_idx   on tasks (parent_task_id) where parent_task_id is not null;
+create index tasks_blocked_idx  on tasks (workspace_id) where blocked_at is not null;
+create index tasks_plan_call_idx on tasks (plan_call_id) where plan_call_id is not null;
+
+-- ─── Dependencies ───────────────────────────────────────────────────────────
+create table task_dependencies (
+  id              uuid default gen_random_uuid() primary key,
+  workspace_id    uuid references workspaces(id) on delete cascade not null,
+  task_id         uuid references tasks(id) on delete cascade not null,
+  depends_on_id   uuid references tasks(id) on delete cascade not null,
+  created_at      timestamptz default now(),
+  unique (task_id, depends_on_id),
+  check (task_id <> depends_on_id)
+);
+
+create index task_dependencies_task_idx on task_dependencies (task_id);
+
+-- ─── Every deliberate change to the plan ────────────────────────────────────
+create table task_revisions (
+  id            uuid default gen_random_uuid() primary key,
+  workspace_id  uuid references workspaces(id) on delete cascade not null,
+  task_id       uuid references tasks(id) on delete cascade not null,
+  field         text not null check (field in (
+                  'title', 'acceptance_criteria', 'estimate_hours', 'difficulty',
+                  'due_on', 'assignee_id', 'sprint_id', 'priority')),
+  old_value     text,
+  new_value     text,
+  -- Optional, and the most valuable column in the table when it is filled
+  -- in. "The external API turned out to be rate limited" is the difference
+  -- between a bad estimate and a discovered constraint.
+  reason        text,
+  changed_by    uuid references accounts(id) on delete set null,
+  changed_at    timestamptz default now()
+);
+
+create index task_revisions_task_idx on task_revisions (task_id, changed_at);
+
+-- ─── Every move across the board ────────────────────────────────────────────
+create table task_transitions (
+  id            uuid default gen_random_uuid() primary key,
+  workspace_id  uuid references workspaces(id) on delete cascade not null,
+  task_id       uuid references tasks(id) on delete cascade not null,
+  from_status   text,
+  to_status     text not null,
+  actor_id      uuid references accounts(id) on delete set null,
+  occurred_at   timestamptz default now()
+);
+
+create index task_transitions_task_idx on task_transitions (task_id, occurred_at);
+
+-- Written by the database, not by the client. Time-in-column is the basis of
+-- estimate-versus-actual, so a caller that forgets to log a move — or shades
+-- one — would quietly corrupt the only honest measurement here.
+create or replace function record_task_transition()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status is distinct from old.status then
+    insert into task_transitions (workspace_id, task_id, from_status, to_status, actor_id)
+    values (new.workspace_id, new.id, old.status, new.status, auth.uid());
+
+    -- First entry into a column wins. Someone who moves a card back to Doing
+    -- and forward again has not started the task twice.
+    if new.status = 'doing'      and new.started_at   is null then new.started_at   := now(); end if;
+    if new.status = 'submitted'  and new.submitted_at is null then new.submitted_at := now(); end if;
+    if new.status = 'verified'   and new.verified_at  is null then new.verified_at  := now(); end if;
+    if new.status = 'accepted'   and new.accepted_at  is null then new.accepted_at  := now(); end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger tasks_record_transition
+  before update on tasks
+  for each row execute function record_task_transition();
+
+create or replace function record_task_creation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  insert into task_transitions (workspace_id, task_id, from_status, to_status, actor_id)
+  values (new.workspace_id, new.id, null, new.status, auth.uid());
+  return new;
+end;
+$$;
+
+create trigger tasks_record_creation
+  after insert on tasks
+  for each row execute function record_task_creation();
+
+-- ─── RLS ────────────────────────────────────────────────────────────────────
+alter table sprints            enable row level security;
+alter table tasks              enable row level security;
+alter table task_dependencies  enable row level security;
+alter table task_revisions     enable row level security;
+alter table task_transitions   enable row level security;
+
+-- Anyone on the team may plan, write and move work. The finer permission
+-- system — who may edit whose task — is a thing to add when a real team asks
+-- for it, not to guess at now.
+create policy "Members: read sprints"   on sprints for select using (is_workspace_member(workspace_id));
+create policy "Members: write sprints"  on sprints for insert with check (is_workspace_member(workspace_id));
+create policy "Members: update sprints" on sprints for update
+  using (is_workspace_member(workspace_id)) with check (is_workspace_member(workspace_id));
+create policy "Owners: delete sprints"  on sprints for delete using (is_workspace_owner(workspace_id));
+
+create policy "Members: read tasks"   on tasks for select using (is_workspace_member(workspace_id));
+create policy "Members: create tasks" on tasks for insert with check (is_workspace_member(workspace_id));
+create policy "Members: update tasks" on tasks for update
+  using (is_workspace_member(workspace_id)) with check (is_workspace_member(workspace_id));
+create policy "Members: delete tasks" on tasks for delete using (is_workspace_member(workspace_id));
+
+create policy "Members: read dependencies"   on task_dependencies for select using (is_workspace_member(workspace_id));
+create policy "Members: write dependencies"  on task_dependencies for insert with check (is_workspace_member(workspace_id));
+create policy "Members: delete dependencies" on task_dependencies for delete using (is_workspace_member(workspace_id));
+
+-- Insert-and-read only. A history that can be edited is not a history, and
+-- the entire argument for these two tables is that they cannot be rewritten
+-- after the fact.
+create policy "Members: read revisions"  on task_revisions for select using (is_workspace_member(workspace_id));
+create policy "Members: write revisions" on task_revisions for insert with check (is_workspace_member(workspace_id));
+
+create policy "Members: read transitions" on task_transitions for select using (is_workspace_member(workspace_id));
+
+create policy "Admins: read tasks"       on tasks for select using (is_admin());
+create policy "Admins: read transitions" on task_transitions for select using (is_admin());
+
+-- The evidence side: what GitHub said, what the verifier decided, and the
+-- things people write to each other while the work happens.
+--
+-- work_events is the piece that makes verification affordable. The obvious
+-- design — scan the repo when a task is submitted — costs a full repository
+-- read per task and gets slower as the project grows. Instead GitHub tells us
+-- as things happen, we store the events, and a submission assembles a case
+-- file from rows that are already here. Deterministic checks run for free on
+-- top of that, and exactly one model call is spent on the judgement.
+--
+-- It follows that this table must exist BEFORE the verifier. Built in the
+-- other order, every check is a repo scan and the feature is too expensive to
+-- turn on.
+
+create table work_events (
+  id                uuid default gen_random_uuid() primary key,
+  workspace_id      uuid references workspaces(id) on delete cascade not null,
+  repo_full_name    text not null,
+
+  event_type        text not null check (event_type in (
+                      'push', 'pull_request', 'pull_request_review',
+                      'check_suite', 'issue_comment', 'release')),
+
+  -- Attribution is the whole point on a team. GitHub gives us a login; the
+  -- account id is resolved from students.github_username, which the App
+  -- callback writes and which v05_0024 stopped students from forging. It
+  -- stays nullable because a commit can come from someone outside the
+  -- workspace, and that is a fact worth keeping rather than dropping.
+  author_login      text,
+  author_account_id uuid references accounts(id) on delete set null,
+
+  -- GitHub's own id for the delivery, so a redelivered webhook is ignored
+  -- rather than counted twice.
+  external_id       text,
+
+  occurred_at       timestamptz not null,
+  recorded_at       timestamptz default now(),
+
+  -- Trimmed at write time, not stored whole. A push payload carries the full
+  -- commit list and more besides; what a verifier needs is the messages, the
+  -- paths and the counts.
+  payload           jsonb,
+
+  unique (repo_full_name, event_type, external_id)
+);
+
+create index work_events_workspace_idx on work_events (workspace_id, occurred_at desc);
+create index work_events_author_idx    on work_events (author_account_id, occurred_at desc)
+  where author_account_id is not null;
+
+-- Defined here rather than further down because task_submissions below
+-- carries a foreign key to it.
+create table verification_runs (
+  id            uuid default gen_random_uuid() primary key,
+  workspace_id  uuid references workspaces(id) on delete cascade not null,
+  -- null when the nightly job started it.
+  triggered_by  uuid references accounts(id) on delete set null,
+  trigger       text not null default 'scheduled' check (trigger in ('scheduled', 'manual')),
+  status        text not null default 'queued'
+                  check (status in ('queued', 'running', 'complete', 'failed')),
+  task_count    int not null default 0,
+  agent_call_id uuid references agent_calls(id) on delete set null,
+  error         text,
+  queued_at     timestamptz default now(),
+  started_at    timestamptz,
+  finished_at   timestamptz,
+
+  -- The lease. This table is a queue as well as a record: the manual button
+  -- and the nightly sweep both reach for whatever is waiting, and a double
+  -- run would spend twice and could write two verdicts for one submission.
+  -- Same shape as jobs.locked_at, for the same reason. See v05_0032.
+  locked_at     timestamptz,
+  attempts      int not null default 0
+);
+
+/**
+ * Claim one run, or return nothing.
+ *
+ * A single statement on purpose. Reading a queued row and then updating it
+ * is two statements with a gap in the middle, and that gap is exactly where
+ * two workers both decide the run is theirs.
+ *
+ * Claimable when queued, or running for more than ten minutes — long enough
+ * that any real run has finished, short enough that a crash does not strand
+ * a student's submission for an hour.
+ */
+create or replace function claim_verification_run(p_run uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_claimed int;
+begin
+  update verification_runs
+     set status = 'running',
+         locked_at = now(),
+         started_at = coalesce(started_at, now()),
+         attempts = attempts + 1
+   where id = p_run
+     and (status = 'queued'
+          or (status = 'running' and locked_at < now() - interval '10 minutes'));
+  get diagnostics v_claimed = row_count;
+  return v_claimed > 0;
+end;
+$$;
+
+create index verification_runs_workspace_idx on verification_runs (workspace_id, queued_at desc);
+create index verification_runs_pending_idx   on verification_runs (status) where status in ('queued', 'running');
+create index verification_runs_claimable_idx on verification_runs (queued_at) where status in ('queued', 'running');
+
+-- ─── Verification ───────────────────────────────────────────────────────────
+create table task_submissions (
+  id             uuid default gen_random_uuid() primary key,
+  workspace_id   uuid references workspaces(id) on delete cascade not null,
+  task_id        uuid references tasks(id) on delete cascade not null,
+  submitted_by   uuid references accounts(id) on delete set null,
+  submitted_at   timestamptz default now(),
+
+  verdict        text not null default 'pending'
+                   check (verdict in ('pending', 'verified', 'needs_work', 'unverifiable', 'human_verified')),
+
+  -- 0 to 1. Never rounded to a yes: the product promise is that Workmark
+  -- says what the evidence supports and no more.
+  confidence     numeric(3,2) check (confidence is null or (confidence >= 0 and confidence <= 1)),
+
+  -- The deterministic checks, each with its own answer: CI passed, tests
+  -- touched, changed paths overlap what the task named. These cost nothing
+  -- and produce most of the checklist; the model only writes the judgement.
+  checks         jsonb,
+  notes          text,
+
+  -- The audit trail already used for every other agent call.
+  agent_call_id  uuid references agent_calls(id) on delete set null,
+  decided_at     timestamptz,
+
+  -- A person's answer, when the work is not the kind a machine can check or
+  -- when the student disputes the verdict.
+  human_verdict  text check (human_verdict is null or human_verdict in
+                   ('works', 'partly_works', 'does_not_work', 'not_checked')),
+  human_actor_id uuid references accounts(id) on delete set null,
+
+  -- Attempts are capped in the API at two before a person is asked. A board
+  -- somebody cannot get a card out of is worse than one with no checking.
+  attempt        int not null default 1 check (attempt >= 1),
+
+  -- Submitted tasks wait for a batch rather than triggering a check each.
+  -- See verification_runs below.
+  run_id         uuid references verification_runs(id) on delete set null
+);
+
+create index task_submissions_task_idx on task_submissions (task_id, submitted_at desc);
+
+-- ─── Checkpoints ────────────────────────────────────────────────────────────
+-- Seconds, not an exam. These are the only place a student is asked anything
+-- directly, and the spec is right that they should be rare: the primary
+-- evidence is the work, and a workspace that interrogates you is one people
+-- stop opening.
+-- ─── Every answer, kept ─────────────────────────────────────────────────────
+-- task_submissions.verdict is updated in place: the checker writes
+-- 'unverifiable', a teammate later writes 'human_verified', and the first
+-- answer is gone. For a dispute that is the wrong half to lose — "the checker
+-- could not tell, then Priya confirmed it on the 4th" is the story, and the
+-- row only remembers the ending.
+--
+-- Trigger-written, like task_transitions and for the same reason: a caller
+-- that forgets to log a decision, or shades one, corrupts the only record a
+-- student has to argue with. See v05_0035.
+create table task_decisions (
+  id               uuid default gen_random_uuid() primary key,
+  workspace_id     uuid references workspaces(id) on delete cascade not null,
+  task_id          uuid references tasks(id) on delete cascade not null,
+  submission_id    uuid references task_submissions(id) on delete cascade not null,
+  -- 'checker' is the automatic pass, 'person' a teammate or staff. Stored
+  -- rather than inferred from a null actor: "nobody was recorded" and "a
+  -- machine decided" are different facts and only one is a bug.
+  decided_by       text not null check (decided_by in ('checker', 'person')),
+  actor_id         uuid references accounts(id) on delete set null,
+  verdict          text not null,
+  previous_verdict text,
+  human_verdict    text,
+  confidence       numeric(3,2),
+  checks           jsonb,
+  note             text,
+  -- agent_calls holds the full prompt and parsed output, so this links "your
+  -- task was marked needs_work" to the exact text that decided it.
+  agent_call_id    uuid references agent_calls(id) on delete set null,
+  decided_at       timestamptz default now() not null
+);
+
+create index task_decisions_task_idx       on task_decisions (task_id, decided_at);
+create index task_decisions_submission_idx on task_decisions (submission_id, decided_at);
+
+create table task_checkpoints (
+  id            uuid default gen_random_uuid() primary key,
+  workspace_id  uuid references workspaces(id) on delete cascade not null,
+  task_id       uuid references tasks(id) on delete cascade not null,
+  account_id    uuid references accounts(id) on delete cascade not null,
+  kind          text not null check (kind in ('before', 'blocked', 'after')),
+  question      text not null,
+  answer        text,
+  asked_at      timestamptz default now(),
+  answered_at   timestamptz,
+  -- Skipping is allowed and is itself recorded. A required question gets
+  -- answered with whatever makes it go away, which is worse than no answer.
+  skipped_at    timestamptz
+);
+
+create index task_checkpoints_task_idx    on task_checkpoints (task_id);
+create index task_checkpoints_pending_idx on task_checkpoints (account_id)
+  where answered_at is null and skipped_at is null;
+
+-- ─── Files ──────────────────────────────────────────────────────────────────
+-- Metadata here, bytes in Supabase Storage. A file in a column makes every
+-- query that touches the row expensive and every backup enormous.
+create table workspace_files (
+  id             uuid default gen_random_uuid() primary key,
+  workspace_id   uuid references workspaces(id) on delete cascade not null,
+  task_id        uuid references tasks(id) on delete set null,
+  kind           text not null default 'attachment'
+                   check (kind in ('attachment', 'presentation')),
+  storage_path   text not null unique,
+  file_name      text not null,
+  content_type   text,
+  size_bytes     bigint check (size_bytes is null or size_bytes >= 0),
+  uploaded_by    uuid references accounts(id) on delete set null,
+  uploaded_at    timestamptz default now()
+);
+
+create index workspace_files_workspace_idx on workspace_files (workspace_id, uploaded_at desc);
+
+-- ─── Messages ───────────────────────────────────────────────────────────────
+-- application_messages was the pattern, not the table: it is capped at 500
+-- characters, tied to an application, and strictly between two people.
+create table workspace_messages (
+  id            uuid default gen_random_uuid() primary key,
+  workspace_id  uuid references workspaces(id) on delete cascade not null,
+  -- A message about a specific task. Null is the general channel. One table
+  -- rather than two, so "what was said about this" and "what was said here"
+  -- are the same query with a different filter.
+  task_id       uuid references tasks(id) on delete cascade,
+  sender_id     uuid references accounts(id) on delete set null,
+  body          text not null check (char_length(body) between 1 and 4000),
+  created_at    timestamptz default now(),
+  edited_at     timestamptz
+);
+
+create index workspace_messages_idx      on workspace_messages (workspace_id, created_at desc);
+create index workspace_messages_task_idx on workspace_messages (task_id, created_at)
+  where task_id is not null;
+
+-- ─── RLS ────────────────────────────────────────────────────────────────────
+alter table work_events        enable row level security;
+alter table task_submissions   enable row level security;
+alter table task_checkpoints   enable row level security;
+alter table workspace_files    enable row level security;
+alter table workspace_messages enable row level security;
+
+-- Read-only to everyone. Written by the webhook under the service role,
+-- because an event a client can insert is an event a client can invent — and
+-- these are the rows a verified skill is ultimately built on.
+create policy "Members: read work events"
+  on work_events for select using (is_workspace_member(workspace_id));
+
+-- Same reasoning: a student may ask for verification, and may never write
+-- its answer. The verdict columns are set by the job under the service role.
+create policy "Members: read submissions"
+  on task_submissions for select using (is_workspace_member(workspace_id));
+create policy "Members: submit work"
+  on task_submissions for insert
+  with check (is_workspace_member(workspace_id) and submitted_by = auth.uid() and verdict = 'pending');
+
+create policy "Members: read checkpoints"
+  on task_checkpoints for select using (is_workspace_member(workspace_id));
+-- Only the person who was asked may answer, and only their own row.
+create policy "Owner of the checkpoint: answer it"
+  on task_checkpoints for update
+  using (account_id = auth.uid()) with check (account_id = auth.uid());
+
+create policy "Members: read files"   on workspace_files for select using (is_workspace_member(workspace_id));
+create policy "Members: upload files" on workspace_files for insert
+  with check (is_workspace_member(workspace_id) and uploaded_by = auth.uid());
+create policy "Uploader or owner: remove a file"
+  on workspace_files for delete
+  using (uploaded_by = auth.uid() or is_workspace_owner(workspace_id));
+
+create policy "Members: read messages" on workspace_messages for select using (is_workspace_member(workspace_id));
+create policy "Members: send messages" on workspace_messages for insert
+  with check (is_workspace_member(workspace_id) and sender_id = auth.uid());
+create policy "Sender: edit their own message"
+  on workspace_messages for update
+  using (sender_id = auth.uid()) with check (sender_id = auth.uid());
+
+create policy "Admins: read submissions" on task_submissions for select using (is_admin());
+
+-- Answering a checkpoint must not let somebody rewrite the question they were
+-- asked, and editing a message must not let them move it to another task.
+revoke update on public.task_checkpoints from authenticated;
+grant update (answer, answered_at, skipped_at) on public.task_checkpoints to authenticated;
+
+revoke update on public.workspace_messages from authenticated;
+grant update (body, edited_at) on public.workspace_messages to authenticated;
+
+-- ─── Project rules (v05_0029) ───────────────────────────────────────────────
+
+-- The repo is what makes a project real: without one there is nothing to
+-- read, nothing to attribute, and no evidence at the end. So it is a
+-- condition of starting rather than a prompt somebody can dismiss.
+create or replace function require_repo_before_starting()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.status = 'active' and old.status = 'draft' then
+    if not exists (
+      select 1 from workspace_repos
+       where workspace_id = new.id and unlinked_at is null
+    ) then
+      raise exception 'Attach a GitHub repository before starting the project.'
+        using errcode = '23514';
+    end if;
+    if new.started_at is null then new.started_at := now(); end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger workspaces_require_repo
+  before update on workspaces
+  for each row execute function require_repo_before_starting();
+
+-- "Contributed" is deliberately generous: one verified task or one commit.
+-- The bar is not "pulled their weight", it is "did anything at all", because
+-- this only exists to separate someone who vanished from someone who is
+-- merely slower than their teammates would like.
+create or replace function member_has_contributed(p_workspace uuid, p_account uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from tasks
+     where workspace_id = p_workspace
+       and assignee_id = p_account
+       and status in ('verified', 'accepted')
+  ) or exists (
+    select 1 from work_events
+     where workspace_id = p_workspace
+       and author_account_id = p_account
+  );
+$$;
+
+create table workspace_removal_requests (
+  id                uuid default gen_random_uuid() primary key,
+  workspace_id      uuid references workspaces(id) on delete cascade not null,
+  target_account_id uuid references accounts(id) on delete cascade not null,
+  requested_by      uuid references accounts(id) on delete set null,
+  reason            text not null check (char_length(reason) between 10 and 2000),
+  created_at        timestamptz default now(),
+  resolved_at       timestamptz,
+  outcome           text check (outcome is null or outcome in ('approved', 'withdrawn', 'expired'))
+);
+
+create unique index workspace_removal_open_idx
+  on workspace_removal_requests (workspace_id, target_account_id)
+  where resolved_at is null;
+
+create table workspace_removal_approvals (
+  id          uuid default gen_random_uuid() primary key,
+  request_id  uuid references workspace_removal_requests(id) on delete cascade not null,
+  account_id  uuid references accounts(id) on delete cascade not null,
+  approved_at timestamptz default now(),
+  unique (request_id, account_id)
+);
+
+alter table workspace_removal_requests  enable row level security;
+alter table workspace_removal_approvals enable row level security;
+
+-- The person being removed can see the request and the reason. Being voted
+-- out of a project without being told why is not something to build.
+create policy "Members: read removal requests"
+  on workspace_removal_requests for select
+  using (is_workspace_member(workspace_id) or target_account_id = auth.uid());
+create policy "Members: open a removal request"
+  on workspace_removal_requests for insert
+  with check (is_workspace_member(workspace_id) and requested_by = auth.uid()
+              and target_account_id <> auth.uid());
+
+create policy "Members: read approvals"
+  on workspace_removal_approvals for select
+  using (exists (select 1 from workspace_removal_requests r
+                  where r.id = request_id and is_workspace_member(r.workspace_id)));
+create policy "Members: approve"
+  on workspace_removal_approvals for insert
+  with check (account_id = auth.uid()
+              and exists (select 1 from workspace_removal_requests r
+                           where r.id = request_id
+                             and is_workspace_member(r.workspace_id)
+                             and r.target_account_id <> auth.uid()
+                             and r.resolved_at is null));
+
+/**
+ * Leave, or remove somebody who never contributed.
+ *
+ * A contributor cannot be removed here at all — that path goes through a
+ * request and a vote, which is the whole point of the split.
+ */
+create or replace function remove_workspace_member(
+  p_workspace uuid,
+  p_account   uuid,
+  p_reason    text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_is_self boolean := (p_account = auth.uid());
+begin
+  if not is_workspace_member(p_workspace) then
+    raise exception 'You are not on this project.' using errcode = '42501';
+  end if;
+
+  -- The last owner cannot walk out and leave a project nobody can manage.
+  if (select role from workspace_members
+       where workspace_id = p_workspace and account_id = p_account
+         and accepted_at is not null and removed_at is null) = 'owner'
+     and (select count(*) from workspace_members
+           where workspace_id = p_workspace and role = 'owner'
+             and accepted_at is not null and removed_at is null) <= 1 then
+    raise exception 'A project needs at least one owner — make someone else an owner first.'
+      using errcode = '23514';
+  end if;
+
+  if not v_is_self then
+    if not is_workspace_owner(p_workspace) then
+      raise exception 'Only an owner can remove someone.' using errcode = '42501';
+    end if;
+    if member_has_contributed(p_workspace, p_account) then
+      raise exception 'This person has contributed work. Open a removal request so the team can agree.'
+        using errcode = '42501';
+    end if;
+    if p_reason is null or char_length(p_reason) < 10 then
+      raise exception 'Give a reason for removing someone.' using errcode = '22023';
+    end if;
+  end if;
+
+  update workspace_members
+     set removed_at = now(),
+         removed_by = auth.uid(),
+         removed_reason = case when v_is_self then 'Left the project' else p_reason end
+   where workspace_id = p_workspace and account_id = p_account and removed_at is null;
+end;
+$$;
+
+/**
+ * Carry out a removal once enough of the team agrees.
+ *
+ * Majority of the OTHER members — the person being removed does not vote,
+ * and neither does the count include them. On a team of four that is two of
+ * the remaining three.
+ */
+create or replace function resolve_removal_request(p_request uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_workspace uuid;
+  v_target    uuid;
+  v_others    int;
+  v_approvals int;
+begin
+  select workspace_id, target_account_id into v_workspace, v_target
+    from workspace_removal_requests where id = p_request and resolved_at is null;
+  if v_workspace is null then return false; end if;
+
+  if not is_workspace_member(v_workspace) then
+    raise exception 'You are not on this project.' using errcode = '42501';
+  end if;
+
+  select count(*) into v_others from workspace_members
+   where workspace_id = v_workspace and account_id <> v_target
+     and accepted_at is not null and removed_at is null;
+
+  select count(*) into v_approvals from workspace_removal_approvals
+   where request_id = p_request;
+
+  if v_approvals * 2 <= v_others then
+    return false;  -- not a majority yet
+  end if;
+
+  update workspace_members
+     set removed_at = now(),
+         removed_by = auth.uid(),
+         removed_reason = (select reason from workspace_removal_requests where id = p_request)
+   where workspace_id = v_workspace and account_id = v_target and removed_at is null;
+
+  update workspace_removal_requests
+     set resolved_at = now(), outcome = 'approved'
+   where id = p_request;
+
+  return true;
+end;
+$$;
+
+-- Pending invitations count. Otherwise an owner sends six and the team
+-- quietly exceeds the cap as they trickle in.
+create or replace function enforce_workspace_member_cap()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if (select count(*) from workspace_members
+       where workspace_id = new.workspace_id and removed_at is null) >= 4 then
+    raise exception 'A project holds at most 4 people.' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger workspace_members_cap
+  before insert on workspace_members
+  for each row execute function enforce_workspace_member_cap();
+
+
+create index task_submissions_run_idx on task_submissions (run_id) where run_id is not null;
+
+alter table verification_runs enable row level security;
+
+create policy "Members: read verification runs"
+  on verification_runs for select using (is_workspace_member(workspace_id));
+-- A member may ask for a check; the job writes the result under the service
+-- role, the same way a student may submit but never write a verdict.
+create policy "Members: request a check"
+  on verification_runs for insert
+  with check (is_workspace_member(workspace_id) and triggered_by = auth.uid()
+              and trigger = 'manual' and status = 'queued');
+
+-- ─── Plan vs reality (v05_0033) ─────────────────────────────────────────────
+-- One row per person per project, written nightly by the rollup. Never
+-- computed on page load: the figures come from every task, board move,
+-- revision and submission somebody has, which would make the page slowest
+-- for the students who had done the most work.
+
+create table workspace_metrics (
+  id            uuid default gen_random_uuid() primary key,
+  workspace_id  uuid references workspaces(id) on delete cascade not null,
+  account_id    uuid references accounts(id) on delete cascade not null,
+
+  -- The whole shape, as computeMetrics returns it. jsonb rather than fifty
+  -- columns because the shape will change as the measurement gets better,
+  -- and a migration per metric would make improving it expensive enough that
+  -- it stops happening.
+  metrics       jsonb not null,
+
+  -- Lifted out for querying: these are what a record page sorts, filters and
+  -- compares across projects, and digging them out of jsonb every time would
+  -- undo the point of precomputing them.
+  tasks_completed        int not null default 0,
+  difficulty_weighted    int not null default 0,
+  capability_frontier    int,
+  on_time_rate           numeric(4,3),
+  estimate_bias          numeric(6,3),
+
+  computed_at   timestamptz not null default now(),
+
+  unique (workspace_id, account_id)
+);
+
+create index workspace_metrics_account_idx on workspace_metrics (account_id, computed_at desc);
+
+alter table workspace_metrics enable row level security;
+
+-- Your own numbers, wherever they are. This is the row a record page reads,
+-- and it must not depend on still being on the project — somebody who
+-- finished a project last term keeps what they earned.
+create policy "Students: read own metrics"
+  on workspace_metrics for select using (account_id = auth.uid());
+
+-- And your teammates' on a project you are on. A team can see how the
+-- project went, which is the honest reading of shared work — and it is the
+-- same information they could assemble by hand from the board anyway.
+create policy "Members: read metrics on their projects"
+  on workspace_metrics for select using (is_workspace_member(workspace_id));
+
+create policy "Admins: read all metrics"
+  on workspace_metrics for select using (is_admin());
+
+-- No insert or update policy for anybody. These are written by the nightly
+-- rollup under the service role, and a student who could write their own
+-- capability frontier could write anything.

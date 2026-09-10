@@ -3,9 +3,11 @@
 import { useCallback, useState } from 'react'
 import { MarketingLayout } from './MarketingLayout'
 import { MissionHero } from './MissionHero'
+import { TheModes } from './TheModes'
 import { TheRecord } from './TheRecord'
+import { TheGrowth } from './TheGrowth'
 import { TheLoop } from './TheLoop'
-import { TheExternship } from './TheExternship'
+import { TheGuidedProject } from './TheGuidedProject'
 import { CrossLink } from './CrossLink'
 import { JoinSection } from './WaitlistSection'
 import { AudienceProvider, AUDIENCE_ROUTES } from './audience-context'
@@ -49,9 +51,11 @@ export function AudienceLanding({ initial }: { initial: Audience }) {
     <AudienceProvider value={{ audience, setAudience: changeAudience }}>
       <MarketingLayout>
         <MissionHero audience={audience} onAudienceChange={changeAudience} />
-        <TheRecord audience={audience} />
+        <TheModes audience={audience} />
+        <TheGuidedProject audience={audience} />
         <TheLoop audience={audience} />
-        <TheExternship audience={audience} />
+        <TheRecord audience={audience} />
+        <TheGrowth audience={audience} />
         <CrossLink audience={audience} onAudienceChange={changeAudience} />
         <JoinSection audience={audience} />
       </MarketingLayout>

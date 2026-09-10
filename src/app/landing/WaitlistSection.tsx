@@ -33,7 +33,7 @@ export function JoinSection({ audience }: { audience: Audience }) {
   const copy = CLOSING[audience]
   const cta = COPY[audience].primaryCta
   return (
-    <section style={{ position: 'relative', overflow: 'hidden', padding: '104px 24px 116px', textAlign: 'center' }}>
+    <section style={{ position: 'relative', overflow: 'hidden', padding: 'var(--wm-section-y) 24px', textAlign: 'center' }}>
       <Aurora height={620} />
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 620, margin: '0 auto' }}>

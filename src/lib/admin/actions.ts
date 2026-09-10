@@ -13,6 +13,7 @@
 // Skill attribution stays with the scanner.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { outcomeFor, type HumanVerdict } from '@/lib/workspace/review'
 import { embedText } from '@/lib/embeddings/voyage'
 
 export interface ActionResult {
@@ -72,6 +73,74 @@ export async function resolveReviewRequest(
     ok: true,
     message: args.approve ? 'Approved — the work is on their record.' : 'Rejected.',
   }
+}
+
+// ─── Workspace tasks waiting on a person ─────────────────────────────────────
+
+/**
+ * Answer a task the automatic checker could not settle.
+ *
+ * The same four answers a teammate gets, resolved through the same
+ * `outcomeFor` rules — a card must not behave differently depending on who
+ * happened to look at it, and two copies of "what does 'partly works' do"
+ * would eventually disagree.
+ *
+ * Staff are the backstop rather than the first line. On a team a teammate
+ * clears these; a solo student has nobody who is *allowed* to, because the
+ * person who did the work never confirms it.
+ */
+export async function resolveTaskVerification(
+  admin: SupabaseClient,
+  args: { id: string; verdict: HumanVerdict; adminId: string; note: string | null },
+): Promise<ActionResult> {
+  const { data: submission } = await admin
+    .from('task_submissions')
+    .select('id, task_id, workspace_id, verdict, human_verdict, notes')
+    .eq('id', args.id)
+    .maybeSingle()
+
+  if (!submission) return { ok: false, message: 'That submission no longer exists.' }
+  // Two reviewers open the queue at once often enough that this is the
+  // normal case, not the exotic one. The second is told, not overwritten.
+  if (submission.human_verdict) {
+    return { ok: false, message: 'Somebody already answered this one.' }
+  }
+  if (submission.verdict !== 'unverifiable') {
+    return { ok: false, message: 'This is no longer waiting on a person.' }
+  }
+
+  const outcome = outcomeFor(args.verdict)
+  const existingNote = (submission.notes as string | null) ?? null
+
+  const { error } = await admin
+    .from('task_submissions')
+    .update({
+      // Same rule as the teammate path: "I can't tell" is recorded in the
+      // notes and leaves the question open, rather than marking a card
+      // answered that nobody has answered.
+      ...(outcome.recordsAnswer ? { human_verdict: args.verdict, human_actor_id: args.adminId } : {}),
+      verdict: outcome.submissionVerdict,
+      ...(args.note
+        ? { notes: existingNote ? `${existingNote}\n\nWorkmark: ${args.note}` : `Workmark: ${args.note}` }
+        : {}),
+      decided_at: new Date().toISOString(),
+    })
+    .eq('id', args.id)
+    .is('human_verdict', null) // lost race → zero rows, and the read above already reported it
+
+  if (error) return { ok: false, message: 'Could not save the decision.' }
+
+  if (outcome.taskStatus) {
+    const { error: taskError } = await admin
+      .from('tasks')
+      .update({ status: outcome.taskStatus })
+      .eq('id', submission.task_id as string)
+    if (taskError) {
+      return { ok: false, message: 'Answer saved, but the card did not move. Check the board.' }
+    }
+  }
+
+  return { ok: true, message: outcome.message }
 }
 
 // ─── Disputes ────────────────────────────────────────────────────────────────

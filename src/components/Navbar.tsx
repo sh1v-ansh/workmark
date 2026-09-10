@@ -40,6 +40,11 @@ interface NavbarProps {
 const STUDENT_TABS: Tab[] = [
   { href: '/student/dashboard', label: 'Home',      also: ['/goals'] },
   { href: '/listings',          label: 'Find work', also: [] as string[] },
+  // Top level rather than under My record: a project is shared with other
+  // people, and My record is the one part of Workmark that is entirely
+  // yours. It is also what a student opens most days. `prefix` is safe here
+  // because everything under /workspaces/ belongs to this tab.
+  { href: '/workspaces',        label: 'Projects',  also: [] as string[], prefix: true },
   { href: '/me',                label: 'My record', also: ['/me/file', '/me/briefs', '/student/github'] },
 ]
 

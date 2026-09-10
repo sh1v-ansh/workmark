@@ -1,6 +1,8 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getGithubApp } from '@/lib/github/app'
+import { extractWorkEvents, isWorkEvent } from '@/lib/workspace/events'
+import { ingestWorkEvents } from '@/lib/workspace/ingest'
 
 /**
  * POST /api/github/app/webhook
@@ -17,6 +19,12 @@ import { getGithubApp } from '@/lib/github/app'
  * multiple times for one event after enough warm invocations. A plain
  * signature check + switch on the parsed payload has no such state to
  * accumulate.
+ *
+ * It also records project activity. Everything a workspace later needs to
+ * verify a task — commits, pull requests, reviews, CI results — arrives
+ * here first and is stored as it happens. The alternative is reading the
+ * whole repository every time somebody submits a task, which costs more and
+ * gets slower the further a project gets. See lib/workspace/events.ts.
  *
  * Revoked grants are never deleted, only marked revoked_at — a grant row
  * can be referenced by artifacts.access_grant_id, and deleting a
@@ -100,6 +108,27 @@ export async function POST(request: Request) {
           .eq('repo_full_name', r.full_name)
         if (error) throw error
       }
+    }
+  }
+
+  // ── Project activity ──
+  // Separate from the grant sync above and deliberately after it: an event
+  // that cannot be stored must never stop a repo being marked revoked.
+  //
+  // Wrapped, because a webhook that 500s is one GitHub retries — for days,
+  // and against the same endpoint the grant sync depends on. A dropped
+  // event costs one row of history; a failing endpoint costs the
+  // connection.
+  if (isWorkEvent(eventName)) {
+    try {
+      const events = extractWorkEvents(
+        eventName,
+        request.headers.get('x-github-delivery') ?? '',
+        payload,
+      )
+      await ingestWorkEvents(admin, events)
+    } catch (err) {
+      console.error('[github/webhook] work event ingest failed:', err)
     }
   }
 

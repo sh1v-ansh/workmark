@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { readFields, requireInt, requireBoolean } from '@/lib/http/validate'
 
 /**
  * POST /api/engagements/[id]/outcome
@@ -29,10 +30,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
   }
 
-  const satisfaction = body.posterSatisfaction
-  if (satisfaction !== undefined && (!Number.isInteger(satisfaction) || satisfaction < 1 || satisfaction > 5)) {
-    return NextResponse.json({ error: 'Satisfaction must be a whole number from 1 to 5.' }, { status: 400 })
-  }
+  // wouldRehire and hiredBeyondEngagement go straight into boolean columns.
+  // Passed through unchecked, a string there was a Postgres type error and a
+  // 500 on a form somebody had just filled in.
+  const fields = readFields(() => ({
+    satisfaction: body.posterSatisfaction === undefined || body.posterSatisfaction === null
+      ? null
+      : requireInt(body.posterSatisfaction, 'Satisfaction', { min: 1, max: 5 }),
+    wouldRehire: body.wouldRehire === undefined || body.wouldRehire === null
+      ? null
+      : requireBoolean(body.wouldRehire, 'Would rehire'),
+    hiredBeyond: body.hiredBeyondEngagement === undefined || body.hiredBeyondEngagement === null
+      ? false
+      : requireBoolean(body.hiredBeyondEngagement, 'Hired beyond the engagement'),
+  }))
+  if (!fields.ok) return fields.response
+  const { satisfaction, wouldRehire, hiredBeyond } = fields.values
 
   const { data: engagement } = await supabase
     .from('engagements')
@@ -49,9 +62,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const row: Record<string, unknown> = {
     engagement_id: id,
-    poster_satisfaction: satisfaction ?? null,
-    would_rehire: body.wouldRehire ?? null,
-    hired_beyond_engagement: body.hiredBeyondEngagement ?? false,
+    poster_satisfaction: satisfaction,
+    would_rehire: wouldRehire,
+    hired_beyond_engagement: hiredBeyond,
   }
   if (body.hiredBeyondEngagement) {
     row.hired_beyond_engagement_at = new Date().toISOString()

@@ -28,7 +28,7 @@ export function CrossLink({
   const other: Audience = audience === 'students' ? 'businesses' : 'students'
 
   return (
-    <section className="wm-section" style={{ paddingTop: 0 }}>
+    <section className="wm-section">
       <div className="wm-section-inner">
         <div className="wm-crosslink">
           <div style={{ minWidth: 0, position: 'relative' }}>

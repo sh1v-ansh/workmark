@@ -804,25 +804,20 @@
   border-radius: 13px;
   text-decoration: none;
   color: inherit;
-  border: 1px solid #DCD4F7;
-  background:
-    linear-gradient(152deg, #F6F2FF 0%, #FCFBFF 46%, #FFFFFF 100%);
+  /* Was a violet gradient with a sheen sweeping across it. Nothing about
+     the card being AI-written justifies more visual weight than the work
+     itself, and a gradient used to mean "special" is the cheapest signal
+     there is. A plain surface and a small label say the same thing without
+     asking to be looked at. */
+  border: 1px solid #E8E6F0;
+  background: #FFFFFF;
   box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 32px -18px rgba(97, 66, 245, 0.45);
   transition: box-shadow 0.2s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 /* Light pooling in the bottom-right, the same move the focal card makes. */
-.nb-ai-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(420px 220px at 96% 108%, rgba(97, 66, 245, 0.13) 0%, rgba(97, 66, 245, 0) 72%);
-}
-.nb-ai-card:hover {
-  border-color: #C3B4F2;
-  transform: translateY(-1px);
-  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.08), 0 18px 38px -18px rgba(97, 66, 245, 0.55);
-}
+/* The violet wash in the corner and the lift on hover both went with the
+   gradient. It is a link to a project; it should read as one. */
+.nb-ai-card:hover { border-color: #CFCBE6; }
 
 /* The band above the grid that says what these are. Full width, once, so
    the cards themselves do not each have to carry the explanation. */
@@ -1175,7 +1170,19 @@
 /* ── Marketing section rhythm ─────────────────────────────────────────────
    One class so every section below the hero breathes identically. The old
    page had six different vertical paddings. */
-.wm-section { padding: 92px 24px; }
+/* One value, everywhere.
+ *
+ * Section spacing used to be set per section: 92 here, 0 there, 72 before
+ * the cross-link, 104 before the join. Because adjacent sections both
+ * contribute padding, those produced gaps of 92, 184, 148 and 196 down the
+ * same page — no reader can name that, but everyone feels it as the page
+ * lurching.
+ *
+ * Every section now uses this and nothing overrides it, except one
+ * deliberate zero where the map continues the record section it shares a
+ * tint with. Consistent by construction rather than by remembering. */
+:root { --wm-section-y: 88px; }
+.wm-section { padding: var(--wm-section-y) 24px; }
 .wm-section-inner { max-width: 1080px; margin: 0 auto; }
 .wm-eyebrow-2 {
   display: inline-block;
@@ -1206,7 +1213,8 @@
   text-wrap: pretty;
 }
 @media (max-width: 720px) {
-  .wm-section { padding: 62px 20px; }
+  :root { --wm-section-y: 60px; }
+  .wm-section { padding: var(--wm-section-y) 20px; }
   .wm-h2 { font-size: 30px; }
 }
 
@@ -1244,30 +1252,25 @@
    dashed rather than solid, no shadow, no lift. Honest by construction —
    a reader can tell which of these they can have today without reading the
    badge. */
-.wm-step {
-  background: #FFFFFF;
-  border: 1px solid #E5E4EF;
-  border-radius: 16px;
-  padding: 24px 25px;
-  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03), 0 12px 28px -18px rgba(25, 30, 46, 0.25);
-  transition: box-shadow 0.22s ease, transform 0.16s ease, border-color 0.16s ease;
-}
-.wm-step:hover {
-  transform: translateY(-2px);
-  border-color: #C7B8FF;
-  box-shadow: 0 1px 2px rgba(62, 31, 255, 0.06), 0 18px 36px -18px rgba(62, 31, 255, 0.34);
-}
-.wm-step-soon {
-  background: rgba(255, 255, 255, 0.5);
-  border-style: dashed;
-  border-color: #DCDAE8;
-  box-shadow: none;
-}
-.wm-step-soon:hover {
-  transform: none;
-  border-color: #C7C4D8;
-  box-shadow: none;
-}
+/* Text, not a card.
+ *
+ * This used to be a white box with a border, a radius, a drop shadow and a
+ * hover that lifted it and glowed violet — and every block of content on the
+ * page got the same treatment. That is the look of a page assembled from a
+ * component library rather than designed: identical rectangles in a grid,
+ * a shadow under everything so nothing is actually emphasised, and a border
+ * around text that needed no border to be readable.
+ *
+ * A hairline above each item and real space around it does the same job.
+ * Grouping comes from alignment and whitespace, hierarchy comes from type.
+ * Nothing lifts on hover, because none of these are buttons and pretending
+ * otherwise is the tell. */
+/* No rule at all. In a two-column grid a per-cell top border stops at the
+   gutter, so a row reads as one line with a hole in it — a divider that
+   divides nothing. The 01/02/03/04 numerals already give each item an
+   anchor and the column gap does the separating. */
+.wm-step { padding: 4px 0; }
+.wm-step-soon { opacity: 0.86; }
 
 /* The record demonstration in TheRecord. Elevated more than an ordinary
    card because it is the one thing on the page a reader should look at. */
@@ -1355,6 +1358,94 @@
   background: radial-gradient(420px 220px at 96% 120%, rgba(236, 72, 153, 0.10) 0%, rgba(236, 72, 153, 0) 70%);
 }
 
+/* ── A ruled list ─────────────────────────────────────────────────────────
+   Full-width rules, so each one separates one item from the next rather
+   than underlining half of one. The fixed label column gives every row the
+   same left edge, and that alignment is what contains the text — the job
+   the floating borders were failing at. */
+.wm-rows { border-top: 1px solid #E9E8F0; }
+.wm-row {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+  padding: 24px 0 26px;
+  border-bottom: 1px solid #E9E8F0;
+}
+.wm-row-label { display: flex; align-items: baseline; gap: 10px; }
+.wm-row-soon { border-bottom-color: #F0EFF5; }
+
+@media (max-width: 860px) {
+  .wm-row { grid-template-columns: 1fr; gap: 8px; padding: 20px 0 22px; }
+}
+
+/* ── The skills map ───────────────────────────────────────────────────────
+   One panel, full width, no shadow. It is the only section on this page
+   that is not a heading over a two-column grid, and that is the point: even
+   with card borders gone, a page where every section keeps the same meter
+   still reads as generated. One section breaking the rhythm is worth more
+   than another that keeps it.
+
+   The zones are divided by hairlines rather than made into three cards, for
+   the same reason as .wm-step — three rectangles side by side would give
+   equal weight to "what you have proven" and "what you have never touched",
+   which is exactly the distinction the picture exists to draw. */
+/* No border, no fill, no radius. The panel sits flat on the section tint.
+   Below it the page already stacks a cross-link box and a join panel, both
+   rounded rectangles of the same radius — a third one above them is what
+   makes the bottom of this page read as a component gallery. The hairlines
+   inside the map are enough structure on their own. */
+.wm-map { padding: 0; }
+.wm-map-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding-bottom: 26px;
+  border-bottom: 1px solid #EFEEF5;
+}
+/* Four bars, and the last one is gold. The shape carries the whole idea —
+   a record is something that moves — so it needs no axis and no legend. */
+.wm-terms {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-left: auto;
+}
+.wm-map-tag {
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 12px;
+  color: #8A8A94;
+  align-self: flex-start;
+}
+.wm-map-zones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 0;
+}
+.wm-map-zone { padding: 24px 26px 4px; }
+.wm-map-zone + .wm-map-zone { border-left: 1px solid #EFEEF5; }
+.wm-map-zone:first-child { padding-left: 0; }
+.wm-map-zone:last-child { padding-right: 0; }
+.wm-map-foot {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #EFEEF5;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 14.5px;
+  color: #4B4B57;
+}
+
+@media (max-width: 860px) {
+  .wm-map { padding: 24px 22px 22px; border-radius: 16px; }
+  .wm-map-zones { grid-template-columns: 1fr; }
+  .wm-map-zone { padding: 22px 0 4px; }
+  .wm-map-zone + .wm-map-zone { border-left: 0; border-top: 1px solid #EFEEF5; }
+  .wm-terms { margin-left: 0; gap: 14px; }
+}
+
 /* ── Footer ───────────────────────────────────────────────────────────────
    Four columns rather than a logo and a row of links. The old one put every
    destination in one flat list, which is a sitemap rather than a footer —
@@ -1407,12 +1498,12 @@
   .wm-footer-grid { grid-template-columns: 1fr; }
 }
 
-/* ── The externship section ───────────────────────────────────────────────
+/* ── The guided-project section ───────────────────────────────────────────────
    Its own panel rather than another flat band, because it is the part of
    the page that answers the hardest objection a student has — everyone
    wants experience and nobody will give you any — and it was previously a
    clause inside somebody else's paragraph. */
-.wm-externship {
+.wm-guided {
   position: relative;
   overflow: hidden;
   padding: 44px 44px 46px;
@@ -1421,7 +1512,7 @@
   background: linear-gradient(140deg, #F7F4FF 0%, #FCFBFF 46%, #FFFFFF 100%);
   box-shadow: 0 1px 2px rgba(62, 31, 255, 0.05), 0 30px 70px -40px rgba(62, 31, 255, 0.42);
 }
-.wm-externship::before {
+.wm-guided::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -1431,7 +1522,7 @@
     radial-gradient(560px 320px at 0% 100%, rgba(56, 189, 248, 0.10) 0%, rgba(56, 189, 248, 0) 68%);
 }
 @media (max-width: 720px) {
-  .wm-externship { padding: 30px 22px 32px; border-radius: 18px; }
+  .wm-guided { padding: 30px 22px 32px; border-radius: 18px; }
 }
 
 /* The AI project card, in the clothes it actually wears in the product. A
@@ -1455,19 +1546,14 @@
 
 /* The four beats under the card. Same dashed treatment as the loop's
    unbuilt step, so "not yet" looks identical wherever it appears. */
+/* Same reasoning as .wm-step above: a rule and space, not a rectangle. */
 .wm-ext-step {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid #EAE6F8;
-  border-radius: 12px;
-  padding: 13px 15px;
+  padding: 15px 0 3px;
+  border-top: 1px solid #E7E2F5;
 }
-.wm-ext-step-soon {
-  background: rgba(255, 255, 255, 0.4);
-  border-style: dashed;
-  border-color: #DCDAE8;
-}
+.wm-ext-step-soon { border-top-color: #EDEAF6; }
 
-/* ── The unbuilt half of the externship ───────────────────────────────────
+/* ── The unbuilt half of the guided project ───────────────────────────────────
    Everything under here describes the workspace, which does not exist yet.
    It is separated by a rule, carries one unmistakable "Being built" badge,
    and every card in it wears the same dashed treatment the loop's unbuilt
