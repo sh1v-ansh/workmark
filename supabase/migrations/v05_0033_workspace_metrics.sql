@@ -43,15 +43,20 @@ alter table workspace_metrics enable row level security;
 -- Your own numbers, wherever they are. This is the row a record page reads,
 -- and it must not depend on still being on the project — somebody who
 -- finished a project last term keeps what they earned.
+-- CREATE POLICY has no IF NOT EXISTS, so this file aborts on a re-run
+-- without the drop. Migrations here are meant to be safe to replay.
+drop policy if exists "Students: read own metrics" on workspace_metrics;
 create policy "Students: read own metrics"
   on workspace_metrics for select using (account_id = auth.uid());
 
 -- And your teammates' on a project you are on. A team can see how the
 -- project went, which is the honest reading of shared work — and it is the
 -- same information they could assemble by hand from the board anyway.
+drop policy if exists "Members: read metrics on their projects" on workspace_metrics;
 create policy "Members: read metrics on their projects"
   on workspace_metrics for select using (is_workspace_member(workspace_id));
 
+drop policy if exists "Admins: read all metrics" on workspace_metrics;
 create policy "Admins: read all metrics"
   on workspace_metrics for select using (is_admin());
 

@@ -136,8 +136,14 @@ alter table task_decisions enable row level security;
 -- writer. A student can read the full history of every answer about their own
 -- work, which is the point — a dispute you cannot see the basis of is one you
 -- cannot make.
+-- Dropped first, like every trigger in this file. CREATE POLICY has no
+-- IF NOT EXISTS, so without these two lines re-running this migration aborts
+-- with 42710 — which matters because "run the last few again to be safe" is
+-- exactly what somebody does when they are unsure what has been applied.
+drop policy if exists "Members: read decisions" on task_decisions;
 create policy "Members: read decisions"
   on task_decisions for select using (is_workspace_member(workspace_id));
 
+drop policy if exists "Admins: read decisions" on task_decisions;
 create policy "Admins: read decisions"
   on task_decisions for select using (is_admin());

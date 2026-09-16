@@ -18,6 +18,9 @@
 --
 -- No recursion risk: this is a policy on `workspaces` reading
 -- `workspace_members`, which is a different table.
+-- CREATE POLICY has no IF NOT EXISTS, so this file aborts on a re-run
+-- without the drop. Migrations here are meant to be safe to replay.
+drop policy if exists "Invitees: read the workspace they were invited to" on workspaces;
 create policy "Invitees: read the workspace they were invited to"
   on workspaces for select
   using (
