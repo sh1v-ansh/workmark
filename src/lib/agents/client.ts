@@ -37,6 +37,7 @@ const MAX_TOKENS = 16000
 // how a reader concludes the opposite.
 export type AgentType =
   | 'posting' | 'brief' | 'goals' | 'taxonomy' | 'work_summary' | 'planner' | 'verification'
+  | 'retro'
 
 let cached: Anthropic | null = null
 

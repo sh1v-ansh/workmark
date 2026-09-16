@@ -6,6 +6,7 @@
 // they cannot be told it exists.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { toSprint, type Sprint } from './sprint'
 import type { MemberRole, WorkRole } from './membership'
 import type { TaskStatus, TaskPriority } from './tasks'
 import type { WorkspaceMetrics } from './metrics'
@@ -344,6 +345,7 @@ export interface BoardTask {
   verifiable: boolean
   position: number
   blockedAt: string | null
+  sprintId: string | null
   /** Why this was set aside, when it was. Null on every live card. */
   abandonedReason: string | null
   blockedReason: string | null
@@ -369,7 +371,7 @@ export async function loadBoard(
     // One literal, not a concatenation: supabase-js infers the row type from
     // the select string, and joining two pieces at runtime leaves it with
     // nothing to read.
-    .select('id, title, detail, acceptance_criteria, status, priority, assignee_id, suggested_role, estimate_hours, difficulty, due_on, verifiable, position, blocked_at, blocked_reason, abandoned_reason, origin, created_at, started_at')
+    .select('id, title, detail, acceptance_criteria, status, priority, assignee_id, suggested_role, estimate_hours, difficulty, due_on, verifiable, position, blocked_at, blocked_reason, abandoned_reason, sprint_id, origin, created_at, started_at')
     .eq('workspace_id', workspaceId)
     .order('position')
 
@@ -388,6 +390,7 @@ export async function loadBoard(
     verifiable: t.verifiable as boolean,
     position: Number(t.position),
     blockedAt: t.blocked_at as string | null,
+    sprintId: (t.sprint_id as string | null) ?? null,
     abandonedReason: t.abandoned_reason as string | null,
     blockedReason: t.blocked_reason as string | null,
     origin: t.origin as string,
@@ -615,4 +618,25 @@ export async function loadDecisions(
     byTask.set(taskId, [...(byTask.get(taskId) ?? []), decision])
   }
   return byTask
+}
+
+
+/**
+ * Every sprint on a project, newest first.
+ *
+ * The whole list rather than only the open one: the board shows the current
+ * week, and last week's review is the thing somebody actually wants to read
+ * while planning this one.
+ */
+export async function loadSprints(
+  supabase: SupabaseClient,
+  workspaceId: string,
+): Promise<Sprint[]> {
+  const { data } = await supabase
+    .from('sprints')
+    .select('id, name, goal, starts_on, ends_on, closed_at, retro')
+    .eq('workspace_id', workspaceId)
+    .order('starts_on', { ascending: false })
+
+  return (data ?? []).map(toSprint)
 }

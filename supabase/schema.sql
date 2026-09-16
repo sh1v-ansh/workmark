@@ -682,7 +682,8 @@ create table review_requests (
 create table agent_calls (
   id           uuid default gen_random_uuid() primary key,
   agent_type   text not null check (agent_type in (
-                 'posting', 'brief', 'goals', 'taxonomy', 'work_summary', 'planner', 'verification')),
+                 'posting', 'brief', 'goals', 'taxonomy', 'work_summary', 'planner',
+                 'verification', 'retro')),
   student_id   uuid references students(id) on delete cascade,
   poster_id    uuid,
   input        jsonb not null,
@@ -2104,6 +2105,16 @@ create table sprints (
   starts_on     date not null,
   ends_on       date not null,
   created_at    timestamptz default now(),
+
+  -- When the team reviewed it (v05_0041). ends_on is the plan; this is what
+  -- happened, and a sprint that ran two days over is ordinary enough to be
+  -- worth being able to see.
+  closed_at     timestamptz,
+  -- What it taught, written once at close. Prose rather than a verdict: the
+  -- reader is a student deciding what to do next week, not a metric.
+  retro         text,
+  retro_call_id uuid references agent_calls(id) on delete set null,
+
   check (ends_on >= starts_on)
 );
 

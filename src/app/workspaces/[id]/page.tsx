@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import {
-  loadWorkspace, loadBoard, loadVerdicts, loadMetrics, loadCloseSummary, loadDependencies,
+  loadWorkspace, loadBoard, loadVerdicts, loadMetrics, loadCloseSummary, loadDependencies, loadSprints,
   loadDecisions,
 } from '@/lib/workspace/queries'
 import WorkspaceClient from './WorkspaceClient'
@@ -23,14 +23,15 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
   // The board is only worth loading once the project has actually started —
   // a draft has no tasks and the query would be a round trip for an empty
   // array on every visit during setup.
-  const [tasks, verdicts, measured, dependencies, decisions] = workspace.status === 'draft'
-    ? [[], new Map(), null, [], new Map()]
+  const [tasks, verdicts, measured, dependencies, decisions, sprints] = workspace.status === 'draft'
+    ? [[], new Map(), null, [], new Map(), []]
     : await Promise.all([
         loadBoard(supabase, id),
         loadVerdicts(supabase, id),
         loadMetrics(supabase, id, user.id),
         loadDependencies(supabase, id),
         loadDecisions(supabase, id),
+        loadSprints(supabase, id),
       ])
 
   // Only for a finished project. On every other visit this is a query for a
@@ -53,6 +54,7 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
       workspace={workspace}
       tasks={tasks}
       verdicts={Array.from(verdicts.values())}
+      sprints={sprints}
       measured={measured}
       dependencies={dependencies}
       decisions={Array.from(decisions.values()).flat()}

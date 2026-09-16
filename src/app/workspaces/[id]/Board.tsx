@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import { Bar } from '@/components/ui/Skeleton'
 import { canAskForMore } from '@/lib/workspace/project-state'
+import {
+  currentSprint, progressOf, isOverdue, daysRemaining, type Sprint,
+} from '@/lib/workspace/sprint'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/Toast'
 import { C, R, T } from '@/lib/theme/dark-tokens'
@@ -58,6 +61,7 @@ export default function Board({
   workspaceId,
   tasks,
   verdicts,
+  sprints,
   members,
   dependencies,
   decisions,
@@ -68,6 +72,7 @@ export default function Board({
   workspaceId: string
   tasks: BoardTask[]
   verdicts: TaskVerdict[]
+  sprints: Sprint[]
   members: TeamMember[]
   dependencies: TaskDependency[]
   decisions: TaskDecision[]
@@ -93,6 +98,10 @@ export default function Board({
   const [abandoning, setAbandoning] = useState<BoardTask | null>(null)
   const [abandonReason, setAbandonReason] = useState('')
   const [showAside, setShowAside] = useState(false)
+  const [sprintGoal, setSprintGoal] = useState('')
+  const [startingSprint, setStartingSprint] = useState(false)
+  const [endingSprint, setEndingSprint] = useState(false)
+  const [lastRetro, setLastRetro] = useState<string | null>(null)
   const [reviewVerdict, setReviewVerdict] = useState<HumanVerdict | null>(null)
   const [reviewNote, setReviewNote] = useState('')
   const verdictFor = new Map(verdicts.map((v) => [v.taskId, v]))
@@ -237,6 +246,36 @@ export default function Board({
       { method: 'PATCH', body: JSON.stringify({ blocked: true, blockedReason: blockReason }) },
       'Flagged as blocked.')
     if (ok) setBlocking(null)
+  }
+
+  const sprint = currentSprint(sprints)
+  const lastClosed = sprints.find((s) => s.closedAt !== null && s.retro) ?? null
+
+  async function startSprint() {
+    const ok = await send(`/api/workspaces/${workspaceId}/sprints`,
+      { method: 'POST', body: JSON.stringify({ goal: sprintGoal || null }) }, 'Week started.')
+    if (ok) { setStartingSprint(false); setSprintGoal('') }
+  }
+
+  async function endSprint() {
+    if (!sprint) return
+    setEndingSprint(true)
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/sprints/${sprint.id}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Could not end the week.')
+      // Shown straight away rather than only after the refresh: the review is
+      // the thing they pressed the button for, and making them find it on a
+      // reloaded page is how it goes unread.
+      setLastRetro(data.retro ?? null)
+      router.refresh()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
+    } finally {
+      setEndingSprint(false)
+    }
   }
 
   async function confirmAbandon() {
@@ -412,6 +451,83 @@ export default function Board({
           Workmark can draft a first plan from what this project is. It will get some of it wrong —
           edit it, reorder it, throw tasks out and add your own. The plan is yours once it lands.
         </p>
+      )}
+
+      {/* The week.
+          The one place a student commits to an amount of work before doing it
+          and is then shown what happened, which is the most informative thing
+          this board records. Above the columns because it frames them: these
+          six columns are this week's work, not an undated pile. */}
+      {!readOnly && workspaceStatus === 'active' && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: 12, flexWrap: 'wrap', marginBottom: 14, padding: '11px 14px',
+          borderRadius: R.md, border: `1px solid ${sprint && isOverdue(sprint, new Date()) ? '#E4B9A6' : C.borderFaint}`,
+          background: C.surfaceAlt,
+        }}>
+          {sprint ? (
+            <>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text }}>
+                  {sprint.name}
+                  {sprint.goal ? <span style={{ fontWeight: 400, color: C.textMuted }}> — {sprint.goal}</span> : null}
+                </p>
+                <p style={{ fontSize: T.meta, color: C.textFaint, marginTop: 3 }}>
+                  {(() => {
+                    const p = progressOf(sprint, tasks)
+                    const left = daysRemaining(sprint, new Date())
+                    const when = left > 0
+                      ? `${left} day${left === 1 ? '' : 's'} left`
+                      : left === 0 ? 'ends today' : `${-left} day${left === -1 ? '' : 's'} over`
+                    // Set-aside counted separately, never folded into either
+                    // side: it is not done and it is not outstanding.
+                    return `${p.done} of ${p.committed - p.setAside} done` +
+                      (p.setAside > 0 ? `, ${p.setAside} set aside` : '') +
+                      ` · ${when}`
+                  })()}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={endSprint}
+                busyLabel={endingSprint ? 'Reviewing…' : null}
+              >
+                End the week
+              </Button>
+            </>
+          ) : (
+            <>
+              <div style={{ minWidth: 0, flex: '1 1 260px' }}>
+                <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text, marginBottom: 2 }}>
+                  No week running
+                </p>
+                <p style={{ fontSize: T.meta, color: C.textFaint }}>
+                  Commit to what you will finish, and find out how close you got.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setStartingSprint(true)}>
+                Start a week
+              </Button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Last week's review, until they start the next one. The thing somebody
+          actually wants while deciding what to commit to. */}
+      {!sprint && lastClosed?.retro && (
+        <div style={{
+          marginBottom: 14, padding: '12px 14px', borderRadius: R.md,
+          border: `1px solid ${C.borderFaint}`, background: C.bg,
+        }}>
+          <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.textFaint, marginBottom: 6 }}>
+            {lastClosed.name} review
+          </p>
+          <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, whiteSpace: 'pre-line' }}>
+            {lastClosed.retro}
+          </p>
+        </div>
       )}
 
       <div className="nb-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
@@ -727,6 +843,40 @@ export default function Board({
         history={editing ? decisionsFor.get(editing.id) ?? [] : []}
         nameOf={nameOf}
       />
+
+      <Modal open={startingSprint} onClose={() => setStartingSprint(false)} title="Start a week">
+        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>
+          A week runs for seven days. At the end you get a review of what you committed to against
+          what actually happened — including the reasons you gave when something moved, which is
+          the part that matters.
+        </p>
+        <label htmlFor="sprint-goal" style={{ display: 'block', fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
+          What is this week for? <span style={{ fontWeight: 400, color: C.textGhost }}>Optional</span>
+        </label>
+        <input
+          id="sprint-goal"
+          className="dk-input"
+          value={sprintGoal}
+          onChange={(e) => setSprintGoal(e.target.value)}
+          placeholder="Get sign-in working end to end"
+          maxLength={500}
+          style={{ marginBottom: 20 }}
+        />
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="quiet" onClick={() => setStartingSprint(false)}>Cancel</Button>
+          <Button onClick={startSprint} disabled={busy}>Start</Button>
+        </div>
+      </Modal>
+
+      {/* The review, the moment it arrives. */}
+      <Modal open={lastRetro !== null} onClose={() => setLastRetro(null)} title="How the week went">
+        <p style={{ fontSize: T.body, color: C.textMuted, lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: 20 }}>
+          {lastRetro}
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button onClick={() => setLastRetro(null)}>Got it</Button>
+        </div>
+      </Modal>
 
       {/* Setting work aside.
           Worded so that using it honestly does not feel like an admission.

@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
+import type { Sprint } from '@/lib/workspace/sprint'
 import { WORK_ROLES, MAX_WORKSPACE_MEMBERS, type WorkRole } from '@/lib/workspace/membership'
 import Board from './Board'
 import PlanVsReality from './PlanVsReality'
@@ -31,6 +32,7 @@ export default function WorkspaceClient({
   workspace,
   tasks,
   verdicts,
+  sprints,
   measured,
   dependencies,
   decisions,
@@ -41,6 +43,7 @@ export default function WorkspaceClient({
   workspace: WorkspaceDetail
   tasks: BoardTask[]
   verdicts: TaskVerdict[]
+  sprints: Sprint[]
   measured: { metrics: WorkspaceMetrics; computedAt: string } | null
   dependencies: TaskDependency[]
   decisions: TaskDecision[]
@@ -210,6 +213,7 @@ export default function WorkspaceClient({
               verdicts={verdicts}
               members={workspace.members}
               workspaceStatus={workspace.status}
+              sprints={sprints}
               dependencies={dependencies}
               decisions={decisions}
               userId={userId}

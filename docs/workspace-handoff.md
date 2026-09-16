@@ -540,7 +540,7 @@ Everything below is unbuilt. Ordered by what blocks what.
 - [x] Migrations `0025`–`0035` are applied.
 - [x] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
       pg_cron.
-- [ ] **Run migrations `v05_0038`, `v05_0039` and `v05_0040`.** `0040` adds
+- [ ] **Run migrations `v05_0038`–`v05_0041`.** `0040` adds
       token columns to `agent_calls`, `sender_kind` to `workspace_messages`,
       and the `abandoned` task status. Until it runs, every agent call logs a
       null cost and setting a task aside fails the status check. `0038` schedules the
@@ -617,7 +617,17 @@ What is still thin here:
 Each of these is a migration already applied and nothing writing to it.
 
 - [ ] **Subtasks** — `tasks.parent_task_id`
-- [ ] **Sprints** — `sprints`
+- [x] **Sprints** — `sprints`. A week, with a goal, closed by hand and
+      reviewed by an agent at close. `lib/workspace/sprint.ts` holds the rules;
+      `lib/agents/retro.ts` is the PM. One open sprint per project, enforced by
+      a partial unique index. A week is seven days and is deliberately not
+      configurable — the choice costs every team a decision with no good answer
+      and makes boards incomparable. The retro never grades: a student who
+      reads a mark optimises for it, and would stop committing to anything hard
+      or setting work aside honestly, which are the two behaviours the board
+      exists to make safe. Set-aside work is held apart from both done and
+      outstanding in every sprint figure. **v05_0041** adds `closed_at`,
+      `retro`, `retro_call_id` and widens `agent_calls.agent_type`.
 - [x] **Dependencies** — `task_dependencies`. The planner's `dependsOn` is
       written on plan, and shown on the card as "Waiting on …". Recorded,
       never enforced: a board that refuses moves is a board people work
