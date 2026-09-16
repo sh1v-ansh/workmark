@@ -205,6 +205,10 @@ create table listings (
   is_paid                 boolean default false not null check (is_paid = false), -- MVP: no payments infra exists yet
   tier                    text not null default 'listing_driven' check (tier in ('listing_driven', 'faculty_project')),
   status                  text not null default 'open' check (status in ('draft', 'open', 'filled', 'closed')),
+  -- Two short judgement questions, generated from this listing at post time
+  -- so the cost is per listing rather than per applicant (v05_0043). Null
+  -- falls back to the standard pair.
+  application_questions   jsonb,
   view_count              int default 0 not null,
   created_at              timestamptz default now()
 );
@@ -240,6 +244,10 @@ create table applications (
   consent_id         uuid,  -- FK added after consents is created (circular declaration order)
   claimed_skills     text[],
   response_text      text,
+  -- Answers with the question text as asked (v05_0043). The text is stored
+  -- alongside because a listing can be edited after somebody applied, and a
+  -- poster reading this in three months needs to see what was actually asked.
+  responses          jsonb,
   scored_response    jsonb,
   fit_tier_at_apply  text check (fit_tier_at_apply in ('strong_fit', 'competitive', 'reach', 'not_yet')),
   rank_score_at_apply numeric,

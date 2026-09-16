@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { writeApplicationQuestions } from '@/lib/agents/application-questions'
 import { getAccount, hasRole } from '@/lib/auth/roles'
 import { readFields, requireString, requireArray } from '@/lib/http/validate'
 
@@ -107,7 +108,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Could not save the required skills. The listing was saved as a draft.' }, { status: 500 })
   }
 
-  const { error: openErr } = await supabase.from('listings').update({ status: 'open' }).eq('id', listing.id)
+  // The two questions applicants answer, written against this listing.
+  //
+  // Once per listing rather than once per applicant, which is the difference
+  // between a few hundred calls a year and one every time somebody clicks
+  // Apply. Best-effort and deliberately not awaited into the failure path: a
+  // listing must never be unpostable because a model call was slow or
+  // refused, and questionsFor() serves a good standard pair when this is
+  // null rather than a placeholder.
+  let applicationQuestions = null
+  try {
+    applicationQuestions = await writeApplicationQuestions(supabase, user.id, {
+      title,
+      description: brief,
+      requirements: requirements.map((r) => String(r.skillId)),
+    })
+  } catch (err) {
+    console.error('[api/listings] could not write application questions:', err)
+  }
+
+  const { error: openErr } = await supabase
+    .from('listings')
+    .update({ status: 'open', application_questions: applicationQuestions })
+    .eq('id', listing.id)
   if (openErr) {
     console.error('[api/listings] publish failed:', openErr)
     return NextResponse.json({ error: 'The listing was saved as a draft but could not be published.' }, { status: 500 })
