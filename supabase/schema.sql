@@ -2199,6 +2199,16 @@ create table tasks (
   -- many survived" answerable. See v05_0031.
   plan_call_id        uuid references agent_calls(id) on delete set null,
 
+  -- Asked once when this card enters Doing, and written by the planner in the
+  -- same call that created the task (v05_0046). A stated approach before the
+  -- work is a prediction, and the diff afterwards is the outcome — holding
+  -- those two together is the one thing here that timestamps cannot do.
+  --
+  -- Null means ask the standard question: a hand-written task never goes
+  -- through the planner, and a refused planner call must not leave a card
+  -- that cannot be started.
+  before_question     text,
+
   -- ── Blocked ──
   -- A status flag rather than a board column: a blocked task is still in
   -- Doing, and moving it elsewhere loses where it actually was.

@@ -10,6 +10,7 @@ import { useToast } from '@/components/Toast'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import type { Sprint } from '@/lib/workspace/sprint'
 import type { Message } from '@/lib/workspace/messages'
+import type { Checkpoint } from '@/lib/workspace/checkpoints'
 import { WORK_ROLES, MAX_WORKSPACE_MEMBERS, type WorkRole } from '@/lib/workspace/membership'
 import Board from './Board'
 import PlanVsReality from './PlanVsReality'
@@ -35,6 +36,7 @@ export default function WorkspaceClient({
   verdicts,
   sprints,
   messages,
+  checkpoints,
   measured,
   dependencies,
   decisions,
@@ -47,6 +49,7 @@ export default function WorkspaceClient({
   verdicts: TaskVerdict[]
   sprints: Sprint[]
   messages: [string, Message[]][]
+  checkpoints: [string, Checkpoint[]][]
   measured: { metrics: WorkspaceMetrics; computedAt: string } | null
   dependencies: TaskDependency[]
   decisions: TaskDecision[]
@@ -218,6 +221,7 @@ export default function WorkspaceClient({
               workspaceStatus={workspace.status}
               sprints={sprints}
               messages={messages}
+              checkpoints={checkpoints}
               dependencies={dependencies}
               decisions={decisions}
               userId={userId}

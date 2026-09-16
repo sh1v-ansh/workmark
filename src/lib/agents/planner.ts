@@ -24,6 +24,8 @@ export interface DraftTask {
   title: string
   detail: string
   acceptanceCriteria: string
+  /** Asked when this card is started. Null falls back to the standard one. */
+  beforeQuestion: string | null
   suggestedRole: WorkRole | null
   estimateHours: number
   difficulty: number
@@ -79,6 +81,11 @@ const SCHEMA = {
             type: 'string',
             description: 'Observable outcomes that say this is done.',
           },
+          before_question: {
+            type: 'string',
+            description:
+              'One short question, asked when the student starts this task, about what they will try first. Specific to this task and answerable in fifteen seconds. Not "how will you approach this" — something a person can be concretely wrong about, so it can be compared with what they actually build.',
+          },
           suggested_role: {
             type: ['string', 'null'],
             enum: [...WORK_ROLES, null],
@@ -93,7 +100,7 @@ const SCHEMA = {
           },
         },
         required: [
-          'title', 'detail', 'acceptance_criteria', 'suggested_role',
+          'title', 'detail', 'acceptance_criteria', 'before_question', 'suggested_role',
           'estimate_hours', 'difficulty', 'verifiable', 'depends_on',
         ],
         additionalProperties: false,
@@ -109,6 +116,7 @@ interface AgentResponse {
     title: string
     detail: string
     acceptance_criteria: string
+    before_question: string
     suggested_role: string | null
     estimate_hours: number
     difficulty: number
@@ -215,6 +223,9 @@ function normalise(raw: AgentResponse['tasks'][number]): DraftTask | null {
   return {
     title,
     detail: typeof raw.detail === 'string' ? raw.detail.trim().slice(0, 4000) : '',
+    beforeQuestion: typeof raw.before_question === 'string' && raw.before_question.length >= 10
+      ? raw.before_question.slice(0, 300)
+      : null,
     acceptanceCriteria: typeof raw.acceptance_criteria === 'string'
       ? raw.acceptance_criteria.trim().slice(0, 4000)
       : '',

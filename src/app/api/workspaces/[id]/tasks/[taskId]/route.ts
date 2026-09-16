@@ -7,6 +7,9 @@ import { WORK_ROLES, workspaceAcceptsWork, type WorkRole } from '@/lib/workspace
 import { canMoveTo, revisionsFor, type TaskStatus, TASK_STATUSES } from '@/lib/workspace/tasks'
 import { canSubmitParent } from '@/lib/workspace/subtasks'
 import {
+  wantsBefore, DEFAULT_BEFORE, BLOCKED_QUESTION, type CheckpointKind,
+} from '@/lib/workspace/checkpoints'
+import {
   parseBody, readFields, requireString, optionalString, optionalUuid,
   requireUuid, requireOneOf, optionalNumber, optionalInt, optionalDate, ValidationError,
 } from '@/lib/http/validate'
@@ -67,7 +70,7 @@ export async function PATCH(request: Request, { params }: Params) {
   // rather than as a refusal that confirms it exists.
   const { data: current } = await supabase
     .from('tasks')
-    .select('id, status, origin, title, detail, acceptance_criteria, estimate_hours, difficulty, due_on, assignee_id, sprint_id, priority')
+    .select('id, status, origin, title, detail, acceptance_criteria, estimate_hours, difficulty, due_on, assignee_id, sprint_id, priority, started_at, before_question')
     .eq('id', taskId)
     .eq('workspace_id', workspaceId)
     .maybeSingle()
@@ -162,6 +165,68 @@ export async function PATCH(request: Request, { params }: Params) {
   if (patch.status) {
     const refusal = canMoveTo(current.status as TaskStatus, patch.status as TaskStatus)
     if (refusal) return NextResponse.json({ error: refusal }, { status: 400 })
+  }
+
+  // ── The question asked once, as work starts ──
+  //
+  // Created here rather than by trigger because the row needs an owner and
+  // the database does not know who moved the card — auth.uid() inside a
+  // trigger is the caller, which is right, but the rest of this route already
+  // has it and one place is better than two.
+  //
+  // Best-effort: a checkpoint that fails to be created must never stop
+  // somebody starting work. It is a question, not a gate.
+  if (submittingTo === 'doing' && current.status !== 'doing') {
+    try {
+      const [{ data: existing }, { data: children }] = await Promise.all([
+        supabase.from('task_checkpoints').select('id, kind').eq('task_id', taskId),
+        supabase.from('tasks').select('id').eq('parent_task_id', taskId).limit(1),
+      ])
+
+      const asked = wantsBefore({
+        toStatus: 'doing',
+        // First entry into Doing wins, the same rule the transition trigger
+        // uses for started_at. Dragging a card back and forward is not
+        // starting it twice.
+        hadStartedBefore: current.started_at !== null,
+        hasChildren: (children ?? []).length > 0,
+        existing: (existing ?? []).map((c) => ({
+          id: c.id as string, taskId, kind: c.kind as CheckpointKind,
+          question: '', answer: null, askedAt: null, answeredAt: null, skippedAt: null,
+        })),
+      })
+
+      if (asked) {
+        await supabase.from('task_checkpoints').insert({
+          workspace_id: workspaceId,
+          task_id: taskId,
+          account_id: user.id,
+          kind: 'before',
+          question: (current.before_question as string | null) ?? DEFAULT_BEFORE,
+        })
+      }
+    } catch (err) {
+      console.error('[api/tasks/:id] could not open a checkpoint:', err)
+    }
+  }
+
+  // Flagging yourself blocked already involves typing a reason, so the
+  // checkpoint costs nothing extra — it just files what they wrote somewhere
+  // the verifier will read it.
+  if (patch.blocked_at && typeof patch.blocked_reason === 'string') {
+    try {
+      await supabase.from('task_checkpoints').insert({
+        workspace_id: workspaceId,
+        task_id: taskId,
+        account_id: user.id,
+        kind: 'blocked',
+        question: BLOCKED_QUESTION,
+        answer: patch.blocked_reason,
+        answered_at: new Date().toISOString(),
+      })
+    } catch (err) {
+      console.error('[api/tasks/:id] could not record the blocked checkpoint:', err)
+    }
   }
 
   // A parent cannot be submitted while its pieces are still open. Moving it

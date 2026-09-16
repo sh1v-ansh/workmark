@@ -10,6 +10,7 @@ import {
   currentSprint, progressOf, isOverdue, daysRemaining, type Sprint,
 } from '@/lib/workspace/sprint'
 import { MENTION, type Message } from '@/lib/workspace/messages'
+import { pending, type Checkpoint } from '@/lib/workspace/checkpoints'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/Toast'
 import { C, R, T } from '@/lib/theme/dark-tokens'
@@ -64,6 +65,7 @@ export default function Board({
   verdicts,
   sprints,
   messages,
+  checkpoints,
   members,
   dependencies,
   decisions,
@@ -76,6 +78,7 @@ export default function Board({
   verdicts: TaskVerdict[]
   sprints: Sprint[]
   messages: [string, Message[]][]
+  checkpoints: [string, Checkpoint[]][]
   members: TeamMember[]
   dependencies: TaskDependency[]
   decisions: TaskDecision[]
@@ -113,6 +116,13 @@ export default function Board({
   const [splitting, setSplitting] = useState<BoardTask | null>(null)
   const [subtaskTitle, setSubtaskTitle] = useState('')
   const threadsByTask = new Map(messages)
+  const checkpointsByTask = new Map(checkpoints)
+  // At most one, and only on a card that is yours. A question about what
+  // somebody else will try first is not yours to answer.
+  const myPending = tasks
+    .map((t) => ({ task: t, checkpoint: pending(checkpointsByTask.get(t.id) ?? []) }))
+    .find((x) => x.checkpoint !== null && x.task.assigneeId === userId) ?? null
+  const [checkpointAnswer, setCheckpointAnswer] = useState('')
   const [scopeCheck, setScopeCheck] = useState<
     { verdict: string; reasoning: string; suggestion: string } | null
   >(null)
@@ -295,6 +305,15 @@ export default function Board({
     } finally {
       setSending(false)
     }
+  }
+
+  async function settleCheckpoint(skip: boolean) {
+    if (!myPending?.checkpoint) return
+    const ok = await send(`/api/workspaces/${workspaceId}/checkpoints/${myPending.checkpoint.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ answer: skip ? null : checkpointAnswer }),
+    }, skip ? 'Skipped.' : 'Noted.')
+    if (ok) setCheckpointAnswer('')
   }
 
   async function addSubtask() {
@@ -526,6 +545,43 @@ export default function Board({
           Workmark can draft a first plan from what this project is. It will get some of it wrong —
           edit it, reorder it, throw tasks out and add your own. The plan is yours once it lands.
         </p>
+      )}
+
+      {/* One question, once, as work starts.
+          A strip rather than a modal on purpose: a dialog in front of the
+          board at the moment somebody sits down to work is the thing that
+          teaches people to dismiss these without reading. This waits. */}
+      {myPending?.checkpoint && !readOnly && (
+        <div style={{
+          marginBottom: 14, padding: '12px 14px', borderRadius: R.md,
+          border: `1px solid ${C.border}`, background: C.surfaceAlt,
+        }}>
+          <p style={{ fontSize: T.meta, color: C.textFaint, marginBottom: 4 }}>
+            {myPending.task.title}
+          </p>
+          <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text, marginBottom: 9 }}>
+            {myPending.checkpoint.question}
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <input
+              className="dk-input"
+              value={checkpointAnswer}
+              onChange={(e) => setCheckpointAnswer(e.target.value)}
+              placeholder="A few words is enough"
+              maxLength={2000}
+              style={{ flex: '1 1 280px' }}
+            />
+            <Button size="sm" onClick={() => settleCheckpoint(false)} disabled={busy || checkpointAnswer.trim().length < 8}>
+              Save
+            </Button>
+            {/* Skipping is a real answer. A question nobody can dismiss is one
+                people make something up for, and an invented prediction is
+                worse than none — the checker would hold the diff against it. */}
+            <Button variant="quiet" size="sm" onClick={() => settleCheckpoint(true)} disabled={busy}>
+              Skip
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* The week.

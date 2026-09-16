@@ -541,7 +541,10 @@ Everything below is unbuilt. Ordered by what blocks what.
 - [x] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
       pg_cron.
 - [x] Migrations `v05_0038`–`v05_0043` are applied.
-- [ ] **Run migrations `v05_0044` and `v05_0045`.** `0044` adds `kickoff`,
+- [ ] **Run migrations `v05_0044`, `v05_0045` and `v05_0046`.** `0046` adds
+      `tasks.before_question`.
+
+  Superseded: `0044` adds `kickoff`,
       `0045` adds `helper`, both to the `agent_calls` agent_type check. Until
       they run, the sprint scope check and task discussion fail when they try
       to write their audit row.
@@ -648,7 +651,10 @@ What is still thin here:
 
 Each of these is a migration already applied and nothing writing to it.
 
-- [ ] **Subtasks** — `tasks.parent_task_id`
+- [x] **Subtasks** — `tasks.parent_task_id`. Only leaves count, in evidence,
+      rollups and sprint progress; one level; a parent cannot be submitted
+      while its pieces are open. The helper agent offers one for free when its
+      answer implies work. See `lib/workspace/subtasks.ts`.
 - [x] **Sprints** — `sprints`. A week, with a goal, closed by hand and
       reviewed by an agent at close. `lib/workspace/sprint.ts` holds the rules;
       `lib/agents/retro.ts` is the PM. One open sprint per project, enforced by
@@ -667,9 +673,25 @@ Each of these is a migration already applied and nothing writing to it.
       more interesting fact. Only the planner writes these — there is still
       no UI for adding one by hand, which is what the decomposition metric
       wants in order to compare declared against discovered.
-- [ ] **Checkpoints** — `task_checkpoints`. The short before/blocked/after
-      questions. Keep them rare; a workspace that interrogates you is one
-      people stop opening.
+- [x] **Checkpoints** — `task_checkpoints`, via `lib/workspace/checkpoints.ts`.
+      `before` once as a card enters Doing, `blocked` filed automatically from
+      the reason they already type. `after` deliberately not built: submission
+      already asks what changed, and a second prompt at the same moment is the
+      one that gets dismissed.
+
+      **No model call.** The question is written by the planner in the call
+      that created the task (`tasks.before_question`, v05_0046, null falls back
+      to the standard one); the answer is read by the verifier in the call that
+      checks the work. Capture is free, reasoning happens where it is already
+      paid for.
+
+      **Skipping is a first-class outcome.** A question nobody can dismiss is
+      one people invent an answer for, and an invented prediction is worse than
+      none — the checker would hold the diff against something nobody meant.
+
+      The verifier is told to use it to *read* the evidence, never as a bar:
+      changing approach after finding out what the problem was is good
+      engineering. The acceptance criteria stay the only thing judged.
 - [x] **Messages** — `workspace_messages`, per task. `lib/workspace/messages.ts`
       holds the rules; `lib/agents/helper.ts` is the senior engineer.
 

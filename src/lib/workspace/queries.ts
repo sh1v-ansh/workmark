@@ -8,6 +8,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toSprint, type Sprint } from './sprint'
 import type { Message } from './messages'
+import type { Checkpoint } from './checkpoints'
 import type { MemberRole, WorkRole } from './membership'
 import type { TaskStatus, TaskPriority } from './tasks'
 import type { WorkspaceMetrics } from './metrics'
@@ -679,6 +680,42 @@ export async function loadMessages(
     const bucket = byTask.get(taskId)
     if (bucket) bucket.push(message)
     else byTask.set(taskId, [message])
+  }
+  return byTask
+}
+
+/**
+ * Checkpoints for a project, keyed by task.
+ *
+ * One query for the board, like verdicts and messages. A project has a
+ * handful — at most one per card — so this is a small read.
+ */
+export async function loadCheckpoints(
+  supabase: SupabaseClient,
+  workspaceId: string,
+): Promise<Map<string, Checkpoint[]>> {
+  const { data } = await supabase
+    .from('task_checkpoints')
+    .select('id, task_id, kind, question, answer, asked_at, answered_at, skipped_at')
+    .eq('workspace_id', workspaceId)
+    .order('asked_at')
+
+  const byTask = new Map<string, Checkpoint[]>()
+  for (const row of data ?? []) {
+    const taskId = row.task_id as string
+    const checkpoint: Checkpoint = {
+      id: row.id as string,
+      taskId,
+      kind: row.kind as Checkpoint['kind'],
+      question: row.question as string,
+      answer: (row.answer as string | null) ?? null,
+      askedAt: (row.asked_at as string | null) ?? null,
+      answeredAt: (row.answered_at as string | null) ?? null,
+      skippedAt: (row.skipped_at as string | null) ?? null,
+    }
+    const bucket = byTask.get(taskId)
+    if (bucket) bucket.push(checkpoint)
+    else byTask.set(taskId, [checkpoint])
   }
   return byTask
 }

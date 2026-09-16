@@ -24,6 +24,13 @@ export interface VerifierTask {
   taskId: string
   title: string
   acceptanceCriteria: string | null
+  /**
+   * What the student said they would do, written before they started.
+   *
+   * Empty when they were not asked or chose not to say, and then nothing
+   * about it reaches the prompt — see approachForVerifier.
+   */
+  statedApproach?: string
   caseFile: CaseFile
 }
 
@@ -37,6 +44,8 @@ export interface VerifierVerdict {
 const SYSTEM = `You decide whether submitted work meets what a task said it would do.
 
 You are given, for each task: what the student said "done" would mean, and the evidence collected from their repository while the task was open — commit messages, the files they changed, whether CI passed, whether anything was merged or reviewed.
+
+Some tasks also carry what the student said they would try, written before they started. Use it to read the evidence, never as a thing to be judged against: changing approach after finding out what the problem actually was is good engineering, not a failure to follow a plan. It is useful when it explains a diff that would otherwise look off-target, and it is worth a line in your note when what they built is a long way from what they predicted — as an observation, not a criticism. The acceptance criteria are the only bar.
 
 Judge the task against ITS OWN acceptance criteria and nothing else. Not against how you would have built it, not against whether the code is good, not against whether the criteria were ambitious enough. A modest task done exactly as described is verified.
 
@@ -86,6 +95,11 @@ function describe(task: VerifierTask, index: number): string {
     `CI: ${c.ciConclusion ?? 'no CI ran'}`,
     `Merged pull requests: ${c.mergedPullRequests}. Reviews: ${c.reviewsReceived}.`,
   ]
+  // The one thing here that timestamps cannot produce: a prediction made
+  // before the work, to hold against what the work turned out to be.
+  if (task.statedApproach) {
+    lines.push(untrusted('What they said in advance', task.statedApproach))
+  }
   if (c.paths.length > 0) lines.push(untrustedList('Files changed', c.paths))
   if (c.commitMessages.length > 0) lines.push(untrustedList('Commit messages', c.commitMessages))
   return lines.join('\n')

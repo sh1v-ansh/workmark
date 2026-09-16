@@ -17,6 +17,7 @@ import {
   type EvidenceEvent, type TaskForVerification, type CaseFile,
 } from './verify'
 import { notifyVerdicts } from './notify'
+import { approachForVerifier, type CheckpointKind } from './checkpoints'
 
 export interface RunOutcome {
   checked: number
@@ -89,6 +90,34 @@ async function execute(admin: SupabaseClient, runId: string): Promise<RunOutcome
       .eq('workspace_id', workspaceId)
       .eq('status', 'submitted'),
   ])
+
+  // What each student said they would try, from the checkpoint opened when
+  // they started. Read here rather than at the model call so it is one query
+  // for the batch rather than one per task.
+  const { data: checkpointRows } = await admin
+    .from('task_checkpoints')
+    .select('id, task_id, kind, question, answer, asked_at, answered_at, skipped_at')
+    .eq('workspace_id', workspaceId)
+    .not('answered_at', 'is', null)
+
+  const approachByTask = new Map<string, string>()
+  for (const taskId of Array.from(new Set((checkpointRows ?? []).map((c) => c.task_id as string)))) {
+    const text = approachForVerifier(
+      (checkpointRows ?? [])
+        .filter((c) => c.task_id === taskId)
+        .map((c) => ({
+          id: c.id as string,
+          taskId,
+          kind: c.kind as CheckpointKind,
+          question: c.question as string,
+          answer: (c.answer as string | null) ?? null,
+          askedAt: (c.asked_at as string | null) ?? null,
+          answeredAt: (c.answered_at as string | null) ?? null,
+          skippedAt: (c.skipped_at as string | null) ?? null,
+        })),
+    )
+    if (text) approachByTask.set(taskId, text)
+  }
 
   const tasks: TaskForVerification[] = (taskRows ?? []).map((t) => ({
     id: t.id as string,
@@ -180,6 +209,7 @@ async function execute(admin: SupabaseClient, runId: string): Promise<RunOutcome
       taskId: task.id,
       title: task.title,
       acceptanceCriteria: task.acceptanceCriteria,
+      statedApproach: approachByTask.get(task.id),
       caseFile,
     })
     decisions.push({

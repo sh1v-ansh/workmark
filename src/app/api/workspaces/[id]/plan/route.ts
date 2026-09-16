@@ -145,6 +145,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     title: task.title,
     detail: task.detail || null,
     acceptance_criteria: task.acceptanceCriteria || null,
+    before_question: task.beforeQuestion,
     suggested_role: task.suggestedRole,
     // Unassigned when nobody holds the role. Better than landing on
     // whoever happens to be listed first, which is how a teammate ends up

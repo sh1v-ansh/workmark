@@ -8,6 +8,7 @@ function raw(over: Record<string, unknown> = {}) {
     title: 'Build the events API',
     detail: 'Endpoints for listing and creating events.',
     acceptance_criteria: 'GET and POST both work and are covered by tests.',
+    before_question: 'What will you try first for the list endpoint?',
     suggested_role: 'backend',
     estimate_hours: 6,
     difficulty: 5,
@@ -23,12 +24,21 @@ describe('what comes back from the planner', () => {
       title: 'Build the events API',
       detail: 'Endpoints for listing and creating events.',
       acceptanceCriteria: 'GET and POST both work and are covered by tests.',
+      beforeQuestion: 'What will you try first for the list endpoint?',
       suggestedRole: 'backend',
       estimateHours: 6,
       difficulty: 5,
       verifiable: true,
       dependsOn: [0],
     })
+  })
+
+  // Null rather than a made-up question. A hand-written task never goes
+  // through the planner, and a card whose question failed to arrive must
+  // still be startable — checkpoints.ts falls back to the standard one.
+  it('falls back to no question rather than a bad one', () => {
+    expect(normalisePlannedTask(raw({ before_question: 'too short' })).beforeQuestion).toBeNull()
+    expect(normalisePlannedTask(raw({ before_question: undefined })).beforeQuestion).toBeNull()
   })
 
   it('plans between five and twelve tasks', () => {
