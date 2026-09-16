@@ -54,6 +54,8 @@ export default function WorkspaceClient({
   const [invitee, setInvitee] = useState('')
   const [repo, setRepo] = useState(workspace.repoFullName ?? '')
   const [closing, setClosing] = useState(false)
+  const [removing, setRemoving] = useState<TeamMember | null>(null)
+  const [removeReason, setRemoveReason] = useState('')
 
   const isOwner = workspace.yourRole === 'owner'
   const isDraft = workspace.status === 'draft'
@@ -96,6 +98,23 @@ export default function WorkspaceClient({
 
   const leave = () => call('leave', `/api/workspaces/${workspace.id}/members/${userId}`,
     { method: 'DELETE', body: JSON.stringify({}) }, 'You left the project.')
+
+  async function openRemoval() {
+    if (!removing) return
+    const ok = await call('removal', `/api/workspaces/${workspace.id}/removals`, {
+      method: 'POST',
+      body: JSON.stringify({ targetAccountId: removing.accountId, reason: removeReason }),
+    }, 'The team has been asked.')
+    if (ok) { setRemoving(null); setRemoveReason('') }
+  }
+
+  const approveRemoval = (id: string) =>
+    call(`approve-${id}`, `/api/workspaces/${workspace.id}/removals/${id}`,
+      { method: 'POST' }, 'Your vote is counted.')
+
+  const withdrawRemoval = (id: string) =>
+    call(`withdraw-${id}`, `/api/workspaces/${workspace.id}/removals/${id}`,
+      { method: 'DELETE' }, 'Request withdrawn.')
 
   async function closeProject() {
     const ok = await call('close', `/api/workspaces/${workspace.id}/close`, { method: 'POST' })
@@ -314,11 +333,18 @@ export default function WorkspaceClient({
                     {m.workRole ? ` · ${ROLE_LABEL[m.workRole]}` : ''}
                   </p>
                 </div>
-                {m.isYou && (
+                {m.isYou ? (
                   <Button variant="quiet" size="sm" onClick={leave} disabled={busy === 'leave'}>
                     Leave
                   </Button>
-                )}
+                ) : !isClosed && !workspace.removals.some((r) => r.targetAccountId === m.accountId) ? (
+                  // Offered to every member, not just the owner. Removal is a
+                  // vote precisely because it is not the owner's to decide,
+                  // and an owner who is the problem is the case that matters.
+                  <Button variant="quiet" size="sm" onClick={() => { setRemoving(m); setRemoveReason('') }}>
+                    Remove
+                  </Button>
+                ) : null}
               </div>
             ))}
             {workspace.invited.map((m) => (
@@ -347,6 +373,51 @@ export default function WorkspaceClient({
               </Button>
             </div>
           )}
+
+          {/* An open vote, shown to everyone including the person it is about.
+              Being removed takes work off your record, and finding that out
+              afterwards from a board you can no longer open is the version of
+              this that would be indefensible. */}
+          {workspace.removals.map((r) => (
+            <div
+              key={r.id}
+              style={{
+                marginTop: 14, padding: '12px 14px', borderRadius: R.md,
+                border: `1px solid ${C.border}`, background: C.bgAlt,
+              }}
+            >
+              <p style={{ fontSize: T.bodySm, color: C.text, fontWeight: 600, marginBottom: 4 }}>
+                {r.isYou
+                  ? 'The team has been asked to remove you'
+                  : `Remove ${r.targetName ?? 'a teammate'}?`}
+              </p>
+              <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 8 }}>
+                {r.reason}
+              </p>
+              <p style={{ fontSize: T.meta, color: C.textFaint, marginBottom: r.isYou ? 0 : 10 }}>
+                {r.approvals} of {r.needed} needed
+                {r.requestedByName ? ` · asked by ${r.requestedByName}` : ''}
+              </p>
+              {!r.isYou && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {r.youApproved ? (
+                    <span style={{ fontSize: T.meta, color: C.textFaint, alignSelf: 'center' }}>
+                      You agreed.
+                    </span>
+                  ) : (
+                    <Button size="sm" disabled={busy === `approve-${r.id}`} onClick={() => approveRemoval(r.id)}>
+                      Agree
+                    </Button>
+                  )}
+                  {r.requestedBy === userId && (
+                    <Button variant="quiet" size="sm" disabled={busy === `withdraw-${r.id}`} onClick={() => withdrawRemoval(r.id)}>
+                      Withdraw
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
 
           {/* Said plainly rather than discovered when a button refuses to
               work. Between peers, removal is not one person's decision. */}
@@ -382,6 +453,41 @@ export default function WorkspaceClient({
           The count is in the dialog rather than only on the button because
           "6 tasks" is the fact that tells an owner whether they are closing
           too early. */}
+      <Modal
+        open={!!removing}
+        onClose={() => setRemoving(null)}
+        title={`Remove ${removing ? displayName(removing) : ''}?`}
+      >
+        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>
+          If they have already contributed work, this goes to the rest of the team and needs
+          most of them to agree. If they have not, they are removed straight away.
+          They are shown the reason either way.
+        </p>
+        <label htmlFor="removal-reason" style={{ display: 'block', fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
+          Why?
+        </label>
+        <textarea
+          id="removal-reason"
+          className="dk-input"
+          value={removeReason}
+          onChange={(e) => setRemoveReason(e.target.value)}
+          placeholder="Hasn't responded in three weeks and their tasks are blocking the rest of us."
+          rows={3}
+          minLength={10}
+          maxLength={2000}
+          style={{ marginBottom: 6, resize: 'vertical' }}
+        />
+        <p style={{ fontSize: T.meta, color: C.textGhost, marginBottom: 18 }}>
+          At least 10 characters. The person is shown this.
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="quiet" onClick={() => setRemoving(null)}>Cancel</Button>
+          <Button onClick={openRemoval} disabled={busy === 'removal' || removeReason.trim().length < 10}>
+            {busy === 'removal' ? 'Asking…' : 'Ask the team'}
+          </Button>
+        </div>
+      </Modal>
+
       <Modal open={closing} onClose={() => setClosing(false)} title="Close this project?">
         <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 14 }}>
           {finishedCount === 0

@@ -72,6 +72,11 @@ export const EMAIL_KINDS = {
     detail: 'Workmark could not check it on its own, so it is stuck until somebody looks.',
     essential: false,
   },
+  workspace_board_dry: {
+    label: 'Your project is running out of work',
+    detail: 'Sent when a board has almost nothing left on it, so you can plan the next piece before you run out.',
+    essential: false,
+  },
   workspace_closed: {
     label: 'A project you were on is closed',
     detail: 'Says what reached your record.',

@@ -538,9 +538,14 @@ Everything below is unbuilt. Ordered by what blocks what.
 ### 7.1 Operational — nothing works until these are done
 
 - [x] Migrations `0025`–`0035` are applied.
-- [ ] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
-      pg_cron. Until it runs, verification only happens when somebody presses
-      the button, and no closed project's evidence is ever retried.
+- [x] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
+      pg_cron.
+- [ ] **Run migrations `v05_0038` and `v05_0039`.** `0038` schedules the
+      purge of finished job rows; `0039` adds the two markers the nightly
+      attention sweep needs (`task_submissions.review_chased_at`,
+      `workspaces.replan_nudged_at`). Until `0039` runs, `sweepAttention`
+      fails on every pass and logs it — the rest of the night still completes,
+      because each step catches its own errors.
 - [x] GitHub App permissions and the six event subscriptions are set.
 **Scheduling lives in pg_cron, not `vercel.json`.** `v05_0016` moved it there
 and said why: Vercel's Hobby plan allows one cron run per day, which is
@@ -625,10 +630,17 @@ Each of these is a migration already applied and nothing writing to it.
       Supabase Storage bucket does not exist yet. Needs a bucket, a storage
       policy calling `is_workspace_member`, a type allowlist, a size cap and
       a malware scan.
-- [ ] **Removal requests** — `workspace_removal_requests` /
-      `workspace_removal_approvals`. The SQL enforces the rules; there is no
-      screen to open a request or vote on one, so removing a contributor is
-      currently impossible through the UI.
+- [x] **Removal requests** — `workspace_removal_requests` /
+      `workspace_removal_approvals`. `POST /api/workspaces/:id/removals` opens
+      one and counts the opener's own vote; the sibling route records an
+      approval or withdraws the request, and both call
+      `resolve_removal_request`. The team panel shows the open vote with its
+      count to everyone **including the person it is about** — being removed
+      takes work off your record, and learning that afterwards from a board
+      you can no longer open is the version that would be indefensible.
+      Offered to every member rather than the owner alone: removal is a vote
+      precisely because it is not the owner's to decide, and an owner who is
+      the problem is the case that matters.
 
 ### 7.4 Missing behaviour
 
@@ -641,9 +653,13 @@ Each of these is a migration already applied and nothing writing to it.
       that emails five times is a batch people mute, and then the message
       that needed them gets muted with it. Only `workspace_invited` is
       essential; the rest are switchable.
-- [ ] **Nothing chases a stale review.** A task waiting on a teammate emails
-      once and then waits forever. It reaches the admin queue, where its age
-      is visible, and that is the only backstop.
+- [x] **Nothing chases a stale review.** `sweepAttention` in the nightly pass
+      reminds the team once, after `CHASE_AFTER_DAYS` (3), and records
+      `task_submissions.review_chased_at` so it never asks twice. A card still
+      stuck after that is in the admin queue with its age showing, which is the
+      backstop the product actually promises — repeating the email would nag
+      the one person barred from answering. Thresholds are in
+      `lib/workspace/attention.ts`, pure and unit-tested.
 - [ ] **Realtime board.** Supabase `postgres_changes` on `tasks` filtered by
       `workspace_id`. RLS already gates it, so no new authorization. Keep
       drag-in-progress state out of Postgres; if it gets hot, the migration
@@ -655,7 +671,15 @@ Each of these is a migration already applied and nothing writing to it.
       if the sorted list reads thin. A call a day per student is a bill.
 - [ ] **Cross-project metrics on `/me`.** `workspace_metrics.account_id` and
       the lifted columns exist for this.
-- [ ] **Scheduled re-planning.** Currently a "Suggest more tasks" button only.
+- [x] **Scheduled re-planning.** Not a scheduled *planner*, deliberately.
+      The nightly pass nudges the owner when a board falls to
+      `DRY_BOARD_TASKS` (2) or fewer open tasks, with a `RENUDGE_AFTER_DAYS`
+      (14) cooldown on `workspaces.replan_nudged_at`, and leaves boards past
+      their deadline alone. No model call: running the planner nightly for
+      every project is a bill per student per night, and it would hand them a
+      plan they did not write — "the planner proposes; the student owns it" is
+      what makes the record mean anything. The nudge points at the existing
+      button; they decide whether to press it.
 
 ### 7.6 Found by the walkthrough, still open
 

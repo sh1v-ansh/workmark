@@ -4,6 +4,7 @@ import { sweepVerification } from '@/lib/workspace/run-verification'
 import { rollupAll } from '@/lib/workspace/rollup'
 import { sweepWorkspaceEvidence } from '@/lib/workspace/evidence'
 import { recomputeCalibration } from '@/lib/skills/calibration'
+import { sweepAttention } from '@/lib/workspace/notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -30,7 +31,7 @@ export const maxDuration = 60
  * One endpoint rather than three schedules because the order is a real
  * dependency, not a preference:
  *
- *   verify, then mint evidence, then recalibrate, then rollups
+ *   verify, mint evidence, recalibrate, chase what is stuck, then rollups
  *
  * Verification first because the others read its verdicts. Minting second
  * because a project that closed while GitHub was slow has a record owed to
@@ -100,6 +101,18 @@ export async function POST(request: Request) {
     console.error('[cron/nightly] calibration failed:', err)
   }
 
+  // Last, and after verification: what counts as a stuck review depends on
+  // the verdicts written earlier tonight, and a card the checker has just
+  // settled is not something to chase anybody about.
+  let attention: unknown = null
+  let attentionError: string | null = null
+  try {
+    attention = await sweepAttention(admin)
+  } catch (err) {
+    attentionError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[cron/nightly] attention sweep failed:', err)
+  }
+
   let rollups: unknown = null
   let rollupError: string | null = null
   try {
@@ -113,10 +126,11 @@ export async function POST(request: Request) {
   // back, so a status code here reaches nobody — the body is for a person
   // running it by hand, and the console is where a failure is actually found.
   return NextResponse.json({
-    ok: !verifyError && !evidenceError && !calibrationError && !rollupError,
+    ok: !verifyError && !evidenceError && !calibrationError && !attentionError && !rollupError,
     verification: verification ?? { error: verifyError },
     evidence: evidence ?? { error: evidenceError },
     calibration: calibration ?? { error: calibrationError },
+    attention: attention ?? { error: attentionError },
     rollups: rollups ?? { error: rollupError },
   })
 }

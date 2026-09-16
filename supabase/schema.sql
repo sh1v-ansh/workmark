@@ -1699,6 +1699,12 @@ create table workspaces (
   -- members simply earned nothing. See v05_0034.
   evidence_minted_at timestamptz,
 
+  -- When the owner was last told this board is running out of work
+  -- (v05_0039). Null means never. Carries a fortnight's cooldown, because a
+  -- project can be legitimately quiet and a nightly nudge through exam week
+  -- is how a sender gets filtered.
+  replan_nudged_at timestamptz,
+
   -- The only combination that is never legitimate: a workspace cannot be
   -- both somebody's private brief and a posted job.
   constraint workspaces_single_parent check (not (brief_id is not null and listing_id is not null))
@@ -2455,7 +2461,12 @@ create table task_submissions (
 
   -- Submitted tasks wait for a batch rather than triggering a check each.
   -- See verification_runs below.
-  run_id         uuid references verification_runs(id) on delete set null
+  run_id         uuid references verification_runs(id) on delete set null,
+
+  -- When the team was last reminded this is waiting on a person (v05_0039).
+  -- Null means never. Without it the nightly pass would re-send the same
+  -- reminder every night for as long as the card stayed stuck.
+  review_chased_at timestamptz
 );
 
 create index task_submissions_task_idx on task_submissions (task_id, submitted_at desc);

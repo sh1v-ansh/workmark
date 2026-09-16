@@ -315,6 +315,54 @@ export function workspaceReviewNeeded(args: {
   })
 }
 
+/**
+ * The same question as workspaceReviewNeeded, asked once more days later.
+ *
+ * Worded as a reminder rather than repeated verbatim. A message identical to
+ * one somebody already read is one they assume they have already dealt with,
+ * and the whole reason this is being sent is that they have not.
+ */
+export function workspaceReviewStale(args: {
+  reviewerId: string; reviewerEmail: string; projectTitle: string; workspaceId: string
+  count: number; oldestDays: number
+}) {
+  const tasks = args.count === 1 ? 'a task' : `${args.count} tasks`
+  return sendEmail({
+    to: args.reviewerEmail,
+    userId: args.reviewerId,
+    kind: 'workspace_review_needed',
+    subject: `Still waiting on you: ${tasks} on ${args.projectTitle}`,
+    body: `${args.count === 1 ? 'A task' : `${args.count} tasks`} on ${args.projectTitle} ${args.count === 1 ? 'has' : 'have'} been waiting ${args.oldestDays} days for somebody to confirm ${args.count === 1 ? 'it' : 'them'}.\n\nWhoever did the work cannot answer this themselves, so it stays put until you look. It takes about a minute, and until then it counts for nothing on their record.`,
+    linkPath: `/workspaces/${args.workspaceId}`,
+    linkLabel: 'Confirm the work',
+  })
+}
+
+/**
+ * A board with nothing much left on it.
+ *
+ * Deliberately does not propose the work. Sending somebody tasks a model
+ * invented overnight, unasked, makes the plan Workmark's rather than theirs —
+ * and the plan being the student's is the thing that makes the record mean
+ * anything. This points at the button; they decide whether to press it.
+ */
+export function workspaceBoardDry(args: {
+  ownerId: string; ownerEmail: string; projectTitle: string; workspaceId: string
+  openTasks: number
+}) {
+  return sendEmail({
+    to: args.ownerEmail,
+    userId: args.ownerId,
+    kind: 'workspace_board_dry',
+    subject: `${args.projectTitle} is nearly out of work`,
+    body: args.openTasks === 0
+      ? `Every task on ${args.projectTitle} is done. If the project is finished, close it out and your verified work goes onto your record. If it is not, plan the next piece.`
+      : `${args.projectTitle} has ${args.openTasks === 1 ? 'one task' : `${args.openTasks} tasks`} left on it.\n\nWorth deciding what comes next before you run out — a project that quietly stops a fortnight before it was finished puts less on your record than one you closed out on purpose.`,
+    linkPath: `/workspaces/${args.workspaceId}`,
+    linkLabel: 'Open the board',
+  })
+}
+
 export function workspaceClosed(args: {
   studentId: string; studentEmail: string; projectTitle: string; skillCount: number
   finishedTasks: number; pending: boolean

@@ -46,6 +46,34 @@ export interface WorkspaceDetail extends WorkspaceSummary {
   /** Pending invitations, kept separate: they are not the team yet. */
   invited: TeamMember[]
   yourRole: MemberRole | null
+  /** Open votes to remove somebody. Empty on almost every project. */
+  removals: RemovalRequest[]
+}
+
+/**
+ * A request to remove a contributor, and where the vote has got to.
+ *
+ * Shown to the whole team including the person it is about. Being removed
+ * from a project takes work off your record, and finding that out afterwards
+ * — from a board you can no longer open — is the version of this that would
+ * be indefensible.
+ */
+export interface RemovalRequest {
+  id: string
+  targetAccountId: string
+  targetName: string | null
+  requestedBy: string | null
+  requestedByName: string | null
+  reason: string
+  createdAt: string | null
+  /** Votes cast so far, including the opener's. */
+  approvals: number
+  /** How many are needed: more than half of everyone except the target. */
+  needed: number
+  /** Whether the reader has already voted. */
+  youApproved: boolean
+  /** Whether the reader is the person being removed. */
+  isYou: boolean
 }
 
 export interface PendingInvitation {
@@ -203,7 +231,58 @@ export async function loadWorkspace(
     members,
     invited,
     yourRole: members.find((m) => m.isYou)?.role ?? null,
+    removals: await loadRemovals(supabase, workspaceId, userId, members, names),
   }
+}
+
+/**
+ * Open removal requests, with the vote counted.
+ *
+ * The threshold is recomputed here rather than stored, because the team can
+ * change while a request is open: somebody leaving mid-vote lowers the bar,
+ * and a stored number would leave a request that can never be met. It mirrors
+ * `resolve_removal_request`, which is what actually decides — this is for
+ * showing the reader where the count is, not for enforcing it.
+ */
+async function loadRemovals(
+  supabase: SupabaseClient,
+  workspaceId: string,
+  userId: string,
+  members: TeamMember[],
+  names: Map<string, { name: string | null; handle: string | null }>,
+): Promise<RemovalRequest[]> {
+  const { data: requests } = await supabase
+    .from('workspace_removal_requests')
+    .select('id, target_account_id, requested_by, reason, created_at')
+    .eq('workspace_id', workspaceId)
+    .is('resolved_at', null)
+
+  if (!requests || requests.length === 0) return []
+
+  const { data: votes } = await supabase
+    .from('workspace_removal_approvals')
+    .select('request_id, account_id')
+    .in('request_id', requests.map((r) => r.id as string))
+
+  return requests.map((r) => {
+    const targetId = r.target_account_id as string
+    const cast = (votes ?? []).filter((v) => v.request_id === r.id)
+    const others = members.filter((m) => m.accountId !== targetId).length
+    return {
+      id: r.id as string,
+      targetAccountId: targetId,
+      targetName: names.get(targetId)?.name ?? null,
+      requestedBy: r.requested_by as string | null,
+      requestedByName: r.requested_by ? names.get(r.requested_by as string)?.name ?? null : null,
+      reason: r.reason as string,
+      createdAt: r.created_at as string | null,
+      approvals: cast.length,
+      // Strictly more than half, matching `v_approvals * 2 > v_others`.
+      needed: Math.floor(others / 2) + 1,
+      youApproved: cast.some((v) => v.account_id === userId),
+      isYou: targetId === userId,
+    }
+  })
 }
 
 /**

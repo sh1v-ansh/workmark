@@ -20,7 +20,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   emailAvailable, workspaceInvited, workspaceTaskAssigned,
   workspaceVerdicts, workspaceReviewNeeded, workspaceClosed,
+  workspaceReviewStale, workspaceBoardDry,
 } from '@/lib/notify/email'
+import { chaseable, nudgeable, digest } from './attention'
 
 interface Recipient {
   accountId: string
@@ -265,4 +267,162 @@ export async function notifyClosed(
   } catch (err) {
     console.error('[workspace/notify] close emails failed:', err)
   }
+}
+
+/**
+ * The nightly pass over what has gone quiet.
+ *
+ * Two checks, both of which exist because the product's failure mode is
+ * silence rather than error: a card waiting on a person is mentioned once
+ * when the verdict lands and then never again, and a board that has run out
+ * of work says nothing at all.
+ *
+ * No model call. Deciding that a board is nearly empty is a count, and
+ * deciding a review is overdue is a subtraction — running the planner nightly
+ * for every project would be a bill per student per night, and would hand
+ * them a plan they did not write. `attention.ts` holds the arithmetic so the
+ * thresholds can be argued with in a test.
+ *
+ * Marked as done before the mail is sent, and deliberately. Marking after
+ * would mean a crash mid-batch re-sends everything the next night, and the
+ * failure this is guarding against is being noisy — a reminder that is
+ * silently dropped once is a much smaller problem than one that arrives
+ * every night for a fortnight.
+ */
+export async function sweepAttention(admin: SupabaseClient): Promise<{
+  chased: number
+  nudged: number
+}> {
+  const now = new Date()
+  let chased = 0
+  let nudged = 0
+
+  // ── Reviews nobody has answered ──
+  try {
+    const { data: stuck } = await admin
+      .from('task_submissions')
+      .select('id, workspace_id, task_id, submitted_at, review_chased_at, submitted_by, tasks(assignee_id), workspaces(title, status)')
+      .eq('verdict', 'unverifiable')
+      .is('human_verdict', null)
+      .is('review_chased_at', null)
+      .order('submitted_at')
+      .limit(200)
+
+    const live = (stuck ?? []).filter((r) => {
+      const ws = r.workspaces as unknown as { status: string | null } | null
+      return ws?.status === 'active'
+    })
+
+    const due = chaseable(
+      live.map((r) => ({
+        submissionId: r.id as string,
+        workspaceId: r.workspace_id as string,
+        taskId: r.task_id as string,
+        submittedAt: r.submitted_at as string,
+        reviewChasedAt: r.review_chased_at as string | null,
+      })),
+      now,
+    )
+    const dueIds = new Set(due.map((d) => d.submissionId))
+    const rows = live.filter((r) => dueIds.has(r.id as string))
+
+    // One email per person per project, not one per card.
+    type StuckRow = (typeof rows)[number]
+    const byProject = Array.from(digest<StuckRow>(rows, (r) => r.workspace_id as string))
+
+    for (const [workspaceId, group] of byProject) {
+      const title = ((group[0].workspaces as unknown as { title: string | null } | null)?.title) ?? 'a project'
+
+      // Barred for the same reason canReview bars them: whoever did the work
+      // cannot confirm it. Both the assignee and whoever pressed submit, since
+      // a card can be submitted with nobody assigned to it.
+      const barred = group.flatMap((r: StuckRow) => [
+        (r.tasks as unknown as { assignee_id: string | null } | null)?.assignee_id ?? null,
+        r.submitted_by as string | null,
+      ])
+
+      const reviewerIds = await activeMemberIds(admin, workspaceId, barred)
+      const oldest = Math.max(
+        ...group.map((r: StuckRow) => Math.floor(
+          (now.getTime() - new Date(r.submitted_at as string).getTime()) / 86_400_000,
+        )),
+      )
+
+      await admin
+        .from('task_submissions')
+        .update({ review_chased_at: now.toISOString() })
+        .in('id', group.map((r: StuckRow) => r.id as string))
+
+      // Nobody left to ask. Correct on a solo project, and the reason the
+      // admin queue exists — marked above regardless, so staff are the only
+      // ones chased about it from here.
+      if (reviewerIds.length === 0) continue
+
+      const reviewers = await recipients(admin, reviewerIds)
+      for (const reviewer of Array.from(reviewers.values())) {
+        await workspaceReviewStale({
+          reviewerId: reviewer.accountId,
+          reviewerEmail: reviewer.email,
+          projectTitle: title,
+          workspaceId,
+          count: group.length,
+          oldestDays: oldest,
+        })
+        chased += 1
+      }
+    }
+  } catch (err) {
+    console.error('[workspace/notify] chasing stale reviews failed:', err)
+  }
+
+  // ── Boards that have run dry ──
+  try {
+    const { data: projects } = await admin
+      .from('workspaces')
+      .select('id, title, deadline, replan_nudged_at, created_by, tasks(status)')
+      .eq('status', 'active')
+      .limit(500)
+
+    const boards = (projects ?? []).map((w) => {
+      const tasks = (w.tasks as unknown as { status: string }[] | null) ?? []
+      return {
+        workspaceId: w.id as string,
+        openTasks: tasks.filter((t) => t.status !== 'verified' && t.status !== 'accepted').length,
+        replanNudgedAt: w.replan_nudged_at as string | null,
+        deadline: w.deadline as string | null,
+      }
+    })
+
+    const due = new Set(nudgeable(boards, now).map((b) => b.workspaceId))
+    const byId = new Map(boards.map((b) => [b.workspaceId, b]))
+
+    for (const project of (projects ?? []).filter((w) => due.has(w.id as string))) {
+      const workspaceId = project.id as string
+
+      await admin
+        .from('workspaces')
+        .update({ replan_nudged_at: now.toISOString() })
+        .eq('id', workspaceId)
+
+      // The owner, because planning the next piece is theirs to do. Telling
+      // the whole team a board is empty is three people waiting for each other.
+      const ownerId = project.created_by as string | null
+      if (!ownerId) continue
+      const owner = (await recipients(admin, [ownerId])).get(ownerId)
+      if (!owner) continue
+
+      await workspaceBoardDry({
+        ownerId: owner.accountId,
+        ownerEmail: owner.email,
+        projectTitle: (project.title as string | null) ?? 'Your project',
+        workspaceId,
+        openTasks: byId.get(workspaceId)?.openTasks ?? 0,
+      })
+      nudged += 1
+    }
+  } catch (err) {
+    console.error('[workspace/notify] nudging dry boards failed:', err)
+  }
+
+  return { chased, nudged }
 }
