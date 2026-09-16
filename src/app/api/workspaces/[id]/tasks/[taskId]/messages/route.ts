@@ -155,5 +155,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .select('id, task_id, sender_id, sender_kind, body, created_at')
     .single()
 
-  return NextResponse.json({ ok: true, message: written, reply: agentMessage ?? null })
+  // Offered, never applied. The student presses the button — the same
+  // decision they would make for themselves on a real job.
+  return NextResponse.json({
+    ok: true,
+    message: written,
+    reply: agentMessage ?? null,
+    suggestedSubtask: reply.suggestedSubtask ?? null,
+  })
 }

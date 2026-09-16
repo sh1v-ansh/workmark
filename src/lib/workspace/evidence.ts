@@ -18,6 +18,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { processRepo, type ProcessRepoResult } from '@/lib/skills/evidence'
+import { countable } from './subtasks'
 
 /** Task states that count as work actually finished. */
 export const FINISHED_STATUSES = ['verified', 'accepted'] as const
@@ -101,7 +102,7 @@ export async function mintWorkspaceEvidence(
   admin: SupabaseClient,
   workspaceId: string,
 ): Promise<WorkspaceEvidenceResult> {
-  const [{ data: repo }, { data: memberRows }, { data: finishedTasks }] = await Promise.all([
+  const [{ data: repo }, { data: memberRows }, { data: allTasks }] = await Promise.all([
     admin
       .from('workspace_repos')
       .select('repo_full_name, installation_id')
@@ -127,9 +128,12 @@ export async function mintWorkspaceEvidence(
       // justification needs to look each task up. Selecting one and reading
       // the other is how the audit trail came back saying "0 tasks" while the
       // evidence it was explaining had just been written.
-      .select('id, assignee_id')
-      .eq('workspace_id', workspaceId)
-      .in('status', FINISHED_STATUSES as unknown as string[]),
+      // Every task, not only the finished ones, because deciding whether a
+      // card is a container needs to see its children whatever state they are
+      // in. Filtered to finished below. A board is a few dozen rows either
+      // way, so this is the same round trip.
+      .select('id, assignee_id, status, parent_task_id')
+      .eq('workspace_id', workspaceId),
   ])
 
   const empty: WorkspaceEvidenceResult = {
@@ -147,9 +151,25 @@ export async function mintWorkspaceEvidence(
   const members = memberRows ?? []
   if (members.length === 0) return empty
 
+  // Only leaves. A task broken into three subtasks is one piece of work, and
+  // counting the parent alongside its children would mint evidence for four —
+  // rewarding the student who decomposed carefully over the one who did not.
+  // See subtasks.ts.
+  const leaves = countable(
+    (allTasks ?? []).map((t) => ({
+      id: t.id as string,
+      parentTaskId: (t.parent_task_id as string | null) ?? null,
+      status: t.status as string,
+      createdAt: null,
+      startedAt: null,
+      assigneeId: (t.assignee_id as string | null) ?? null,
+    })),
+  )
+  const finishedTasks = leaves.filter((t) => (FINISHED_STATUSES as readonly string[]).includes(t.status))
+
   const verifiedCounts = new Map<string, number>()
-  for (const t of finishedTasks ?? []) {
-    const id = t.assignee_id as string | null
+  for (const t of finishedTasks) {
+    const id = t.assigneeId
     if (!id) continue
     verifiedCounts.set(id, (verifiedCounts.get(id) ?? 0) + 1)
   }
@@ -300,7 +320,11 @@ export interface TaskJustification {
 async function gatherJustifications(
   admin: SupabaseClient,
   workspaceId: string,
-  finishedTasks: { id?: unknown; assignee_id?: unknown }[],
+  // Just the ids. The wider `{ id?: unknown; assignee_id?: unknown }` this
+  // replaced accepted any object at all, which is how a caller once passed a
+  // row shape missing the field it thought it was reading and the audit trail
+  // came back saying "0 tasks".
+  finishedTasks: { id: string }[],
 ): Promise<Map<string, TaskJustification[]>> {
   const out = new Map<string, TaskJustification[]>()
   const taskIds = finishedTasks.map((t) => t.id as string).filter(Boolean)

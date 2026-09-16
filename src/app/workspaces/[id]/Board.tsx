@@ -109,6 +109,9 @@ export default function Board({
   const [talking, setTalking] = useState<BoardTask | null>(null)
   const [draftMessage, setDraftMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [offered, setOffered] = useState<{ title: string; why: string } | null>(null)
+  const [splitting, setSplitting] = useState<BoardTask | null>(null)
+  const [subtaskTitle, setSubtaskTitle] = useState('')
   const threadsByTask = new Map(messages)
   const [scopeCheck, setScopeCheck] = useState<
     { verdict: string; reasoning: string; suggestion: string } | null
@@ -283,12 +286,33 @@ export default function Board({
       // Said out loud rather than swallowed: somebody who typed a mention and
       // saw nothing happen concludes the feature is broken.
       if (data.note) toast(data.note, 'info')
+      // Offered rather than added. The student decides, the same way they
+      // would on a real job.
+      setOffered(data.suggestedSubtask ?? null)
       router.refresh()
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
     } finally {
       setSending(false)
     }
+  }
+
+  async function addSubtask() {
+    if (!splitting || subtaskTitle.trim().length < 2) return
+    const ok = await send(`/api/workspaces/${workspaceId}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify({ title: subtaskTitle, parentTaskId: splitting.id }),
+    }, 'Subtask added.')
+    if (ok) setSubtaskTitle('')
+  }
+
+  async function addOfferedSubtask() {
+    if (!talking || !offered) return
+    const ok = await send(`/api/workspaces/${workspaceId}/tasks`, {
+      method: 'POST',
+      body: JSON.stringify({ title: offered.title, detail: offered.why, parentTaskId: talking.id }),
+    }, 'Added as a subtask.')
+    if (ok) setOffered(null)
   }
 
   async function checkScopeNow() {
@@ -596,7 +620,12 @@ export default function Board({
 
       <div className="nb-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
         {BOARD_COLUMNS.map((column) => {
-          const inColumn = boardTasks.filter((t) => t.status === column).sort(byBoardOrder)
+          // Children are drawn under their parent rather than as cards of
+          // their own, so a task broken into three does not take four slots
+          // in a column and read as four separate pieces of work.
+          const inColumn = boardTasks
+            .filter((t) => t.status === column && t.parentTaskId === null)
+            .sort(byBoardOrder)
           const refusal = dragging
             ? canMoveTo(tasks.find((t) => t.id === dragging)!.status, column)
             : null
@@ -779,6 +808,17 @@ export default function Board({
                       </button>
                       <button
                         type="button"
+                        onClick={() => { setSplitting(task); setSubtaskTitle('') }}
+                        title="Break this into pieces"
+                        style={{
+                          fontSize: T.meta, padding: '3px 7px', borderRadius: R.sm, cursor: 'pointer',
+                          border: `1px solid ${C.border}`, background: C.bg, color: C.textGhost,
+                        }}
+                      >
+                        Split
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => { setTalking(task); setDraftMessage('') }}
                         title="Discuss this task, or ask Workmark"
                         style={{
@@ -809,6 +849,29 @@ export default function Board({
                         </button>
                       )}
                     </div>
+                    {(() => {
+                      const kids = tasks.filter((k) => k.parentTaskId === task.id)
+                      if (kids.length === 0) return null
+                      const done = kids.filter((k) => k.status === 'verified' || k.status === 'accepted').length
+                      return (
+                        <div style={{ marginTop: 9, paddingTop: 8, borderTop: `1px solid ${C.borderFaint}` }}>
+                          <p style={{ fontSize: T.meta, color: C.textFaint, marginBottom: 5 }}>
+                            {done} of {kids.length} pieces done
+                          </p>
+                          {kids.map((k) => (
+                            <p
+                              key={k.id}
+                              style={{
+                                fontSize: T.meta, lineHeight: 1.5, color: C.textMuted,
+                                textDecoration: k.status === 'abandoned' ? 'line-through' : 'none',
+                              }}
+                            >
+                              {k.status === 'verified' || k.status === 'accepted' ? '✓ ' : '· '}{k.title}
+                            </p>
+                          ))}
+                        </div>
+                      )
+                    })()}
                   </article>
                 ))}
 
@@ -961,6 +1024,27 @@ export default function Board({
               </div>
             )}
 
+            {offered && !readOnly && (
+              <div style={{
+                marginBottom: 14, padding: '11px 13px', borderRadius: R.md,
+                border: `1px solid ${C.border}`, background: C.bgAlt,
+              }}>
+                <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.textFaint, marginBottom: 5 }}>
+                  Looks like more work
+                </p>
+                <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text, marginBottom: 3 }}>
+                  {offered.title}
+                </p>
+                <p style={{ fontSize: T.meta, color: C.textMuted, lineHeight: 1.55, marginBottom: 10 }}>
+                  {offered.why}
+                </p>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Button size="sm" onClick={addOfferedSubtask} disabled={busy}>Add as a subtask</Button>
+                  <Button variant="quiet" size="sm" onClick={() => setOffered(null)}>No thanks</Button>
+                </div>
+              </div>
+            )}
+
             {!readOnly && (
               <>
                 <textarea
@@ -1018,6 +1102,41 @@ export default function Board({
             {/* Nothing is applied. It is advice, and the plan stays theirs. */}
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <Button onClick={() => setScopeCheck(null)}>Got it</Button>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      <Modal
+        open={splitting !== null}
+        onClose={() => { setSplitting(null); setSubtaskTitle('') }}
+        title="Break this up"
+        subtitle={splitting?.title}
+      >
+        {splitting && (
+          <>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 14 }}>
+              One level, not a tree. Each piece is checked on its own, and the parent counts once —
+              splitting a task does not make it worth more.
+            </p>
+            {tasks.filter((k) => k.parentTaskId === splitting.id).length > 0 && (
+              <div style={{ marginBottom: 14 }}>
+                {tasks.filter((k) => k.parentTaskId === splitting.id).map((k) => (
+                  <p key={k.id} style={{ fontSize: T.bodySm, color: C.textSub, lineHeight: 1.7 }}>· {k.title}</p>
+                ))}
+              </div>
+            )}
+            <input
+              className="dk-input"
+              value={subtaskTitle}
+              onChange={(e) => setSubtaskTitle(e.target.value)}
+              placeholder="Set the callback URL in the provider dashboard"
+              maxLength={200}
+              style={{ marginBottom: 16 }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <Button variant="quiet" onClick={() => { setSplitting(null); setSubtaskTitle('') }}>Done</Button>
+              <Button onClick={addSubtask} disabled={busy || subtaskTitle.trim().length < 2}>Add piece</Button>
             </div>
           </>
         )}

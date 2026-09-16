@@ -28,6 +28,20 @@ import { untrusted } from './untrusted'
 export interface HelperReply {
   /** What to say. A few sentences at most. */
   body: string
+  /**
+   * Work the answer implies, when it implies any.
+   *
+   * The case this exists for: a student asks why something fails, and the
+   * honest answer is "you also have to set that up locally" — which is a real
+   * piece of work nobody has written down. Before this it lived in a chat
+   * message and was forgotten, and the board quietly stopped describing the
+   * project.
+   *
+   * It costs nothing: the same call, a slightly longer response. And it only
+   * offers — the student presses the button, exactly as they would decide for
+   * themselves on a real job.
+   */
+  suggestedSubtask?: { title: string; why: string } | null
 }
 
 const SYSTEM = `You are an experienced software engineer helping a computer science student who is stuck on a task in their own project. You are the senior person they would ask if they had one.
@@ -47,12 +61,28 @@ WHAT YOU MUST NOT DO — this is the important part
 - Do not tell them what their acceptance criteria should be. Somebody else set the bar before the work started, and that is what makes the evidence worth something.
 - Do not comment on their ability, their pace, or how long this is taking.
 
+WHEN YOUR ANSWER IMPLIES WORK
+Sometimes the honest answer is that something else has to happen first — a setting to configure, a dependency to install, a piece nobody wrote down. When that is true, fill in suggestedSubtask with a short title and one line on why. Leave it null otherwise.
+
+Only for real, separable work. Not "read the docs", not "try again", and never a restatement of the task they are already on. If you are not sure it deserves its own card, it does not.
+
 You cannot see their code. You have the task and the conversation. If answering needs something you were not given, ask for it.`
 
 const SCHEMA = {
   type: 'object',
-  properties: { body: { type: 'string', maxLength: 900 } },
-  required: ['body'],
+  properties: {
+    body: { type: 'string', maxLength: 900 },
+    suggestedSubtask: {
+      type: ['object', 'null'],
+      properties: {
+        title: { type: 'string', maxLength: 200 },
+        why: { type: 'string', maxLength: 200 },
+      },
+      required: ['title', 'why'],
+      additionalProperties: false,
+    },
+  },
+  required: ['body', 'suggestedSubtask'],
   additionalProperties: false,
 } as const
 

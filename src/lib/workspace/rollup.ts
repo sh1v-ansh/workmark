@@ -10,6 +10,7 @@
 // nightly outage.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { countable } from './subtasks'
 import {
   computeMetrics,
   type MetricTask, type MetricTransition, type MetricRevision, type MetricSubmission,
@@ -37,7 +38,7 @@ export async function rollupWorkspace(
         .not('accepted_at', 'is', null),
       admin
         .from('tasks')
-        .select('id, assignee_id, status, origin, estimate_hours, difficulty, due_on, verifiable, suggested_role, created_at, blocked_at')
+        .select('id, parent_task_id, assignee_id, status, origin, estimate_hours, difficulty, due_on, verifiable, suggested_role, created_at, blocked_at')
         .eq('workspace_id', workspaceId),
       admin
         .from('task_transitions')
@@ -62,6 +63,7 @@ export async function rollupWorkspace(
 
   const allTasks: MetricTask[] = (taskRows ?? []).map((t) => ({
     id: t.id as string,
+    parentTaskId: (t.parent_task_id as string | null) ?? null,
     assigneeId: t.assignee_id as string | null,
     status: t.status as TaskStatus,
     origin: t.origin as string,
@@ -94,12 +96,24 @@ export async function rollupWorkspace(
     decidedAt: s.decided_at as string | null,
   }))
 
+  // Leaves only, and done here rather than inside computeMetrics because
+  // deciding whether a card is a container needs the whole board: a parent
+  // assigned to one person with its children assigned to another has no
+  // children inside that person's own subset, and would be counted as work.
+  const leafIds = new Set(
+    countable(allTasks.map((t) => ({
+      id: t.id, parentTaskId: t.parentTaskId ?? null, status: t.status,
+      createdAt: null, startedAt: null,
+    }))).map((t) => t.id),
+  )
+  const countableTasks = allTasks.filter((t) => leafIds.has(t.id))
+
   const rows = members.map((member) => {
     const accountId = member.account_id as string
     // Their tasks. On a solo project that is everything; on a team it is
     // what they were actually responsible for, which is the only honest
     // basis for a number about a person.
-    const theirs = allTasks.filter((t) => t.assigneeId === accountId)
+    const theirs = countableTasks.filter((t) => t.assigneeId === accountId)
     const theirIds = new Set(theirs.map((t) => t.id))
 
     const metrics = computeMetrics(

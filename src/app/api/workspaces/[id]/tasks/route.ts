@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { canAddSubtask } from '@/lib/workspace/subtasks'
 import { workspaceAcceptsWork } from '@/lib/workspace/membership'
 import { createClient } from '@/lib/supabase/server'
 import { enforce } from '@/lib/rate-limit'
@@ -84,6 +85,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .order('position', { ascending: false })
     .limit(1)
     .maybeSingle()
+
+  // One level only, checked against the parent rather than trusted from the
+  // client. A tree is a project plan and nobody maintains one past week two.
+  if (v.parentTaskId) {
+    const { data: parent } = await supabase
+      .from('tasks')
+      .select('id, parent_task_id, status')
+      .eq('id', v.parentTaskId)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+
+    if (!parent) return NextResponse.json({ error: 'That parent task was not found.' }, { status: 404 })
+
+    const refusal = canAddSubtask({
+      parentTaskId: (parent.parent_task_id as string | null) ?? null,
+      status: parent.status as string,
+    })
+    if (refusal) return NextResponse.json({ error: refusal }, { status: 400 })
+  }
 
   const { data: task, error } = await supabase
     .from('tasks')

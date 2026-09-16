@@ -16,6 +16,7 @@
 // what is in a sprint and whether it can be closed.
 
 import type { TaskStatus } from './tasks'
+import { countable } from './subtasks'
 
 /** The length of a sprint, in days. See above for why it is not a setting. */
 export const SPRINT_DAYS = 7
@@ -42,6 +43,8 @@ export interface Sprint {
 
 export interface SprintTask {
   id: string
+  /** Set when this card is a piece of a bigger one. */
+  parentTaskId?: string | null
   title: string
   status: TaskStatus
   sprintId: string | null
@@ -116,7 +119,15 @@ export interface SprintProgress {
  * that failed, which is the behaviour the status exists to make safe.
  */
 export function progressOf(sprint: Sprint, tasks: SprintTask[]): SprintProgress {
-  const mine = tasks.filter((t) => t.sprintId === sprint.id)
+  // Leaves only, for the same reason evidence counts leaves only: a task
+  // broken into three is one piece of work, and counting the parent as well
+  // would make a week look like four things when it was one. See subtasks.ts.
+  const leaves = countable(tasks.map((t) => ({
+    id: t.id, parentTaskId: t.parentTaskId ?? null, status: t.status,
+    createdAt: null, startedAt: null,
+  })))
+  const isLeaf = new Set(leaves.map((l) => l.id))
+  const mine = tasks.filter((t) => t.sprintId === sprint.id && isLeaf.has(t.id))
   const done = mine.filter((t) => t.status === 'verified' || t.status === 'accepted')
   const setAside = mine.filter((t) => t.status === 'abandoned')
   const inFlight = mine.filter((t) => t.status === 'doing' || t.status === 'submitted')

@@ -29,6 +29,8 @@ export const MIN_SAMPLE = 4
 
 export interface MetricTask {
   id: string
+  /** Set when this card is a piece of a bigger one. */
+  parentTaskId?: string | null
   assigneeId: string | null
   status: TaskStatus
   origin: string

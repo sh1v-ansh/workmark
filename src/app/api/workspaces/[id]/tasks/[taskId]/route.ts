@@ -5,6 +5,7 @@ import { notifyAssigned } from '@/lib/workspace/notify'
 import { enforce } from '@/lib/rate-limit'
 import { WORK_ROLES, workspaceAcceptsWork, type WorkRole } from '@/lib/workspace/membership'
 import { canMoveTo, revisionsFor, type TaskStatus, TASK_STATUSES } from '@/lib/workspace/tasks'
+import { canSubmitParent } from '@/lib/workspace/subtasks'
 import {
   parseBody, readFields, requireString, optionalString, optionalUuid,
   requireUuid, requireOneOf, optionalNumber, optionalInt, optionalDate, ValidationError,
@@ -53,6 +54,9 @@ export async function PATCH(request: Request, { params }: Params) {
     if (err instanceof ValidationError) return NextResponse.json({ error: err.message }, { status: 400 })
     throw err
   }
+
+  // Set when the patch moves the card, so the subtask gate below knows to run.
+  let submittingTo: string | null = null
 
   const parsed = await parseBody(request)
   if (!parsed.ok) return parsed.response
@@ -118,6 +122,7 @@ export async function PATCH(request: Request, { params }: Params) {
       // move is allowed from where the card currently is.
       const next = requireOneOf(body.status, 'Status', TASK_STATUSES)
       patch.status = next
+      submittingTo = next
 
       // A card set aside must say why. The database enforces this too, but a
       // check constraint surfaces as "violates tasks_abandoned_has_reason",
@@ -157,6 +162,32 @@ export async function PATCH(request: Request, { params }: Params) {
   if (patch.status) {
     const refusal = canMoveTo(current.status as TaskStatus, patch.status as TaskStatus)
     if (refusal) return NextResponse.json({ error: refusal }, { status: 400 })
+  }
+
+  // A parent cannot be submitted while its pieces are still open. Moving it
+  // to Submitted would claim the work is finished alongside a board saying it
+  // is not, and the checker would be asked to verify something nobody has
+  // claimed to have done.
+  if (submittingTo === 'submitted') {
+    const { data: siblings } = await supabase
+      .from('tasks')
+      .select('id, parent_task_id, status')
+      .eq('workspace_id', workspaceId)
+      .eq('parent_task_id', taskId)
+
+    if ((siblings ?? []).length > 0) {
+      const openRefusal = canSubmitParent(
+        (siblings ?? []).map((t) => ({
+          id: t.id as string,
+          parentTaskId: (t.parent_task_id as string | null) ?? null,
+          status: t.status as string,
+          createdAt: null,
+          startedAt: null,
+        })),
+        taskId,
+      )
+      if (openRefusal) return NextResponse.json({ error: openRefusal }, { status: 400 })
+    }
   }
 
   // A task the planner proposed becomes 'ai_edited' the moment somebody
