@@ -36,12 +36,23 @@ import type { MemberRow } from '@/lib/workspace/membership'
  * signs, which `source` chokes on.
  */
 function loadEnv(): void {
-  let raw: string
-  try {
-    raw = readFileSync('.env.local', 'utf8')
-  } catch {
-    return
-  }
+  // Both, in Next's own precedence order: .env.local wins where a key is in
+  // each. Reading only .env.local meant a project whose file is plain .env
+  // got a silent no-op and then "supabaseUrl is required" three frames away,
+  // which says nothing about the actual problem.
+  const raw = ['.env.local', '.env']
+    .map((file) => {
+      try {
+        return readFileSync(file, 'utf8')
+      } catch {
+        return ''
+      }
+    })
+    .filter(Boolean)
+    .join('\n')
+
+  if (!raw) return
+
   for (const line of raw.split(/\r?\n/)) {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith('#')) continue
@@ -107,6 +118,12 @@ describe.skipIf(!LIVE)('a project, end to end', () => {
   beforeAll(async () => {
     expect(STUDENT_ID && REPO && INSTALLATION && LOGIN,
       'set E2E_STUDENT_ID, E2E_REPO, E2E_INSTALLATION and E2E_LOGIN').toBeTruthy()
+
+    // Checked here rather than left to supabase-js, which fails with
+    // "supabaseUrl is required" from three frames down and says nothing about
+    // which file it was looking for.
+    expect(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY,
+      'No Supabase credentials found. This reads .env.local or .env from the project root — check one exists and holds NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.').toBeTruthy()
 
     admin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
