@@ -540,7 +540,10 @@ Everything below is unbuilt. Ordered by what blocks what.
 - [x] Migrations `0025`–`0035` are applied.
 - [x] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
       pg_cron.
-- [ ] **Run migrations `v05_0038` and `v05_0039`.** `0038` schedules the
+- [ ] **Run migrations `v05_0038`, `v05_0039` and `v05_0040`.** `0040` adds
+      token columns to `agent_calls`, `sender_kind` to `workspace_messages`,
+      and the `abandoned` task status. Until it runs, every agent call logs a
+      null cost and setting a task aside fails the status check. `0038` schedules the
       purge of finished job rows; `0039` adds the two markers the nightly
       attention sweep needs (`task_submissions.review_chased_at`,
       `workspaces.replan_nudged_at`). Until `0039` runs, `sweepAttention`
@@ -641,6 +644,31 @@ Each of these is a migration already applied and nothing writing to it.
       Offered to every member rather than the owner alone: removal is a vote
       precisely because it is not the owner's to decide, and an owner who is
       the problem is the case that matters.
+
+### 7.3b Knowing what has happened so far
+
+- [x] **`projectState`** (`lib/workspace/project-state.ts`) — one read that
+      assembles the board, the latest verdict and note per task, what is
+      blocked and why, what was set aside and why, and the revision reasons.
+      **It does not rescan commits.** The verifier already decided whether
+      each task is done and told the student; a planner that re-derives that
+      from the same commits can disagree with it, and then Workmark says a
+      task is done on Monday and not on Wednesday. One place decides, and
+      everything downstream reads that decision.
+- [x] **`abandoned` task status.** Tried, did not work out, with the reason
+      kept. Not a seventh board column — set-aside cards drop into a collapsed
+      list under the board. **Excluded from `capabilityFrontier` on both sides
+      of the ratio**, not counted as a failure: if setting work aside lowered
+      your frontier nobody would do it, cards would stay in Doing forever, and
+      the signal would never be written down. Not an escape hatch either —
+      dropping them shrinks the sample, so abandoning everything hard yields
+      no frontier rather than an inflated one.
+- [x] **Token accounting.** `agent_calls` records input, output, cache-read
+      and cache-write tokens; `lib/agents/cost.ts` prices them. Rates there
+      are a planning estimate — the dashboard is the authority — and
+      `totalCost` returns how many rows it *could not* price alongside the
+      total, so a figure that skipped a third of the rows cannot read as good
+      news.
 
 ### 7.4 Missing behaviour
 

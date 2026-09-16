@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { notifyAssigned } from '@/lib/workspace/notify'
 import { enforce } from '@/lib/rate-limit'
 import { WORK_ROLES, workspaceAcceptsWork, type WorkRole } from '@/lib/workspace/membership'
-import { canMoveTo, revisionsFor, type TaskStatus, BOARD_COLUMNS } from '@/lib/workspace/tasks'
+import { canMoveTo, revisionsFor, type TaskStatus, TASK_STATUSES } from '@/lib/workspace/tasks'
 import {
   parseBody, readFields, requireString, optionalString, optionalUuid,
   requireUuid, requireOneOf, optionalNumber, optionalInt, optionalDate, ValidationError,
@@ -113,7 +113,24 @@ export async function PATCH(request: Request, { params }: Params) {
     }
 
     if (body.status !== undefined) {
-      patch.status = requireOneOf(body.status, 'Status', BOARD_COLUMNS)
+      // TASK_STATUSES rather than BOARD_COLUMNS: abandoned is a real status
+      // that is not a column, and canMoveTo below is what decides whether the
+      // move is allowed from where the card currently is.
+      const next = requireOneOf(body.status, 'Status', TASK_STATUSES)
+      patch.status = next
+
+      // A card set aside must say why. The database enforces this too, but a
+      // check constraint surfaces as "violates tasks_abandoned_has_reason",
+      // and the person reading it is a student.
+      if (next === 'abandoned') {
+        patch.abandoned_reason = requireString(body.abandonedReason, 'A reason', { min: 10, max: 2000 })
+      } else {
+        // Reopening keeps the reason: it is the record of what was tried, and
+        // task_transitions already shows the card came back. abandoned_at is
+        // cleared by the trigger, not here.
+        patch.abandoned_reason = undefined
+        delete patch.abandoned_reason
+      }
     }
 
     // Blocked is a flag, not a column. A blocked task is still in Doing, and

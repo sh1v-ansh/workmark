@@ -11,7 +11,42 @@ export const BOARD_COLUMNS = [
   'backlog', 'planned', 'doing', 'submitted', 'verified', 'accepted',
 ] as const
 
-export type TaskStatus = (typeof BOARD_COLUMNS)[number]
+export type BoardColumn = (typeof BOARD_COLUMNS)[number]
+
+/**
+ * Every state a task can be in, which is the six columns plus one.
+ *
+ * `abandoned` is a status and not a seventh column. A student who spent four
+ * days on an approach that turned out to be wrong had two options before it
+ * existed: leave the card in Doing forever, which quietly ruins their
+ * completion figures, or move it to Verified and pretend, which the verifier
+ * would catch. Neither is what happened.
+ *
+ * Kept off the board because a column of things that did not happen is a
+ * column nobody wants to look at every day. Abandoned cards leave the six and
+ * appear in a collapsed list underneath.
+ *
+ * It is not a flag like `blocked_at`, and the difference is whether the work
+ * is still live. A blocked task is still in Doing and still coming; an
+ * abandoned one is finished without having been completed, and leaving it in
+ * a column would keep it counting as work in flight forever.
+ */
+export const TASK_STATUSES = [...BOARD_COLUMNS, 'abandoned'] as const
+
+export type TaskStatus = (typeof TASK_STATUSES)[number]
+
+/**
+ * No longer work in flight.
+ *
+ * Deliberately NOT the same list as FINISHED_STATUSES in evidence.ts, which
+ * is the narrower question of what earns a place on the record. Abandoned
+ * work is over, and it earns nothing.
+ */
+export const TERMINAL_STATUSES: readonly TaskStatus[] = ['verified', 'accepted', 'abandoned']
+
+export function isOnBoard(status: TaskStatus): status is BoardColumn {
+  return status !== 'abandoned'
+}
 
 export const COLUMN_LABEL: Record<TaskStatus, string> = {
   backlog: 'Backlog',
@@ -20,6 +55,7 @@ export const COLUMN_LABEL: Record<TaskStatus, string> = {
   submitted: 'Submitted',
   verified: 'Verified',
   accepted: 'Accepted',
+  abandoned: 'Set aside',
 }
 
 /**
@@ -36,6 +72,7 @@ export const COLUMN_HINT: Record<TaskStatus, string> = {
   submitted: 'You think it is done — waiting to be checked',
   verified: 'Checked against your acceptance criteria',
   accepted: 'Signed off',
+  abandoned: 'Tried, and did not work out',
 }
 
 export type TaskPriority = 'low' | 'normal' | 'high'
@@ -52,6 +89,9 @@ export type TaskPriority = 'low' | 'normal' | 'high'
  * Everything else is allowed, including backwards. A task that turns out not
  * to be finished belongs back in Doing, and refusing that just teaches
  * people to delete the card and make a new one.
+ *
+ * `abandoned` is movable but is handled separately in canMoveTo, because
+ * unlike the four below it needs a reason before it is allowed.
  */
 export const MOVABLE_BY_PEOPLE: readonly TaskStatus[] = ['backlog', 'planned', 'doing', 'submitted']
 
@@ -60,6 +100,22 @@ export function canMoveTo(from: TaskStatus, to: TaskStatus): string | null {
   if (from === 'accepted') return 'This task is closed.'
   if (to === 'verified') return 'Workmark decides this one — submit the task and it gets checked.'
   if (to === 'accepted' && from !== 'verified') return 'A task has to be verified before it can be accepted.'
+
+  // Setting work aside is allowed from anywhere except a finished task.
+  // Abandoning something already verified would take back a verdict the
+  // record may already rest on.
+  if (to === 'abandoned') {
+    return from === 'verified' ? 'This work is already verified.' : null
+  }
+
+  // Reopening is deliberately allowed, and only back to Planned. A card that
+  // comes back is not in progress again just because somebody changed their
+  // mind, and task_transitions records the round trip either way, so nothing
+  // is hidden by letting it happen.
+  if (from === 'abandoned') {
+    return to === 'planned' ? null : 'Set-aside work comes back to Planned first.'
+  }
+
   if (!MOVABLE_BY_PEOPLE.includes(to) && to !== 'accepted') return 'You cannot move a task there.'
   return null
 }

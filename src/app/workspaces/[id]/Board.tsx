@@ -85,10 +85,15 @@ export default function Board({
   const [planning, setPlanning] = useState(false)
   const [checking, setChecking] = useState(false)
   const [reviewing, setReviewing] = useState<BoardTask | null>(null)
+  const [abandoning, setAbandoning] = useState<BoardTask | null>(null)
+  const [abandonReason, setAbandonReason] = useState('')
+  const [showAside, setShowAside] = useState(false)
   const [reviewVerdict, setReviewVerdict] = useState<HumanVerdict | null>(null)
   const [reviewNote, setReviewNote] = useState('')
   const verdictFor = new Map(verdicts.map((v) => [v.taskId, v]))
   const submittedCount = tasks.filter((t) => t.status === 'submitted').length
+  const asideTasks = tasks.filter((t) => t.status === 'abandoned')
+  const boardTasks = tasks.filter((t) => t.status !== 'abandoned')
 
   // workspace.members is already only the people actually on the team, so
   // every row here is active by construction. Shaped into MemberRow so the
@@ -210,6 +215,14 @@ export default function Board({
       { method: 'PATCH', body: JSON.stringify({ blocked: true, blockedReason: blockReason }) },
       'Flagged as blocked.')
     if (ok) setBlocking(null)
+  }
+
+  async function confirmAbandon() {
+    if (!abandoning) return
+    const ok = await send(`/api/workspaces/${workspaceId}/tasks/${abandoning.id}`,
+      { method: 'PATCH', body: JSON.stringify({ status: 'abandoned', abandonedReason: abandonReason }) },
+      'Set aside.')
+    if (ok) setAbandoning(null)
   }
 
   function openReview(task: BoardTask) {
@@ -372,7 +385,7 @@ export default function Board({
 
       <div className="nb-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
         {BOARD_COLUMNS.map((column) => {
-          const inColumn = tasks.filter((t) => t.status === column).sort(byBoardOrder)
+          const inColumn = boardTasks.filter((t) => t.status === column).sort(byBoardOrder)
           const refusal = dragging
             ? canMoveTo(tasks.find((t) => t.id === dragging)!.status, column)
             : null
@@ -553,6 +566,23 @@ export default function Board({
                       >
                         {task.blockedAt ? 'Unblock' : 'Block'}
                       </button>
+                      {/* Only where it is a real answer. Verified work cannot
+                          be taken back, and nothing in Backlog was ever
+                          attempted, so offering it there is noise. */}
+                      {(task.status === 'doing' || task.status === 'submitted') && (
+                        <button
+                          type="button"
+                          onClick={() => { setAbandoning(task); setAbandonReason('') }}
+                          disabled={busy}
+                          title="Tried this and it did not work out"
+                          style={{
+                            fontSize: T.meta, padding: '3px 7px', borderRadius: R.sm, cursor: 'pointer',
+                            border: `1px solid ${C.border}`, background: C.bg, color: C.textGhost,
+                          }}
+                        >
+                          Set aside
+                        </button>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -565,6 +595,61 @@ export default function Board({
           )
         })}
       </div>
+
+      {/* Set-aside work, under the board rather than in it.
+          A seventh column of things that did not happen is one nobody wants
+          to look at every day, but hiding these entirely would be worse: the
+          reason somebody wrote down is the whole value of setting a card
+          aside instead of leaving it in Doing forever, and it is what the
+          planner reads before writing the next task. */}
+      {asideTasks.length > 0 && (
+        <div style={{ marginTop: 20, borderTop: `1px solid ${C.borderFaint}`, paddingTop: 14 }}>
+          <button
+            onClick={() => setShowAside((v) => !v)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none',
+              padding: 0, cursor: 'pointer', fontSize: T.meta, fontWeight: 600, color: C.textFaint,
+            }}
+          >
+            {showAside ? '▾' : '▸'} Set aside ({asideTasks.length})
+          </button>
+          {showAside && (
+            <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+              {asideTasks.map((t) => (
+                <div
+                  key={t.id}
+                  style={{
+                    padding: '10px 12px', borderRadius: R.md,
+                    border: `1px solid ${C.borderFaint}`, background: C.surfaceAlt,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                    <p style={{ fontSize: T.bodySm, color: C.textMuted, textDecoration: 'line-through' }}>
+                      {t.title}
+                    </p>
+                    {!readOnly && (
+                      <button
+                        onClick={() => move(t, 'planned')}
+                        style={{
+                          flexShrink: 0, background: 'none', border: 'none', padding: 0,
+                          cursor: 'pointer', fontSize: T.meta, color: C.accent,
+                        }}
+                      >
+                        Pick it back up
+                      </button>
+                    )}
+                  </div>
+                  {t.abandonedReason && (
+                    <p style={{ fontSize: T.meta, color: C.textFaint, lineHeight: 1.55, marginTop: 4 }}>
+                      {t.abandonedReason}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <TaskDialog
         open={creating}
@@ -598,6 +683,52 @@ export default function Board({
         history={editing ? decisionsFor.get(editing.id) ?? [] : []}
         nameOf={nameOf}
       />
+
+      {/* Setting work aside.
+          Worded so that using it honestly does not feel like an admission.
+          A student who spent four days finding out an approach does not work
+          has learned something, and the alternative on offer before this
+          existed was to leave the card in Doing forever or move it to
+          Verified and lie. */}
+      <Modal
+        open={abandoning !== null}
+        onClose={() => setAbandoning(null)}
+        title="Set this aside"
+      >
+        {abandoning && (
+          <>
+            <p style={{ fontSize: T.bodySm, fontWeight: 500, color: C.text, marginBottom: 10 }}>
+              {abandoning.title}
+            </p>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>
+              This does not count against you. What you found out is the useful part, and it is
+              what gets read when the next task is written. You can pick it back up any time.
+            </p>
+            <label htmlFor="abandon-reason" style={{ display: 'block', fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
+              What happened?
+            </label>
+            <textarea
+              id="abandon-reason"
+              className="dk-input"
+              value={abandonReason}
+              onChange={(e) => setAbandonReason(e.target.value)}
+              placeholder="The library does not support streaming on this runtime, so the whole approach needs rethinking."
+              rows={3}
+              maxLength={2000}
+              style={{ marginBottom: 6, resize: 'vertical' }}
+            />
+            <p style={{ fontSize: T.meta, color: C.textGhost, marginBottom: 18 }}>
+              At least 10 characters.
+            </p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <Button variant="quiet" onClick={() => setAbandoning(null)}>Cancel</Button>
+              <Button onClick={confirmAbandon} disabled={busy || abandonReason.trim().length < 10}>
+                Set aside
+              </Button>
+            </div>
+          </>
+        )}
+      </Modal>
 
       {/* One question, four answers, one button. The answers are ordered by
           how often each is the true one, and only the first is styled as a

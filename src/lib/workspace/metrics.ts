@@ -271,7 +271,25 @@ export function computeMetrics(
  * tasks is a number that looks like knowledge and is not.
  */
 export function capabilityFrontier(tasks: MetricTask[], threshold = 0.7): number | null {
-  const attempted = tasks.filter((t) => t.difficulty !== null && t.status !== 'backlog')
+  // Abandoned work is left out of both halves of the ratio, not counted as a
+  // failure. The frontier asks how hard it gets before somebody stops
+  // succeeding, and a task set aside because the approach turned out to be
+  // infeasible does not answer that question either way — treating it as a
+  // failure conflates "could not do it" with "found out it should not be
+  // done".
+  //
+  // It also has to be this way for the feature to work at all. If setting
+  // work aside lowered your frontier, nobody would ever do it, cards would
+  // sit in Doing forever exactly as they do today, and the honest signal this
+  // was built to capture would never be written down.
+  //
+  // Not an escape hatch: dropping them shrinks the sample rather than
+  // flattering the ratio, so somebody who abandons everything hard falls
+  // under MIN_SAMPLE and gets no frontier at all. That fails in the safe
+  // direction — "we cannot say" rather than "they are advanced".
+  const attempted = tasks.filter(
+    (t) => t.difficulty !== null && t.status !== 'backlog' && t.status !== 'abandoned',
+  )
   if (attempted.length < MIN_SAMPLE) return null
 
   // Only levels somebody actually attempted. Walking 1..10 looks equivalent

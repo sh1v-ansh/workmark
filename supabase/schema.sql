@@ -688,6 +688,15 @@ create table agent_calls (
   input        jsonb not null,
   output       jsonb not null,
   model_version text,
+
+  -- What the call cost, from the API's own usage block (v05_0040). Null on
+  -- every row written before that migration: unknown, not zero. Cache figures
+  -- are separate from input_tokens because they bill at different rates, and
+  -- summing them would hide the saving prompt caching is meant to produce.
+  input_tokens       int,
+  output_tokens      int,
+  cache_read_tokens  int,
+  cache_write_tokens int,
   created_at   timestamptz default now()
 );
 
@@ -2119,7 +2128,7 @@ create table tasks (
   acceptance_criteria text,
 
   status              text not null default 'backlog'
-                        check (status in ('backlog', 'planned', 'doing', 'submitted', 'verified', 'accepted')),
+                        check (status in ('backlog', 'planned', 'doing', 'submitted', 'verified', 'accepted', 'abandoned')),
 
   assignee_id         uuid references accounts(id) on delete set null,
 
@@ -2162,6 +2171,15 @@ create table tasks (
   -- Doing, and moving it elsewhere loses where it actually was.
   blocked_at          timestamptz,
   blocked_reason      text,
+
+  -- ── Set aside ──
+  -- A status rather than a flag, unlike blocked above, and the difference is
+  -- whether the work is still live: a blocked task is still coming, an
+  -- abandoned one is over without having been completed. Kept off the board
+  -- as a seventh column, because a column of things that did not happen is
+  -- one nobody wants to look at. See v05_0040.
+  abandoned_at        timestamptz,
+  abandoned_reason    text,
 
   created_by          uuid references accounts(id) on delete set null,
   created_at          timestamptz default now(),
@@ -2560,6 +2578,12 @@ create table workspace_messages (
   -- are the same query with a different filter.
   task_id       uuid references tasks(id) on delete cascade,
   sender_id     uuid references accounts(id) on delete set null,
+
+  -- Who is speaking (v05_0040). sender_id is `on delete set null`, so a null
+  -- sender already means "that account is gone"; without this an agent
+  -- message would be indistinguishable from one by a deleted member, and the
+  -- first agent message is the point after which that can never be untangled.
+  sender_kind   text not null default 'member' check (sender_kind in ('member', 'agent')),
   body          text not null check (char_length(body) between 1 and 4000),
   created_at    timestamptz default now(),
   edited_at     timestamptz

@@ -344,6 +344,8 @@ export interface BoardTask {
   verifiable: boolean
   position: number
   blockedAt: string | null
+  /** Why this was set aside, when it was. Null on every live card. */
+  abandonedReason: string | null
   blockedReason: string | null
   origin: string
   createdAt: string | null
@@ -367,7 +369,7 @@ export async function loadBoard(
     // One literal, not a concatenation: supabase-js infers the row type from
     // the select string, and joining two pieces at runtime leaves it with
     // nothing to read.
-    .select('id, title, detail, acceptance_criteria, status, priority, assignee_id, suggested_role, estimate_hours, difficulty, due_on, verifiable, position, blocked_at, blocked_reason, origin, created_at, started_at')
+    .select('id, title, detail, acceptance_criteria, status, priority, assignee_id, suggested_role, estimate_hours, difficulty, due_on, verifiable, position, blocked_at, blocked_reason, abandoned_reason, origin, created_at, started_at')
     .eq('workspace_id', workspaceId)
     .order('position')
 
@@ -386,6 +388,7 @@ export async function loadBoard(
     verifiable: t.verifiable as boolean,
     position: Number(t.position),
     blockedAt: t.blocked_at as string | null,
+    abandonedReason: t.abandoned_reason as string | null,
     blockedReason: t.blocked_reason as string | null,
     origin: t.origin as string,
     createdAt: t.created_at as string | null,

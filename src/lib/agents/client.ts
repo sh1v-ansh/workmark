@@ -157,6 +157,20 @@ async function callInternal<T>(
       input: { ...args.inputForAudit, system: args.system, user: args.userContent },
       output: parsed as Record<string, unknown>,
       model_version: AGENT_MODEL,
+      // The API returns these on every response and they were being thrown
+      // away, which left the Anthropic dashboard as the only way to answer
+      // "are we near the budget" — and it cannot break spend down by agent
+      // type, by student, or by the feature that caused it.
+      //
+      // Cache figures are kept apart from input_tokens rather than summed:
+      // they bill at different rates, and folding them together would hide
+      // the saving from prompt caching, which is the number worth watching
+      // once caching is on. `?? null` rather than `?? 0` because a field the
+      // API did not send is unknown, and zero is a claim.
+      input_tokens: response.usage?.input_tokens ?? null,
+      output_tokens: response.usage?.output_tokens ?? null,
+      cache_read_tokens: response.usage?.cache_read_input_tokens ?? null,
+      cache_write_tokens: response.usage?.cache_creation_input_tokens ?? null,
     })
     .select('id')
     .maybeSingle()
