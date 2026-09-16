@@ -27,6 +27,17 @@ export default function Drawer({ open, onClose, title, subtitle, children, foote
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
 
+  /**
+   * Kept out of the setup effect's dependencies on purpose — see Modal, which
+   * had the same defect. Callers pass `onClose` inline, so depending on it
+   * re-ran the focus trap after every keystroke, and each re-run moved focus
+   * off the field being typed into.
+   */
+  const closeRef = useRef(onClose)
+  useEffect(() => {
+    closeRef.current = onClose
+  })
+
   useEffect(() => {
     if (!open) return
 
@@ -39,7 +50,7 @@ export default function Drawer({ open, onClose, title, subtitle, children, foote
 
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        onClose()
+        closeRef.current()
         return
       }
       if (e.key !== 'Tab' || !panelRef.current) return
@@ -73,7 +84,7 @@ export default function Drawer({ open, onClose, title, subtitle, children, foote
       document.body.style.overflow = previousOverflow
       previouslyFocused?.focus?.()
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!open) return null
 

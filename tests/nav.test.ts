@@ -71,7 +71,7 @@ describe('lastScanLabel', () => {
 })
 
 describe('the Projects tab', () => {
-  const projects: Tab = { href: '/workspaces', label: 'Projects', also: [], prefix: true }
+  const projects: Tab = { href: '/workspaces', label: 'My projects', also: [], prefix: true }
 
   it('lights up on the list and on one project', () => {
     expect(isTabActive(projects, '/workspaces')).toBe(true)
