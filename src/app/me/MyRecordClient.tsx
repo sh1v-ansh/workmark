@@ -18,6 +18,8 @@ import SkillChip, { PlainChip } from '@/components/skills/SkillChip'
 import LevelBar, { countLevels } from '@/components/skills/LevelBar'
 import SkillEvidenceModal from '@/components/skills/SkillEvidenceModal'
 import { SELF_EVIDENCED_CAP } from '@/lib/skills/level-names'
+import HowYouWork from './HowYouWork'
+import type { AcrossProjects } from '@/lib/workspace/across'
 import { LAYOUT } from '@/lib/theme/layout'
 
 interface EvidenceSource {
@@ -65,8 +67,10 @@ const VERIFICATION_LABEL: Record<string, string> = {
   attested: 'Confirmed by a collaborator',
 }
 
-export default function MyRecordClient({ record, sources, suggestedHandle, githubConnected, lastScannedAt }: {
+export default function MyRecordClient({ record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt }: {
   record: StudentRecord
+  /** Pooled across every project. Null for somebody who has not been on one. */
+  howYouWork: AcrossProjects | null
   sources: EvidenceSource[]
   suggestedHandle: string
   githubConnected: boolean
@@ -194,6 +198,16 @@ export default function MyRecordClient({ record, sources, suggestedHandle, githu
                 </p>
               </Card>
             )}
+
+            {/* The half of the record that is not about what they know.
+                Skills say what they can build; this says whether they finish
+                it and whether they said so when it was going to slip — the
+                thing a reference call exists to get at.
+
+                Not rendered at all for somebody who has never been on a
+                project: a card of "not enough yet" reads as the product being
+                broken rather than as them being new. */}
+            {howYouWork && <HowYouWork data={howYouWork} />}
 
             <Card hoverable={false} padding={19.5}>
               <Kicker style={{ marginBottom: 9 }}>Public profile</Kicker>

@@ -811,8 +811,28 @@ Each of these is a migration already applied and nothing writing to it.
       falls out of the same comparison for free. An empty list says which of
       the four nothings it is; "nothing to do" on a board where everything is
       blocked would be actively wrong. A call a day per student is a bill.
-- [ ] **Cross-project metrics on `/me`.** `workspace_metrics.account_id` and
-      the lifted columns exist for this.
+- [x] **Cross-project metrics on `/me`** — `lib/workspace/across.ts`, rendered
+      as "How you work".
+
+      **Pooled from the raw rows, never averaged from the per-project ones.**
+      Almost every figure here is a median, and the median of three medians is
+      not the median of the underlying data — a project with two tasks would
+      count as much as one with forty, so one bad week on a tiny project moves
+      the headline as much as a term of work. Rates have the same problem from
+      the other side: 100%, 100% and 50% is not 83% on-time, it is whatever
+      the pooled count says. So it runs `computeMetrics` once over everything,
+      which is also the only way there is one definition of what these numbers
+      mean. `tests/workspace-across.test.ts` demonstrates the divergence
+      rather than asserting it.
+
+      MIN_SAMPLE applies to the pooled sample, which is the honest place for
+      it — two tasks on each of three projects is six tasks, and that is the
+      question the floor is asking.
+
+      Samples sit next to every number and anything under the floor says "not
+      enough yet". The per-project breakdown stays underneath, because "you
+      underestimate" and "you underestimate on that one project" are different
+      claims and the second is arguable.
 - [x] **Scheduled re-planning.** Not a scheduled *planner*, deliberately.
       The nightly pass nudges the owner when a board falls to
       `DRY_BOARD_TASKS` (2) or fewer open tasks, with a `RENUDGE_AFTER_DAYS`
