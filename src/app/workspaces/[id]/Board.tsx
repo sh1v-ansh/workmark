@@ -108,6 +108,7 @@ export default function Board({
       id: task.id,
       status: task.status,
       assigneeId: task.assigneeId,
+      submittedById: v?.submittedById ?? null,
       latestVerdict: v?.verdict ?? null,
       humanVerdict: v?.humanVerdict ?? null,
     }

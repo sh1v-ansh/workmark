@@ -332,6 +332,12 @@ export interface TaskVerdict {
    * and the board has to be able to say which it is looking at.
    */
   humanActorId: string | null
+  /**
+   * Who pressed submit. The board needs it to bar the same people the review
+   * route bars — the assignee alone is not who did the work, because a card
+   * can be submitted with no assignee at all.
+   */
+  submittedById: string | null
 }
 
 /**
@@ -347,7 +353,7 @@ export async function loadVerdicts(
 ): Promise<Map<string, TaskVerdict>> {
   const { data } = await supabase
     .from('task_submissions')
-    .select('id, task_id, verdict, confidence, notes, checks, attempt, decided_at, submitted_at, human_verdict, human_actor_id')
+    .select('id, task_id, verdict, confidence, notes, checks, attempt, decided_at, submitted_at, human_verdict, human_actor_id, submitted_by')
     .eq('workspace_id', workspaceId)
     .order('submitted_at', { ascending: false })
 
@@ -366,6 +372,7 @@ export async function loadVerdicts(
       decidedAt: row.decided_at as string | null,
       humanVerdict: row.human_verdict as string | null,
       humanActorId: row.human_actor_id as string | null,
+      submittedById: row.submitted_by as string | null,
     })
   }
   return latest

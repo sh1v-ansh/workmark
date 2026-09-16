@@ -22,6 +22,7 @@ function reviewable(extra: Partial<ReviewableTask> = {}): ReviewableTask {
     id: 'task-1',
     status: 'submitted',
     assigneeId: 'alice',
+    submittedById: 'alice',
     latestVerdict: REVIEWABLE_VERDICT,
     humanVerdict: null,
     ...extra,
@@ -39,6 +40,25 @@ describe('canReview', () => {
   // write about their own work is evidence worth nothing.
   it('never lets the assignee confirm their own work', () => {
     expect(canReview(TEAM, 'alice', reviewable())).toMatch(/you did the work/i)
+  })
+
+  // The assignee is not a reliable record of who did the work: the column is
+  // nullable, nothing forces a card to be assigned before it is submitted,
+  // and it empties on account deletion. Each of those used to hand the
+  // submitter a way to confirm their own work.
+  it('never lets the submitter confirm their own work on an unassigned task', () => {
+    const task = reviewable({ assigneeId: null, submittedById: 'alice' })
+    expect(canReview(TEAM, 'alice', task)).toMatch(/you did the work/i)
+  })
+
+  it('never lets the submitter confirm work assigned to somebody else', () => {
+    const task = reviewable({ assigneeId: 'bob', submittedById: 'alice' })
+    expect(canReview(TEAM, 'alice', task)).toMatch(/you did the work/i)
+  })
+
+  it('still lets an uninvolved teammate answer an unassigned task', () => {
+    const task = reviewable({ assigneeId: null, submittedById: 'alice' })
+    expect(canReview(TEAM, 'bob', task)).toBeNull()
   })
 
   it('refuses somebody who is not on the team', () => {
@@ -79,28 +99,45 @@ describe('canReview', () => {
       .toMatch(/already answered/i)
   })
 
-  it('treats an unassigned task as reviewable by anyone on the team', () => {
-    expect(canReview(TEAM, 'alice', reviewable({ assigneeId: null }))).toBeNull()
-    expect(canReview(TEAM, 'bob', reviewable({ assigneeId: null }))).toBeNull()
+  // Was "reviewable by anyone on the team", which included the person who
+  // submitted it. An unassigned card is open to everyone the work was not
+  // done by, and to nobody else.
+  it('treats an unassigned task as reviewable by anyone who did not do it', () => {
+    const task = reviewable({ assigneeId: null, submittedById: 'alice' })
+    expect(canReview(TEAM, 'alice', task)).toMatch(/you did the work/i)
+    expect(canReview(TEAM, 'bob', task)).toBeNull()
+  })
+
+  // Nothing is known about who did the work, so nothing bars anyone. This is
+  // the only case where an unassigned card is open to the whole team, and it
+  // is reachable when an account is deleted after submitting.
+  it('falls back to the team when neither assignee nor submitter is known', () => {
+    const task = reviewable({ assigneeId: null, submittedById: null })
+    expect(canReview(TEAM, 'alice', task)).toBeNull()
+    expect(canReview(TEAM, 'bob', task)).toBeNull()
   })
 })
 
 describe('hasEligibleReviewer', () => {
   it('is false on a solo project — the only member did the work', () => {
-    expect(hasEligibleReviewer([member('alice')], 'alice')).toBe(false)
+    expect(hasEligibleReviewer([member('alice')], reviewable())).toBe(false)
   })
 
   it('is true when somebody else is on the team', () => {
-    expect(hasEligibleReviewer(TEAM, 'alice')).toBe(true)
+    expect(hasEligibleReviewer(TEAM, reviewable())).toBe(true)
   })
 
-  it('is true for an unassigned task even on a solo project', () => {
-    expect(hasEligibleReviewer([member('alice')], null)).toBe(true)
+  // This used to assert the opposite, which is how the hole got in: an
+  // unassigned task on a solo project looked as though somebody could
+  // answer it, and the only candidate was the student who submitted it.
+  it('is false for an unassigned task the solo student submitted', () => {
+    const task = reviewable({ assigneeId: null, submittedById: 'alice' })
+    expect(hasEligibleReviewer([member('alice')], task)).toBe(false)
   })
 
   it('does not count a removed member as eligible', () => {
     const team = [member('alice'), member('bob', { removed_at: '2026-02-01T00:00:00Z' })]
-    expect(hasEligibleReviewer(team, 'alice')).toBe(false)
+    expect(hasEligibleReviewer(team, reviewable())).toBe(false)
   })
 })
 

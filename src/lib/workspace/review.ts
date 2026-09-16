@@ -47,10 +47,34 @@ export interface ReviewableTask {
   id: string
   status: string
   assigneeId: string | null
+  /**
+   * Who pressed submit on the most recent submission.
+   *
+   * Carried separately from the assignee because the assignee is not a
+   * reliable answer to "who did this work". `tasks.assignee_id` is nullable,
+   * nothing requires a card to be assigned before it is submitted, and the
+   * column is `on delete set null`, so it also empties when an account goes.
+   * Any of those leaves a submitted task whose assignee is null — and a null
+   * assignee matches nobody, so the guard below silently stopped applying to
+   * exactly the person it was written about.
+   */
+  submittedById: string | null
   /** The verdict on the most recent submission, or null if never submitted. */
   latestVerdict: string | null
   /** Whether a person has already answered on that submission. */
   humanVerdict: string | null
+}
+
+/**
+ * Everybody this task's answer cannot come from.
+ *
+ * One list rather than two checks, so `canReview` and `hasEligibleReviewer`
+ * cannot drift — the board hides the button for exactly the people the route
+ * refuses, and a task nobody is left to answer escalates to staff rather than
+ * looking answerable to somebody who is barred.
+ */
+export function didTheWork(task: Pick<ReviewableTask, 'assigneeId' | 'submittedById'>): string[] {
+  return [task.assigneeId, task.submittedById].filter((id): id is string => id !== null)
 }
 
 export type Refusal = string | null
@@ -75,7 +99,7 @@ export function canReview(
   const onTeam = activeMembers(members).some((m) => m.account_id === actorId)
   if (!onTeam) return 'You are not on this project.'
 
-  if (task.assigneeId === actorId) {
+  if (didTheWork(task).includes(actorId)) {
     return 'Somebody else has to confirm this one — you did the work.'
   }
 
@@ -101,9 +125,18 @@ export function canReview(
  * every reviewable task can still end up assigned to the only other member
  * who is away. Either way the answer is the same: it goes to Workmark staff
  * through the admin queue rather than sitting on the board unanswerable.
+ *
+ * Takes the whole task rather than the assignee alone, so it bars the same
+ * people `canReview` does. Asking only about the assignee meant a solo
+ * student's unassigned task looked as though it had a reviewer available —
+ * themselves — and so never reached the queue that exists to catch it.
  */
-export function hasEligibleReviewer(members: MemberRow[], assigneeId: string | null): boolean {
-  return activeMembers(members).some((m) => m.account_id !== assigneeId)
+export function hasEligibleReviewer(
+  members: MemberRow[],
+  task: Pick<ReviewableTask, 'assigneeId' | 'submittedById'>,
+): boolean {
+  const barred = didTheWork(task)
+  return activeMembers(members).some((m) => !barred.includes(m.account_id))
 }
 
 export interface ReviewOutcome {

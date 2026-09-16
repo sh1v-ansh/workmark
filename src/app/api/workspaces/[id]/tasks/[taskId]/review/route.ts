@@ -86,7 +86,7 @@ export async function POST(request: Request, { params }: Params) {
   // question nobody is asking any more.
   const { data: submission } = await supabase
     .from('task_submissions')
-    .select('id, verdict, human_verdict, notes')
+    .select('id, verdict, human_verdict, notes, submitted_by')
     .eq('task_id', taskId)
     .order('submitted_at', { ascending: false })
     .limit(1)
@@ -96,6 +96,7 @@ export async function POST(request: Request, { params }: Params) {
     id: task.id as string,
     status: task.status as string,
     assigneeId: task.assignee_id as string | null,
+    submittedById: (submission?.submitted_by as string | null) ?? null,
     latestVerdict: (submission?.verdict as string | null) ?? null,
     humanVerdict: (submission?.human_verdict as string | null) ?? null,
   }
