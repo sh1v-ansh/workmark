@@ -31,8 +31,12 @@ const SCHEMA = {
   properties: {
     questions: {
       type: 'array',
-      minItems: QUESTION_COUNT,
+      // 0 or 1 only — see the note in planner.ts. questionsFor() already
+      // slices to QUESTION_COUNT and falls back when fewer arrive, so the
+      // count is handled where it can be handled.
+      minItems: 1,
       maxItems: QUESTION_COUNT,
+      description: `Exactly ${QUESTION_COUNT} questions.`,
       items: {
         type: 'object',
         properties: {

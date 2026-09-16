@@ -7,6 +7,7 @@ import {
 } from '@/lib/http/validate'
 import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 import { answerOnTask } from '@/lib/agents/helper'
+import { classify, SCOPE_REPLY } from '@/lib/agents/scope'
 import {
   shouldAnswer, stripMention, threadForAgent, type Message,
 } from '@/lib/workspace/messages'
@@ -101,6 +102,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // silence after a mention reads as the feature being broken.
   if (refusal) {
     return NextResponse.json({ ok: true, message: written, reply: null, note: refusal })
+  }
+
+  // Checked before the money is spent. The prompt is the real boundary, but a
+  // refusal that costs a model call is one somebody can still spend our budget
+  // on thirty times a day by being politely off-topic.
+  const verdict = classify(stripMention(fields.values.body))
+  if (verdict !== 'ok') {
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    // Written as an agent message so the thread reads as a conversation
+    // rather than as the feature having silently failed.
+    const { data: said } = await admin
+      .from('workspace_messages')
+      .insert({
+        workspace_id: workspaceId,
+        task_id: taskId,
+        sender_id: null,
+        sender_kind: 'agent',
+        body: SCOPE_REPLY[verdict],
+      })
+      .select('id, task_id, sender_id, sender_kind, body, created_at')
+      .single()
+
+    return NextResponse.json({ ok: true, message: written, reply: said ?? null })
   }
 
   const admin = createServiceClient(

@@ -24,6 +24,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { callStructuredAgent } from './client'
 import { untrusted } from './untrusted'
+import { SCOPE_RULE } from './scope'
 
 export interface HelperReply {
   /** What to say. A few sentences at most. */
@@ -66,7 +67,9 @@ Sometimes the honest answer is that something else has to happen first — a set
 
 Only for real, separable work. Not "read the docs", not "try again", and never a restatement of the task they are already on. If you are not sure it deserves its own card, it does not.
 
-You cannot see their code. You have the task and the conversation. If answering needs something you were not given, ask for it.`
+You cannot see their code. You have the task and the conversation. If answering needs something you were not given, ask for it.
+
+${SCOPE_RULE}`
 
 const SCHEMA = {
   type: 'object',
