@@ -114,7 +114,13 @@ export async function mintWorkspaceEvidence(
       .select('account_id, scan_consent_at')
       .eq('workspace_id', workspaceId)
       .not('accepted_at', 'is', null)
-      .is('removed_at', null),
+      .is('removed_at', null)
+      // Anybody already minted for is finished. Without this a retry — which
+      // exists so somebody who connects GitHub after a project closes still
+      // gets their record — would rescan and re-mint for the three people who
+      // were fine the first time, costing a GitHub round trip each and
+      // writing a second set of evidence rows for work already recorded.
+      .is('evidence_minted_at', null),
     admin
       .from('tasks')
       // id as well as assignee_id: the counts only need the assignee, but the
@@ -218,11 +224,50 @@ export async function mintWorkspaceEvidence(
     }
   }
 
+  // Written down rather than only returned. Until this existed the reasons
+  // lived in one HTTP response and were gone, so a project stamped
+  // evidence_minted_at was never revisited whatever the reason was — and two
+  // of the three reasons are things a student fixes on their own account days
+  // later, with no idea a closed project is waiting on it.
+  await recordMemberOutcomes(admin, workspaceId, outcomes)
+
   return {
     workspaceId,
     repoFullName: repo.repo_full_name as string,
     members: outcomes,
     skillsWritten: skills.size,
+  }
+}
+
+/**
+ * Who this pass minted for, and who it skipped.
+ *
+ * Best-effort, like recordEvidenceBasis: losing the bookkeeping must never
+ * cost somebody evidence that was actually written. A failure here means the
+ * retry does not happen, which is the state everything was in before.
+ */
+async function recordMemberOutcomes(
+  admin: SupabaseClient,
+  workspaceId: string,
+  outcomes: MemberEvidenceOutcome[],
+): Promise<void> {
+  try {
+    for (const outcome of outcomes) {
+      await admin
+        .from('workspace_members')
+        .update({
+          // A scan that threw is neither minted nor skipped: it is unfinished,
+          // and leaving both null is what keeps it in tomorrow's sweep.
+          evidence_minted_at: outcome.skipped === null && outcome.error === null
+            ? new Date().toISOString()
+            : null,
+          evidence_skip_reason: outcome.skipped,
+        })
+        .eq('workspace_id', workspaceId)
+        .eq('account_id', outcome.accountId)
+    }
+  } catch (err) {
+    console.error('[workspace/evidence] could not record member outcomes:', err)
   }
 }
 
@@ -466,5 +511,74 @@ export async function sweepWorkspaceEvidence(
     }
   }
 
+  // ── Projects that are stamped, but still owe somebody ──
+  //
+  // A project where a member was skipped for no consent or no connected
+  // account is finished as far as evidence_minted_at is concerned, and both
+  // of those can stop being true afterwards. Without this, a student who
+  // connects GitHub the week after a project closes never gets the record of
+  // work they actually did, and nothing ever tells them why.
+  //
+  // Bounded the same way the main pass is, and cheap when there is nothing to
+  // do: the partial index means the common case is an index probe that
+  // matches no rows.
+  const { data: owed } = await admin
+    .from('workspace_members')
+    .select('workspace_id, account_id, scan_consent_at, evidence_skip_reason')
+    .in('evidence_skip_reason', ['no_consent', 'no_github_username'])
+    .is('removed_at', null)
+    .limit(limit * 4)
+
+  const retryable = new Set<string>()
+  for (const row of owed ?? []) {
+    const reason = row.evidence_skip_reason as SkipReason
+    // Re-checked here rather than trusted: the stored reason says why it was
+    // skipped, not whether that is still true, and re-minting a project whose
+    // blocker has not lifted is a scan per member for no reason.
+    if (reason === 'no_consent' && row.scan_consent_at === null) continue
+    retryable.add(row.workspace_id as string)
+  }
+
+  for (const id of Array.from(retryable).slice(0, limit)) {
+    try {
+      const result = await mintWorkspaceEvidence(admin, id)
+      skillsWritten += result.skillsWritten
+      minted++
+    } catch (err) {
+      console.error(`[workspace/evidence] retry mint failed for ${id}:`, err)
+      failed++
+    }
+  }
+
   return { minted, skillsWritten, failed }
+}
+
+/**
+ * Can this skip stop being true?
+ *
+ * Two of the three can, and both are things a student does on their own
+ * account days later with no idea a closed project is waiting on it: agreeing
+ * to have their work read, and connecting GitHub. Until this existed, that
+ * work was simply never recorded — silently, with no way for them to find out.
+ *
+ * `no_verified_work` cannot change. The project is closed and no further task
+ * will ever be verified on it, so retrying would be a scan per member per
+ * night forever, for an answer that is already settled.
+ */
+export function isRetryableSkip(reason: SkipReason | null): boolean {
+  return reason === 'no_consent' || reason === 'no_github_username'
+}
+
+/**
+ * What to tell somebody about a project that recorded nothing for them.
+ *
+ * Written as the thing they can do rather than the rule that stopped them.
+ * "They have not agreed to Workmark reading their work" is the explanation a
+ * member of staff needs; "turn scanning on for this project and it will be
+ * picked up tonight" is what the person it happened to needs.
+ */
+export const SKIP_REMEDY: Record<SkipReason, string | null> = {
+  no_verified_work: null,
+  no_consent: 'Agree to have your work on this project read, and it will be picked up on the next nightly pass.',
+  no_github_username: 'Connect GitHub and it will be picked up on the next nightly pass.',
 }

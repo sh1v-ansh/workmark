@@ -18,6 +18,7 @@
 // regular users by design (§10: these are system-computed, not user input).
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { baseFor, type ArtifactTier } from './tiers'
 import { scanRepo, type RepoScanResult } from '@/lib/github/scan'
 import { extractComplexity } from '@/lib/github/complexity'
 import { verifyDeployment } from '@/lib/github/verify-deployment'
@@ -121,17 +122,18 @@ export async function processRepo(
 
   const engagementId = options.engagementId ?? null
   const workspaceId = options.workspaceId ?? null
-  // Listing-driven work carries base 0.5 regardless of contributor count:
-  // the weight comes from it having been real work someone asked for and
+  // Listing-driven work carries the same weight regardless of contributor
+  // count: it comes from having been real work someone asked for and
   // accepted, not from how many people happened to commit to the repo.
-  // Workspace work carries 0.6 for the reason in the doc comment above — the
-  // criteria existed before the code did.
   const tier: ArtifactTier = workspaceId
     ? 'workspace_verified'
     : engagementId
       ? 'listing_driven'
       : (scanResult.distinctContributors ?? 1) > 1 ? 'tier_0_5' : 'tier_0'
-  const base = tier === 'workspace_verified' ? 0.6 : tier === 'tier_0' ? 0.4 : 0.5
+  // The weights and the argument for them are in tiers.ts. They were four
+  // inline numbers here, which made it impossible to see that the ordering is
+  // the claim and the magnitudes are an unvalidated first guess.
+  const base = baseFor(tier)
 
   const deployment = await verifyDeployment(installationId, repoFullName, scanResult.defaultBranch)
   const verificationMethod = deployment.verified ? deployment.method! : 'repo_link'
@@ -257,7 +259,8 @@ async function writePriors(supabase: SupabaseClient, studentId: string, skillIds
   if (error) throw error
 }
 
-type ArtifactTier = 'tier_0' | 'tier_0_5' | 'listing_driven' | 'workspace_verified'
+// Moved to tiers.ts, with the weights and the reasoning for each.
+export type { ArtifactTier } from './tiers'
 
 async function getOrCreateArtifact(
   supabase: SupabaseClient,

@@ -540,7 +540,7 @@ Everything below is unbuilt. Ordered by what blocks what.
 - [x] Migrations `0025`–`0035` are applied.
 - [x] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
       pg_cron.
-- [ ] **Run migrations `v05_0038`–`v05_0041`.** `0040` adds
+- [ ] **Run migrations `v05_0038`–`v05_0042`.** `0040` adds
       token columns to `agent_calls`, `sender_kind` to `workspace_messages`,
       and the `abandoned` task status. Until it runs, every agent call logs a
       null cost and setting a task aside fails the status check. `0038` schedules the
@@ -594,20 +594,36 @@ Both items are done; see step 7. What is worth knowing about how:
 
 What is still thin here:
 
-- [ ] **Nothing re-mints when a record should change.** A project closed
+- [x] **Re-minting when a record should change.** A project closed
       before a member connected GitHub, or before they consented, is stamped
-      `evidence_minted_at` and never revisited. The skip reasons are recorded
-      per member in the close response but not stored, so nothing can offer
-      "three people were skipped, want to try again".
-- [ ] **`workspace_verified` base 0.6 is unvalidated**, like every other
-      constant here. It says this evidence outranks listing-driven work. That
-      is defensible and it is still a guess.
-- [ ] **`reinvestigate` does not reconsider the tasks.** It rescans the
-      repository, which is the right check for a scan-derived row and only
-      half the story for a project one: the acceptance criteria, the verdicts
-      and the human confirmations are now recorded in `evidence_audit` and
-      nothing reads them back. A dispute on project evidence gets a repo
-      answer to a project claim.
+      `evidence_minted_at` and used to be stamped and never revisited.
+      `v05_0042` stores the outcome per member on `workspace_members`, and the
+      nightly pass retries the two skip reasons that can stop being true —
+      `no_consent` and `no_github_username`, both things a student fixes on
+      their own account days later with no idea a closed project is waiting on
+      it. `no_verified_work` is stored and never retried: the project is
+      closed and no further task will be verified. Members already minted for
+      are excluded from the member query, so a retry does not rescan or
+      duplicate evidence for the people who were fine the first time.
+- [~] **`workspace_verified` base 0.6 is still unvalidated** and cannot be
+      validated from scanning — it needs outcomes, meaning businesses saying
+      whether a level matched work they actually saw. What changed: the four
+      weights were inline magic numbers in `processRepo` and are now
+      `lib/skills/tiers.ts`, with the argument for each and an explicit note
+      that **the ordering is the claim and the magnitudes are a first guess**.
+      A test pins the ordering, so tuning a number cannot silently reverse
+      what the product tells businesses. `recomputeCalibration` does not touch
+      these — it calibrates skill bands, a different question.
+- [x] **`reinvestigate` reconsiders the tasks.** It rescans the
+      repository, which is the right check for a scan-derived row and was only
+      half the story for a project one. `lib/fcra/task-basis.ts` now reads the
+      basis back out of `evidence_audit` and rechecks those tasks against the
+      board. **A rescan can no longer retract project evidence on its own**:
+      while the tasks still stand, a repository that went private, was
+      renamed, had its history rewritten or simply stopped tripping a detector
+      is corroboration failing, not the claim failing. A partly fallen basis
+      and a basis that was never recorded both go to a person — the second
+      because a missing audit row is our logging gap, not the student's.
 - [ ] **Nothing shows a student their own `task_decisions` outside a project
       they can still open.** After a workspace is deleted the log cascades
       with it. That is probably right, and it is worth deciding on purpose.

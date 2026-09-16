@@ -1756,6 +1756,20 @@ create table workspace_members (
   -- Consent to having their commits read, per member rather than per repo:
   -- one person grants the repo, everyone in it agrees separately.
   scan_consent_at timestamptz,
+
+  -- Whether this project's evidence has been written for this person, and why
+  -- not (v05_0042). Per member rather than per project: workspaces.
+  -- evidence_minted_at answers "did the slow half of closing finish", which
+  -- cannot distinguish a project that minted for everyone from one that
+  -- minted for two people out of four.
+  --
+  -- no_consent and no_github_username can both stop being true afterwards —
+  -- a student agrees, or connects GitHub, days later with no idea a closed
+  -- project is waiting on it — so the nightly pass retries those.
+  evidence_minted_at   timestamptz,
+  evidence_skip_reason text check (evidence_skip_reason is null or evidence_skip_reason in
+                         ('no_verified_work', 'no_consent', 'no_github_username')),
+
   -- What they actually do, as opposed to what they may manage. `role` above
   -- is permission; this is the job, agreed between the students. The planner
   -- reads it to put each task on the right person. See v05_0029.

@@ -18,6 +18,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { scanRepo } from '@/lib/github/scan'
 import { extractComplexity } from '@/lib/github/complexity'
+import { checkBasis, scanMayRetract, needsAPerson, type BasisFinding, type LiveTask, type RecordedTask } from './task-basis'
 import { canonicalizeSkills } from '@/lib/skills/canonicalize'
 import { applyImplications } from '@/lib/skills/implications'
 import {
@@ -199,6 +200,49 @@ export async function reinvestigate(
     })
   }
 
+  // ── Reconsider the basis the claim was actually made on ──
+  //
+  // Everything above asked the repository a question. For a row that came out
+  // of a scan that is the right question, because the scan was the basis. A
+  // project row was minted on something else — tasks whose acceptance
+  // criteria were agreed before the work started, and a checker or teammate
+  // who confirmed each one — and §611 requires reconsidering the information
+  // the claim rests on, not a different one that happens to be cheaper.
+  //
+  // Concretely: a repository that went private, was renamed, had its history
+  // rewritten or simply stopped tripping a detector could retract evidence
+  // whose real basis is three confirmed tasks still sitting verified in the
+  // database. That is the same class of mistake as reading a skipped scan as
+  // "no commits are yours".
+  const basis = workspaceId
+    ? await checkTaskBasis(supabase, evidence.id, workspaceId)
+    : null
+
+  if (basis) {
+    if (needsAPerson(basis)) {
+      return finish({
+        status: 'resolved_manual',
+        note: `${basis.note} A person will review this, and nothing about your record has been changed.`,
+        correctionEvidenceId: null,
+      })
+    }
+
+    // The tasks still stand, so whatever the repository says, the claim does.
+    // Corroboration failing is not the claim failing.
+    if (!scanMayRetract(basis)) {
+      if (!hasAttributedCommits || !skillStillDetected) {
+        return finish({
+          status: 'resolved_verified',
+          note: `${basis.note} The repository could not corroborate it on this pass, but the tasks are what this evidence rests on, so it stands unchanged.`,
+          correctionEvidenceId: null,
+        })
+      }
+      // Corroborated as well. A level recomputed downwards is still allowed
+      // through below — that is a correction, not a retraction.
+      skillStillDetected = true
+    }
+  }
+
   const outcome = reinvestigationOutcome({
     category: dispute.category as DisputeCategory,
     hasAttributedCommits,
@@ -261,4 +305,55 @@ export async function reinvestigate(
   if (auditErr) console.error('[fcra/reinvestigate] audit insert failed:', auditErr)
 
   return finish({ ...outcome, correctionEvidenceId: correction.id })
+}
+
+
+/**
+ * The recorded basis for one piece of project evidence, checked against the
+ * board as it stands now.
+ *
+ * Reads `evidence_audit` rather than recomputing, because the question is
+ * whether the claim that was made still holds — not whether a claim made
+ * today would look the same. Returns null when this row has no workspace
+ * basis to check, which is every scan-derived row and is the normal case.
+ */
+async function checkTaskBasis(
+  supabase: SupabaseClient,
+  evidenceId: string,
+  workspaceId: string,
+): Promise<BasisFinding | null> {
+  const { data: audit } = await supabase
+    .from('evidence_audit')
+    .select('raw_input')
+    .eq('evidence_id', evidenceId)
+    .eq('source', 'workspace_close')
+    .maybeSingle()
+
+  const raw = (audit?.raw_input ?? null) as { tasks?: unknown[] } | null
+  const recordedTasks: RecordedTask[] = Array.isArray(raw?.tasks)
+    ? (raw.tasks as Record<string, unknown>[]).map((t) => ({
+        id: String(t.id ?? ''),
+        title: String(t.title ?? 'A task'),
+        settledBy: (t.settled_by as string | null) ?? null,
+        verifiedAt: (t.verified_at as string | null) ?? null,
+      })).filter((t) => t.id !== '')
+    : []
+
+  // No audit row at all is 'unknown' rather than 'gone' — see checkBasis.
+  if (recordedTasks.length === 0) return checkBasis([], new Map())
+
+  const { data: taskRows } = await supabase
+    .from('tasks')
+    .select('id, status')
+    .eq('workspace_id', workspaceId)
+    .in('id', recordedTasks.map((t) => t.id))
+
+  const live = new Map<string, LiveTask>(
+    (taskRows ?? []).map((t) => [
+      t.id as string,
+      { id: t.id as string, status: t.status as string, latestVerdict: null },
+    ]),
+  )
+
+  return checkBasis(recordedTasks, live)
 }
