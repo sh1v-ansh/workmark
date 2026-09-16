@@ -781,9 +781,20 @@ Each of these is a migration already applied and nothing writing to it.
       path is Broadcast.
 - [ ] **Calendar.** Tasks, deadlines and sprints on one timeline. Build the
       grid; do not pull in FullCalendar.
-- [ ] **Daily "what to work on today".** Try plain arithmetic first — what is
-      due, blocked and depended-on is a sort, not a model. Only reach for AI
-      if the sorted list reads thin. A call a day per student is a bill.
+- [x] **Daily "what to work on today"** — `lib/workspace/today.ts`, a strip of
+      three above the board. Arithmetic, and it stayed arithmetic: overdue,
+      due today, how many tasks are stuck behind it, committed to this week.
+      There is no case where a model orders these differently.
+
+      **No "ask Workmark what to do today" button, deliberately.** What a model
+      could add is how to *start* the thing, and that already exists on the
+      card as the task thread. A second door to it would be a worse one.
+
+      Each row carries its reason, because a ranked list with no explanation
+      is one people re-sort in their head and then ignore — and the reason
+      falls out of the same comparison for free. An empty list says which of
+      the four nothings it is; "nothing to do" on a board where everything is
+      blocked would be actively wrong. A call a day per student is a bill.
 - [ ] **Cross-project metrics on `/me`.** `workspace_metrics.account_id` and
       the lifted columns exist for this.
 - [x] **Scheduled re-planning.** Not a scheduled *planner*, deliberately.

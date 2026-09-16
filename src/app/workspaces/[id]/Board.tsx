@@ -11,6 +11,7 @@ import {
 } from '@/lib/workspace/sprint'
 import { MENTION, type Message } from '@/lib/workspace/messages'
 import { pending, type Checkpoint } from '@/lib/workspace/checkpoints'
+import { rankToday, emptyReason } from '@/lib/workspace/today'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/Toast'
 import { C, R, T } from '@/lib/theme/dark-tokens'
@@ -123,6 +124,7 @@ export default function Board({
     .map((t) => ({ task: t, checkpoint: pending(checkpointsByTask.get(t.id) ?? []) }))
     .find((x) => x.checkpoint !== null && x.task.assigneeId === userId) ?? null
   const [checkpointAnswer, setCheckpointAnswer] = useState('')
+
   const [scopeCheck, setScopeCheck] = useState<
     { verdict: string; reasoning: string; suggestion: string } | null
   >(null)
@@ -274,6 +276,21 @@ export default function Board({
 
   const sprint = currentSprint(sprints)
   const lastClosed = sprints.find((s) => s.closedAt !== null && s.retro) ?? null
+
+  // A sort, not a judgement. See today.ts for why this is deliberately not a
+  // model call — and why there is no "ask Workmark what to do today" button
+  // when the task thread on each card already answers "how do I start this".
+  const todayISO = new Date().toISOString().slice(0, 10)
+  const todayList = rankToday(
+    tasks.map((t) => ({
+      id: t.id, title: t.title, status: t.status, assigneeId: t.assigneeId,
+      dueOn: t.dueOn, difficulty: t.difficulty, sprintId: t.sprintId,
+      blockedAt: t.blockedAt, parentTaskId: t.parentTaskId,
+    })),
+    dependencies.map((d) => ({ taskId: d.taskId, dependsOnTaskId: d.dependsOnId })),
+    { userId, sprintId: sprint?.id ?? null, today: todayISO },
+  )
+
 
   async function startSprint() {
     const ok = await send(`/api/workspaces/${workspaceId}/sprints`,
@@ -547,6 +564,56 @@ export default function Board({
         </p>
       )}
 
+      {/* Three things, with why each is here.
+          A strip rather than a page: twelve items is a competing view of the
+          same board and people end up trusting neither. */}
+      {!readOnly && workspaceStatus === 'active' && (
+        <div style={{ marginBottom: 14 }}>
+          <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.textFaint, marginBottom: 8 }}>
+            Today
+          </p>
+          {todayList.length === 0 ? (
+            <p style={{ fontSize: T.bodySm, color: C.textFaint, lineHeight: 1.6 }}>
+              {emptyReason(
+                tasks.map((t) => ({
+                  id: t.id, title: t.title, status: t.status, assigneeId: t.assigneeId,
+                  dueOn: t.dueOn, difficulty: t.difficulty, sprintId: t.sprintId,
+                  blockedAt: t.blockedAt, parentTaskId: t.parentTaskId,
+                })),
+                { userId },
+              )}
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gap: 6 }}>
+              {todayList.map(({ task, reason }, i) => (
+                <button
+                  key={task.id}
+                  onClick={() => {
+                    const full = tasks.find((t) => t.id === task.id)
+                    if (full) openEdit(full)
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'baseline', gap: 10, textAlign: 'left',
+                    padding: '9px 12px', borderRadius: R.md, cursor: 'pointer',
+                    border: `1px solid ${i === 0 ? C.border : C.borderFaint}`,
+                    background: i === 0 ? C.surfaceAlt : C.surface,
+                  }}
+                >
+                  <span style={{ fontSize: T.bodySm, color: C.text, flex: 1, minWidth: 0 }}>
+                    {task.title}
+                  </span>
+                  {/* The reason, not just the rank. A list with no explanation
+                      is one people re-sort in their head and then ignore. */}
+                  <span style={{ fontSize: T.meta, color: C.textFaint, flexShrink: 0 }}>
+                    {reason}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* One question, once, as work starts.
           A strip rather than a modal on purpose: a dialog in front of the
           board at the moment somebody sits down to work is the thing that
@@ -728,7 +795,10 @@ export default function Board({
                   >
                     <button
                       type="button"
-                      onClick={() => openEdit(task)}
+                      onClick={() => {
+                    const full = tasks.find((t) => t.id === task.id)
+                    if (full) openEdit(full)
+                  }}
                       style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%' }}
                     >
                       <p style={{ fontSize: T.bodySm, fontWeight: 500, color: C.text, lineHeight: 1.45, marginBottom: 6 }}>
