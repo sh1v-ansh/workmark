@@ -126,6 +126,14 @@ export interface PlanRequest {
   deadline: string | null
   /** Titles already on the board, so a top-up does not repeat them. */
   existingTitles: string[]
+  /**
+   * What has happened so far, from projectState's progressBrief.
+   *
+   * Null on a first plan, where there is nothing to say. Present on every
+   * top-up, which is what stops the second run reading like the first one
+   * with different words.
+   */
+  progress?: string | null
 }
 
 export async function planProject(
@@ -144,7 +152,12 @@ export async function planProject(
     request.existingTitles.length > 0
       ? untrustedList('Tasks already on the board — do not repeat these', request.existingTitles)
       : 'The board is empty.',
-  ].join('\n\n')
+    // What has actually happened, when there is anything to say. This is the
+    // difference between a planner that generates tasks and one that reads as
+    // though somebody senior has been watching: knowing that two tasks came
+    // back on the same theme changes what the next one should be.
+    request.progress ? untrusted('What has happened so far', request.progress) : null,
+  ].filter((line): line is string => line !== null).join('\n\n')
 
   const response = await callStructuredAgent<AgentResponse>(supabase, {
     agentType: 'planner',

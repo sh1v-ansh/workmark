@@ -4,6 +4,8 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
+import { Bar } from '@/components/ui/Skeleton'
+import { canAskForMore } from '@/lib/workspace/project-state'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/Toast'
 import { C, R, T } from '@/lib/theme/dark-tokens'
@@ -60,6 +62,7 @@ export default function Board({
   dependencies,
   decisions,
   userId,
+  workspaceStatus,
   readOnly = false,
 }: {
   workspaceId: string
@@ -69,6 +72,8 @@ export default function Board({
   dependencies: TaskDependency[]
   decisions: TaskDecision[]
   userId: string
+  /** Needed to answer "may I ask for more work" without a round trip. */
+  workspaceStatus: string
   /** A closed project. The board becomes the record of what happened. */
   readOnly?: boolean
 }) {
@@ -93,6 +98,23 @@ export default function Board({
   const verdictFor = new Map(verdicts.map((v) => [v.taskId, v]))
   const submittedCount = tasks.filter((t) => t.status === 'submitted').length
   const asideTasks = tasks.filter((t) => t.status === 'abandoned')
+
+  // The same function the route uses to refuse, run here so the answer
+  // arrives on hover instead of after a ten-second model call that was never
+  // going to succeed. The route still decides — this only saves the wait.
+  const askRefusal = canAskForMore({
+    workspaceId, title: '', status: workspaceStatus, deadline: null, revisions: [],
+    tasks: tasks.map((t) => ({
+      id: t.id, title: t.title, status: t.status,
+      difficulty: t.difficulty, estimateHours: t.estimateHours, dueOn: t.dueOn,
+      assigneeId: t.assigneeId, startedAt: t.startedAt,
+      blockedReason: t.blockedAt ? t.blockedReason : null,
+      abandonedReason: t.abandonedReason,
+      latestVerdict: verdictFor.get(t.id)?.verdict ?? null,
+      verdictNote: verdictFor.get(t.id)?.notes ?? null,
+      attempts: verdictFor.get(t.id)?.attempt ?? 0,
+    })),
+  })
   const boardTasks = tasks.filter((t) => t.status !== 'abandoned')
 
   // workspace.members is already only the people actually on the team, so
@@ -316,13 +338,22 @@ export default function Board({
             </span>
           )}
           {!readOnly && submittedCount > 0 && (
-            <Button size="sm" onClick={checkWork} disabled={checking}>
-              {checking ? 'Checking…' : `Check my work (${submittedCount})`}
+            <Button size="sm" onClick={checkWork} busyLabel={checking ? 'Checking…' : null}>
+              {`Check my work (${submittedCount})`}
             </Button>
           )}
           {!readOnly && (
-            <Button variant="outline" size="sm" onClick={draftPlan} disabled={planning}>
-              {planning ? 'Drafting…' : tasks.length === 0 ? 'Draft a plan' : 'Suggest more tasks'}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={draftPlan}
+              disabled={askRefusal !== null}
+              busyLabel={planning ? 'Thinking…' : null}
+              // The reason, on the control itself. A disabled button with no
+              // explanation is the most annoying thing an interface can do.
+              title={askRefusal ?? undefined}
+            >
+              {tasks.length === 0 ? 'Draft a plan' : 'Give me more work'}
             </Button>
           )}
           {!readOnly && (
@@ -587,7 +618,20 @@ export default function Board({
                   </article>
                 ))}
 
-                {inColumn.length === 0 && (
+                {/* Where the plan is about to land.
+                    A model call takes the better part of ten seconds, and for
+                    all of it the board used to look exactly as it had before
+                    the button was pressed. Drawing the cards in the column
+                    they will appear in turns a wait into something visibly in
+                    progress, and it costs nothing. */}
+                {planning && column === 'backlog' && (
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {[0, 1, 2].map((i) => (
+                      <Bar key={i} height={78} radius={10} style={{ opacity: 1 - i * 0.22 }} />
+                    ))}
+                  </div>
+                )}
+                {inColumn.length === 0 && !(planning && column === 'backlog') && (
                   <p style={{ fontSize: T.meta, color: C.textGhost, padding: '10px 2px' }}>Nothing here</p>
                 )}
               </div>

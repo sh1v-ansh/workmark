@@ -124,6 +124,9 @@
   @keyframes nb-drawer-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes nb-modal-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes nb-shimmer { 0%, 100% { background-position: 50% 50%; } }
+  /* The spinner still turns — it is the only indication work is happening,
+     and freezing it would say the page had hung. Slowed, not stopped. */
+  .nb-spinner { animation-duration: 1.6s; }
 }
 
 @keyframes slide-up {
@@ -325,10 +328,60 @@
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+              opacity 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease;
 }
+
+/* The press.
+ *
+ * Every other piece of feedback on this page waits for a server. This one
+ * cannot: it is the only thing that tells somebody the click registered, and
+ * it has to happen in the same frame as the finger going down. A button that
+ * looks identical for the 400ms before a response arrives is a button people
+ * press twice.
+ *
+ * Transform rather than a colour change, because it reads as physical and
+ * because it composites on the GPU — it cannot be delayed by whatever the
+ * main thread is doing when the click lands.
+ *
+ * Scoped to no-preference here rather than overridden in the reduced-motion
+ * block further up: the two rules have identical specificity, so whichever
+ * came second would win regardless of the media query, and the override was
+ * silently doing nothing.
+ *
+ * Reduced motion still gets feedback, just not movement. There is no hover
+ * colour on press, so suppressing this outright would leave that reader with
+ * no confirmation the click landed at all — which is the exact problem this
+ * rule exists to solve. */
+@media (prefers-reduced-motion: no-preference) {
+  .nb-btn:not(:disabled):active { transform: scale(0.975); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb-btn:not(:disabled):active { opacity: 0.7; }
+}
+
 .nb-btn:disabled,
 .nb-btn[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; }
+
+/* A button waiting on a server.
+ *
+ * Distinct from disabled on purpose: the two look the same at 0.45 opacity,
+ * and they mean opposite things. Disabled is "you cannot do this"; busy is
+ * "it is happening". Somebody who reads the first when the second is true
+ * concludes the click failed and goes looking for another way. */
+.nb-btn[data-busy='true'] { opacity: 0.8; cursor: progress; }
+
+.nb-spinner {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  animation: nb-spin 0.7s linear infinite;
+}
+
+@keyframes nb-spin { to { transform: rotate(360deg); } }
 
 .nb-btn-ink      { background: #191E2E; color: #FFFFFF; border-color: #191E2E; }
 .nb-btn-ink:not(:disabled):hover { background: #262D42; border-color: #262D42; }

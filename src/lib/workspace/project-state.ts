@@ -219,3 +219,96 @@ export function setbacks(state: ProjectState): { title: string; note: string | n
       note: t.status === 'abandoned' ? t.abandonedReason : t.verdictNote,
     }))
 }
+
+/**
+ * Whether asking for more work is the right thing right now.
+ *
+ * The guard exists because "give me more" is the one button on this board
+ * that a student can press repeatedly and feel productive doing. Somebody
+ * with four cards sitting in Submitted does not need a bigger board; they
+ * need those looked at, and generating more would turn the completion figures
+ * that make their record mean anything into noise.
+ *
+ * Returns a sentence to show them, or null when they are clear to ask.
+ */
+export function canAskForMore(
+  state: ProjectState,
+  limits = { maxOpen: 8, maxAwaiting: 3 },
+): string | null {
+  if (state.status === 'draft') {
+    return 'Start the project first — link a repository and there will be somewhere for work to land.'
+  }
+  if (state.status !== 'active') {
+    return 'This project is finished.'
+  }
+
+  const waiting = awaitingSomeone(state).length
+  if (waiting > limits.maxAwaiting) {
+    return `You have ${waiting} tasks waiting to be checked. Those come back before it is worth planning more.`
+  }
+
+  const stillOpen = open(state).length
+  if (stillOpen > limits.maxOpen) {
+    return `There are already ${stillOpen} tasks open. Finish or set aside some of those first.`
+  }
+
+  return null
+}
+
+/**
+ * What has happened so far, written for a planner to read.
+ *
+ * Plain prose rather than JSON, and short. The model does not need the board;
+ * it needs the handful of facts that change what it should suggest next, and
+ * every extra line is prompt tokens on a call that runs on demand.
+ *
+ * Ordered by how much each part should influence the next task: what went
+ * wrong first, because repeating a theme somebody has failed twice is the
+ * worst thing this can do; then what is stuck; then what has been achieved.
+ */
+export function progressBrief(state: ProjectState): string {
+  const lines: string[] = []
+
+  const done = completed(state)
+  const trouble = setbacks(state)
+  const stuck = blocked(state)
+  const aside = setAside(state)
+
+  if (trouble.length > 0) {
+    lines.push(
+      'Work that came back or was set aside, with what was said about it. ' +
+      'Do not propose the same thing again; if a theme keeps failing, aim at the ' +
+      'underlying gap in a smaller step:',
+    )
+    for (const t of trouble.slice(0, 8)) {
+      lines.push(`- ${t.title}${t.note ? `: ${t.note}` : ''}`)
+    }
+  }
+
+  if (aside.length > 0 && trouble.length === 0) {
+    lines.push(`${aside.length} task(s) were tried and set aside.`)
+  }
+
+  if (stuck.length > 0) {
+    lines.push('Blocked right now:')
+    for (const t of stuck.slice(0, 5)) {
+      lines.push(`- ${t.title}: ${t.blockedReason}`)
+    }
+  }
+
+  if (done.length > 0) {
+    const levels = done.map((t) => t.difficulty).filter((d): d is number => d !== null)
+    const hardest = levels.length > 0 ? Math.max(...levels) : null
+    lines.push(
+      `${done.length} task(s) finished and verified` +
+      (hardest !== null ? `, the hardest at difficulty ${hardest}.` : '.'),
+    )
+  } else {
+    lines.push('Nothing has been finished yet.')
+  }
+
+  const waiting = awaitingSomeone(state).length
+  if (waiting > 0) lines.push(`${waiting} task(s) are submitted and waiting to be checked.`)
+
+  return lines.join('\n')
+}

@@ -209,6 +209,7 @@ export default function WorkspaceClient({
               tasks={tasks}
               verdicts={verdicts}
               members={workspace.members}
+              workspaceStatus={workspace.status}
               dependencies={dependencies}
               decisions={decisions}
               userId={userId}

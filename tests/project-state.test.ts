@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   completed, inFlight, notStarted, open, setAside, blocked, awaitingSomeone, setbacks,
+  canAskForMore, progressBrief,
   type ProjectState, type StateTask,
 } from '../src/lib/workspace/project-state'
 import { canMoveTo, TASK_STATUSES, BOARD_COLUMNS, isOnBoard, type TaskStatus } from '../src/lib/workspace/tasks'
@@ -152,5 +153,69 @@ describe('setbacks', () => {
 
   it('is empty on a project where nothing has gone wrong', () => {
     expect(setbacks(state([task({ status: 'verified', latestVerdict: 'verified' })]))).toEqual([])
+  })
+})
+
+describe('canAskForMore', () => {
+  const active = (tasks: StateTask[]) => state(tasks)
+
+  it('lets a student with a nearly empty board ask', () => {
+    expect(canAskForMore(active([task({ status: 'verified' })]))).toBeNull()
+  })
+
+  // The guard that matters. Somebody with a pile waiting to be checked needs
+  // those looked at, not a bigger board.
+  it('refuses while too much is waiting to be checked', () => {
+    const waiting = Array.from({ length: 4 }, (_, i) => task({ id: `s${i}`, status: 'submitted' }))
+    expect(canAskForMore(active(waiting))).toMatch(/waiting to be checked/i)
+  })
+
+  it('refuses when the board is already full of open work', () => {
+    const open = Array.from({ length: 9 }, (_, i) => task({ id: `p${i}`, status: 'planned' }))
+    expect(canAskForMore(active(open))).toMatch(/already 9 tasks open/i)
+  })
+
+  // Set-aside work is finished, so it must not count towards the open cap —
+  // otherwise abandoning things would lock you out of asking for more, which
+  // is the opposite of the incentive the status exists to create.
+  it('does not count set-aside work towards the open cap', () => {
+    const aside = Array.from({ length: 9 }, (_, i) =>
+      task({ id: `a${i}`, status: 'abandoned', abandonedReason: 'Did not work.' }))
+    expect(canAskForMore(active(aside))).toBeNull()
+  })
+
+  it('refuses on a project that has not started', () => {
+    expect(canAskForMore({ ...state([]), status: 'draft' })).toMatch(/Start the project first/i)
+  })
+
+  it('refuses on a finished project', () => {
+    expect(canAskForMore({ ...state([]), status: 'closed' })).toMatch(/finished/i)
+  })
+})
+
+describe('progressBrief', () => {
+  it('leads with what went wrong', () => {
+    const brief = progressBrief(state([
+      task({ id: 'a', status: 'doing', latestVerdict: 'needs_work', verdictNote: 'Error paths are untested.' }),
+      task({ id: 'b', status: 'verified', difficulty: 6 }),
+    ]))
+    expect(brief.indexOf('Error paths are untested.')).toBeLessThan(brief.indexOf('finished and verified'))
+  })
+
+  it('names the hardest thing finished', () => {
+    const brief = progressBrief(state([
+      task({ id: 'a', status: 'verified', difficulty: 3 }),
+      task({ id: 'b', status: 'verified', difficulty: 7 }),
+    ]))
+    expect(brief).toMatch(/hardest at difficulty 7/)
+  })
+
+  it('says plainly when nothing is done yet', () => {
+    expect(progressBrief(state([task({ status: 'planned' })]))).toMatch(/Nothing has been finished yet/)
+  })
+
+  it('reports what is blocked and why', () => {
+    const brief = progressBrief(state([task({ blockedReason: 'Waiting on an API key.' })]))
+    expect(brief).toMatch(/Waiting on an API key\./)
   })
 })

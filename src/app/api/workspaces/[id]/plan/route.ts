@@ -9,6 +9,7 @@ import { planProject } from '@/lib/agents/planner'
 import { assigneeForRole, type MemberRow, type WorkRole } from '@/lib/workspace/membership'
 import { POSITION_STEP } from '@/lib/workspace/tasks'
 import { requireUuid, ValidationError } from '@/lib/http/validate'
+import { loadProjectState, canAskForMore, progressBrief } from '@/lib/workspace/project-state'
 
 /**
  * POST /api/workspaces/[id]/plan — draft a plan.
@@ -96,6 +97,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: agentLimit.message }, { status: 429 })
   }
 
+  // What has happened so far, read rather than rescanned — the verifier has
+  // already decided what is finished, and re-deriving it from the same
+  // commits is how a planner ends up disagreeing with a verdict the student
+  // was shown. See project-state.ts.
+  const state = await loadProjectState(supabase, workspaceId)
+
+  // Refused before the money is spent, not after. A student with four cards
+  // waiting to be checked does not need a bigger board, and generating more
+  // would turn their completion figures into noise.
+  if (state) {
+    const refusal = canAskForMore(state)
+    if (refusal) return NextResponse.json({ error: refusal }, { status: 409 })
+  }
+
   const plan = await planProject(admin, user.id, {
     title: workspace.title as string,
     summary: workspace.summary as string | null,
@@ -105,6 +120,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // Sent so a second run tops the board up instead of proposing the same
     // eight tasks again.
     existingTitles: (existing ?? []).map((t) => t.title as string).slice(0, 60),
+    // Omitted on a board with no history, where it would be a paragraph
+    // saying nothing had happened yet.
+    progress: state && state.tasks.length > 0 ? progressBrief(state) : null,
   })
 
   if (!plan) {
