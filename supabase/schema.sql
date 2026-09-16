@@ -691,7 +691,7 @@ create table agent_calls (
   id           uuid default gen_random_uuid() primary key,
   agent_type   text not null check (agent_type in (
                  'posting', 'brief', 'goals', 'taxonomy', 'work_summary', 'planner',
-                 'verification', 'retro')),
+                 'verification', 'retro', 'kickoff')),
   student_id   uuid references students(id) on delete cascade,
   poster_id    uuid,
   input        jsonb not null,

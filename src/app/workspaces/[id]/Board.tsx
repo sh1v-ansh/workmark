@@ -102,6 +102,10 @@ export default function Board({
   const [startingSprint, setStartingSprint] = useState(false)
   const [endingSprint, setEndingSprint] = useState(false)
   const [lastRetro, setLastRetro] = useState<string | null>(null)
+  const [checkingScope, setCheckingScope] = useState(false)
+  const [scopeCheck, setScopeCheck] = useState<
+    { verdict: string; reasoning: string; suggestion: string } | null
+  >(null)
   const [reviewVerdict, setReviewVerdict] = useState<HumanVerdict | null>(null)
   const [reviewNote, setReviewNote] = useState('')
   const verdictFor = new Map(verdicts.map((v) => [v.taskId, v]))
@@ -255,6 +259,23 @@ export default function Board({
     const ok = await send(`/api/workspaces/${workspaceId}/sprints`,
       { method: 'POST', body: JSON.stringify({ goal: sprintGoal || null }) }, 'Week started.')
     if (ok) { setStartingSprint(false); setSprintGoal('') }
+  }
+
+  async function checkScopeNow() {
+    if (!sprint) return
+    setCheckingScope(true)
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/sprints/${sprint.id}/check`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Could not check this week.')
+      setScopeCheck(data)
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
+    } finally {
+      setCheckingScope(false)
+    }
   }
 
   async function endSprint() {
@@ -487,14 +508,27 @@ export default function Board({
                   })()}
                 </p>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={endSprint}
-                busyLabel={endingSprint ? 'Reviewing…' : null}
-              >
-                End the week
-              </Button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {/* Before, not after. A review says what happened; this says
+                    "that is three weeks of work" while there is still time to
+                    change it. */}
+                <Button
+                  variant="quiet"
+                  size="sm"
+                  onClick={checkScopeNow}
+                  busyLabel={checkingScope ? 'Checking…' : null}
+                >
+                  Is this doable?
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={endSprint}
+                  busyLabel={endingSprint ? 'Reviewing…' : null}
+                >
+                  End the week
+                </Button>
+              </div>
             </>
           ) : (
             <>
@@ -843,6 +877,36 @@ export default function Board({
         history={editing ? decisionsFor.get(editing.id) ?? [] : []}
         nameOf={nameOf}
       />
+
+      <Modal
+        open={scopeCheck !== null}
+        onClose={() => setScopeCheck(null)}
+        title={
+          scopeCheck?.verdict === 'too_much' ? 'This is more than a week'
+            : scopeCheck?.verdict === 'tight' ? 'Tight, but possible'
+              : 'This looks about right'
+        }
+      >
+        {scopeCheck && (
+          <>
+            <p style={{ fontSize: T.body, color: C.textMuted, lineHeight: 1.7, marginBottom: 14 }}>
+              {scopeCheck.reasoning}
+            </p>
+            <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '12px 14px', marginBottom: 20 }}>
+              <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.textFaint, marginBottom: 5 }}>
+                What to change
+              </p>
+              <p style={{ fontSize: T.bodySm, color: C.textSub, lineHeight: 1.65 }}>
+                {scopeCheck.suggestion}
+              </p>
+            </div>
+            {/* Nothing is applied. It is advice, and the plan stays theirs. */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Button onClick={() => setScopeCheck(null)}>Got it</Button>
+            </div>
+          </>
+        )}
+      </Modal>
 
       <Modal open={startingSprint} onClose={() => setStartingSprint(false)} title="Start a week">
         <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>

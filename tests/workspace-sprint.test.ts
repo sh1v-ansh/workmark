@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   currentSprint, isOverdue, daysRemaining, progressOf, canClose,
-  nextDates, nextName, retroBrief,
+  nextDates, nextName, retroBrief, kickoffBrief,
   SPRINT_DAYS, OVERDUE_GRACE_DAYS,
   type Sprint, type SprintTask,
 } from '../src/lib/workspace/sprint'
@@ -162,5 +162,54 @@ describe('retroBrief', () => {
   it('marks a slip that was never explained', () => {
     const brief = retroBrief(sprint(), [], { slipped: [{ title: 'Auth', reason: null }], setbacks: [] })
     expect(brief).toMatch(/no reason given/)
+  })
+})
+
+describe('kickoffBrief', () => {
+  const s = sprint()
+  const t = (extra: Partial<SprintTask> = {}) => task({ ...extra })
+
+  // The one number nobody has ever told a student about themselves, and the
+  // reason this is worth a model call at all.
+  it('turns estimate bias into the hours it actually means', () => {
+    const brief = kickoffBrief(s, [t({ estimateHours: 10 })], { bias: 0.4, spread: 0.3, sample: 8 })
+    expect(brief).toMatch(/underestimate by about 40%/)
+    expect(brief).toMatch(/nearer 14/)
+  })
+
+  it('says so plainly when there is not enough history', () => {
+    const brief = kickoffBrief(s, [t()], { bias: null, spread: null, sample: 0 })
+    expect(brief).toMatch(/Not enough finished work yet/)
+    expect(brief).toMatch(/Do not guess/)
+  })
+
+  // A small sample is the same as none. Telling somebody they underestimate
+  // by 40% on the basis of two tasks is a number that looks like knowledge.
+  it('treats too small a sample as no history', () => {
+    expect(kickoffBrief(s, [t()], { bias: 0.4, spread: 0.2, sample: 2 }))
+      .toMatch(/Not enough finished work yet/)
+  })
+
+  it('flags tasks carrying no estimate, which understate the week', () => {
+    const brief = kickoffBrief(s, [t({ id: 'a', estimateHours: 4 }), t({ id: 'b', estimateHours: null })],
+      { bias: null, spread: null, sample: 0 })
+    expect(brief).toMatch(/1 of them carry no estimate/)
+  })
+
+  it('names the hardest task', () => {
+    const brief = kickoffBrief(s, [t({ id: 'a', difficulty: 3 }), t({ id: 'b', difficulty: 8 })],
+      { bias: null, spread: null, sample: 0 })
+    expect(brief).toMatch(/difficulty 8 of 10/)
+  })
+
+  it('reports overestimating in the other direction', () => {
+    expect(kickoffBrief(s, [t({ estimateHours: 10 })], { bias: -0.25, spread: 0.2, sample: 9 }))
+      .toMatch(/overestimate by about 25%/)
+  })
+
+  it("counts only this weeks tasks", () => {
+    const brief = kickoffBrief(s, [t({ id: 'a', estimateHours: 4 }), t({ id: 'b', estimateHours: 99, sprintId: 'other' })],
+      { bias: null, spread: null, sample: 0 })
+    expect(brief).toMatch(/1 task\(s\), 4 estimated hours/)
   })
 })

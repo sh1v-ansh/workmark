@@ -5,6 +5,7 @@ import { rollupAll } from '@/lib/workspace/rollup'
 import { sweepWorkspaceEvidence } from '@/lib/workspace/evidence'
 import { recomputeCalibration } from '@/lib/skills/calibration'
 import { sweepAttention } from '@/lib/workspace/notify'
+import { backfillListingQuestions } from '@/lib/agents/application-questions'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,6 +114,18 @@ export async function POST(request: Request) {
     console.error('[cron/nightly] attention sweep failed:', err)
   }
 
+  // Catching up rather than rescuing: a listing with no questions of its own
+  // already shows the fallback pair. Last, and bounded, because it is the one
+  // step here whose only cost is money and whose absence nobody notices.
+  let questions: unknown = null
+  let questionsError: string | null = null
+  try {
+    questions = await backfillListingQuestions(admin)
+  } catch (err) {
+    questionsError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[cron/nightly] question backfill failed:', err)
+  }
+
   let rollups: unknown = null
   let rollupError: string | null = null
   try {
@@ -126,11 +139,12 @@ export async function POST(request: Request) {
   // back, so a status code here reaches nobody — the body is for a person
   // running it by hand, and the console is where a failure is actually found.
   return NextResponse.json({
-    ok: !verifyError && !evidenceError && !calibrationError && !attentionError && !rollupError,
+    ok: !verifyError && !evidenceError && !calibrationError && !attentionError && !questionsError && !rollupError,
     verification: verification ?? { error: verifyError },
     evidence: evidence ?? { error: evidenceError },
     calibration: calibration ?? { error: calibrationError },
     attention: attention ?? { error: attentionError },
+    questions: questions ?? { error: questionsError },
     rollups: rollups ?? { error: rollupError },
   })
 }

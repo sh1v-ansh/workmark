@@ -40,6 +40,10 @@ export const AGENT_LIMITS: Record<AgentType, RateLimit> = {
   // student closing out several projects on the same evening, which happens
   // at the end of a term; anything beyond that is a loop.
   retro: { max: 4, windowHours: 24 },
+  // Once at the start of a week, and people do re-check after moving cards
+  // around. Six a day covers somebody planning three projects and changing
+  // their mind twice.
+  kickoff: { max: 6, windowHours: 24 },
   // A project gets planned once, then topped up occasionally as it grows.
   // Six a day covers a student with three projects who redrafts one of them,
   // and stops a loop that would draft eight tasks a second.

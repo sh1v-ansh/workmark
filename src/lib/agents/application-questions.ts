@@ -90,3 +90,71 @@ export async function writeApplicationQuestions(
     hint: q.hint,
   }))
 }
+
+/**
+ * How many listings one nightly pass writes questions for.
+ *
+ * Small, because each is a model call and there is no hurry: a listing with
+ * no questions of its own still shows the fallback pair, which is a good pair
+ * rather than a placeholder. This is catching up, not rescuing anybody.
+ */
+export const MAX_BACKFILL_PER_NIGHT = 10
+
+/**
+ * Write questions for listings that have none.
+ *
+ * Two kinds end up here. Listings posted before the feature existed, and
+ * listings whose generation failed at post time — that call is best-effort so
+ * a slow model cannot make a listing unpostable, which means failures are
+ * expected and something has to pick them up.
+ *
+ * Only open listings. A closed or filled one will never be applied to again,
+ * so a model call on it is money spent on nothing.
+ */
+export async function backfillListingQuestions(
+  admin: SupabaseClient,
+  limit: number = MAX_BACKFILL_PER_NIGHT,
+): Promise<{ written: number; failed: number }> {
+  const { data: listings } = await admin
+    .from('listings')
+    .select('id, poster_id, title, brief')
+    .eq('status', 'open')
+    .is('application_questions', null)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  let written = 0
+  let failed = 0
+
+  for (const listing of listings ?? []) {
+    try {
+      const { data: reqs } = await admin
+        .from('listing_requirements')
+        .select('skill_id')
+        .eq('listing_id', listing.id as string)
+
+      const questions = await writeApplicationQuestions(admin, listing.poster_id as string, {
+        title: listing.title as string,
+        description: (listing.brief as string | null) ?? '',
+        requirements: (reqs ?? []).map((r) => String(r.skill_id)),
+      })
+
+      // A refusal or an unavailable agent leaves the column null, so tomorrow
+      // tries again. Writing an empty array to stop the retry would be worse:
+      // the fallback already covers the reader, and a listing permanently
+      // marked "attempted" is one nobody ever looks at again.
+      if (!questions) { failed++; continue }
+
+      await admin
+        .from('listings')
+        .update({ application_questions: questions })
+        .eq('id', listing.id as string)
+      written++
+    } catch (err) {
+      console.error(`[agents/application-questions] backfill failed for ${listing.id}:`, err)
+      failed++
+    }
+  }
+
+  return { written, failed }
+}

@@ -230,3 +230,56 @@ export function toSprint(row: Record<string, unknown>): Sprint {
     retro: (row.retro as string | null) ?? null,
   }
 }
+
+/**
+ * The facts a scope check is made from.
+ *
+ * The one number that matters is estimate bias, and it is the reason this is
+ * worth asking at all: somebody who underestimates by 40% every week is not
+ * bad at their job, they are predictably optimistic, and the fix is arithmetic
+ * rather than advice. Nobody tells a student that, because nobody has ever
+ * measured it about them before.
+ *
+ * Null bias means not enough history to say, which is the common case early
+ * on and must be stated rather than guessed around.
+ */
+export function kickoffBrief(
+  sprint: Sprint,
+  tasks: SprintTask[],
+  estimation: { bias: number | null; spread: number | null; sample: number },
+): string {
+  const mine = tasks.filter((t) => t.sprintId === sprint.id)
+  const hours = mine.reduce((sum, t) => sum + (t.estimateHours ?? 0), 0)
+  const unestimated = mine.filter((t) => t.estimateHours === null).length
+  const hardest = mine.map((t) => t.difficulty).filter((d): d is number => d !== null)
+
+  const lines = [
+    `Week: ${sprint.name}${sprint.goal ? ` — goal: ${sprint.goal}` : ' (no goal set)'}`,
+    `Committed: ${mine.length} task(s), ${hours || 'no'} estimated hours.`,
+  ]
+
+  if (unestimated > 0) {
+    lines.push(`${unestimated} of them carry no estimate at all, so the hours above understate the week.`)
+  }
+  if (hardest.length > 0) {
+    lines.push(`Hardest task is difficulty ${Math.max(...hardest)} of 10.`)
+  }
+
+  if (estimation.bias === null || estimation.sample < 4) {
+    lines.push('Not enough finished work yet to know how this person estimates. Do not guess at it.')
+  } else {
+    const pct = Math.round(estimation.bias * 100)
+    lines.push(
+      pct > 0
+        ? `They underestimate by about ${pct}% on past tasks, so ${hours} planned hours has historically meant nearer ${Math.round(hours * (1 + estimation.bias))}.`
+        : pct < 0
+          ? `They overestimate by about ${Math.abs(pct)}% on past tasks.`
+          : 'Their estimates have been close to right on average.',
+    )
+    if (estimation.spread !== null) {
+      lines.push(`Their typical error either way is about ${Math.round(estimation.spread * 100)}%.`)
+    }
+  }
+
+  return lines.join('\n')
+}

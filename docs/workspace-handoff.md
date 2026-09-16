@@ -540,7 +540,12 @@ Everything below is unbuilt. Ordered by what blocks what.
 - [x] Migrations `0025`–`0035` are applied.
 - [x] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
       pg_cron.
-- [ ] **Run migrations `v05_0038`–`v05_0042`.** `0040` adds
+- [x] Migrations `v05_0038`–`v05_0043` are applied.
+- [ ] **Run migration `v05_0044`.** Adds `kickoff` to the `agent_calls`
+      agent_type check. Until it runs, the sprint scope check fails when it
+      tries to write its audit row.
+
+  Superseded note: `0040` adds
       token columns to `agent_calls`, `sender_kind` to `workspace_messages`,
       and the `abandoned` task status. Until it runs, every agent call logs a
       null cost and setting a task aside fails the status check. `0038` schedules the
@@ -624,9 +629,15 @@ What is still thin here:
       is corroboration failing, not the claim failing. A partly fallen basis
       and a basis that was never recorded both go to a person — the second
       because a missing audit row is our logging gap, not the student's.
-- [ ] **Nothing shows a student their own `task_decisions` outside a project
-      they can still open.** After a workspace is deleted the log cascades
-      with it. That is probably right, and it is worth deciding on purpose.
+- [x] **`task_decisions` cascading with a deleted workspace is correct**, and
+      this is the deliberate decision rather than an oversight. Checked the
+      foreign keys: `artifacts.workspace_id` and `skill_evidence.workspace_id`
+      are both `on delete set null`, so deleting a project leaves the evidence
+      standing, and `evidence_audit` — which holds the task titles, the
+      criteria agreed in advance, the verdicts and who confirmed them — hangs
+      off `skill_evidence` and survives with it. The durable record a dispute
+      argues with is therefore intact; `task_decisions` is the working log of a
+      board that no longer exists.
 
 ### 7.3 Tables that exist with no UI
 
