@@ -44,6 +44,11 @@ export const AGENT_LIMITS: Record<AgentType, RateLimit> = {
   // around. Six a day covers somebody planning three projects and changing
   // their mind twice.
   kickoff: { max: 6, windowHours: 24 },
+  // The only conversational call here, and the only one somebody can hold a
+  // back-and-forth with. Thirty a day is a student stuck on three different
+  // things and working through each; beyond that they are using it as a
+  // compiler, which the prompt refuses to be anyway.
+  helper: { max: 30, windowHours: 24 },
   // A project gets planned once, then topped up occasionally as it grows.
   // Six a day covers a student with three projects who redrafts one of them,
   // and stops a loop that would draft eight tasks a second.

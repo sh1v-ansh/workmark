@@ -541,7 +541,12 @@ Everything below is unbuilt. Ordered by what blocks what.
 - [x] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
       pg_cron.
 - [x] Migrations `v05_0038`–`v05_0043` are applied.
-- [ ] **Run migration `v05_0044`.** Adds `kickoff` to the `agent_calls`
+- [ ] **Run migrations `v05_0044` and `v05_0045`.** `0044` adds `kickoff`,
+      `0045` adds `helper`, both to the `agent_calls` agent_type check. Until
+      they run, the sprint scope check and task discussion fail when they try
+      to write their audit row.
+
+  Superseded: Adds `kickoff` to the `agent_calls`
       agent_type check. Until it runs, the sprint scope check fails when it
       tries to write its audit row.
 
@@ -665,7 +670,30 @@ Each of these is a migration already applied and nothing writing to it.
 - [ ] **Checkpoints** — `task_checkpoints`. The short before/blocked/after
       questions. Keep them rare; a workspace that interrogates you is one
       people stop opening.
-- [ ] **Messages** — `workspace_messages`. Project-wide and per-task.
+- [x] **Messages** — `workspace_messages`, per task. `lib/workspace/messages.ts`
+      holds the rules; `lib/agents/helper.ts` is the senior engineer.
+
+      **The agent answers only when named** (`@workmark`). Not "when a message
+      looks like a question", not "when nobody has replied" — every other
+      trigger is unbounded spend by construction, and an assistant that
+      answers everything is one a team cannot talk around. Six answers per
+      task, then it says the task is probably too big. Six messages of context
+      rather than the whole thread.
+
+      **It will not write the implementation**, and the prompt says so three
+      times. A student who pastes an answer into their editor has produced
+      evidence of prompting, and the record would then say they can do
+      something they cannot — the exact failure Workmark exists to prevent,
+      arriving through the front door. A short illustration of an unfamiliar
+      API is fine; the solution to their task is not.
+
+      Per task rather than project-wide: a task thread carries its own context
+      — the card, its criteria, what the checker said — which is both a better
+      answer and a cheaper one than handing a model the whole board.
+
+      Still open: project-wide threads, and nothing emails anybody about a
+      reply. `workspace_messages.task_id` is nullable and the loader filters
+      to non-null, so the project-wide case is additive when it is wanted.
 - [ ] **Files and presentations** — `workspace_files` holds metadata; the
       Supabase Storage bucket does not exist yet. Needs a bucket, a storage
       policy calling `is_workspace_member`, a type allowlist, a size cap and

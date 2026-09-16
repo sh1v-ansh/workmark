@@ -7,6 +7,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { toSprint, type Sprint } from './sprint'
+import type { Message } from './messages'
 import type { MemberRole, WorkRole } from './membership'
 import type { TaskStatus, TaskPriority } from './tasks'
 import type { WorkspaceMetrics } from './metrics'
@@ -639,4 +640,42 @@ export async function loadSprints(
     .order('starts_on', { ascending: false })
 
   return (data ?? []).map(toSprint)
+}
+
+/**
+ * Every task thread on a project, keyed by task.
+ *
+ * One query for the whole board rather than one per card, the same shape
+ * loadVerdicts uses. A project's messages are small — four people and a few
+ * dozen cards — so the alternative is a round trip every time somebody opens
+ * a task.
+ */
+export async function loadMessages(
+  supabase: SupabaseClient,
+  workspaceId: string,
+): Promise<Map<string, Message[]>> {
+  const { data } = await supabase
+    .from('workspace_messages')
+    .select('id, task_id, sender_id, sender_kind, body, created_at')
+    .eq('workspace_id', workspaceId)
+    .not('task_id', 'is', null)
+    .order('created_at')
+    .limit(500)
+
+  const byTask = new Map<string, Message[]>()
+  for (const row of data ?? []) {
+    const taskId = row.task_id as string
+    const message: Message = {
+      id: row.id as string,
+      taskId,
+      senderId: (row.sender_id as string | null) ?? null,
+      senderKind: (row.sender_kind as 'member' | 'agent') ?? 'member',
+      body: row.body as string,
+      createdAt: (row.created_at as string | null) ?? null,
+    }
+    const bucket = byTask.get(taskId)
+    if (bucket) bucket.push(message)
+    else byTask.set(taskId, [message])
+  }
+  return byTask
 }

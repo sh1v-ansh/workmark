@@ -9,6 +9,7 @@ import { canAskForMore } from '@/lib/workspace/project-state'
 import {
   currentSprint, progressOf, isOverdue, daysRemaining, type Sprint,
 } from '@/lib/workspace/sprint'
+import { MENTION, type Message } from '@/lib/workspace/messages'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/Toast'
 import { C, R, T } from '@/lib/theme/dark-tokens'
@@ -62,6 +63,7 @@ export default function Board({
   tasks,
   verdicts,
   sprints,
+  messages,
   members,
   dependencies,
   decisions,
@@ -73,6 +75,7 @@ export default function Board({
   tasks: BoardTask[]
   verdicts: TaskVerdict[]
   sprints: Sprint[]
+  messages: [string, Message[]][]
   members: TeamMember[]
   dependencies: TaskDependency[]
   decisions: TaskDecision[]
@@ -103,6 +106,10 @@ export default function Board({
   const [endingSprint, setEndingSprint] = useState(false)
   const [lastRetro, setLastRetro] = useState<string | null>(null)
   const [checkingScope, setCheckingScope] = useState(false)
+  const [talking, setTalking] = useState<BoardTask | null>(null)
+  const [draftMessage, setDraftMessage] = useState('')
+  const [sending, setSending] = useState(false)
+  const threadsByTask = new Map(messages)
   const [scopeCheck, setScopeCheck] = useState<
     { verdict: string; reasoning: string; suggestion: string } | null
   >(null)
@@ -259,6 +266,29 @@ export default function Board({
     const ok = await send(`/api/workspaces/${workspaceId}/sprints`,
       { method: 'POST', body: JSON.stringify({ goal: sprintGoal || null }) }, 'Week started.')
     if (ok) { setStartingSprint(false); setSprintGoal('') }
+  }
+
+  async function sendMessage() {
+    if (!talking || !draftMessage.trim()) return
+    setSending(true)
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${talking.id}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: draftMessage }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Could not send that.')
+      setDraftMessage('')
+      // Said out loud rather than swallowed: somebody who typed a mention and
+      // saw nothing happen concludes the feature is broken.
+      if (data.note) toast(data.note, 'info')
+      router.refresh()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
+    } finally {
+      setSending(false)
+    }
   }
 
   async function checkScopeNow() {
@@ -747,6 +777,20 @@ export default function Board({
                       >
                         {task.blockedAt ? 'Unblock' : 'Block'}
                       </button>
+                      <button
+                        type="button"
+                        onClick={() => { setTalking(task); setDraftMessage('') }}
+                        title="Discuss this task, or ask Workmark"
+                        style={{
+                          fontSize: T.meta, padding: '3px 7px', borderRadius: R.sm, cursor: 'pointer',
+                          border: `1px solid ${C.border}`, background: C.bg, color: C.textGhost,
+                        }}
+                      >
+                        {(() => {
+                          const n = (threadsByTask.get(task.id) ?? []).length
+                          return n > 0 ? `Discuss (${n})` : 'Discuss'
+                        })()}
+                      </button>
                       {/* Only where it is a real answer. Verified work cannot
                           be taken back, and nothing in Backlog was ever
                           attempted, so offering it there is noise. */}
@@ -877,6 +921,77 @@ export default function Board({
         history={editing ? decisionsFor.get(editing.id) ?? [] : []}
         nameOf={nameOf}
       />
+
+      {/* The task thread.
+          Per task rather than project-wide, because a task thread carries its
+          own context — the card, its criteria, what the checker said — which
+          is both a better answer and a cheaper one than handing a model the
+          whole board to answer something specific. */}
+      <Modal
+        open={talking !== null}
+        onClose={() => { setTalking(null); setDraftMessage('') }}
+        title="Discussion"
+        subtitle={talking?.title}
+      >
+        {talking && (
+          <>
+            {(threadsByTask.get(talking.id) ?? []).length === 0 ? (
+              <p style={{ fontSize: T.bodySm, color: C.textFaint, lineHeight: 1.6, marginBottom: 16 }}>
+                Nothing here yet. Talk to your team, or type {MENTION} to ask Workmark about this task.
+              </p>
+            ) : (
+              <div style={{ display: 'grid', gap: 10, marginBottom: 16, maxHeight: 320, overflowY: 'auto' }}>
+                {(threadsByTask.get(talking.id) ?? []).map((m) => (
+                  <div
+                    key={m.id}
+                    style={{
+                      padding: '10px 12px', borderRadius: R.md,
+                      background: m.senderKind === 'agent' ? C.surfaceAlt : C.surface,
+                      border: `1px solid ${m.senderKind === 'agent' ? C.border : C.borderFaint}`,
+                    }}
+                  >
+                    <p style={{ fontSize: T.meta, fontWeight: 600, color: C.textFaint, marginBottom: 4 }}>
+                      {m.senderKind === 'agent' ? 'Workmark' : (nameOf(m.senderId) ?? 'Someone')}
+                    </p>
+                    <p style={{ fontSize: T.bodySm, color: C.textSub, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                      {m.body}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!readOnly && (
+              <>
+                <textarea
+                  className="dk-input"
+                  value={draftMessage}
+                  onChange={(e) => setDraftMessage(e.target.value)}
+                  placeholder={`Ask your team, or ${MENTION} to ask Workmark`}
+                  rows={3}
+                  maxLength={4000}
+                  style={{ marginBottom: 6, resize: 'vertical' }}
+                />
+                {/* Said up front, because the limit is the point rather than a
+                    disappointment: it explains, it does not write the code. */}
+                <p style={{ fontSize: T.meta, color: C.textGhost, marginBottom: 14, lineHeight: 1.5 }}>
+                  Workmark answers when you name it. It will explain and point you at things — it will not
+                  write the task for you, because then the record would be about the wrong person.
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    onClick={sendMessage}
+                    disabled={!draftMessage.trim()}
+                    busyLabel={sending ? 'Sending…' : null}
+                  >
+                    Send
+                  </Button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </Modal>
 
       <Modal
         open={scopeCheck !== null}
