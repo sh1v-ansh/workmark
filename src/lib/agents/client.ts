@@ -111,33 +111,57 @@ async function callInternal<T>(
   const client = getAnthropic()
   if (!client) return null
 
-  const response = await client.messages.create({
-    model: AGENT_MODEL,
-    max_tokens: MAX_TOKENS,
-    // Structured drafting doesn't need reasoning; Sonnet 5 runs adaptive
-    // thinking by default when omitted, so disable it explicitly to keep
-    // these calls cheap and their token use predictable.
-    thinking: { type: 'disabled' },
-    // Cached, because every agent here sends a long fixed system prompt and
-    // a short variable user message. A second call of the same kind within
-    // the cache window reads the prompt at a fraction of the input rate, and
-    // agent_calls records cache_read_tokens separately so the saving is
-    // visible rather than assumed.
-    //
-    // A block, not a string, because only the block form takes cache_control.
-    // The boundary is appended here rather than in each agent so a new agent
-    // cannot ship without it — see untrusted.ts for what it says and why —
-    // and it stays inside the cached block so the cache key covers it.
-    system: [
+  // Every failure mode of this call has to come back as null rather than as a
+  // throw. An Anthropic error escaping here propagates out of whatever route
+  // called it, Next turns it into an HTML 500, and the client's `res.json()`
+  // then fails — so the browser shows a generic fallback and the actual cause
+  // reaches nobody. That is how a rate limit, an overloaded model and a
+  // malformed schema all became the same unreadable error.
+  //
+  // Routes already handle null: they return a 502 with a sentence somebody can
+  // read. This makes that path the only one.
+  let response: Anthropic.Message
+  try {
+      response = await client.messages.create({
+      model: AGENT_MODEL,
+      max_tokens: MAX_TOKENS,
+      // Structured drafting doesn't need reasoning; Sonnet 5 runs adaptive
+      // thinking by default when omitted, so disable it explicitly to keep
+      // these calls cheap and their token use predictable.
+      thinking: { type: 'disabled' },
+      // Cached, because every agent here sends a long fixed system prompt and
+      // a short variable user message. A second call of the same kind within
+      // the cache window reads the prompt at a fraction of the input rate, and
+      // agent_calls records cache_read_tokens separately so the saving is
+      // visible rather than assumed.
+      //
+      // A block, not a string, because only the block form takes cache_control.
+      // The boundary is appended here rather than in each agent so a new agent
+      // cannot ship without it — see untrusted.ts for what it says and why —
+      // and it stays inside the cached block so the cache key covers it.
+      system: [
       {
         type: 'text' as const,
         text: args.system + UNTRUSTED_BOUNDARY,
         cache_control: { type: 'ephemeral' as const },
       },
-    ],
-    output_config: { format: { type: 'json_schema', schema: args.schema } },
-    messages: [{ role: 'user', content: args.userContent }],
-  })
+      ],
+      output_config: { format: { type: 'json_schema', schema: args.schema } },
+      messages: [{ role: 'user', content: args.userContent }],
+    })
+  } catch (err) {
+    // Logged with everything the API said, because "could not draft a plan" in
+    // a browser is not a diagnosis and the server log is the only place the
+    // real answer exists.
+    if (err instanceof Anthropic.APIError) {
+      console.error(
+        `[agents] ${args.agentType} call failed: ${err.status} ${err.name} — ${err.message}`,
+      )
+    } else {
+      console.error(`[agents] ${args.agentType} call threw:`, err)
+    }
+    return null
+  }
 
   // Safety classifiers can decline; content is empty or partial then.
   // Checked before reading content, which would otherwise throw.

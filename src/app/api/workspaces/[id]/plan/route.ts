@@ -30,6 +30,23 @@ import { loadProjectState, canAskForMore, progressBrief } from '@/lib/workspace/
  * database hiccups is not a limiter, and this endpoint spends money.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  // A backstop, not a substitute for handling errors where they happen. Next
+  // turns an uncaught throw into an HTML 500, which the client cannot parse
+  // out of `res.json()` — so the browser falls back to a generic sentence and
+  // the real cause reaches nobody. Everything below returns JSON; this makes
+  // sure the unexpected does too.
+  try {
+    return await draftPlan(request, params)
+  } catch (err) {
+    console.error('[api/workspaces/:id/plan] unhandled:', err)
+    return NextResponse.json(
+      { error: 'Something went wrong drafting the plan. Nothing was saved.' },
+      { status: 500 },
+    )
+  }
+}
+
+async function draftPlan(request: Request, params: Promise<{ id: string }>) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
