@@ -3,7 +3,7 @@ import {
   blockers, canSubmit, countWords, toneFor,
   MIN_ANSWER_WORDS, MAX_ANSWER_WORDS, type ApplicationDraft,
 } from '../src/lib/applications/gate'
-import { questionsFor, FALLBACK_QUESTIONS, QUESTION_COUNT } from '../src/lib/applications/questions'
+import { questionsFor, answerPairs, FALLBACK_QUESTIONS, QUESTION_COUNT } from '../src/lib/applications/questions'
 
 const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`).join(' ')
 
@@ -103,5 +103,24 @@ describe('questionsFor', () => {
 
   it('defaults an unknown kind rather than dropping the question', () => {
     expect(questionsFor([{ id: 'x', kind: 'nonsense', prompt: 'A long enough prompt here', hint: '' }])[0].kind).toBe('tradeoff')
+  })
+})
+
+describe('answerPairs', () => {
+  it('reads stored answers', () => {
+    const p = answerPairs([{ question: 'What would you cut?', answer: 'The export.' }])
+    expect(p).toEqual([{ question: 'What would you cut?', answer: 'The export.' }])
+  })
+
+  // A poster reviewing candidates must never get a blank panel because one
+  // jsonb row is shaped oddly; the caller falls back to the old single block.
+  it('is empty for anything it cannot read', () => {
+    expect(answerPairs(null)).toEqual([])
+    expect(answerPairs('nope')).toEqual([])
+    expect(answerPairs([{ nope: 1 }])).toEqual([])
+  })
+
+  it('drops an entry with no answer', () => {
+    expect(answerPairs([{ question: 'Q', answer: '' }])).toEqual([])
   })
 })

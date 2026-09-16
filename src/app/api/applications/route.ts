@@ -200,6 +200,17 @@ export async function POST(request: Request) {
     if (appErr.code === '23505') {
       return NextResponse.json({ error: "You've already applied to this listing." }, { status: 409 })
     }
+    // 42703 / PGRST204 = a column the code writes does not exist on the
+    // table. That is always a migration that has not been run, and it is worth
+    // saying so: the generic message sends somebody hunting through their own
+    // input for a problem that is not there.
+    if (appErr.code === '42703' || appErr.code === 'PGRST204') {
+      console.error('[api/applications] schema is behind the code:', appErr)
+      return NextResponse.json(
+        { error: 'Applications are temporarily unavailable — the database is behind the app. This is our problem, not yours.' },
+        { status: 503 },
+      )
+    }
     console.error('[api/applications] application insert failed:', appErr)
     return NextResponse.json({ error: 'Could not submit your application.' }, { status: 500 })
   }

@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { C, R, T, E } from '@/lib/theme/dark-tokens'
 import { Icon } from '@/components/Icon'
 
@@ -97,10 +98,31 @@ export default function Modal({
     }
   }, [open])
 
-  if (!open) return null
+  // Portals need a DOM to render into, which the server does not have.
+  // Mounted flips after hydration; before that the overlay renders nothing,
+  // which is correct — an overlay is never part of the first paint.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+  if (!open || !mounted) return null
+
+
+  /**
+   * Rendered into document.body rather than where it is written.
+   *
+   * A fixed overlay's z-index only competes inside its nearest stacking
+   * context, and any ancestor with a transform, a filter, a backdrop-filter or
+   * its own z-index makes one. This drawer sat at z-60 and the app header at
+   * z-40, and the header still painted over it — because the drawer's 60 was
+   * being resolved inside a context that itself sat below the header, so the
+   * number never got compared with 40 at all.
+   *
+   * Portalling to body puts it in the root stacking context, where the z-index
+   * below means what it says. It is also the only fix that stays fixed: the
+   * alternative is auditing every ancestor of every overlay forever.
+   */
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
       <div
         onClick={onClose}
         aria-hidden="true"
@@ -153,6 +175,7 @@ export default function Modal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

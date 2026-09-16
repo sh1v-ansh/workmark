@@ -118,9 +118,23 @@ async function callInternal<T>(
     // thinking by default when omitted, so disable it explicitly to keep
     // these calls cheap and their token use predictable.
     thinking: { type: 'disabled' },
-    // Appended here rather than in each agent so a new agent cannot ship
-    // without it. See untrusted.ts for what it says and why.
-    system: args.system + UNTRUSTED_BOUNDARY,
+    // Cached, because every agent here sends a long fixed system prompt and
+    // a short variable user message. A second call of the same kind within
+    // the cache window reads the prompt at a fraction of the input rate, and
+    // agent_calls records cache_read_tokens separately so the saving is
+    // visible rather than assumed.
+    //
+    // A block, not a string, because only the block form takes cache_control.
+    // The boundary is appended here rather than in each agent so a new agent
+    // cannot ship without it — see untrusted.ts for what it says and why —
+    // and it stays inside the cached block so the cache key covers it.
+    system: [
+      {
+        type: 'text' as const,
+        text: args.system + UNTRUSTED_BOUNDARY,
+        cache_control: { type: 'ephemeral' as const },
+      },
+    ],
     output_config: { format: { type: 'json_schema', schema: args.schema } },
     messages: [{ role: 'user', content: args.userContent }],
   })

@@ -111,3 +111,27 @@ export function questionsFor(stored: unknown): ApplicationQuestion[] {
 
   return parsed.length > 0 ? parsed : FALLBACK_QUESTIONS
 }
+
+export interface AnswerPair {
+  question: string
+  answer: string
+}
+
+/**
+ * Read the stored answers on an application.
+ *
+ * Tolerant for the same reason `questionsFor` is: this is a jsonb column, and
+ * a poster reviewing candidates must never get a blank panel because one row
+ * is shaped oddly. Returns empty for anything it cannot read, and the caller
+ * falls back to the pre-v05_0043 single block.
+ */
+export function answerPairs(stored: unknown): AnswerPair[] {
+  if (!Array.isArray(stored)) return []
+  return stored
+    .filter((r): r is Record<string, unknown> => typeof r === 'object' && r !== null)
+    .map((r) => ({
+      question: typeof r.question === 'string' ? r.question : '',
+      answer: typeof r.answer === 'string' ? r.answer : '',
+    }))
+    .filter((r) => r.answer.length > 0)
+}
