@@ -219,6 +219,7 @@ export default function WorkspaceClient({
               verdicts={verdicts}
               members={workspace.members}
               workspaceStatus={workspace.status}
+              workspaceDeadline={workspace.deadline}
               sprints={sprints}
               messages={messages}
               checkpoints={checkpoints}

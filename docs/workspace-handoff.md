@@ -779,8 +779,24 @@ Each of these is a migration already applied and nothing writing to it.
       `workspace_id`. RLS already gates it, so no new authorization. Keep
       drag-in-progress state out of Postgres; if it gets hot, the migration
       path is Broadcast.
-- [ ] **Calendar.** Tasks, deadlines and sprints on one timeline. Build the
-      grid; do not pull in FullCalendar.
+- [x] **Calendar** — `lib/workspace/calendar.ts` for the layout,
+      `workspaces/[id]/Calendar.tsx` for the view, toggled against the board.
+      No library: a month grid is thirty-five boxes and one modulo, and
+      FullCalendar would bring its own opinions about timezones to a product
+      whose dates do not have one.
+
+      **Every date stays a string.** `due_on`, `starts_on`, `ends_on` and
+      `deadline` are DATE columns — days, not moments. `new Date('2026-09-16')`
+      parses as midnight UTC and every local getter then reports the fifteenth
+      west of Greenwich, which would show every deadline a box early for most
+      of the Americas, Massachusetts included. Arithmetic goes through
+      `Date.UTC` on the parts and comes back out as a string; the only clock
+      read is the caller deciding what "today" is. The date tests are run under
+      `America/New_York`, `America/Los_Angeles` and `Pacific/Auckland`.
+
+      **Read-only on purpose.** Dragging a card onto a date would make this a
+      second way to edit the board, and two editors of the same data is how
+      they start disagreeing. Clicking a day opens the card.
 - [x] **Daily "what to work on today"** — `lib/workspace/today.ts`, a strip of
       three above the board. Arithmetic, and it stayed arithmetic: overdue,
       due today, how many tasks are stuck behind it, committed to this week.

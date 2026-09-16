@@ -12,6 +12,7 @@ import {
 import { MENTION, type Message } from '@/lib/workspace/messages'
 import { pending, type Checkpoint } from '@/lib/workspace/checkpoints'
 import { rankToday, emptyReason } from '@/lib/workspace/today'
+import Calendar from './Calendar'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/Toast'
 import { C, R, T } from '@/lib/theme/dark-tokens'
@@ -72,6 +73,7 @@ export default function Board({
   decisions,
   userId,
   workspaceStatus,
+  workspaceDeadline,
   readOnly = false,
 }: {
   workspaceId: string
@@ -86,6 +88,8 @@ export default function Board({
   userId: string
   /** Needed to answer "may I ask for more work" without a round trip. */
   workspaceStatus: string
+  /** The project's own end date, marked on the calendar. */
+  workspaceDeadline: string | null
   /** A closed project. The board becomes the record of what happened. */
   readOnly?: boolean
 }) {
@@ -124,6 +128,7 @@ export default function Board({
     .map((t) => ({ task: t, checkpoint: pending(checkpointsByTask.get(t.id) ?? []) }))
     .find((x) => x.checkpoint !== null && x.task.assigneeId === userId) ?? null
   const [checkpointAnswer, setCheckpointAnswer] = useState('')
+  const [view, setView] = useState<'board' | 'calendar'>('board')
 
   const [scopeCheck, setScopeCheck] = useState<
     { verdict: string; reasoning: string; suggestion: string } | null
@@ -480,7 +485,22 @@ export default function Board({
   return (
     <section>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-        <h2 style={{ fontSize: T.h2, fontWeight: 600, color: C.text }}>Board</h2>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+          <h2 style={{ fontSize: T.h2, fontWeight: 600, color: C.text }}>
+            {view === 'board' ? 'Board' : 'Calendar'}
+          </h2>
+          {/* Two views of one set of tasks, never two editors of it — the
+              calendar opens a card and nothing else. */}
+          <button
+            onClick={() => setView(view === 'board' ? 'calendar' : 'board')}
+            style={{
+              fontSize: T.meta, padding: '3px 9px', borderRadius: R.sm, cursor: 'pointer',
+              border: `1px solid ${C.border}`, background: C.surface, color: C.textMuted,
+            }}
+          >
+            {view === 'board' ? 'Calendar' : 'Board'}
+          </button>
+        </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {readOnly && (
             <span style={{ fontSize: T.meta, color: C.textGhost, alignSelf: 'center' }}>
@@ -741,7 +761,25 @@ export default function Board({
         </div>
       )}
 
-      <div className="nb-scroll" style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
+      {view === 'calendar' && (
+        <Calendar
+          tasks={tasks.map((t) => ({ id: t.id, title: t.title, status: t.status, dueOn: t.dueOn }))}
+          sprints={sprints}
+          deadline={workspaceDeadline}
+          onOpenTask={(taskId) => {
+            const full = tasks.find((t) => t.id === taskId)
+            if (full) openEdit(full)
+          }}
+        />
+      )}
+
+      <div
+        className="nb-scroll"
+        style={{
+          display: view === 'board' ? 'flex' : 'none',
+          gap: 12, overflowX: 'auto', paddingBottom: 8,
+        }}
+      >
         {BOARD_COLUMNS.map((column) => {
           // Children are drawn under their parent rather than as cards of
           // their own, so a task broken into three does not take four slots
