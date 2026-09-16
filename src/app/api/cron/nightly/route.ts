@@ -3,6 +3,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { sweepVerification } from '@/lib/workspace/run-verification'
 import { rollupAll } from '@/lib/workspace/rollup'
 import { sweepWorkspaceEvidence } from '@/lib/workspace/evidence'
+import { recomputeCalibration } from '@/lib/skills/calibration'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,17 +30,20 @@ export const maxDuration = 60
  * One endpoint rather than three schedules because the order is a real
  * dependency, not a preference:
  *
- *   verify, then mint evidence, then rollups
+ *   verify, then mint evidence, then recalibrate, then rollups
  *
- * Verification first because the other two read its verdicts. Minting second
+ * Verification first because the others read its verdicts. Minting second
  * because a project that closed while GitHub was slow has a record owed to
  * somebody and nothing else will notice. Rollups last: they turn a day of
  * board moves into plan-versus-reality figures, and run before the verdicts
  * land they would describe a day in which nothing was ever verified — every
  * student's technical figures a day stale, for as long as the schedule stayed
- * wrong. Cheap to get right once; very hard to notice afterwards.
+ * wrong. Cheap to get right once; very hard to notice afterwards. Calibration
+ * goes after minting for the same kind of reason: it recomputes each skill's
+ * bands from the spread of evidence, so running it first would calibrate
+ * against a distribution missing everything the night just wrote.
  *
- * Staggering three separate pg_cron entries by a few minutes would express
+ * Staggering four separate pg_cron entries by a few minutes would express
  * that ordering as a hope about clock time. One call expresses it as
  * sequence.
  *
@@ -61,7 +65,7 @@ export async function POST(request: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
 
-  // Each half reports its own failure rather than taking the other down with
+  // Each step reports its own failure rather than taking the rest down with
   // it. Rollups are pure arithmetic over rows that already exist; there is no
   // reason a failed model call should also cost the night's figures.
   let verification: unknown = null
@@ -82,6 +86,20 @@ export async function POST(request: Request) {
     console.error('[cron/nightly] evidence sweep failed:', err)
   }
 
+  // Calibration sits here rather than on its own schedule because it reads
+  // current_skill_evidence, and the step above is what writes to it. Run at an
+  // unrelated hour it would recompute every skill's bands from a distribution
+  // missing the evidence minted the same night — correct the following day,
+  // and wrong in a way nobody would ever look for.
+  let calibration: unknown = null
+  let calibrationError: string | null = null
+  try {
+    calibration = await recomputeCalibration(admin)
+  } catch (err) {
+    calibrationError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[cron/nightly] calibration failed:', err)
+  }
+
   let rollups: unknown = null
   let rollupError: string | null = null
   try {
@@ -95,9 +113,10 @@ export async function POST(request: Request) {
   // back, so a status code here reaches nobody — the body is for a person
   // running it by hand, and the console is where a failure is actually found.
   return NextResponse.json({
-    ok: !verifyError && !evidenceError && !rollupError,
+    ok: !verifyError && !evidenceError && !calibrationError && !rollupError,
     verification: verification ?? { error: verifyError },
     evidence: evidence ?? { error: evidenceError },
+    calibration: calibration ?? { error: calibrationError },
     rollups: rollups ?? { error: rollupError },
   })
 }
