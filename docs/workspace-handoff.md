@@ -541,7 +541,12 @@ Everything below is unbuilt. Ordered by what blocks what.
 - [x] **Run migration `v05_0036`.** Schedules the nightly workspace pass in
       pg_cron.
 - [x] Migrations `v05_0038`–`v05_0043` are applied.
-- [ ] **Run migrations `v05_0044`, `v05_0045` and `v05_0046`.** `0046` adds
+- [x] Migrations through `v05_0046` are applied.
+- [ ] **Run migration `v05_0047`.** Publishes tasks, task_submissions and
+      workspace_messages to Realtime. Until it runs the board does not live
+      update, silently.
+
+  Superseded: `0046` adds
       `tasks.before_question`.
 
   Superseded: `0044` adds `kickoff`,
@@ -775,10 +780,27 @@ Each of these is a migration already applied and nothing writing to it.
       backstop the product actually promises — repeating the email would nag
       the one person barred from answering. Thresholds are in
       `lib/workspace/attention.ts`, pure and unit-tested.
-- [ ] **Realtime board.** Supabase `postgres_changes` on `tasks` filtered by
-      `workspace_id`. RLS already gates it, so no new authorization. Keep
-      drag-in-progress state out of Postgres; if it gets hot, the migration
-      path is Broadcast.
+- [x] **Realtime board** — `workspaces/[id]/useBoardRealtime.ts`, plus
+      **v05_0047** which puts the three tables in the `supabase_realtime`
+      publication. Without that migration the client subscribes successfully
+      and receives nothing, which is the worst kind of failure: the board
+      looks untouched and nothing errors.
+
+      **Refetches rather than patching state.** The board is derived from six
+      queries, and a `tasks` row arriving alone cannot update the verdict,
+      thread or child progress that depend on it — merging would produce a
+      card whose column is current and whose everything else is a minute old,
+      and no amount of care makes that converge.
+
+      **Waits while the student is mid-action.** A card that jumps during a
+      drag is worse than a stale board; a dialog reloading under a half-typed
+      message is worse than both. Changes arriving then are remembered and
+      applied the moment they finish. Debounced 600ms, because one plan writes
+      eight tasks and that is eight events in a second.
+
+      Watches `task_submissions` and `workspace_messages` too: a verdict
+      landing from the nightly pass and a reply in a thread both change the
+      board without touching a card.
 - [x] **Calendar** — `lib/workspace/calendar.ts` for the layout,
       `workspaces/[id]/Calendar.tsx` for the view, toggled against the board.
       No library: a month grid is thirty-five boxes and one modulo, and

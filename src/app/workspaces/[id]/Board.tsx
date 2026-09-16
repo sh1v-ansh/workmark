@@ -13,6 +13,7 @@ import { MENTION, type Message } from '@/lib/workspace/messages'
 import { pending, type Checkpoint } from '@/lib/workspace/checkpoints'
 import { rankToday, emptyReason } from '@/lib/workspace/today'
 import Calendar from './Calendar'
+import { useBoardRealtime } from './useBoardRealtime'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/Toast'
 import { C, R, T } from '@/lib/theme/dark-tokens'
@@ -113,6 +114,8 @@ export default function Board({
   const [startingSprint, setStartingSprint] = useState(false)
   const [endingSprint, setEndingSprint] = useState(false)
   const [lastRetro, setLastRetro] = useState<string | null>(null)
+
+
   const [checkingScope, setCheckingScope] = useState(false)
   const [talking, setTalking] = useState<BoardTask | null>(null)
   const [draftMessage, setDraftMessage] = useState('')
@@ -130,11 +133,25 @@ export default function Board({
   const [checkpointAnswer, setCheckpointAnswer] = useState('')
   const [view, setView] = useState<'board' | 'calendar'>('board')
 
+
+
+
   const [scopeCheck, setScopeCheck] = useState<
     { verdict: string; reasoning: string; suggestion: string } | null
   >(null)
   const [reviewVerdict, setReviewVerdict] = useState<HumanVerdict | null>(null)
   const [reviewNote, setReviewNote] = useState('')
+
+  // A card that jumps while you are dragging it is worse than a stale board,
+  // and a dialog reloading under a half-typed message is worse than both. So
+  // a teammate's change waits until the student is not mid-action.
+  useBoardRealtime(workspaceId, {
+    paused: dragging !== null
+      || editing !== null || creating || reviewing !== null || talking !== null
+      || splitting !== null || blocking !== null || abandoning !== null
+      || startingSprint || scopeCheck !== null || lastRetro !== null,
+    onChange: () => router.refresh(),
+  })
   const verdictFor = new Map(verdicts.map((v) => [v.taskId, v]))
   const submittedCount = tasks.filter((t) => t.status === 'submitted').length
   const asideTasks = tasks.filter((t) => t.status === 'abandoned')
