@@ -2,6 +2,8 @@ import { requireAdmin } from '@/lib/admin/guard'
 import { loadQueue, countsByKind } from '@/lib/admin/queue'
 import AdminQueueClient from './AdminQueueClient'
 
+export const metadata = { title: 'Queue' }
+
 /**
  * /admin/queue — everything waiting on a person.
  *

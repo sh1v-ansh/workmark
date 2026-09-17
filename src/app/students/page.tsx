@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import StudentsDirectoryClient from './StudentsDirectoryClient'
 
+export const metadata = { title: 'Students' }
+
 export default async function StudentsDirectoryPage() {
   const supabase = await createClient()
 

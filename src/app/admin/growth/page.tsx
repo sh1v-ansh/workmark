@@ -6,6 +6,8 @@ import { Panel, Bar, HealthRow } from '../widgets'
 import { tableStyles as ts } from '../table-styles'
 import { C, state } from '@/lib/theme/dark-tokens'
 
+export const metadata = { title: 'Growth' }
+
 /**
  * /admin/growth — is the product doing its job?
  *

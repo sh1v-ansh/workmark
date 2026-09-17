@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import GithubScanClient from './GithubScanClient'
 
+export const metadata = { title: 'GitHub' }
+
 /**
  * Minimal, standalone verification page for the Phase 1 scan pipeline —
  * deliberately NOT integrated into the main student dashboard, which

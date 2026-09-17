@@ -6,6 +6,8 @@ import { suggestHandle } from '@/lib/profile/handle'
 import MyRecordClient from './MyRecordClient'
 import { lastScanFinishedAt } from '@/lib/github/last-scan'
 
+export const metadata = { title: 'Record' }
+
 /**
  * /me — the student's own complete record.
  *

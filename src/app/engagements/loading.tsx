@@ -1,18 +1,28 @@
-import { CardSkeleton, Bar } from '@/components/ui/Skeleton'
+import { CardSkeleton, HeaderSkeleton } from '@/components/ui/Skeleton'
 import { LAYOUT } from '@/lib/theme/layout'
 
-/** The page's shape, drawn while the server reads it. Without this the route
- *  shows nothing at all until every query returns, and a blank page reads as
- *  a broken one. */
+/**
+ * An engagement, while it loads.
+ *
+ * There is no /engagements index, so this only ever stands in for one
+ * engagement. It is a stage bar across the top and then a two-to-one split —
+ * the brief and the task on the left, the settings rail on the right — and
+ * the skeleton was drawing one column of three cards.
+ */
 export default function Loading() {
   return (
     <div style={{ padding: '30px 28px 72px', maxWidth: LAYOUT.maxWidth, margin: '0 auto' }}>
-      <Bar width={220} height={28} style={{ marginBottom: 10 }} />
-      <Bar width="55%" height={14} style={{ marginBottom: 30 }} />
-      <div style={{ display: 'grid', gap: 12 }}>
-        <CardSkeleton lines={3} />
-        <CardSkeleton lines={3} />
-        <CardSkeleton lines={2} />
+      <HeaderSkeleton back title={300} sub={250} gap={18} />
+
+      {/* Where this has got to. */}
+      <CardSkeleton lines={1} height={86} />
+
+      <div className="nb-split" style={{ marginTop: 18 }}>
+        <div style={{ display: 'grid', gap: 18 }}>
+          <CardSkeleton lines={5} height={280} />
+          <CardSkeleton lines={3} height={190} />
+        </div>
+        <CardSkeleton lines={3} height={220} />
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 import { getWorkspace } from '../load'
 import SettingsClient from './SettingsClient'
 
-export const metadata = { title: 'Project settings' }
+export const metadata = { title: 'Settings' }
 
 /**
  * The repository, who is on the team, what everybody works on, and closing

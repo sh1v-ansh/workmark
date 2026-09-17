@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getAccount, hasRole } from '@/lib/auth/roles'
 import FacultyHomeClient, { type FacultyData } from './FacultyHomeClient'
 
+export const metadata = { title: 'Faculty' }
+
 /**
  * /faculty — a professor's home.
  *

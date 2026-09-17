@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import ApplicantsClient, { type ApplicantRow } from './ApplicantsClient'
 import type { FitTier } from '@/lib/matching/fit'
 
+export const metadata = { title: 'Applicants' }
+
 /**
  * Poster's applicant inbox, ranked.
  *

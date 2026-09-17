@@ -3,7 +3,7 @@ import { loadMetrics } from '@/lib/workspace/queries'
 import { getWorkspace } from '../load'
 import PlanVsReality from '../PlanVsReality'
 
-export const metadata = { title: 'Project progress' }
+export const metadata = { title: 'Progress' }
 
 /**
  * Planned against delivered.

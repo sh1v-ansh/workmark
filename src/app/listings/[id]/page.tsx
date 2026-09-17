@@ -7,6 +7,8 @@ import { computeFit, assignTier } from '@/lib/matching/fit'
 import ListingDetailClient from './ListingDetailClient'
 import { verifiedFacultyPosterIds } from '@/lib/listings/verified-faculty'
 
+export const metadata = { title: 'Posting' }
+
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()

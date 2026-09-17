@@ -4,6 +4,8 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import MyFileClient, { type FileData } from './MyFileClient'
 import type { DisputeCategory, DisputeStatus } from '@/lib/fcra/disputes'
 
+export const metadata = { title: 'File' }
+
 /**
  * /me/file — the consumer's file disclosure (§609).
  *

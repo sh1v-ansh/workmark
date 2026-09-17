@@ -17,11 +17,38 @@
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { wantsEmail, EMAIL_KINDS, type EmailKind } from './prefs'
+import { parseSender, formatSender } from './from'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 
+/**
+ * Whether mail can go out at all, and if not, which of the two reasons.
+ *
+ * It used to be two truthiness checks, which meant a malformed EMAIL_FROM
+ * passed and then failed at Resend on every send — visible only as a 422 in a
+ * server log. "No email is going out" then had four possible causes with one
+ * symptom: no key, wrong key, unverified domain, bad from address. This tells
+ * the last one apart from the other three before anything is sent.
+ */
+export function emailStatus(): { ok: true; from: string } | { ok: false; reason: string } {
+  if (!process.env.RESEND_API_KEY) {
+    return { ok: false, reason: 'RESEND_API_KEY is not set.' }
+  }
+  const sender = parseSender(process.env.EMAIL_FROM)
+  if (!sender) {
+    return {
+      ok: false,
+      reason: process.env.EMAIL_FROM
+        ? `EMAIL_FROM is not a sender address: ${JSON.stringify(process.env.EMAIL_FROM)}. `
+          + 'Use noreply@send.workmark.org or Workmark <noreply@send.workmark.org>.'
+        : 'EMAIL_FROM is not set.',
+    }
+  }
+  return { ok: true, from: formatSender(sender) }
+}
+
 export function emailAvailable(): boolean {
-  return !!process.env.RESEND_API_KEY && !!process.env.EMAIL_FROM
+  return emailStatus().ok
 }
 
 function siteUrl(): string {
@@ -96,7 +123,14 @@ function escapeHtml(s: string): string {
 }
 
 export async function sendEmail(args: SendArgs): Promise<boolean> {
-  if (!emailAvailable()) return false
+  const status = emailStatus()
+  if (!status.ok) {
+    // Logged rather than swallowed. Mail being off is a legitimate state in
+    // development, but "it is off and here is the one line to change" beats
+    // finding out from a user that nobody got an invitation.
+    console.error('[notify] not sending —', status.reason)
+    return false
+  }
   if (!args.to) return false
 
   // Asked before the send, not filtered after. Costs one indexed lookup on
@@ -135,7 +169,10 @@ export async function sendEmail(args: SendArgs): Promise<boolean> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: process.env.EMAIL_FROM,
+        // Rebuilt from the parsed parts, so however the variable was written
+        // — quoted, spaced oddly, with or without a display name — Resend
+        // receives one shape.
+        from: status.from,
         to: [args.to],
         subject: args.subject,
         html,

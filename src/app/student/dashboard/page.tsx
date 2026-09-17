@@ -4,6 +4,8 @@ import StudentDashboardClient, { type DashboardData } from './StudentDashboardCl
 import { computeTrackRecord, type Stage } from '@/lib/engagements/lifecycle'
 import { lastScanFinishedAt } from '@/lib/github/last-scan'
 
+export const metadata = { title: 'Dashboard' }
+
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import NewListingClient from './NewListingClient'
 import { agentsAvailable } from '@/lib/agents/client'
 
+export const metadata = { title: 'Post' }
+
 export default async function NewListingPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()

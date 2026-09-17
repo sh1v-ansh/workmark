@@ -4,6 +4,8 @@ import { agentsAvailable } from '@/lib/agents/client'
 import BriefsClient, { type BriefRow } from './BriefsClient'
 import { splitBriefText } from '@/lib/briefs/format'
 
+export const metadata = { title: 'Briefs' }
+
 /**
  * /me/briefs — private project ideas.
  *

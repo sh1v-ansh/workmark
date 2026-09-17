@@ -6,6 +6,8 @@ import { Panel, Bar, EmptyState } from '../widgets'
 import { C, state } from '@/lib/theme/dark-tokens'
 import { tableStyles as ts } from '../table-styles'
 
+export const metadata = { title: 'Fairness' }
+
 const TIER_LABEL: Record<string, string> = {
   strong_fit: 'Strong fit',
   competitive: 'Competitive',

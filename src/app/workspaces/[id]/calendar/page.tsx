@@ -6,7 +6,7 @@ import {
 import { getWorkspace } from '../load'
 import Board from '../Board'
 
-export const metadata = { title: 'Project calendar' }
+export const metadata = { title: 'Calendar' }
 
 /**
  * The same tasks, laid out by when they are due.

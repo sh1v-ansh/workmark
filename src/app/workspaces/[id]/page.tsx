@@ -7,7 +7,7 @@ import Board from './Board'
 import DraftSetup from './DraftSetup'
 import CloseSummaryCard from './CloseSummaryCard'
 
-export const metadata = { title: 'Project' }
+export const metadata = { title: 'Board' }
 
 /**
  * The board, and nothing else.
