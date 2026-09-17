@@ -999,6 +999,83 @@
 /* The panel they sit in. Sticky, because it is a sidebar beside a list that
    can be much taller than it — a filter you have to scroll back up to reach
    is a filter people stop using. */
+/* ── The board toolbar ────────────────────────────────────────────────────
+   One row between the project's tabs and the kanban.
+
+   There used to be five bands stacked here: the review queue, the blocked
+   list, Today, the week, and last week's review. Every one of them is worth
+   having and none of them was worth what they cost together — on a real
+   project the columns started most of a screen down, and the columns are
+   what somebody opened the page for.
+
+   So the lists became counts, and the counts open one panel at a time.
+   Nothing is hidden: "Blocked 3" says more at a glance than the list did,
+   because the list was too far down the page to be glanced at. */
+.wm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ECEBF3;
+}
+
+/* A count you can press. Sized to sit on one line with the buttons opposite
+   it, so the whole toolbar is one row rather than two. */
+.wm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 7px 11px;
+  border-radius: 8px;
+  border: 1px solid #DDE0EB;
+  background: #FFFFFF;
+  color: #5A6172;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.wm-pill strong { font-weight: 700; color: #191E2E; }
+.wm-pill:hover { border-color: #B9BDCC; color: #191E2E; }
+
+/* Work other people are waiting on. Violet, the colour this app uses for
+   "this one is yours to move". */
+.wm-pill-accent { border-color: rgba(97, 66, 245, 0.35); color: #4E2FD6; }
+.wm-pill-accent strong { color: #4E2FD6; }
+.wm-pill-accent:hover { border-color: #6142F5; color: #4E2FD6; }
+
+/* Blocked. Red and never folded into anything else — a blocked card is the
+   thing between somebody and all of their other work, and it was previously
+   scattered across six columns where a full board still looked like
+   progress. */
+.wm-pill-stop { border-color: #E9BFBC; background: #FEF6F6; color: #B91C1C; }
+.wm-pill-stop strong { color: #B91C1C; }
+.wm-pill-stop:hover { border-color: #DC2626; color: #991B1B; }
+
+/* A week that has run past its end date. */
+.wm-pill-warn { border-color: #E4B9A6; background: #FDF8F3; color: #94500F; }
+.wm-pill-warn strong { color: #94500F; }
+
+/* Open, rather than merely hovered. Filled, because the panel it controls is
+   directly underneath and the two need to read as one thing.
+
+   Two classes and last in the file, so it beats the tone rules above whatever
+   order they are written in. As a single class earlier it lost to
+   .wm-pill-stop on exactly the pill somebody is most likely to press. */
+.wm-pill.wm-pill-on {
+  background: #191E2E;
+  border-color: #191E2E;
+  color: #FFFFFF;
+}
+.wm-pill.wm-pill-on strong { color: #FFFFFF; }
+.wm-pill.wm-pill-on:hover { background: #262D42; border-color: #262D42; color: #FFFFFF; }
+
 /* The facet panel down the left of Find work.
    It keeps the borderless treatment the rest of the cards have just given up:
    it is a panel of controls, not one of the results, and the sheet the results

@@ -121,6 +121,20 @@ export default function Board({
   const [endingSprint, setEndingSprint] = useState(false)
   const [lastRetro, setLastRetro] = useState<string | null>(null)
 
+  /**
+   * Which of the lists above the board is open, and never more than one.
+   *
+   * There were five of these stacked permanently: the review queue, the
+   * blocked list, Today, the week and last week's review. Each is worth
+   * having and none of them is worth what they cost together — on a real
+   * project the kanban started most of a screen down, which is the thing
+   * somebody opens the page for.
+   *
+   * So they are counts in the toolbar that open one at a time. Nothing is
+   * hidden — a number beside "Blocked" says more at a glance than the list
+   * did, because the list was too far down to be glanced at.
+   */
+  const [panel, setPanel] = useState<'needs' | 'blocked' | 'today' | 'week' | null>(null)
 
   const [checkingScope, setCheckingScope] = useState(false)
   const [talking, setTalking] = useState<BoardTask | null>(null)
@@ -227,6 +241,10 @@ export default function Board({
   // be found among six columns: a queue nobody can see is a queue nobody
   // clears, and every card in it is a student waiting.
   const needsYou = tasks.filter(mayReview)
+
+  // Everything that is stuck. Blocked cards scatter across six columns, so
+  // the board can be full of them and still look like work in progress.
+  const stuck = readOnly ? [] : tasks.filter((t) => t.blockedAt !== null)
 
   // What a card is still waiting on, shown rather than enforced. Only
   // unfinished blockers count: a dependency that is done is history, and
@@ -601,11 +619,86 @@ export default function Board({
 
   return (
     <section>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-        {/* No heading. The tab above already says which view this is, and
-            repeating it was a line of chrome between somebody and their work. */}
-        <div />
-        <div style={{ display: 'flex', gap: 8 }}>
+      {/* One row between the tabs and the work.
+          No heading — the tab above already says which view this is, and
+          repeating it was a line of chrome between somebody and their board. */}
+      <div className="wm-toolbar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+          {/* The week reads as a fact and opens as a panel, so the goal and
+              the two week-level actions are one click away instead of a
+              permanent 62px band above the columns. */}
+          {!readOnly && workspaceStatus === 'active' && (
+            sprint ? (
+              <button
+                className={`wm-pill${panel === 'week' ? ' wm-pill-on' : ''}${isOverdue(sprint, new Date()) ? ' wm-pill-warn' : ''}`}
+                aria-expanded={panel === 'week'}
+                onClick={() => setPanel(panel === 'week' ? null : 'week')}
+              >
+                <strong>{sprint.name}</strong>
+                {(() => {
+                  const p = progressOf(sprint, tasks)
+                  const left = daysRemaining(sprint, new Date())
+                  const when = left > 0
+                    ? `${left}d left`
+                    : left === 0 ? 'ends today' : `${-left}d over`
+                  // Set aside counted apart, never folded into either side:
+                  // it is not done and it is not outstanding.
+                  return <span>{p.done} of {p.committed - p.setAside} · {when}</span>
+                })()}
+              </button>
+            ) : (
+              <button className="wm-pill" onClick={() => setStartingSprint(true)}>
+                Start a week
+              </button>
+            )
+          )}
+
+          {/* Last week's review, while there is no week running — the thing
+              somebody wants while deciding what to commit to next. */}
+          {!readOnly && !sprint && lastClosed?.retro && (
+            <button
+              className={`wm-pill${panel === 'week' ? ' wm-pill-on' : ''}`}
+              aria-expanded={panel === 'week'}
+              onClick={() => setPanel(panel === 'week' ? null : 'week')}
+            >
+              {lastClosed.name} review
+            </button>
+          )}
+
+          {needsYou.length > 0 && (
+            <button
+              className={`wm-pill wm-pill-accent${panel === 'needs' ? ' wm-pill-on' : ''}`}
+              aria-expanded={panel === 'needs'}
+              onClick={() => setPanel(panel === 'needs' ? null : 'needs')}
+            >
+              Needs you <strong>{needsYou.length}</strong>
+            </button>
+          )}
+
+          {/* Red and never folded into anything else. A blocked card is the
+              thing between somebody and all their other work. */}
+          {stuck.length > 0 && (
+            <button
+              className={`wm-pill wm-pill-stop${panel === 'blocked' ? ' wm-pill-on' : ''}`}
+              aria-expanded={panel === 'blocked'}
+              onClick={() => setPanel(panel === 'blocked' ? null : 'blocked')}
+            >
+              Blocked <strong>{stuck.length}</strong>
+            </button>
+          )}
+
+          {!readOnly && workspaceStatus === 'active' && (
+            <button
+              className={`wm-pill${panel === 'today' ? ' wm-pill-on' : ''}`}
+              aria-expanded={panel === 'today'}
+              onClick={() => setPanel(panel === 'today' ? null : 'today')}
+            >
+              Today{todayList.length > 0 ? <strong>{todayList.length}</strong> : null}
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           {readOnly && (
             <span style={{ fontSize: T.meta, color: C.textGhost, alignSelf: 'center' }}>
               Finished — this is the record now
@@ -636,11 +729,10 @@ export default function Board({
         </div>
       </div>
 
-      {/* Work other people are blocked on, put where somebody will see it.
-          The checker sends two kinds of task here — work with no code to
-          look at, and work it has already failed twice — and both stop dead
-          until a person answers. */}
-      {needsYou.length > 0 && (
+      {/* Work other people are blocked on. The checker sends two kinds of
+          task here — work with no code to look at, and work it has already
+          failed twice — and both stop dead until a person answers. */}
+      {panel === 'needs' && needsYou.length > 0 && (
         <div style={{
           background: C.surfaceAlt, border: `1px solid ${C.accentBorder}`, borderRadius: R.lg,
           padding: '13px 15px', marginBottom: 16,
@@ -688,13 +780,10 @@ export default function Board({
         </p>
       )}
 
-      {/* Everything that is stuck, in one place.
-          Blocked cards scatter across six columns, so the board can be full of
-          them and still look like work in progress. This is the list somebody
+      {/* Everything that is stuck, in one place. This is the list somebody
           actually needs: the thing between them and everything else. */}
       {(() => {
-        const stuck = tasks.filter((t) => t.blockedAt !== null)
-        if (stuck.length === 0 || readOnly) return null
+        if (panel !== 'blocked' || stuck.length === 0) return null
         return (
           <div style={{
             marginBottom: 14, padding: '11px 13px', borderRadius: R.md,
@@ -730,13 +819,10 @@ export default function Board({
       })()}
 
       {/* Three things, with why each is here.
-          A strip rather than a page: twelve items is a competing view of the
+          Three rather than twelve: a longer list is a competing view of the
           same board and people end up trusting neither. */}
-      {!readOnly && workspaceStatus === 'active' && (
+      {panel === 'today' && !readOnly && workspaceStatus === 'active' && (
         <div style={{ marginBottom: 14 }}>
-          <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.textFaint, marginBottom: 8 }}>
-            Today
-          </p>
           {todayList.length === 0 ? (
             <p style={{ fontSize: T.bodySm, color: C.textFaint, lineHeight: 1.6 }}>
               {emptyReason(
@@ -819,80 +905,61 @@ export default function Board({
       {/* The week.
           The one place a student commits to an amount of work before doing it
           and is then shown what happened, which is the most informative thing
-          this board records. Above the columns because it frames them: these
-          six columns are this week's work, not an undated pile. */}
-      {!readOnly && workspaceStatus === 'active' && (
+          this board records. The counts are in the toolbar; this is the goal
+          and the two actions that end or size the week. */}
+      {panel === 'week' && !readOnly && sprint && (
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, flexWrap: 'wrap', marginBottom: 14, padding: '11px 14px',
-          borderRadius: R.md, border: `1px solid ${sprint && isOverdue(sprint, new Date()) ? '#E4B9A6' : C.borderFaint}`,
+          borderRadius: R.md, border: `1px solid ${isOverdue(sprint, new Date()) ? '#E4B9A6' : C.borderFaint}`,
           background: C.surfaceAlt,
         }}>
-          {sprint ? (
-            <>
-              <div style={{ minWidth: 0 }}>
-                <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text }}>
-                  {sprint.name}
-                  {sprint.goal ? <span style={{ fontWeight: 400, color: C.textMuted }}> — {sprint.goal}</span> : null}
-                </p>
-                <p style={{ fontSize: T.meta, color: C.textFaint, marginTop: 3 }}>
-                  {(() => {
-                    const p = progressOf(sprint, tasks)
-                    const left = daysRemaining(sprint, new Date())
-                    const when = left > 0
-                      ? `${left} day${left === 1 ? '' : 's'} left`
-                      : left === 0 ? 'ends today' : `${-left} day${left === -1 ? '' : 's'} over`
-                    // Set-aside counted separately, never folded into either
-                    // side: it is not done and it is not outstanding.
-                    return `${p.done} of ${p.committed - p.setAside} done` +
-                      (p.setAside > 0 ? `, ${p.setAside} set aside` : '') +
-                      ` · ${when}`
-                  })()}
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {/* Before, not after. A review says what happened; this says
-                    "that is three weeks of work" while there is still time to
-                    change it. */}
-                <Button
-                  variant="quiet"
-                  size="sm"
-                  onClick={checkScopeNow}
-                  busyLabel={checkingScope ? 'Checking…' : null}
-                >
-                  Check this week
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={endSprint}
-                  busyLabel={endingSprint ? 'Reviewing…' : null}
-                >
-                  End the week
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div style={{ minWidth: 0, flex: '1 1 260px' }}>
-                <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text, marginBottom: 2 }}>
-                  No week running
-                </p>
-                <p style={{ fontSize: T.meta, color: C.textFaint }}>
-                  Commit to what you will finish, and find out how close you got.
-                </p>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => setStartingSprint(true)}>
-                Start a week
-              </Button>
-            </>
-          )}
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text }}>
+              {sprint.goal ?? 'No goal set for this week'}
+            </p>
+            <p style={{ fontSize: T.meta, color: C.textFaint, marginTop: 3 }}>
+              {(() => {
+                const p = progressOf(sprint, tasks)
+                const left = daysRemaining(sprint, new Date())
+                const when = left > 0
+                  ? `${left} day${left === 1 ? '' : 's'} left`
+                  : left === 0 ? 'ends today' : `${-left} day${left === -1 ? '' : 's'} over`
+                // Set-aside counted separately, never folded into either
+                // side: it is not done and it is not outstanding.
+                return `${p.done} of ${p.committed - p.setAside} done` +
+                  (p.setAside > 0 ? `, ${p.setAside} set aside` : '') +
+                  ` · ${when}`
+              })()}
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/* Before, not after. A review says what happened; this says
+                "that is three weeks of work" while there is still time to
+                change it. */}
+            <Button
+              variant="quiet"
+              size="sm"
+              onClick={checkScopeNow}
+              busyLabel={checkingScope ? 'Checking…' : null}
+            >
+              Check this week
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={endSprint}
+              busyLabel={endingSprint ? 'Reviewing…' : null}
+            >
+              End the week
+            </Button>
+          </div>
         </div>
       )}
 
       {/* Last week's review, until they start the next one. The thing somebody
           actually wants while deciding what to commit to. */}
-      {!sprint && lastClosed?.retro && (
+      {panel === 'week' && !sprint && lastClosed?.retro && (
         <div style={{
           marginBottom: 14, padding: '12px 14px', borderRadius: R.md,
           border: `1px solid ${C.borderFaint}`, background: C.bg,
