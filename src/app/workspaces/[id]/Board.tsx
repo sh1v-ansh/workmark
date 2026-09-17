@@ -688,6 +688,47 @@ export default function Board({
         </p>
       )}
 
+      {/* Everything that is stuck, in one place.
+          Blocked cards scatter across six columns, so the board can be full of
+          them and still look like work in progress. This is the list somebody
+          actually needs: the thing between them and everything else. */}
+      {(() => {
+        const stuck = tasks.filter((t) => t.blockedAt !== null)
+        if (stuck.length === 0 || readOnly) return null
+        return (
+          <div style={{
+            marginBottom: 14, padding: '11px 13px', borderRadius: R.md,
+            borderLeft: '3px solid #DC2626',
+            border: '1px solid #F3D3D3', background: '#FEF6F6',
+          }}>
+            <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: '#B91C1C', marginBottom: 7 }}>
+              Blocked · {stuck.length}
+            </p>
+            <div style={{ display: 'grid', gap: 6 }}>
+              {stuck.map((t) => (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+                  <button
+                    onClick={() => openEdit(t)}
+                    style={{ all: 'unset', cursor: 'pointer', fontSize: T.bodySm, fontWeight: 500, color: C.text }}
+                  >
+                    {t.title}
+                  </button>
+                  <span style={{ fontSize: T.meta, color: C.textMuted, flex: 1, minWidth: 0 }}>
+                    {t.blockedReason}
+                  </span>
+                  <button className="wm-mini" onClick={() => toggleBlocked(t)} disabled={busy}>
+                    Unblock
+                  </button>
+                  <button className="wm-mini" onClick={() => { setTalking(t); setDraftMessage('') }}>
+                    Ask Workmark
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Three things, with why each is here.
           A strip rather than a page: twelve items is a competing view of the
           same board and people end up trusting neither. */}
@@ -908,11 +949,18 @@ export default function Board({
                 if (stop) { toast(stop, 'error'); return }
                 move(task, column)
               }}
+              className={
+                dragging && !refusal ? 'wm-column-open'
+                  : dragging && refusal ? 'wm-column-shut' : undefined
+              }
               style={{
-                flex: '0 0 236px', background: C.surfaceAlt, borderRadius: R.lg, padding: 11,
-                border: `1px solid ${dragging && !refusal ? C.accentBorder : 'transparent'}`,
-                opacity: dragging && refusal ? 0.45 : 1,
-                transition: 'opacity 120ms ease, border-color 120ms ease',
+                // Wider. 236px fits a title on three lines and nothing else,
+                // which is what made the board feel cramped and every card
+                // feel like an ellipsis.
+                flex: '0 0 288px',
+                background: C.surfaceAlt, borderRadius: R.lg, padding: 11,
+                border: '1px solid transparent',
+                transition: 'opacity 120ms ease, border-color 120ms ease, background 120ms ease',
               }}
             >
               <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 2 }}>
@@ -930,225 +978,128 @@ export default function Board({
                     draggable={!readOnly}
                     onDragStart={() => { if (!readOnly) setDragging(task.id) }}
                     onDragEnd={() => setDragging(null)}
+                    className="wm-card"
                     style={{
                       background: C.surface,
-                      border: `1px solid ${task.blockedAt ? '#E4B9A6' : C.border}`,
-                      // Shown, not hidden. A card that is on screen but not
-                      // yet saved should say so — the point of optimistic
-                      // rendering is to remove the wait, not to claim a write
-                      // has landed when it has not.
+                      // Blocked is a state, not a footnote. A left bar in solid
+                      // red is visible from across the board and survives being
+                      // scanned rather than read, which a tinted hairline and a
+                      // line of text did not.
+                      borderLeft: task.blockedAt ? '3px solid #DC2626' : `1px solid ${C.border}`,
+                      border: task.blockedAt ? undefined : `1px solid ${C.border}`,
+                      borderRadius: R.md,
+                      padding: '10px 12px',
+                      cursor: readOnly ? 'default' : 'grab',
                       opacity: optimistic.isPending(task.id) ? 0.55 : 1,
-                      transition: 'opacity 0.18s ease',
-                      borderRadius: R.md, padding: 11, cursor: 'grab',
+                      transition: 'opacity .18s ease, box-shadow .12s ease, transform .12s ease',
                     }}
                   >
                     <button
                       type="button"
                       onClick={() => {
-                    const full = tasks.find((t) => t.id === task.id)
-                    if (full) openEdit(full)
-                  }}
+                        const full = tasks.find((t) => t.id === task.id)
+                        if (full) openEdit(full)
+                      }}
                       style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%' }}
                     >
-                      <p style={{ fontSize: T.bodySm, fontWeight: 500, color: C.text, lineHeight: 1.45, marginBottom: 6 }}>
+                      <p style={{
+                        fontSize: 14, fontWeight: 500, color: C.text,
+                        lineHeight: 1.4, textWrap: 'pretty',
+                      }}>
                         {task.title}
                       </p>
-                      {task.origin === 'ai_proposed' && (
-                        <p style={{ fontSize: T.meta, color: C.textGhost, marginBottom: 6 }}>
-                          Suggested — edit it or throw it out
-                        </p>
-                      )}
                     </button>
 
+                    {/* One row of signals instead of six paragraphs.
+                        Everything that used to live here — the checker's note,
+                        the checks it rested on, who confirmed it, the list of
+                        pieces — is in the card's own dialog. A board is for
+                        seeing where things are; reading is what opening a card
+                        is for. */}
                     {(() => {
                       const v = verdictFor.get(task.id)
-                      if (!v || v.verdict === 'pending') return null
-                      const tone = VERDICT_TONE[v.verdict] ?? VERDICT_TONE.pending
-                      return (
-                        <div style={{ marginBottom: 7 }}>
-                          <p style={{ fontSize: T.meta, fontWeight: 600, color: tone.colour, marginBottom: 2 }}>
-                            {tone.label}
-                            {v.confidence !== null && ` · ${Math.round(v.confidence * 100)}% sure`}
-                          </p>
-                          {v.notes && (
-                            <p style={{ fontSize: T.meta, color: C.textMuted, lineHeight: 1.45 }}>{v.notes}</p>
-                          )}
-                          {/* The free checks, shown as themselves. A student
-                              who disagrees with the verdict can see exactly
-                              which fact it was resting on. */}
-                          <ul style={{ listStyle: 'none', margin: '5px 0 0', padding: 0 }}>
-                            {v.checks.map((c) => (
-                              <li key={c.id} style={{ fontSize: T.meta, color: C.textGhost, lineHeight: 1.5 }}>
-                                {c.status === 'pass' ? '✓' : c.status === 'fail' ? '✕' : '?'} {c.label}
-                              </li>
-                            ))}
-                          </ul>
-
-                          {/* Who answered, when a person did. An answer from
-                              the person who did the work is a different claim
-                              from a teammate's, and the card should not blur
-                              the two. */}
-                          {v.humanVerdict && v.humanActorId && (
-                            <p style={{ fontSize: T.meta, color: C.textGhost, marginTop: 5, lineHeight: 1.5 }}>
-                              {v.humanActorId === userId
-                                ? 'You answered this'
-                                : `${nameOf(v.humanActorId)} answered this`}
-                            </p>
-                          )}
-
-                          {mayReview(task) && (
-                            <div style={{ marginTop: 8 }}>
-                              <Button size="sm" onClick={() => openReview(task)} disabled={busy}>
-                                Review this
-                              </Button>
-                            </div>
-                          )}
-
-                          {/* Said plainly, because the alternative is somebody
-                              waiting on a button that is never going to appear
-                              for them. */}
-                          {v.verdict === 'unverifiable' && !v.humanVerdict && task.assigneeId === userId && (
-                            <p style={{ fontSize: T.meta, color: C.textMuted, marginTop: 6, lineHeight: 1.5 }}>
-                              A teammate has to confirm this one. If nobody on the project can,
-                              Workmark will look at it.
-                            </p>
-                          )}
-                        </div>
-                      )
-                    })()}
-
-                    {task.blockedAt && (
-                      <p style={{ fontSize: T.meta, color: '#94500F', lineHeight: 1.45, marginBottom: 6 }}>
-                        Blocked — {task.blockedReason}
-                      </p>
-                    )}
-
-                    {/* Said, not enforced. Starting this anyway is allowed and
-                        is itself worth knowing about. */}
-                    {(blockersFor.get(task.id)?.length ?? 0) > 0 && (
-                      <p style={{ fontSize: T.meta, color: C.textGhost, lineHeight: 1.45, marginBottom: 6 }}>
-                        Waiting on {blockersFor.get(task.id)!.slice(0, 2).join(', ')}
-                        {blockersFor.get(task.id)!.length > 2
-                          && ` and ${blockersFor.get(task.id)!.length - 2} more`}
-                      </p>
-                    )}
-
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: T.meta, color: C.textGhost }}>
-                      {task.assigneeId && <span>{nameOf(task.assigneeId)}</span>}
-                      {task.suggestedRole && <span>{ROLE_LABEL[task.suggestedRole]}</span>}
-                      {task.estimateHours !== null && <span>{task.estimateHours}h</span>}
-                      {task.difficulty !== null && <span>d{task.difficulty}</span>}
-                      {task.dueOn && <span>due {task.dueOn}</span>}
-                      {!task.verifiable && <span>no code</span>}
-                    </div>
-
-                    {/* Drag is not reachable by keyboard or on a phone, so the
-                        same moves exist as a plain control. Both go away once
-                        the project is closed — the board stops being a place
-                        to work and becomes the record of what happened. */}
-                    <div hidden={readOnly} style={{ display: 'flex', gap: 6, marginTop: 9, alignItems: 'center' }}>
-                      <select
-                        value={task.status}
-                        onChange={(e) => {
-                          const to = e.target.value as TaskStatus
-                          const stop = canMoveTo(task.status, to)
-                          if (stop) { toast(stop, 'error'); return }
-                          move(task, to)
-                        }}
-                        disabled={busy}
-                        aria-label={`Move ${task.title}`}
-                        style={{
-                          fontSize: T.meta, padding: '3px 5px', borderRadius: R.sm,
-                          border: `1px solid ${C.border}`, background: C.bg, color: C.textMuted, flex: 1,
-                        }}
-                      >
-                        {BOARD_COLUMNS.map((c) => (
-                          <option key={c} value={c} disabled={!!canMoveTo(task.status, c) && c !== task.status}>
-                            {COLUMN_LABEL[c]}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={() => toggleBlocked(task)}
-                        disabled={busy}
-                        title={task.blockedAt ? 'Unblock' : 'Flag blocked'}
-                        style={{
-                          fontSize: T.meta, padding: '3px 7px', borderRadius: R.sm, cursor: 'pointer',
-                          border: `1px solid ${C.border}`, background: C.bg,
-                          color: task.blockedAt ? '#94500F' : C.textGhost,
-                        }}
-                      >
-                        {task.blockedAt ? 'Unblock' : 'Block'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setSplitting(task); setSubtaskTitle('') }}
-                        title="Break this into pieces"
-                        style={{
-                          fontSize: T.meta, padding: '3px 7px', borderRadius: R.sm, cursor: 'pointer',
-                          border: `1px solid ${C.border}`, background: C.bg, color: C.textGhost,
-                        }}
-                      >
-                        Split
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setTalking(task); setDraftMessage('') }}
-                        title="Discuss this task, or ask Workmark"
-                        style={{
-                          fontSize: T.meta, padding: '3px 7px', borderRadius: R.sm, cursor: 'pointer',
-                          border: `1px solid ${C.border}`, background: C.bg, color: C.textGhost,
-                        }}
-                      >
-                        {(() => {
-                          const n = (threadsByTask.get(task.id) ?? []).length
-                          return n > 0 ? `Discuss (${n})` : 'Discuss'
-                        })()}
-                      </button>
-                      {/* Only where it is a real answer. Verified work cannot
-                          be taken back, and nothing in Backlog was ever
-                          attempted, so offering it there is noise. */}
-                      {(task.status === 'doing' || task.status === 'submitted') && (
-                        <button
-                          type="button"
-                          onClick={() => { setAbandoning(task); setAbandonReason('') }}
-                          disabled={busy}
-                          title="Tried this and it did not work out"
-                          style={{
-                            fontSize: T.meta, padding: '3px 7px', borderRadius: R.sm, cursor: 'pointer',
-                            border: `1px solid ${C.border}`, background: C.bg, color: C.textGhost,
-                          }}
-                        >
-                          Set aside
-                        </button>
-                      )}
-                    </div>
-                    {(() => {
                       const kids = tasks.filter((k) => k.parentTaskId === task.id)
-                      if (kids.length === 0) return null
-                      const done = kids.filter((k) => k.status === 'verified' || k.status === 'accepted').length
+                      const kidsDone = kids.filter(
+                        (k) => k.status === 'verified' || k.status === 'accepted',
+                      ).length
+                      const chips: React.ReactNode[] = []
+
+                      if (task.blockedAt) {
+                        chips.push(
+                          <span key="blocked" className="wm-chip" style={{ background: '#DC2626', color: '#fff' }}>
+                            Blocked
+                          </span>,
+                        )
+                      }
+                      if (v && v.verdict !== 'pending') {
+                        const tone = VERDICT_TONE[v.verdict] ?? VERDICT_TONE.pending
+                        chips.push(
+                          <span key="verdict" className="wm-chip" style={{ color: tone.colour, border: `1px solid ${tone.colour}33` }}>
+                            {tone.label}
+                          </span>,
+                        )
+                      }
+                      if (kids.length > 0) {
+                        chips.push(
+                          <span key="kids" className="wm-chip" style={{ color: C.textMuted, border: `1px solid ${C.border}` }}>
+                            {kidsDone}/{kids.length} pieces
+                          </span>,
+                        )
+                      }
+                      if (task.dueOn) {
+                        const late = task.dueOn < new Date().toISOString().slice(0, 10)
+                          && task.status !== 'verified' && task.status !== 'accepted'
+                        chips.push(
+                          <span key="due" className="wm-chip" style={{
+                            color: late ? '#B91C1C' : C.textGhost,
+                            border: `1px solid ${late ? '#B91C1C33' : C.border}`,
+                          }}>
+                            {late ? 'Overdue' : `Due ${task.dueOn.slice(5)}`}
+                          </span>,
+                        )
+                      }
+                      if (task.origin === 'ai_proposed') {
+                        chips.push(
+                          <span key="ai" className="wm-chip" style={{ color: C.textGhost, border: `1px dashed ${C.border}` }}>
+                            Suggested
+                          </span>,
+                        )
+                      }
+
+                      if (chips.length === 0) return null
                       return (
-                        <div style={{ marginTop: 9, paddingTop: 8, borderTop: `1px solid ${C.borderFaint}` }}>
-                          <p style={{ fontSize: T.meta, color: C.textFaint, marginBottom: 5 }}>
-                            {done} of {kids.length} pieces done
-                          </p>
-                          {kids.map((k) => (
-                            <p
-                              key={k.id}
-                              style={{
-                                fontSize: T.meta, lineHeight: 1.5, color: C.textMuted,
-                                textDecoration: k.status === 'abandoned' ? 'line-through' : 'none',
-                                opacity: optimistic.isPending(k.id) ? 0.55 : 1,
-                                transition: 'opacity 0.18s ease',
-                              }}
-                            >
-                              {k.status === 'verified' || k.status === 'accepted' ? '✓ ' : '· '}{k.title}
-                            </p>
-                          ))}
-                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>{chips}</div>
                       )
                     })()}
+
+                    {/* Actions on hover. Four buttons on every card is four
+                        times the noise for something used on one card at a
+                        time — and on touch, where hover does not exist, the
+                        card opens instead and they are all in the dialog. */}
+                    {!readOnly && (
+                      <div className="wm-card-actions" style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' }}>
+                        {mayReview(task) && (
+                          <button type="button" className="wm-mini" onClick={() => openReview(task)} disabled={busy}>
+                            Review
+                          </button>
+                        )}
+                        <button type="button" className="wm-mini" onClick={() => toggleBlocked(task)} disabled={busy}>
+                          {task.blockedAt ? 'Unblock' : 'Block'}
+                        </button>
+                        <button type="button" className="wm-mini" onClick={() => { setSplitting(task); setSubtaskTitle('') }}>
+                          Split
+                        </button>
+                        <button type="button" className="wm-mini" onClick={() => { setTalking(task); setDraftMessage('') }}>
+                          Discuss{(threadsByTask.get(task.id) ?? []).length > 0
+                            ? ` ${(threadsByTask.get(task.id) ?? []).length}` : ''}
+                        </button>
+                        {(task.status === 'doing' || task.status === 'submitted') && (
+                          <button type="button" className="wm-mini" onClick={() => { setAbandoning(task); setAbandonReason('') }}>
+                            Set aside
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </article>
                 ))}
 
@@ -1259,6 +1210,8 @@ export default function Board({
         askReason={!!(estimateChanged || deadlineChanged)}
         readOnly={readOnly}
         history={editing ? decisionsFor.get(editing.id) ?? [] : []}
+        verdict={editing ? verdictFor.get(editing.id) ?? null : null}
+        subtasks={editing ? tasks.filter((k) => k.parentTaskId === editing.id) : []}
         nameOf={nameOf}
       />
 
@@ -1634,6 +1587,7 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 function TaskDialog({
   open, title, draft, setDraft, members, busy, onClose, onSave, saveLabel,
   reason, setReason, askReason, readOnly = false, history = [], nameOf,
+  verdict = null, subtasks = [],
 }: {
   open: boolean
   title: string
@@ -1650,6 +1604,10 @@ function TaskDialog({
   readOnly?: boolean
   /** Every answer ever given about this task, oldest first. */
   history?: TaskDecision[]
+  /** The checker's answer, moved here off the card. */
+  verdict?: TaskVerdict | null
+  /** The pieces, listed where there is room for them. */
+  subtasks?: BoardTask[]
   nameOf?: (id: string | null) => string | null
 }) {
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft({ ...draft, [key]: value })
@@ -1724,6 +1682,57 @@ function TaskDialog({
           it rested on and who changed it — a dispute you cannot see the basis
           of is one you cannot make. Trigger-written, so nothing here is a
           summary somebody chose to show. */}
+      {/* The checker's answer, with the facts it rested on.
+          This used to be on the card, where it was five paragraphs competing
+          with a title. Here there is room for it, and somebody who disagrees
+          with a verdict can see exactly which check it turned on. */}
+      {verdict && verdict.verdict !== 'pending' && (
+        <div style={{ marginBottom: 16, padding: '11px 13px', borderRadius: R.md, background: C.surfaceAlt }}>
+          <p style={{
+            fontSize: T.bodySm, fontWeight: 600, marginBottom: 4,
+            color: (VERDICT_TONE[verdict.verdict] ?? VERDICT_TONE.pending).colour,
+          }}>
+            {(VERDICT_TONE[verdict.verdict] ?? VERDICT_TONE.pending).label}
+            {verdict.confidence !== null && ` · ${Math.round(verdict.confidence * 100)}% sure`}
+          </p>
+          {verdict.notes && (
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 7 }}>
+              {verdict.notes}
+            </p>
+          )}
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {verdict.checks.map((c) => (
+              <li key={c.id} style={{ fontSize: T.meta, color: C.textGhost, lineHeight: 1.6 }}>
+                {c.status === 'pass' ? '✓' : c.status === 'fail' ? '✕' : '?'} {c.label}
+              </li>
+            ))}
+          </ul>
+          {/* An answer from the person who did the work is a different claim
+              from a teammate's, and this must not blur the two. */}
+          {verdict.humanVerdict && verdict.humanActorId && (
+            <p style={{ fontSize: T.meta, color: C.textGhost, marginTop: 6 }}>
+              {nameOf?.(verdict.humanActorId) ?? 'Someone'} answered this
+            </p>
+          )}
+        </div>
+      )}
+
+      {subtasks.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.textFaint, marginBottom: 7 }}>
+            Pieces · {subtasks.filter((k) => k.status === 'verified' || k.status === 'accepted').length} of {subtasks.length} done
+          </p>
+          {subtasks.map((k) => (
+            <p key={k.id} style={{
+              fontSize: T.bodySm, color: C.textSub, lineHeight: 1.7,
+              textDecoration: k.status === 'abandoned' ? 'line-through' : 'none',
+            }}>
+              {k.status === 'verified' || k.status === 'accepted' ? '✓ ' : '· '}{k.title}
+            </p>
+          ))}
+        </div>
+      )}
+
       {history.length > 0 && (
         <div style={{ borderTop: `1px solid ${C.borderFaint}`, paddingTop: 13, marginBottom: 14 }}>
           <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>

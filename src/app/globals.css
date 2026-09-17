@@ -621,28 +621,12 @@
 .wm-app-ground button {
   font-family: inherit;
 }
-/* Off where it does not earn its place.
-   The wash reads as depth behind a page of cards with a lot of white in it.
-   Behind a dense list — Find Work is rows of listings, edge to edge — there
-   is no white for it to sit under, so it reads as a tint on the paper rather
-   than as light, which is the "cheap" look. One class turns it off rather
-   than a second ground style to keep in sync. */
-.wm-app-ground-flat::before { display: none; }
-
-.wm-app-ground::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 420px at 12% -8%, rgba(97, 66, 245, 0.07) 0%, rgba(97, 66, 245, 0) 68%),
-    radial-gradient(700px 380px at 96% 2%, rgba(129, 140, 248, 0.06) 0%, rgba(129, 140, 248, 0) 70%);
-}
-@media (prefers-reduced-transparency: reduce) {
-  .wm-app-ground::before { background: none; }
-}
-
+/* The violet wash is gone.
+   It was two soft radials meant to give a white ground some depth. On a page
+   with white around the cards it read as light; on a dense page it read as a
+   tint on the paper, and once you have seen that you see it everywhere. The
+   depth the app actually has comes from the card shadow and the hairlines,
+   which work on every page rather than only the sparse ones. */
 /* ── The page grid ────────────────────────────────────────────────────────
    Three columns, and nothing is allowed to take exactly half. A 50/50 split
    is what makes the eye ping-pong: neither side wins, so it keeps checking
@@ -1699,3 +1683,76 @@
 @media (max-width: 720px) {
   .wm-board { width: 100%; }
 }
+
+/* ── The board ────────────────────────────────────────────────────────────
+   A kanban card is scanned, not read. Everything on it competes with the one
+   thing that matters, which is the title — so the card carries a title and a
+   row of small signals, and the checker's reasoning, the checks behind it,
+   who confirmed it and the list of pieces all live in the card's own dialog.
+   A board is for seeing where things are. */
+
+.wm-card {
+  /* Lifts under the pointer so the card reads as a thing you can pick up.
+     Drag was already implemented and nobody found it: a static rectangle with
+     `cursor: grab` announces nothing until you are already on top of it. */
+}
+.wm-card:hover {
+  box-shadow: 0 2px 10px rgba(25, 30, 46, 0.09);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .wm-card:hover { transform: translateY(-1px); }
+}
+.wm-card:active { cursor: grabbing; }
+
+/* Small enough to scan, not small enough to squint at. */
+.wm-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+/* Actions appear when the card does. Four buttons on every card is four times
+   the noise for something used on one card at a time. Hover is not available
+   on touch, so they stay visible there — the alternative is a feature that
+   simply does not exist on a phone. */
+.wm-card-actions {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.wm-card:hover .wm-card-actions,
+.wm-card:focus-within .wm-card-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .wm-card-actions { opacity: 1; }
+}
+
+.wm-mini {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: 1px solid #ECEBF3;
+  background: #FFFFFF;
+  color: #6B7280;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.wm-mini:hover:not(:disabled) { background: #F6F5FB; color: #191E2E; border-color: #DEDCEC; }
+.wm-mini:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* The column you are about to drop into.
+   The old cue was a one-pixel border, which is the same weight as the border
+   that is always there — so nothing appeared to change. A tint plus a dashed
+   edge says "here" from the other side of the board. */
+.wm-column-open {
+  background: rgba(97, 66, 245, 0.06) !important;
+  border-style: dashed !important;
+  border-color: #6142F5 !important;
+}
+.wm-column-shut { opacity: 0.4; }

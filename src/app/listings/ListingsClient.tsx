@@ -149,7 +149,7 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
   const hasAnyFacet = skillOptions.length > 0 || workModeOptions.length > 0 || showHoursFilter || showTierFilter
 
   return (
-    <div className="wm-app-ground wm-app-ground-flat" style={{ minHeight: '100vh', background: C.bg }}>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
