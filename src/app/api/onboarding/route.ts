@@ -84,7 +84,14 @@ export async function POST(request: Request) {
   // only route to it is somebody running scripts/grant-role.mjs with the
   // service key.
   const role = body.role === 'faculty' ? 'faculty' : 'student'
-  const profile = body.profile ?? {}
+  // An array or a string here would read every field as undefined, which
+  // looks downstream like a form somebody left blank rather than a
+  // malformed request.
+  const rawProfile = body.profile
+  const profile: Record<string, unknown> =
+    rawProfile && typeof rawProfile === 'object' && !Array.isArray(rawProfile)
+      ? (rawProfile as Record<string, unknown>)
+      : {}
 
   const admin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

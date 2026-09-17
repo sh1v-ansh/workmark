@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { writeApplicationQuestions } from '@/lib/agents/application-questions'
 import { getAccount, hasRole } from '@/lib/auth/roles'
+import { readFields, requireString, requireArray } from '@/lib/http/validate'
 
 /**
  * POST /api/listings
@@ -41,12 +43,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
   }
 
-  const title = body.title?.trim()
-  const brief = body.brief?.trim()
-  if (!title) return NextResponse.json({ error: 'A title is required.' }, { status: 400 })
-  if (!brief) return NextResponse.json({ error: 'A brief is required.' }, { status: 400 })
+  // requirements was read as an array without being one. A string or an
+  // object here threw inside .filter, which is a 500 for what is really a
+  // malformed request.
+  const fields = readFields(() => ({
+    title: requireString(body.title, 'A title', { max: 200 }),
+    brief: requireString(body.brief, 'A brief', { max: 8000 }),
+    requirements: requireArray(body.requirements ?? [], 'Requirements', { max: 20 }),
+  }))
+  if (!fields.ok) return fields.response
+  const { title, brief } = fields.values
 
-  const requirements = (body.requirements ?? []).filter((r) => r.skillId && r.requiredLevel >= 1 && r.requiredLevel <= 5)
+  const requirements = (fields.values.requirements as { skillId?: unknown; requiredLevel?: unknown }[])
+    .filter((r) =>
+      r && typeof r === 'object' &&
+      typeof r.skillId === 'string' && r.skillId.length > 0 && r.skillId.length <= 120 &&
+      typeof r.requiredLevel === 'number' && Number.isInteger(r.requiredLevel) &&
+      r.requiredLevel >= 1 && r.requiredLevel <= 5)
   if (requirements.length === 0) {
     return NextResponse.json({ error: 'Add at least one required skill so applicants can be matched.' }, { status: 400 })
   }
@@ -95,7 +108,29 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Could not save the required skills. The listing was saved as a draft.' }, { status: 500 })
   }
 
-  const { error: openErr } = await supabase.from('listings').update({ status: 'open' }).eq('id', listing.id)
+  // The two questions applicants answer, written against this listing.
+  //
+  // Once per listing rather than once per applicant, which is the difference
+  // between a few hundred calls a year and one every time somebody clicks
+  // Apply. Best-effort and deliberately not awaited into the failure path: a
+  // listing must never be unpostable because a model call was slow or
+  // refused, and questionsFor() serves a good standard pair when this is
+  // null rather than a placeholder.
+  let applicationQuestions = null
+  try {
+    applicationQuestions = await writeApplicationQuestions(supabase, user.id, {
+      title,
+      description: brief,
+      requirements: requirements.map((r) => String(r.skillId)),
+    })
+  } catch (err) {
+    console.error('[api/listings] could not write application questions:', err)
+  }
+
+  const { error: openErr } = await supabase
+    .from('listings')
+    .update({ status: 'open', application_questions: applicationQuestions })
+    .eq('id', listing.id)
   if (openErr) {
     console.error('[api/listings] publish failed:', openErr)
     return NextResponse.json({ error: 'The listing was saved as a draft but could not be published.' }, { status: 500 })

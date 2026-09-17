@@ -40,6 +40,16 @@ interface NavbarProps {
 const STUDENT_TABS: Tab[] = [
   { href: '/student/dashboard', label: 'Home',      also: ['/goals'] },
   { href: '/listings',          label: 'Find work', also: [] as string[] },
+  // Top level rather than under My record: a project is shared with other
+  // people, and My record is the one part of Workmark that is entirely
+  // yours. It is also what a student opens most days. `prefix` is safe here
+  // because everything under /workspaces/ belongs to this tab.
+  // "My projects", not "Projects". A student also sees "Post a project" in
+  // this same menu, and on mobile the two sit directly above one another —
+  // one opens work you are already doing, the other advertises work for
+  // somebody else to do. Bare "Projects" read as the noun both were fighting
+  // over. The possessive is what tells them apart.
+  { href: '/workspaces',        label: 'My projects', also: [] as string[], prefix: true },
   { href: '/me',                label: 'My record', also: ['/me/file', '/me/briefs', '/student/github'] },
 ]
 
@@ -261,7 +271,11 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     role="menuitem"
                     className="nb-menu-item nb-menu-row"
                     style={{
-                      width: '100%', background: 'none', border: 'none', font: 'inherit',
+                      // Family only. The .nb-menu-item class sets the size and
+                      // weight, and an inline `fontSize` — even 'inherit' —
+                      // beats it, which is exactly how this row ended up in a
+                      // different face from the rows above it.
+                      width: '100%', background: 'none', border: 'none', fontFamily: 'inherit',
                       cursor: signing ? 'not-allowed' : 'pointer',
                       '--row': MENU.length + 3,
                     } as React.CSSProperties}

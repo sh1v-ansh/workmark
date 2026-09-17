@@ -27,6 +27,7 @@ export type QueueKind =
   | 'failed_job'
   | 'faculty_verification'
   | 'feedback'
+  | 'task_verification'
 
 export type Severity = 'overdue' | 'due_soon' | 'normal'
 
@@ -269,6 +270,81 @@ async function feedbackItems(admin: SupabaseClient): Promise<QueueItem[]> {
 }
 
 /**
+ * Workspace tasks the checker could not settle and no teammate has answered.
+ *
+ * Two kinds land here: work marked as having no code — design, research,
+ * talking to somebody — and work that has come back needing changes twice.
+ * On a team a teammate clears these. On a solo project there is nobody but
+ * the person who did the work, and they are the one person who must never
+ * confirm it, so staff are the only way the card ever moves.
+ *
+ * Deliberately lists team projects too. A teammate who never looks leaves a
+ * student just as stuck as having no teammate at all, and the age of the row
+ * is what surfaces that.
+ */
+async function taskVerifications(admin: SupabaseClient): Promise<QueueItem[]> {
+  const { data } = await admin
+    .from('task_submissions')
+    .select('id, task_id, workspace_id, submitted_at, submitted_by, notes, tasks(title, verifiable), workspaces(title, status)')
+    .eq('verdict', 'unverifiable')
+    .is('human_verdict', null)
+    .order('submitted_at')
+    .limit(100)
+
+  if (!data || data.length === 0) return []
+
+  const names = await namesFor(admin, data.map((r) => r.submitted_by as string | null))
+
+
+  // A closed project's evidence is already written, so answering one of its
+  // cards changes nothing. Listing them would be handing staff work that
+  // cannot matter.
+  const live = data.filter((r) => {
+    const workspace = r.workspaces as unknown as { status: string | null } | null
+    return workspace?.status !== 'closed' && workspace?.status !== 'abandoned'
+  })
+
+  return live.map((r) => {
+    const task = r.tasks as unknown as { title: string | null; verifiable: boolean } | null
+    const workspace = r.workspaces as unknown as { title: string | null } | null
+    return {
+      kind: 'task_verification' as const,
+      id: r.id as string,
+      title: task?.title ?? 'A submitted task',
+      detail: [
+        workspace?.title ? `Project: ${workspace.title}` : null,
+        task?.verifiable === false
+          ? 'Marked as having no code, so there was nothing to check automatically.'
+          : 'Came back needing work twice — the checker stopped and asked for a person.',
+        r.notes as string | null,
+      ].filter(Boolean).join(' · '),
+      subjectName: names.get((r.submitted_by as string) ?? '') ?? null,
+      subjectId: (r.submitted_by as string | null) ?? null,
+      createdAt: (r.submitted_at as string | null) ?? new Date(0).toISOString(),
+      dueAt: null,
+      severity: 'normal' as const,
+      // A student is blocked with no way to chase it, and the card cannot
+      // move until somebody answers. Above housekeeping, below the one thing
+      // with a statutory clock.
+      weight: 60,
+    }
+  })
+}
+
+/** Display names for a set of account ids, tolerant of nulls and non-students. */
+async function namesFor(
+  admin: SupabaseClient,
+  ids: (string | null)[],
+): Promise<Map<string, string>> {
+  const unique = Array.from(new Set(ids.filter((id): id is string => !!id)))
+  if (unique.length === 0) return new Map()
+  const { data } = await admin.from('accounts').select('id, display_name').in('id', unique)
+  return new Map((data ?? [])
+    .filter((a) => a.display_name)
+    .map((a) => [a.id as string, a.display_name as string]))
+}
+
+/**
  * Everything waiting on a person.
  *
  * Sources are fetched in parallel and each is allowed to fail alone: one
@@ -286,6 +362,7 @@ export async function loadQueue(
     ['unresolved_skill', unresolvedSkills(admin)],
     ['failed_job', failedJobs(admin)],
     ['feedback', feedbackItems(admin)],
+    ['task_verification', taskVerifications(admin)],
   ]
 
   const settled = await Promise.allSettled(sources.map(([, p]) => p))
@@ -306,7 +383,7 @@ export async function loadQueue(
 export function countsByKind(items: QueueItem[]): Record<QueueKind, number> {
   const counts = {
     dispute: 0, review_request: 0, faculty_verification: 0,
-    unresolved_skill: 0, failed_job: 0, feedback: 0,
+    unresolved_skill: 0, failed_job: 0, feedback: 0, task_verification: 0,
   } as Record<QueueKind, number>
   for (const i of items) counts[i.kind]++
   return counts

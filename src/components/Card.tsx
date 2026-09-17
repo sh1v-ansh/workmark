@@ -49,7 +49,7 @@ export default function Card({ id, href, onClick, padding = 20, style, className
   }
   if (onClick) {
     return (
-      <button id={id} onClick={onClick} className={cls} style={{ ...baseStyle, width: '100%', textAlign: 'left', cursor: 'pointer', font: 'inherit' }}>
+      <button id={id} onClick={onClick} className={cls} style={{ ...baseStyle, width: '100%', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit' }}>
         {children}
       </button>
     )

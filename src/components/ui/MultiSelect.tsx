@@ -68,7 +68,7 @@ export default function MultiSelect({
           <button
             type="button"
             onClick={onClear}
-            style={{ fontSize: 11.5, color: C.textFaint, background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline' }}
+            style={{ fontSize: 11.5, color: C.textFaint, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textDecoration: 'underline' }}
           >
             Clear
           </button>
@@ -84,7 +84,7 @@ export default function MultiSelect({
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
           fontSize: 13, color: count > 0 ? C.text : C.textMuted, background: C.surface,
           border: `1px solid ${count > 0 ? C.accent : C.border}`, borderRadius: R.md,
-          padding: '8px 11px', cursor: 'pointer', font: 'inherit', textAlign: 'left',
+          padding: '8px 11px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

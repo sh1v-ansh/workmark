@@ -33,6 +33,7 @@ export interface FileData {
     source: string | null
     /** The files this skill was found in, e.g. "docker-compose.yml, prisma/schema.prisma". */
     foundIn: string | null
+    projectBasis: string | null
     createdAt: string
     supersededByCorrection: boolean
     isCorrection: boolean
@@ -229,6 +230,16 @@ export default function MyFileClient({ data }: { data: FileData }) {
                         {e.foundIn && (
                           <p style={{ fontSize: 12, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
                             <span style={{ color: C.textGhost }}>Found in: </span>{e.foundIn}
+                          </p>
+                        )}
+
+                        {/* Project rows carry a higher tier than a plain scan.
+                            Saying what earned it — criteria agreed before the
+                            work, checked afterwards — is the difference
+                            between a number and a claim you can argue with. */}
+                        {e.projectBasis && (
+                          <p style={{ fontSize: 12, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
+                            <span style={{ color: C.textGhost }}>From a project: </span>{e.projectBasis}
                           </p>
                         )}
 

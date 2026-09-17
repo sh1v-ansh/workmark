@@ -35,3 +35,6 @@ next-env.d.ts
 
 # Bundled design canvas — 2.5 MB build output, regenerated on publish
 design/workmark-ui-refresh.html
+
+# PR scratch — written per-branch, never source
+.PR_BODY.md

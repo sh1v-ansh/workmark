@@ -39,6 +39,9 @@ export default function robots(): MetadataRoute.Robots {
           // a directory of students is not a thing to have a search engine
           // probing at all, and the page has no business being discovered.
           '/students',
+          // Private work between named people. Nothing here is public and
+          // none of it should be spending anyone's crawl budget.
+          '/workspaces',
         ],
       },
     ],

@@ -40,6 +40,24 @@ export interface Step {
   now: boolean
 }
 
+/**
+ * The ways to use Workmark.
+ *
+ * The page read as one product — get evidence — and that is the reason to
+ * sign up, not the reason to come back next month. These are the reasons to
+ * come back.
+ *
+ * `now` matters more here than anywhere else on the page. Three of these
+ * exist and one does not, and the honest label on the fourth is what makes
+ * the first three believable. A page listing four things a reader can only
+ * verify three of teaches them to discount all four.
+ */
+export interface Mode {
+  title: string
+  body: string
+  now: boolean
+}
+
 interface AudienceCopy {
   tab: string
   eyebrow: string
@@ -50,6 +68,10 @@ interface AudienceCopy {
   secondaryCta: { label: string; href: string }
   reassurance: string
   proof: [string, string][]
+  modesEyebrow: string
+  modesHeadline: string
+  modesLede: string
+  modes: Mode[]
   loopEyebrow: string
   loopHeadline: string
   loopLede: string
@@ -67,19 +89,59 @@ export const COPY: Record<Audience, AudienceCopy> = {
     // The sentence every CS student has already said out loud. They do not
     // need to be sold the problem, so the headline skips straight to the
     // answer — and it sets up the whole page: the record answers
-    // "experience", the externship answers "get", the marketplace answers
-    // what happens next.
+    // "experience", the guided project answers "get", the marketplace
+    // answers what happens next.
     headline: 'You need experience to get experience.',
     headlineAccent: 'Not any more.',
+    // The lede is where the empathy goes, and it has to name the number
+    // rather than gesture at it. Every student reading this has a real count
+    // in their head. Saying it back is what makes them believe the rest.
+    //
+    // Then the reframe, immediately: it is not that they are not good
+    // enough, it is that nothing in the process can tell. That is the honest
+    // diagnosis and it is also what Workmark actually fixes.
     lede:
-      'The application system wants experience nobody ever gave you a chance to get. Workmark hands you the projects instead, then turns what you build into proof an employer can check.',
+      'Two hundred applications. Four replies. Not because you cannot do the work. Because a CV gives nobody any way to tell. Workmark hands you real projects, reads the code you write, and turns it into proof somebody can check.',
     primaryCta: { label: 'Start my first project', href: '/login' },
     secondaryCta: { label: 'See open projects', href: '/listings' },
     reassurance: 'Free with a .edu address. No CV, no cover letter, no waiting to hear back.',
     proof: [
       ['Start today, no application', 'Workmark writes you a project and you begin.'],
-      ['You pick what we read', 'Repo by repo. Turn any of them off whenever.'],
+      ['Stop waiting to hear back', 'Every week you spend applying, you can spend building something that counts.'],
       ['The record is yours', 'Download the whole thing in one file, any time.'],
+    ],
+    modesEyebrow: 'What you can do here',
+    modesHeadline: 'Four ways in. None of them start with a CV.',
+    // The line that separates Workmark from every job board: those are
+    // waiting rooms. This is the one claim here that is emotionally true
+    // AND true today, so it carries the section.
+    modesLede:
+      'Job boards were built for people who already have a career. Here you can work on the thing you are missing and go after real work at the same time.',
+    modes: [
+      {
+        title: 'Get a guided project',
+        body: 'The closest thing to a first job that does not require having had one. A brief, a board, deadlines, and someone senior breaking the work down. The difference is that the someone is Workmark, and nobody had to hire you. Aim it at a gap we spot, or name the skill you want to get better at and we will write it around that.',
+        now: true,
+      },
+      {
+        title: 'Get paid for real work',
+        body: 'Research labs, startups and nonprofits post projects that pay. You see how well you fit before you spend an evening applying.',
+        now: true,
+      },
+      {
+        title: 'Build something with other students',
+        body: 'Find people to build with, on your idea or theirs. Everyone on the project gets credit for the part they actually wrote.',
+        now: true,
+      },
+      {
+        // Said plainly, including the part most companies would hide: this
+        // needs students here first. Being early is a reason to join, not
+        // something to apologise for — and a reader who is told the
+        // chicken-and-egg problem out loud believes the rest of the page.
+        title: 'Get put in front of internships',
+        body: 'The goal is to walk into a company and vouch for you by name. That takes a few hundred students with records strong enough to stand behind, so the earlier you build one, the earlier we can.',
+        now: false,
+      },
     ],
     loopEyebrow: 'How it works',
     // Not "to signed offer". That promises a result Workmark does not
@@ -87,7 +149,11 @@ export const COPY: Record<Audience, AudienceCopy> = {
     // overstate. The arc is still the reward; it just stops where the
     // product does.
     loopHeadline: 'From side project to real work',
-    loopLede: 'Four steps. You are already done with the first one.',
+    // The most reassuring true thing on the page. A student's biggest
+    // private fear is that the semester they spent learning something did
+    // not count for anything, because nothing ever asked them to prove it.
+    loopLede:
+      'Every hour you have already spent learning something counts here, and so does every hour you spend next. Four steps, and the first one is already behind you.',
     steps: [
       {
         n: '01',
@@ -98,16 +164,16 @@ export const COPY: Record<Audience, AudienceCopy> = {
       },
       {
         n: '02',
-        title: 'Get an externship without applying for one',
+        title: 'Get a guided project without applying for one',
         body:
-          'Workmark writes you a real project aimed at the exact skill you are missing. Build it in your own repo and it lands on your record like any other work.',
+          'Workmark writes you a real project aimed at the exact skill you are missing, then plans it with you like a senior dev would. Build it in your own repo and it lands on your record like any other work.',
         now: true,
       },
       {
         n: '03',
         title: 'Stop applying into the void',
         body:
-          'Real projects from faculty, labs and student teams, matched to your record the moment they go up. You see your fit before you apply. They see your evidence before they reply.',
+          'Real projects from faculty, labs and student teams, matched to your record the moment they go up. You see your fit before you apply. They see your evidence before they reply. Nobody is filtered out by a keyword.',
         now: true,
       },
       {
@@ -129,55 +195,96 @@ export const COPY: Record<Audience, AudienceCopy> = {
   businesses: {
     tab: 'For businesses',
     eyebrow: 'For startups, SMBs, nonprofits and labs',
-    headline: 'Stop reading CVs.',
-    headlineAccent: 'Read the work.',
+    // Not "stop reading CVs" — that tells somebody what to do without
+    // saying what is wrong, and nobody changes a process because a website
+    // used the imperative. This states the problem they already have and
+    // lets the fix be the short half.
+    headline: 'Every CV says the same things.',
+    headlineAccent: 'The work doesn’t.',
+    // The pain named the way they actually experience it. Not "CVs are
+    // vague" — that is the diagnosis. The felt problem is volume: the
+    // qualified applications are in there somewhere and there is no way to
+    // find them without reading all of it.
     lede:
-      'A CV is a claim someone wrote about themselves. Workmark shows you what a candidate actually built, which project it came from, and how good it was.',
+      'Three hundred applications and no way to tell which four are worth an hour. Workmark shows you what somebody actually built, how good it was, and how they work, before you decide whether to reply.',
     primaryCta: { label: 'Post a project', href: '/listings/new' },
     secondaryCta: { label: 'See how the record works', href: '/how-it-works' },
     reassurance: 'Free to post. No contract. Nothing to install.',
     proof: [
-      ['Proof, not adjectives', 'Every skill names the project behind it.'],
-      ['Nobody grades themselves', 'Levels come from the code, not the candidate.'],
-      ['You see the gaps too', 'Including what they cannot do yet.'],
+      ['Read five, not three hundred', 'Only candidates whose record fits the role reach you.'],
+      ['Nobody grades themselves', 'Skills come out of the code, not out of a text box.'],
+      ['Try before you hire', 'Start with one real project. No contract, no headcount.'],
     ],
-    loopEyebrow: 'Why this beats a CV',
-    loopHeadline: 'Know what they can do before you call them',
-    loopLede: 'Everything below comes out of work that already exists.',
+    modesEyebrow: 'Where the work comes from',
+    modesHeadline: 'Four reasons a student is already building',
+    // Two things a small employer needs to hear early. They are not
+    // competing with a brand here, and if the skill they need is scarce,
+    // the platform does something about it rather than shrugging.
+    modesLede:
+      'Nobody here is chasing a logo, so a ten-person company reads the same as a famous one. Every route below produces the same record, read the same way. Whichever door somebody came in through, the evidence is comparable.',
+    modes: [
+      {
+        title: 'Guided projects',
+        body: 'Workmark sets the brief against a skill gap, so the work was scoped by somebody other than the candidate. When a skill keeps going unfilled, that is the gap students get pointed at.',
+        now: true,
+      },
+      {
+        title: 'Paid project work',
+        body: 'Real briefs from labs, startups and nonprofits, with a person on the other end who accepted the result.',
+        now: true,
+      },
+      {
+        title: 'Student teams',
+        body: 'Several people, one repository, contributions attributed by commit author. You see what each of them did.',
+        now: true,
+      },
+      {
+        title: 'Internship placement',
+        body: 'Candidates put in front of you because their record supports it, not because they found your posting.',
+        now: false,
+      },
+    ],
+    loopEyebrow: 'A signal that did not exist',
+    loopHeadline: 'Know what they can do, and how they work, before you call them',
+    // Two halves, and the second is the one nobody else has. A reference
+    // call exists to find out whether somebody finishes things and says so
+    // when they are slipping. That is observed here rather than asked about.
+    loopLede:
+      'Not a better-formatted CV. Verified technical evidence, plus the things a reference call tries to get at and usually cannot.',
     steps: [
       {
         n: '01',
-        title: 'Nobody can talk themselves up',
+        title: 'The pile sorts itself',
         body:
-          'Skills are read out of the repositories a candidate owns: what the code depends on, who wrote which commits, whether it was tested. There is no box to exaggerate in.',
+          'Candidates are matched against what the role actually needs before they ever reach you. You read a handful of records that fit instead of screening out the rest by hand.',
         now: true,
       },
       {
         n: '02',
-        title: 'A weekend hack never outranks a real project',
+        title: 'Nobody can talk themselves up',
         body:
-          'How much of the work was theirs, how long they stayed with it, and how hard it was all change the level. Scale is part of the score, not a footnote.',
+          'Skills are read out of the repositories a candidate owns: what the code depends on, who wrote which commits, whether it was tested. There is no box to exaggerate in. A weekend hack never outranks a real project.',
         now: true,
       },
       {
         n: '03',
-        title: 'Advanced means the same thing every time',
+        title: 'See how they work, not just what they shipped',
         body:
-          'Levels are set against every other record on the platform and move as more work comes in. Two candidates at the same level really are comparable.',
+          'Did they hit their estimates? Flag problems early? Finish what they started? Measured while the work happened, from a board they were using anyway.',
         now: true,
       },
       {
         n: '04',
-        title: 'See how they work, not just what they shipped',
+        title: 'Find out before you commit to anything',
         body:
-          'Did they hit their estimates? Flag problems early? Finish what they started? The things a reference call tries to find out, observed while the work happens.',
-        now: false,
+          'Post one real project and work with somebody on it. A few weeks of actual output tells you more than any interview, and nobody has to be hired to find out.',
+        now: true,
       },
     ],
     crossLink: {
       eyebrow: 'Looking for work instead?',
       headline: 'You need experience to get experience',
-      body: 'Workmark hands you the projects, reads what you build, and turns it into proof an employer can check.',
+      body: 'Sending applications into the void does not work. Workmark hands you the projects instead, reads what you build, and turns it into proof somebody can check.',
       cta: 'See it from that side',
     },
   },

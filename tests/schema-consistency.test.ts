@@ -206,7 +206,14 @@ describe('columns the app writes exist', () => {
     for (const file of FILES) {
       const src = readFileSync(file, 'utf-8')
       for (const m of src.matchAll(
-        /\.from\(['"]([a-z_]+)['"]\)\s*\n?\s*\.(?:insert|update|upsert)\(\s*\{([\s\S]*?)\n\s*\}/g,
+        // The terminator has two shapes because the object does. A multi-line
+        // literal closes with `}` at the start of its own line, and requiring
+        // that is what stops a nested jsonb value ending the match early. A
+        // single-line literal closes mid-line, and matching only the first
+        // shape meant the match ran past the end of the statement and swept up
+        // whatever came next — an `.rpc()` argument on the following line was
+        // being reported as a column of the table above it.
+        /\.from\(['"]([a-z_]+)['"]\)\s*\n?\s*\.(?:insert|update|upsert)\(\s*\{([\s\S]*?)(?:\n\s*\}|\}\s*[,)])/g,
       )) {
         const [, table, objectBody] = m
         const cols = QUERYABLE.get(table)

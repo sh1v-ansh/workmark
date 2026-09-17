@@ -539,7 +539,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                         <button
                           type="button"
                           onClick={stopScan}
-                          style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 12.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
+                          style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 12.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
                         >
                           Stop
                         </button>

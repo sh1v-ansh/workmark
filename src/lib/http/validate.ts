@@ -153,6 +153,132 @@ export function requireInt(
 }
 
 /**
+ * A number that may be absent, in a range.
+ *
+ * Accepts the string a number input actually posts as well as a real number,
+ * because <input type="number"> gives you '4' and an empty box gives you ''.
+ */
+export function optionalNumber(
+  value: unknown,
+  field: string,
+  options: { min: number; max: number },
+): number | null {
+  if (value === undefined || value === null || value === '') return null
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(n)) throw new ValidationError(`${field} must be a number.`)
+  if (n < options.min || n > options.max) {
+    throw new ValidationError(`${field} must be between ${options.min} and ${options.max}.`)
+  }
+  return Math.round(n * 100) / 100
+}
+
+/** A whole number that may be absent. Rejects a float rather than rounding. */
+export function optionalInt(
+  value: unknown,
+  field: string,
+  options: { min: number; max: number },
+): number | null {
+  if (value === undefined || value === null || value === '') return null
+  const n = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(n)) throw new ValidationError(`${field} must be a whole number.`)
+  if (n < options.min || n > options.max) {
+    throw new ValidationError(`${field} must be between ${options.min} and ${options.max}.`)
+  }
+  return n
+}
+
+/** A plain calendar date, which is what a date column and a date input both use. */
+export function optionalDate(value: unknown, field: string): string | null {
+  if (value === undefined || value === null || value === '') return null
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new ValidationError(`${field} is not a valid date.`)
+  }
+  return value
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * An id that is about to be put in a `.eq()`.
+ *
+ * Postgres rejects a malformed uuid with error 22P02, which surfaces as a
+ * 500 and an entry in the error log. The row was never going to be found
+ * either way — the difference is whether the caller gets told that plainly
+ * or whether it looks like Workmark fell over.
+ */
+export function requireUuid(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !UUID_RE.test(value)) {
+    throw new ValidationError(`${field} is not valid.`)
+  }
+  return value
+}
+
+export function optionalUuid(value: unknown, field: string): string | null {
+  if (value === undefined || value === null || value === '') return null
+  return requireUuid(value, field)
+}
+
+/** An array, checked before anything calls .filter or .map on it. */
+export function requireArray(value: unknown, field: string, options: { max: number }): unknown[] {
+  if (!Array.isArray(value)) {
+    throw new ValidationError(`${field} must be a list.`)
+  }
+  if (value.length > options.max) {
+    throw new ValidationError(`${field} may have at most ${options.max} entries.`)
+  }
+  return value
+}
+
+/** Turn a ValidationError into the 400 it always means. Rethrows anything else. */
+export function badRequest(err: unknown): Response {
+  if (err instanceof ValidationError) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+  throw err
+}
+
+/**
+ * Parse a body, or hand back the response to return.
+ *
+ * The `{ ok }` shape rather than a thrown error, because it matches what
+ * validateProfileDetails and validateHandle already do here and it keeps a
+ * route's happy path flat instead of indented inside a try.
+ */
+export async function parseBody(
+  request: Request,
+): Promise<{ ok: true; body: Record<string, unknown> } | { ok: false; response: Response }> {
+  try {
+    return { ok: true, body: await readJsonBody(request) }
+  } catch (err) {
+    return { ok: false, response: badRequest(err) }
+  }
+}
+
+/**
+ * Run a block of field checks, collecting the first failure as a response.
+ *
+ * The readers above throw, which is the right shape for writing them and the
+ * wrong shape for calling them one at a time in a route. This is the adapter:
+ *
+ *   const fields = readFields(() => ({
+ *     title: requireString(body.title, 'Title', { max: 200 }),
+ *   }))
+ *   if (!fields.ok) return fields.response
+ */
+export function readFields<T>(
+  fn: () => T,
+): { ok: true; values: T } | { ok: false; response: Response } {
+  try {
+    return { ok: true, values: fn() }
+  } catch (err) {
+    return { ok: false, response: badRequest(err) }
+  }
+}
+
+/**
  * The maximum length of an email address, from RFC 5321.
  *
  * Worth enforcing even though the address is only ever handed to Supabase:

@@ -124,6 +124,9 @@
   @keyframes nb-drawer-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes nb-modal-in { from { opacity: 0; } to { opacity: 1; } }
   @keyframes nb-shimmer { 0%, 100% { background-position: 50% 50%; } }
+  /* The spinner still turns — it is the only indication work is happening,
+     and freezing it would say the page had hung. Slowed, not stopped. */
+  .nb-spinner { animation-duration: 1.6s; }
 }
 
 @keyframes slide-up {
@@ -325,10 +328,60 @@
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease, box-shadow 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+              opacity 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease;
 }
+
+/* The press.
+ *
+ * Every other piece of feedback on this page waits for a server. This one
+ * cannot: it is the only thing that tells somebody the click registered, and
+ * it has to happen in the same frame as the finger going down. A button that
+ * looks identical for the 400ms before a response arrives is a button people
+ * press twice.
+ *
+ * Transform rather than a colour change, because it reads as physical and
+ * because it composites on the GPU — it cannot be delayed by whatever the
+ * main thread is doing when the click lands.
+ *
+ * Scoped to no-preference here rather than overridden in the reduced-motion
+ * block further up: the two rules have identical specificity, so whichever
+ * came second would win regardless of the media query, and the override was
+ * silently doing nothing.
+ *
+ * Reduced motion still gets feedback, just not movement. There is no hover
+ * colour on press, so suppressing this outright would leave that reader with
+ * no confirmation the click landed at all — which is the exact problem this
+ * rule exists to solve. */
+@media (prefers-reduced-motion: no-preference) {
+  .nb-btn:not(:disabled):active { transform: scale(0.975); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nb-btn:not(:disabled):active { opacity: 0.7; }
+}
+
 .nb-btn:disabled,
 .nb-btn[aria-disabled='true'] { opacity: 0.45; cursor: not-allowed; }
+
+/* A button waiting on a server.
+ *
+ * Distinct from disabled on purpose: the two look the same at 0.45 opacity,
+ * and they mean opposite things. Disabled is "you cannot do this"; busy is
+ * "it is happening". Somebody who reads the first when the second is true
+ * concludes the click failed and goes looking for another way. */
+.nb-btn[data-busy='true'] { opacity: 0.8; cursor: progress; }
+
+.nb-spinner {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  animation: nb-spin 0.7s linear infinite;
+}
+
+@keyframes nb-spin { to { transform: rotate(360deg); } }
 
 .nb-btn-ink      { background: #191E2E; color: #FFFFFF; border-color: #191E2E; }
 .nb-btn-ink:not(:disabled):hover { background: #262D42; border-color: #262D42; }
@@ -568,20 +621,12 @@
 .wm-app-ground button {
   font-family: inherit;
 }
-.wm-app-ground::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 420px at 12% -8%, rgba(97, 66, 245, 0.07) 0%, rgba(97, 66, 245, 0) 68%),
-    radial-gradient(700px 380px at 96% 2%, rgba(129, 140, 248, 0.06) 0%, rgba(129, 140, 248, 0) 70%);
-}
-@media (prefers-reduced-transparency: reduce) {
-  .wm-app-ground::before { background: none; }
-}
-
+/* The violet wash is gone.
+   It was two soft radials meant to give a white ground some depth. On a page
+   with white around the cards it read as light; on a dense page it read as a
+   tint on the paper, and once you have seen that you see it everywhere. The
+   depth the app actually has comes from the card shadow and the hairlines,
+   which work on every page rather than only the sparse ones. */
 /* ── The page grid ────────────────────────────────────────────────────────
    Three columns, and nothing is allowed to take exactly half. A 50/50 split
    is what makes the eye ping-pong: neither side wins, so it keeps checking
@@ -642,15 +687,39 @@
    only the link/button variants move. */
 .nb-card {
   background: #FFFFFF;
-  border: 1px solid #ECEBF3;
   border-radius: 13px;
-  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03), 0 8px 20px -12px rgba(25, 30, 46, 0.18);
+  /* The edge is a border again, and a decisive one.
+     Removing it left white cards on a white ground held apart by a shadow
+     alone, which is not enough of an edge to read as a sheet — the grid went
+     soft. Putting back the old --border hairline (#ECEBF3, about 1.1:1 on
+     white) would not fix it either: that is the washed-out grey outline that
+     made every surface look like a form field.
+     So: darker, and cool rather than neutral, which reads as drawn on purpose
+     instead of as a browser default. The shadow drops to a hairline underneath
+     so the definition is border-led — a card with both a strong border and a
+     big soft shadow is claiming to be outlined and floating at once. */
+  border: 1px solid #CFD2E0;
+  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03);
 }
-.nb-card-interactive { transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease; }
+.nb-card-interactive { transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease; }
+/* Violet on hover, because violet means "you can click this" everywhere else
+   in the app. The shadow grows a little so the card lifts, but the edge is
+   still what changes first. */
 .nb-card-interactive:hover {
-  border-color: #DCD4F7;
-  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 30px -16px rgba(97, 66, 245, 0.38);
-  transform: translateY(-1px);
+  border-color: rgba(97, 66, 245, 0.45);
+  box-shadow: 0 2px 4px rgba(25, 30, 46, 0.05), 0 14px 30px -20px rgba(97, 66, 245, 0.4);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nb-card-interactive:hover { transform: translateY(-2px); }
+}
+
+/* A project Workmark wrote, in the same grid as the ones people posted.
+   The distinction is a rule and a mark, the same language the assistant uses
+   everywhere else — not a separate section above the real work, which put a
+   heading, a paragraph and a link between somebody and the postings they came
+   for. */
+.nb-card-written {
+  border-left: 2px solid #6142F5;
 }
 
 /* The one card per screen that owns it. Violet edge, violet light pooling in
@@ -659,7 +728,11 @@
 .nb-card-focal {
   position: relative;
   overflow: hidden;
-  border-color: #DCD4F7;
+  /* Stronger than the ordinary card edge, not weaker. While .nb-card carried
+     no border this line did nothing, so it was tuned against a card that had
+     no edge to beat — #DCD4F7 would now read as a *softer* border than the
+     one every other card has, which is backwards for the focal one. */
+  border-color: rgba(97, 66, 245, 0.5);
   box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 16px 36px -20px rgba(97, 66, 245, 0.45);
 }
 .nb-card-focal::before {
@@ -799,29 +872,29 @@
 .nb-ai-card {
   position: relative;
   display: block;
-  overflow: hidden;
   padding: 18px;
   border-radius: 13px;
   text-decoration: none;
   color: inherit;
-  border: 1px solid #DCD4F7;
-  background:
-    linear-gradient(152deg, #F6F2FF 0%, #FCFBFF 46%, #FFFFFF 100%);
-  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 32px -18px rgba(97, 66, 245, 0.45);
-  transition: box-shadow 0.2s ease, border-color 0.15s ease, transform 0.15s ease;
-}
-/* Light pooling in the bottom-right, the same move the focal card makes. */
-.nb-ai-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(420px 220px at 96% 108%, rgba(97, 66, 245, 0.13) 0%, rgba(97, 66, 245, 0) 72%);
+  background: #FFFFFF;
+  /* Same edge as every other card, because it belongs in the same grid.
+     The only difference is the rule down the left — the mark the assistant
+     uses everywhere else in the product, so a written project reads as
+     Workmark speaking rather than as a different feature. It was in a section
+     of its own with a heading and a paragraph above it, which said "this is
+     somewhere else" about something that is just another project. */
+  border: 1px solid #CFD2E0;
+  border-left: 2px solid #6142F5;
+  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 .nb-ai-card:hover {
-  border-color: #C3B4F2;
-  transform: translateY(-1px);
-  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.08), 0 18px 38px -18px rgba(97, 66, 245, 0.55);
+  border-color: rgba(97, 66, 245, 0.45);
+  border-left-color: #6142F5;
+  box-shadow: 0 2px 4px rgba(25, 30, 46, 0.05), 0 14px 30px -20px rgba(97, 66, 245, 0.4);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nb-ai-card:hover { transform: translateY(-2px); }
 }
 
 /* The band above the grid that says what these are. Full width, once, so
@@ -926,9 +999,94 @@
 /* The panel they sit in. Sticky, because it is a sidebar beside a list that
    can be much taller than it — a filter you have to scroll back up to reach
    is a filter people stop using. */
+/* ── The board toolbar ────────────────────────────────────────────────────
+   One row between the project's tabs and the kanban.
+
+   There used to be five bands stacked here: the review queue, the blocked
+   list, Today, the week, and last week's review. Every one of them is worth
+   having and none of them was worth what they cost together — on a real
+   project the columns started most of a screen down, and the columns are
+   what somebody opened the page for.
+
+   So the lists became counts, and the counts open one panel at a time.
+   Nothing is hidden: "Blocked 3" says more at a glance than the list did,
+   because the list was too far down the page to be glanced at. */
+.wm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ECEBF3;
+}
+
+/* A count you can press. Sized to sit on one line with the buttons opposite
+   it, so the whole toolbar is one row rather than two. */
+.wm-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 7px 11px;
+  border-radius: 8px;
+  border: 1px solid #DDE0EB;
+  background: #FFFFFF;
+  color: #5A6172;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+.wm-pill strong { font-weight: 700; color: #191E2E; }
+.wm-pill:hover { border-color: #B9BDCC; color: #191E2E; }
+
+/* Work other people are waiting on. Violet, the colour this app uses for
+   "this one is yours to move". */
+.wm-pill-accent { border-color: rgba(97, 66, 245, 0.35); color: #4E2FD6; }
+.wm-pill-accent strong { color: #4E2FD6; }
+.wm-pill-accent:hover { border-color: #6142F5; color: #4E2FD6; }
+
+/* Blocked. Red and never folded into anything else — a blocked card is the
+   thing between somebody and all of their other work, and it was previously
+   scattered across six columns where a full board still looked like
+   progress. */
+.wm-pill-stop { border-color: #E9BFBC; background: #FEF6F6; color: #B91C1C; }
+.wm-pill-stop strong { color: #B91C1C; }
+.wm-pill-stop:hover { border-color: #DC2626; color: #991B1B; }
+
+/* A week that has run past its end date. */
+.wm-pill-warn { border-color: #E4B9A6; background: #FDF8F3; color: #94500F; }
+.wm-pill-warn strong { color: #94500F; }
+
+/* Open, rather than merely hovered. Filled, because the panel it controls is
+   directly underneath and the two need to read as one thing.
+
+   Two classes and last in the file, so it beats the tone rules above whatever
+   order they are written in. As a single class earlier it lost to
+   .wm-pill-stop on exactly the pill somebody is most likely to press. */
+.wm-pill.wm-pill-on {
+  background: #191E2E;
+  border-color: #191E2E;
+  color: #FFFFFF;
+}
+.wm-pill.wm-pill-on strong { color: #FFFFFF; }
+.wm-pill.wm-pill-on:hover { background: #262D42; border-color: #262D42; color: #FFFFFF; }
+
+/* The facet panel down the left of Find work.
+   It keeps the borderless treatment the rest of the cards have just given up:
+   it is a panel of controls, not one of the results, and the sheet the results
+   sit on should be the thing with the edge. Left explicitly rather than by
+   accident, because .nb-card now carries a border and this would otherwise
+   have inherited one. */
 .nb-filters {
   position: sticky;
   top: 78px;
+  border-color: transparent;
+  box-shadow: 0 1px 2px rgba(25, 30, 46, 0.04), 0 6px 18px -12px rgba(25, 30, 46, 0.16);
 }
 @media (max-width: 900px) {
   .nb-filters { position: static; }
@@ -1175,7 +1333,19 @@
 /* ── Marketing section rhythm ─────────────────────────────────────────────
    One class so every section below the hero breathes identically. The old
    page had six different vertical paddings. */
-.wm-section { padding: 92px 24px; }
+/* One value, everywhere.
+ *
+ * Section spacing used to be set per section: 92 here, 0 there, 72 before
+ * the cross-link, 104 before the join. Because adjacent sections both
+ * contribute padding, those produced gaps of 92, 184, 148 and 196 down the
+ * same page — no reader can name that, but everyone feels it as the page
+ * lurching.
+ *
+ * Every section now uses this and nothing overrides it, except one
+ * deliberate zero where the map continues the record section it shares a
+ * tint with. Consistent by construction rather than by remembering. */
+:root { --wm-section-y: 88px; }
+.wm-section { padding: var(--wm-section-y) 24px; }
 .wm-section-inner { max-width: 1080px; margin: 0 auto; }
 .wm-eyebrow-2 {
   display: inline-block;
@@ -1206,7 +1376,8 @@
   text-wrap: pretty;
 }
 @media (max-width: 720px) {
-  .wm-section { padding: 62px 20px; }
+  :root { --wm-section-y: 60px; }
+  .wm-section { padding: var(--wm-section-y) 20px; }
   .wm-h2 { font-size: 30px; }
 }
 
@@ -1244,30 +1415,25 @@
    dashed rather than solid, no shadow, no lift. Honest by construction —
    a reader can tell which of these they can have today without reading the
    badge. */
-.wm-step {
-  background: #FFFFFF;
-  border: 1px solid #E5E4EF;
-  border-radius: 16px;
-  padding: 24px 25px;
-  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03), 0 12px 28px -18px rgba(25, 30, 46, 0.25);
-  transition: box-shadow 0.22s ease, transform 0.16s ease, border-color 0.16s ease;
-}
-.wm-step:hover {
-  transform: translateY(-2px);
-  border-color: #C7B8FF;
-  box-shadow: 0 1px 2px rgba(62, 31, 255, 0.06), 0 18px 36px -18px rgba(62, 31, 255, 0.34);
-}
-.wm-step-soon {
-  background: rgba(255, 255, 255, 0.5);
-  border-style: dashed;
-  border-color: #DCDAE8;
-  box-shadow: none;
-}
-.wm-step-soon:hover {
-  transform: none;
-  border-color: #C7C4D8;
-  box-shadow: none;
-}
+/* Text, not a card.
+ *
+ * This used to be a white box with a border, a radius, a drop shadow and a
+ * hover that lifted it and glowed violet — and every block of content on the
+ * page got the same treatment. That is the look of a page assembled from a
+ * component library rather than designed: identical rectangles in a grid,
+ * a shadow under everything so nothing is actually emphasised, and a border
+ * around text that needed no border to be readable.
+ *
+ * A hairline above each item and real space around it does the same job.
+ * Grouping comes from alignment and whitespace, hierarchy comes from type.
+ * Nothing lifts on hover, because none of these are buttons and pretending
+ * otherwise is the tell. */
+/* No rule at all. In a two-column grid a per-cell top border stops at the
+   gutter, so a row reads as one line with a hole in it — a divider that
+   divides nothing. The 01/02/03/04 numerals already give each item an
+   anchor and the column gap does the separating. */
+.wm-step { padding: 4px 0; }
+.wm-step-soon { opacity: 0.86; }
 
 /* The record demonstration in TheRecord. Elevated more than an ordinary
    card because it is the one thing on the page a reader should look at. */
@@ -1355,6 +1521,94 @@
   background: radial-gradient(420px 220px at 96% 120%, rgba(236, 72, 153, 0.10) 0%, rgba(236, 72, 153, 0) 70%);
 }
 
+/* ── A ruled list ─────────────────────────────────────────────────────────
+   Full-width rules, so each one separates one item from the next rather
+   than underlining half of one. The fixed label column gives every row the
+   same left edge, and that alignment is what contains the text — the job
+   the floating borders were failing at. */
+.wm-rows { border-top: 1px solid #E9E8F0; }
+.wm-row {
+  display: grid;
+  grid-template-columns: minmax(0, 300px) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+  padding: 24px 0 26px;
+  border-bottom: 1px solid #E9E8F0;
+}
+.wm-row-label { display: flex; align-items: baseline; gap: 10px; }
+.wm-row-soon { border-bottom-color: #F0EFF5; }
+
+@media (max-width: 860px) {
+  .wm-row { grid-template-columns: 1fr; gap: 8px; padding: 20px 0 22px; }
+}
+
+/* ── The skills map ───────────────────────────────────────────────────────
+   One panel, full width, no shadow. It is the only section on this page
+   that is not a heading over a two-column grid, and that is the point: even
+   with card borders gone, a page where every section keeps the same meter
+   still reads as generated. One section breaking the rhythm is worth more
+   than another that keeps it.
+
+   The zones are divided by hairlines rather than made into three cards, for
+   the same reason as .wm-step — three rectangles side by side would give
+   equal weight to "what you have proven" and "what you have never touched",
+   which is exactly the distinction the picture exists to draw. */
+/* No border, no fill, no radius. The panel sits flat on the section tint.
+   Below it the page already stacks a cross-link box and a join panel, both
+   rounded rectangles of the same radius — a third one above them is what
+   makes the bottom of this page read as a component gallery. The hairlines
+   inside the map are enough structure on their own. */
+.wm-map { padding: 0; }
+.wm-map-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 32px;
+  flex-wrap: wrap;
+  padding-bottom: 26px;
+  border-bottom: 1px solid #EFEEF5;
+}
+/* Four bars, and the last one is gold. The shape carries the whole idea —
+   a record is something that moves — so it needs no axis and no legend. */
+.wm-terms {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  margin-left: auto;
+}
+.wm-map-tag {
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 12px;
+  color: #8A8A94;
+  align-self: flex-start;
+}
+.wm-map-zones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 0;
+}
+.wm-map-zone { padding: 24px 26px 4px; }
+.wm-map-zone + .wm-map-zone { border-left: 1px solid #EFEEF5; }
+.wm-map-zone:first-child { padding-left: 0; }
+.wm-map-zone:last-child { padding-right: 0; }
+.wm-map-foot {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #EFEEF5;
+  font-family: var(--font-app), 'Instrument Sans', system-ui, sans-serif;
+  font-size: 14.5px;
+  color: #4B4B57;
+}
+
+@media (max-width: 860px) {
+  .wm-map { padding: 24px 22px 22px; border-radius: 16px; }
+  .wm-map-zones { grid-template-columns: 1fr; }
+  .wm-map-zone { padding: 22px 0 4px; }
+  .wm-map-zone + .wm-map-zone { border-left: 0; border-top: 1px solid #EFEEF5; }
+  .wm-terms { margin-left: 0; gap: 14px; }
+}
+
 /* ── Footer ───────────────────────────────────────────────────────────────
    Four columns rather than a logo and a row of links. The old one put every
    destination in one flat list, which is a sitemap rather than a footer —
@@ -1407,12 +1661,12 @@
   .wm-footer-grid { grid-template-columns: 1fr; }
 }
 
-/* ── The externship section ───────────────────────────────────────────────
+/* ── The guided-project section ───────────────────────────────────────────────
    Its own panel rather than another flat band, because it is the part of
    the page that answers the hardest objection a student has — everyone
    wants experience and nobody will give you any — and it was previously a
    clause inside somebody else's paragraph. */
-.wm-externship {
+.wm-guided {
   position: relative;
   overflow: hidden;
   padding: 44px 44px 46px;
@@ -1421,7 +1675,7 @@
   background: linear-gradient(140deg, #F7F4FF 0%, #FCFBFF 46%, #FFFFFF 100%);
   box-shadow: 0 1px 2px rgba(62, 31, 255, 0.05), 0 30px 70px -40px rgba(62, 31, 255, 0.42);
 }
-.wm-externship::before {
+.wm-guided::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -1431,7 +1685,7 @@
     radial-gradient(560px 320px at 0% 100%, rgba(56, 189, 248, 0.10) 0%, rgba(56, 189, 248, 0) 68%);
 }
 @media (max-width: 720px) {
-  .wm-externship { padding: 30px 22px 32px; border-radius: 18px; }
+  .wm-guided { padding: 30px 22px 32px; border-radius: 18px; }
 }
 
 /* The AI project card, in the clothes it actually wears in the product. A
@@ -1455,19 +1709,14 @@
 
 /* The four beats under the card. Same dashed treatment as the loop's
    unbuilt step, so "not yet" looks identical wherever it appears. */
+/* Same reasoning as .wm-step above: a rule and space, not a rectangle. */
 .wm-ext-step {
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid #EAE6F8;
-  border-radius: 12px;
-  padding: 13px 15px;
+  padding: 15px 0 3px;
+  border-top: 1px solid #E7E2F5;
 }
-.wm-ext-step-soon {
-  background: rgba(255, 255, 255, 0.4);
-  border-style: dashed;
-  border-color: #DCDAE8;
-}
+.wm-ext-step-soon { border-top-color: #EDEAF6; }
 
-/* ── The unbuilt half of the externship ───────────────────────────────────
+/* ── The unbuilt half of the guided project ───────────────────────────────────
    Everything under here describes the workspace, which does not exist yet.
    It is separated by a rule, carries one unmistakable "Being built" badge,
    and every card in it wears the same dashed treatment the loop's unbuilt
@@ -1551,4 +1800,107 @@
 
 @media (max-width: 720px) {
   .wm-board { width: 100%; }
+}
+
+/* ── The board ────────────────────────────────────────────────────────────
+   A kanban card is scanned, not read. Everything on it competes with the one
+   thing that matters, which is the title — so the card carries a title and a
+   row of small signals, and the checker's reasoning, the checks behind it,
+   who confirmed it and the list of pieces all live in the card's own dialog.
+   A board is for seeing where things are. */
+
+.wm-card {
+  /* Lifts under the pointer so the card reads as a thing you can pick up.
+     Drag was already implemented and nobody found it: a static rectangle with
+     `cursor: grab` announces nothing until you are already on top of it. */
+}
+.wm-card:hover {
+  box-shadow: 0 2px 10px rgba(25, 30, 46, 0.09);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .wm-card:hover { transform: translateY(-1px); }
+}
+.wm-card:active { cursor: grabbing; }
+
+/* Small enough to scan, not small enough to squint at. */
+.wm-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+
+/* Actions appear when the card does. Four buttons on every card is four times
+   the noise for something used on one card at a time. Hover is not available
+   on touch, so they stay visible there — the alternative is a feature that
+   simply does not exist on a phone. */
+.wm-card-actions {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.wm-card:hover .wm-card-actions,
+.wm-card:focus-within .wm-card-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  .wm-card-actions { opacity: 1; }
+}
+
+.wm-mini {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 5px;
+  border: 1px solid #ECEBF3;
+  background: #FFFFFF;
+  color: #6B7280;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.wm-mini:hover:not(:disabled) { background: #F6F5FB; color: #191E2E; border-color: #DEDCEC; }
+.wm-mini:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* The column you are about to drop into.
+   The old cue was a one-pixel border, which is the same weight as the border
+   that is always there — so nothing appeared to change. A tint plus a dashed
+   edge says "here" from the other side of the board. */
+.wm-column-open {
+  background: rgba(97, 66, 245, 0.06) !important;
+  border-style: dashed !important;
+  border-color: #6142F5 !important;
+}
+.wm-column-shut { opacity: 0.4; }
+
+/* ── Tabs ─────────────────────────────────────────────────────────────────
+   Real navigation between views of one project, rather than a button that
+   swaps a panel. The underline is the whole design: it marks where you are
+   without adding a box, and a row of boxes is what made the old toggle read
+   as a stray control rather than as a place. */
+.wm-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 1px solid #ECEBF3;
+}
+.wm-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6B7280;
+  cursor: pointer;
+  transition: color 0.12s ease, border-color 0.12s ease;
+}
+.wm-tab:hover { color: #191E2E; }
+.wm-tab-on {
+  color: #191E2E;
+  font-weight: 600;
+  border-bottom-color: #191E2E;
 }

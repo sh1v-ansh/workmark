@@ -49,6 +49,10 @@ export const LIMITS = {
   /** The data export. Assembles seventeen queries; not a page to refresh. */
   export: { limit: 5, windowSeconds: 3600 },
 
+  /** Creating projects and inviting people. Generous — a student setting up
+   *  a project and getting three teammates in does a lot in five minutes. */
+  workspace: { limit: 40, windowSeconds: 3600 },
+
   // ── Before anyone is signed in ──
   // These four are keyed on an IP or an email address rather than a user id,
   // because the whole point is that no user exists yet. Everything above

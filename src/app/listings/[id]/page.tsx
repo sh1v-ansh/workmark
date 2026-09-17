@@ -103,6 +103,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         brief: listing.brief,
         posterId: listing.poster_id,
         posterDisplayName: listing.poster_display_name,
+        applicationQuestions: listing.application_questions,
         // Confirmed faculty only. A pending claim shows nothing at all —
         // "faculty, unverified" would still say professor, which is the
         // part nobody has checked.

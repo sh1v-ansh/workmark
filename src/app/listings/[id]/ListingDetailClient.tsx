@@ -8,6 +8,8 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Ring from '@/components/ui/Ring'
 import Drawer from '@/components/ui/Drawer'
+import { blockers, canSubmit as canSubmitDraft, countWords, toneFor, MIN_ANSWER_WORDS, MAX_ANSWER_WORDS } from '@/lib/applications/gate'
+import { questionsFor, KIND_LABEL } from '@/lib/applications/questions'
 import { Kicker } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
@@ -19,8 +21,6 @@ import { LAYOUT } from '@/lib/theme/layout'
 const MAX_ACTIVE_APPLICATIONS = 5
 // Must match MIN/MAX_RESPONSE_WORDS in the apply route — the server is
 // authoritative; these exist so the button disables before a round trip.
-const MIN_WORDS = 50
-const MAX_WORDS = 250
 
 interface Listing {
   id: string
@@ -30,6 +30,8 @@ interface Listing {
   posterDisplayName: string | null
   /** Only true once a person has confirmed the claim. Never set for pending. */
   posterIsVerifiedFaculty: boolean
+  /** Generated at post time. Null falls back to the standard pair. */
+  applicationQuestions: unknown
   status: string
   estHours: number | null
   hoursPerWeek: number | null
@@ -68,7 +70,13 @@ export default function ListingDetailClient({
   const router = useRouter()
   const { toast } = useToast()
   const [showApply, setShowApply] = useState(false)
-  const [responseText, setResponseText] = useState('')
+  // One box per question, keyed by question id. The single 50-to-250-word
+  // essay this replaces asked for fluent prose about past work, which is the
+  // cheapest thing a language model makes.
+  const questions = questionsFor(listing.applicationQuestions)
+  const [answers, setAnswers] = useState<Record<string, string>>({})
+  const setAnswer = (id: string, text: string) =>
+    setAnswers((prev) => ({ ...prev, [id]: text }))
   // Pre-ticked where the student already has evidence — the point of the
   // checkbox isn't data collection, it's that ticking a skill your record
   // doesn't back is a visible act rather than something a paragraph can
@@ -80,13 +88,22 @@ export default function ListingDetailClient({
   const [submitting, setSubmitting] = useState(false)
 
   const atSlotCap = activeApplicationCount >= MAX_ACTIVE_APPLICATIONS
-  const wordCount = responseText.trim() ? responseText.trim().split(/\s+/).length : 0
+  const draft = {
+    answers: questions.map((q) => ({ questionId: q.id, text: answers[q.id] ?? '' })),
+    consented,
+    questionCount: questions.length,
+  }
+  // A list of reasons rather than a boolean. The old gate was
+  // `consented && words >= 50 && words <= 250` and said none of it out loud,
+  // so ticking every skill and writing three careful sentences left a grey
+  // button and no explanation.
+  const stopping = blockers(draft)
   // The highest-weighted requirement is what the response is scoped to;
   // ties break on listing order, which is the poster's own ordering.
   const topRequirement = requirements.length
     ? requirements.reduce((a, b) => (b.requiredLevel > a.requiredLevel ? b : a))
     : null
-  const canSubmit = consented && wordCount >= MIN_WORDS && wordCount <= MAX_WORDS
+  const ready = canSubmitDraft(draft)
 
   async function submitApplication() {
     if (!consented) {
@@ -100,7 +117,17 @@ export default function ListingDetailClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           listingId: listing.id,
-          responseText,
+          // The question text travels with the answer: a listing can be
+          // edited after somebody applies, and a poster reading this in three
+          // months needs to see what was actually asked.
+          responses: questions.map((q) => ({
+            question_id: q.id,
+            question: q.prompt,
+            answer: (answers[q.id] ?? '').trim(),
+          })),
+          responseText: questions
+            .map((q) => `${q.prompt}\n${(answers[q.id] ?? '').trim()}`)
+            .join('\n\n'),
           claimedSkills: Array.from(claimed),
           consented: true,
         }),
@@ -262,7 +289,13 @@ export default function ListingDetailClient({
             subtitle={listing.title ?? undefined}
             footer={
               <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                <Button variant="accent" onClick={submitApplication} disabled={!canSubmit} busyLabel={submitting ? 'Submitting…' : null}>
+                {stopping.length > 0 && (
+                  <p style={{ fontSize: 13, color: C.textFaint, alignSelf: 'center', marginRight: 'auto' }}>
+                    {stopping[0]}
+                  </p>
+                )}
+                <Button variant="accent" onClick={submitApplication} disabled={!ready}
+                  title={stopping[0]} busyLabel={submitting ? 'Submitting…' : null}>
                   Submit application
                 </Button>
                 <Button variant="quiet" onClick={() => setShowApply(false)} disabled={submitting}>Cancel</Button>
@@ -301,25 +334,52 @@ export default function ListingDetailClient({
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="apply-note" style={{ display: 'block' }}>
-                  <Kicker style={{ marginBottom: 5.5 }}>{topRequirement ? `About ${topRequirement.name}` : 'Your response'}</Kicker>
-                </label>
-                <p style={{ fontSize: 13, color: C.textFaint, marginBottom: 10, lineHeight: 1.5 }}>
-                  {topRequirement
-                    ? `This listing weights ${topRequirement.name} highest. What have you actually built with it?`
-                    : 'What makes you a fit for this project?'}
-                </p>
-                <textarea
-                  id="apply-note" value={responseText} onChange={(e) => setResponseText(e.target.value)}
-                  rows={6} className="dk-textarea" style={{ fontFamily: 'inherit', lineHeight: 1.65, fontSize: 15 }}
-                  placeholder="Be specific about what you built and what was hard about it. No resume needed — your verified record is the resume."
-                />
-                <p style={{ fontSize: 13, color: wordCount > MAX_WORDS ? '#B91C1C' : C.textGhost, marginTop: 6.5 }}>
-                  {wordCount} word{wordCount === 1 ? '' : 's'}
-                  {wordCount < MIN_WORDS ? ` · ${MIN_WORDS - wordCount} more needed` : wordCount > MAX_WORDS ? ` · ${wordCount - MAX_WORDS} over the limit` : ' · good'}
-                </p>
-              </div>
+              {/* Two short questions instead of one essay.
+                  Sixty words forces a choice; two hundred invites a paragraph
+                  anybody can generate. Each asks what they would do on THIS
+                  project, because the record already covers what they have
+                  done before. */}
+              {questions.map((q, i) => {
+                const text = answers[q.id] ?? ''
+                const n = countWords(text)
+                const tone = toneFor(n)
+                return (
+                  <div key={q.id}>
+                    <Kicker style={{ marginBottom: 5.5 }}>
+                      {KIND_LABEL[q.kind]}
+                    </Kicker>
+                    <label htmlFor={`apply-q-${i}`} style={{ display: 'block', fontSize: 14.5, color: C.textSub, lineHeight: 1.55, marginBottom: 4 }}>
+                      {q.prompt}
+                    </label>
+                    {q.hint && (
+                      <p style={{ fontSize: 13, color: C.textFaint, marginBottom: 9, lineHeight: 1.5 }}>{q.hint}</p>
+                    )}
+                    <textarea
+                      id={`apply-q-${i}`}
+                      value={text}
+                      onChange={(e) => setAnswer(q.id, e.target.value)}
+                      rows={3}
+                      className="dk-textarea"
+                      style={{ fontFamily: 'inherit', lineHeight: 1.65, fontSize: 15 }}
+                      placeholder="Pick one and say what it costs you."
+                    />
+                    {/* Three states, not two. The old counter styled only
+                        "over the limit", so being under the minimum — far the
+                        more common way to be stuck — looked like being done. */}
+                    <p style={{
+                      fontSize: 13, marginTop: 6.5,
+                      color: tone === 'over' ? '#B91C1C' : tone === 'short' ? '#94500F' : C.textGhost,
+                    }}>
+                      {n} word{n === 1 ? '' : 's'}
+                      {tone === 'short'
+                        ? ` · ${MIN_ANSWER_WORDS - n} more needed`
+                        : tone === 'over'
+                          ? ` · ${n - MAX_ANSWER_WORDS} over`
+                          : ' · good'}
+                    </p>
+                  </div>
+                )
+              })}
 
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9.5, cursor: 'pointer' }}>
                 <input type="checkbox" checked={consented} onChange={(e) => setConsented(e.target.checked)} className="dk-checkbox" style={{ marginTop: 3 }} />

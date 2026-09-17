@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { readFields, requireString } from '@/lib/http/validate'
 
 // One open request at a time. A queue reviewed by one person degrades
 // fast if anyone can fill it; this is the cheapest possible backpressure
@@ -29,21 +30,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
   }
 
-  const url = body.url?.trim()
-  const note = body.note?.trim()
+  const fields = readFields(() => ({
+    url: requireString(body.url, 'A link to the work', { max: 2000 }),
+    note: requireString(body.note, 'A description', { min: 30, max: 4000 }),
+  }))
+  if (!fields.ok) return fields.response
+  const { url, note } = fields.values
 
-  if (!url) return NextResponse.json({ error: 'Add a link to the work.' }, { status: 400 })
   try {
     const parsed = new URL(url)
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') throw new Error('bad protocol')
   } catch {
     return NextResponse.json({ error: 'That doesn\'t look like a valid link.' }, { status: 400 })
-  }
-  if (!note || note.length < 30) {
-    return NextResponse.json(
-      { error: 'Describe what it is and what you built — a reviewer has no commit history to read here.' },
-      { status: 400 },
-    )
   }
 
   const { count } = await supabase

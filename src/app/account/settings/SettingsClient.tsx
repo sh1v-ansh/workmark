@@ -211,7 +211,7 @@ export default function SettingsClient({
                     <button
                       type="button"
                       onClick={() => setForm(saved)}
-                      style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 13, color: C.textFaint, textDecoration: 'underline', textUnderlineOffset: 2, cursor: 'pointer' }}
+                      style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 13, color: C.textFaint, textDecoration: 'underline', textUnderlineOffset: 2, cursor: 'pointer' }}
                     >
                       Discard
                     </button>

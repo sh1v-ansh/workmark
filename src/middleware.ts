@@ -54,6 +54,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/faculty') ||
     pathname.startsWith('/admin') ||
     pathname.startsWith('/listings/new') ||
+    pathname.startsWith('/workspaces') ||
     pathname.startsWith('/onboarding')
 
   // The admin role itself is checked in the page and the API route, against

@@ -47,8 +47,13 @@ const LABEL = { advanced: 'Advanced', intermediate: 'Intermediate', beginner: 'B
 const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: string; points: [string, string][] }> = {
   students: {
     eyebrow: 'What you get',
-    headline: 'Every skill, with the receipt attached',
-    lede: 'Not "proficient in PostgreSQL". The project it came from, how good you got, and how that was checked. A poster can go and look.',
+    // The old headline sold a receipt, and nobody wants a receipt. This is
+    // what the receipt is FOR. Everybody rounds up on a CV — not because
+    // students are dishonest but because the format rewards whoever sounds
+    // most certain, and there is no way to prove anything either way. The
+    // relief is not having to play that game.
+    headline: 'Nothing left to oversell',
+    lede: 'Everyone inflates a CV, because sounding confident is the only lever it gives you. Here the work is already on the record. The project it came from, how good you got, how it was checked. So you can just say what happened.',
     points: [
       ['Nothing to write, nothing to inflate', 'Workmark reads your repos and works it out. You never fill in a skills box.'],
       ['Advanced is worth having', 'It means months of real work that survived other people, tests and mistakes. Most skills never get there.'],
@@ -57,8 +62,8 @@ const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: strin
   },
   businesses: {
     eyebrow: 'What you see',
-    headline: 'This arrives instead of a CV',
-    lede: 'Every skill carries the project it came from and how it was verified. The question stops being whether they are telling the truth.',
+    headline: 'You stop having to take their word for it',
+    lede: 'Every skill carries the project it came from and how it was checked. The question is no longer whether somebody is overselling. It is whether the work is the work you need.',
     points: [
       ['Read from repos, not from a form', 'Dependencies, commit authorship, test coverage. No self-assessment anywhere in it.'],
       ['Comparable across candidates', 'Levels are set against the whole platform, so two records at Advanced really are equivalent.'],
@@ -69,8 +74,13 @@ const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: strin
 
 export function TheRecord({ audience }: { audience: Audience }) {
   const framing = FRAMING[audience]
+  // The tint already separates this section from the ones either side. It
+  // used to carry a top and bottom border as well, which was a second
+  // separator doing the same job — and the bottom one landed two pixels above
+  // the cross-link card's own top border. Two hairlines almost touching reads
+  // as a rendering fault, not a divider.
   return (
-    <section className="wm-section" style={{ background: '#FBFBFD', borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
+    <section className="wm-section" style={{ background: '#FBFBFD' }}>
       <div className="wm-section-inner">
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.05fr)', gap: 60, alignItems: 'center' }} className="mob-1col">
           <div>

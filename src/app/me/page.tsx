@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { loadStudentRecord } from '@/lib/profile/record'
+import { loadAcrossProjects } from '@/lib/workspace/across'
 import { suggestHandle } from '@/lib/profile/handle'
 import MyRecordClient from './MyRecordClient'
 import { lastScanFinishedAt } from '@/lib/github/last-scan'
@@ -58,8 +59,15 @@ export default async function MyRecordPage() {
     }
   })
 
+  // How they work, pooled across every project. Null for somebody who has
+  // not been on one, and the panel is then not rendered at all rather than
+  // shown empty — a card of "not enough yet" reads as the product being
+  // broken rather than as them being new.
+  const howYouWork = await loadAcrossProjects(supabase, user.id)
+
   return (
     <MyRecordClient
+      howYouWork={howYouWork}
       record={record}
       sources={sources}
       suggestedHandle={suggestHandle(record.student.fullName, record.student.githubUsername)}

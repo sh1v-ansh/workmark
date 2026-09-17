@@ -235,3 +235,150 @@ export function applicationRejected(args: { studentId: string; studentEmail: str
     linkLabel: 'Find other projects',
   })
 }
+
+// ── Project workspaces ──
+//
+// The same test as above: can the recipient act on it today. A card moving is
+// not news; being handed work, being asked to unstick somebody, and finding
+// out what a finished project put on your record all are.
+
+export function workspaceInvited(args: {
+  inviteeId: string; inviteeEmail: string; inviterName: string; projectTitle: string
+}) {
+  return sendEmail({
+    to: args.inviteeEmail,
+    userId: args.inviteeId,
+    kind: 'workspace_invited',
+    subject: `${args.inviterName} invited you to ${args.projectTitle}`,
+    body: `${args.inviterName} invited you onto "${args.projectTitle}".\n\nYou will need a connected GitHub account before you can accept — otherwise your commits cannot be told apart from everyone else's, and you would spend the project building evidence for other people.`,
+    linkPath: '/workspaces',
+    linkLabel: 'See the invitation',
+  })
+}
+
+export function workspaceTaskAssigned(args: {
+  assigneeId: string; assigneeEmail: string; taskTitle: string; projectTitle: string
+  workspaceId: string; dueOn: string | null
+}) {
+  const due = args.dueOn ? `\n\nDue ${args.dueOn}.` : ''
+  return sendEmail({
+    to: args.assigneeEmail,
+    userId: args.assigneeId,
+    kind: 'workspace_task_assigned',
+    subject: `You picked up "${args.taskTitle}"`,
+    body: `"${args.taskTitle}" on ${args.projectTitle} is now yours.${due}\n\nIf the estimate or the deadline turns out to be wrong, change it and say why — a slip you saw coming reads very differently from one nobody mentioned.`,
+    linkPath: `/workspaces/${args.workspaceId}`,
+    linkLabel: 'Open the board',
+  })
+}
+
+/**
+ * One digest per check, never one per task.
+ *
+ * A batch that emails five times is a batch people mute, and then the message
+ * that actually needed them gets muted with it.
+ */
+export function workspaceVerdicts(args: {
+  studentId: string; studentEmail: string; projectTitle: string; workspaceId: string
+  verified: number; needsWork: number; toAPerson: number
+}) {
+  const parts = [
+    args.verified > 0 ? `${args.verified} verified` : null,
+    args.needsWork > 0 ? `${args.needsWork} needing more work` : null,
+    args.toAPerson > 0 ? `${args.toAPerson} waiting on a teammate` : null,
+  ].filter(Boolean)
+
+  return sendEmail({
+    to: args.studentEmail,
+    userId: args.studentId,
+    kind: 'workspace_verdict',
+    subject: `Your work on ${args.projectTitle} was checked`,
+    body: `${parts.join(', ')}.\n\nEach card shows exactly which checks it rested on — commits, tests, CI, review — so you can see what the answer was based on rather than having to take it.`,
+    linkPath: `/workspaces/${args.workspaceId}`,
+    linkLabel: 'See the results',
+  })
+}
+
+export function workspaceReviewNeeded(args: {
+  reviewerId: string; reviewerEmail: string; projectTitle: string; workspaceId: string
+  count: number; authorName: string
+}) {
+  const tasks = args.count === 1 ? 'a task' : `${args.count} tasks`
+  return sendEmail({
+    to: args.reviewerEmail,
+    userId: args.reviewerId,
+    kind: 'workspace_review_needed',
+    subject: `${args.authorName} ${args.authorName === 'Your teammates' ? 'need' : 'needs'} you to confirm ${args.count === 1 ? 'a task' : 'some work'}`,
+    body: `Workmark could not check ${tasks} on ${args.projectTitle} by itself — either there was no code to look at, or it has already come back needing changes twice.\n\nIt cannot move until somebody who did not do the work says whether it does what it was supposed to. That takes about a minute.`,
+    linkPath: `/workspaces/${args.workspaceId}`,
+    linkLabel: 'Take a look',
+  })
+}
+
+/**
+ * The same question as workspaceReviewNeeded, asked once more days later.
+ *
+ * Worded as a reminder rather than repeated verbatim. A message identical to
+ * one somebody already read is one they assume they have already dealt with,
+ * and the whole reason this is being sent is that they have not.
+ */
+export function workspaceReviewStale(args: {
+  reviewerId: string; reviewerEmail: string; projectTitle: string; workspaceId: string
+  count: number; oldestDays: number
+}) {
+  const tasks = args.count === 1 ? 'a task' : `${args.count} tasks`
+  return sendEmail({
+    to: args.reviewerEmail,
+    userId: args.reviewerId,
+    kind: 'workspace_review_needed',
+    subject: `Still waiting on you: ${tasks} on ${args.projectTitle}`,
+    body: `${args.count === 1 ? 'A task' : `${args.count} tasks`} on ${args.projectTitle} ${args.count === 1 ? 'has' : 'have'} been waiting ${args.oldestDays} days for somebody to confirm ${args.count === 1 ? 'it' : 'them'}.\n\nWhoever did the work cannot answer this themselves, so it stays put until you look. It takes about a minute, and until then it counts for nothing on their record.`,
+    linkPath: `/workspaces/${args.workspaceId}`,
+    linkLabel: 'Confirm the work',
+  })
+}
+
+/**
+ * A board with nothing much left on it.
+ *
+ * Deliberately does not propose the work. Sending somebody tasks a model
+ * invented overnight, unasked, makes the plan Workmark's rather than theirs —
+ * and the plan being the student's is the thing that makes the record mean
+ * anything. This points at the button; they decide whether to press it.
+ */
+export function workspaceBoardDry(args: {
+  ownerId: string; ownerEmail: string; projectTitle: string; workspaceId: string
+  openTasks: number
+}) {
+  return sendEmail({
+    to: args.ownerEmail,
+    userId: args.ownerId,
+    kind: 'workspace_board_dry',
+    subject: `${args.projectTitle} is nearly out of work`,
+    body: args.openTasks === 0
+      ? `Every task on ${args.projectTitle} is done. If the project is finished, close it out and your verified work goes onto your record. If it is not, plan the next piece.`
+      : `${args.projectTitle} has ${args.openTasks === 1 ? 'one task' : `${args.openTasks} tasks`} left on it.\n\nWorth deciding what comes next before you run out — a project that quietly stops a fortnight before it was finished puts less on your record than one you closed out on purpose.`,
+    linkPath: `/workspaces/${args.workspaceId}`,
+    linkLabel: 'Open the board',
+  })
+}
+
+export function workspaceClosed(args: {
+  studentId: string; studentEmail: string; projectTitle: string; skillCount: number
+  finishedTasks: number; pending: boolean
+}) {
+  const skills = args.skillCount === 1 ? '1 verified skill' : `${args.skillCount} verified skills`
+  return sendEmail({
+    to: args.studentEmail,
+    userId: args.studentId,
+    kind: 'workspace_closed',
+    subject: `"${args.projectTitle}" is finished`,
+    body: args.pending
+      ? `"${args.projectTitle}" was closed. Reading the repository takes a few minutes, so your record will finish updating shortly — nothing is lost.`
+      : args.skillCount > 0
+        ? `"${args.projectTitle}" was closed, adding ${skills} to your record from ${args.finishedTasks} verified ${args.finishedTasks === 1 ? 'task' : 'tasks'}.\n\nThis is the strongest kind of evidence Workmark records, because the acceptance criteria were written down before the work started rather than described afterwards.`
+        : `"${args.projectTitle}" was closed.\n\nNo skills were added — usually that means the repository had no commits under your GitHub account, or none of your tasks were verified.`,
+    linkPath: '/me',
+    linkLabel: 'See your record',
+  })
+}

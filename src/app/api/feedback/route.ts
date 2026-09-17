@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { enforce } from '@/lib/rate-limit'
+import { parseBody, readFields, requireString, optionalString } from '@/lib/http/validate'
 import { NextResponse } from 'next/server'
 
 /**
@@ -20,26 +21,29 @@ export async function POST(request: Request) {
   const limited = await enforce('feedback', user.id)
   if (limited) return limited
 
-  let body: { kind?: string; title?: string; body?: string; pageUrl?: string }
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid body.' }, { status: 400 })
-  }
+  const parsed = await parseBody(request)
+  if (!parsed.ok) return parsed.response
+  const body = parsed.body
 
   const kind = body.kind === 'feature' ? 'feature' : 'bug'
-  const title = body.title?.trim()
-  const detail = body.body?.trim()
 
-  if (!title) return NextResponse.json({ error: 'A one-line summary helps us find it.' }, { status: 400 })
-  if (!detail) return NextResponse.json({ error: 'Tell us what happened.' }, { status: 400 })
+  // Lengths enforced here rather than by the slice() below. Truncating was
+  // silently discarding the end of a long report; now it is refused, and the
+  // person still has what they wrote in the box in front of them.
+  const fields = readFields(() => ({
+    title: requireString(body.title, 'A one-line summary', { max: 200 }),
+    detail: requireString(body.body, 'What happened', { max: 4000 }),
+    pageUrl: optionalString(body.pageUrl, 'Page', { max: 500 }),
+  }))
+  if (!fields.ok) return fields.response
+  const { title, detail, pageUrl } = fields.values
 
   const { error } = await supabase.from('feedback').insert({
     reporter_id: user.id,
     kind,
-    title: title.slice(0, 200),
-    body: detail.slice(0, 4000),
-    page_url: body.pageUrl?.slice(0, 500) ?? null,
+    title,
+    body: detail,
+    page_url: pageUrl,
     user_agent: request.headers.get('user-agent')?.slice(0, 300) ?? null,
   })
 

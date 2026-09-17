@@ -69,13 +69,17 @@ export default async function MyFilePage() {
   const [{ data: skillRows }, { data: artifactRows }, { data: auditRows }, { data: signalRows }] = await Promise.all([
     skillIds.length ? supabase.from('skills').select('id, canonical_name').in('id', skillIds) : Promise.resolve({ data: [] }),
     artifactIds.length ? supabase.from('artifacts').select('id, repo_full_name, tier').in('id', artifactIds) : Promise.resolve({ data: [] }),
-    evidenceIds.length ? supabase.from('evidence_audit').select('evidence_id, source, raw_input, extracted_at').in('evidence_id', evidenceIds) : Promise.resolve({ data: [] }),
+    evidenceIds.length ? supabase.from('evidence_audit').select('evidence_id, source, raw_input, extracted_at').in('evidence_id', evidenceIds).order('extracted_at') : Promise.resolve({ data: [] }),
     // Which files each skill was found in. §609 entitles the student to know
     // what's in their file; "PostgreSQL, level 3" without saying where that
     // came from is not really an answer, and it's the thing a dispute needs
     // to be able to argue with.
+    // Both the per-skill citations and the project line. The filter used to
+    // be 'skill_source:%', which silently dropped the one signal that
+    // explains why project evidence outranks a plain scan — the part a
+    // dispute about a workspace-verified row would most want to argue with.
     artifactIds.length
-      ? supabase.from('artifact_signals').select('artifact_id, signal_name, value').in('artifact_id', artifactIds).like('signal_name', 'skill_source:%')
+      ? supabase.from('artifact_signals').select('artifact_id, signal_name, value').in('artifact_id', artifactIds).or('signal_name.like.skill_source:%,signal_name.eq.workspace_verified_tasks')
       : Promise.resolve({ data: [] }),
   ])
 
@@ -90,8 +94,15 @@ export default async function MyFilePage() {
   // places in different repos, and the citation has to match the repo the
   // evidence row actually came from.
   const foundIn = new Map<string, string>()
+  // Keyed by artifact alone: this one is about the project, not about any
+  // single skill it produced.
+  const projectBasis = new Map<string, string>()
   for (const s of (signalRows ?? []) as { artifact_id: string; signal_name: string; value: string | null }[]) {
     if (!s.value) continue
+    if (s.signal_name === 'workspace_verified_tasks') {
+      projectBasis.set(s.artifact_id, s.value)
+      continue
+    }
     foundIn.set(`${s.artifact_id}:${s.signal_name.replace('skill_source:', '')}`, s.value)
   }
 
@@ -121,6 +132,10 @@ export default async function MyFilePage() {
         tier: artifact?.tier ?? null,
         source: audit?.source ?? null,
         foundIn: r.artifact_id ? (foundIn.get(`${r.artifact_id}:${r.skill_id}`) ?? null) : null,
+        // Why a project row outranks a plain scan. Without this the student
+        // sees a higher tier with no stated reason, which is the kind of
+        // unexplained number a dispute exists to challenge.
+        projectBasis: r.artifact_id ? (projectBasis.get(r.artifact_id) ?? null) : null,
         createdAt: r.created_at,
         supersededByCorrection: correctedIds.has(r.id),
         isCorrection: !!r.corrects_evidence_id,

@@ -18,6 +18,8 @@ import SkillChip, { PlainChip } from '@/components/skills/SkillChip'
 import LevelBar, { countLevels } from '@/components/skills/LevelBar'
 import SkillEvidenceModal from '@/components/skills/SkillEvidenceModal'
 import { SELF_EVIDENCED_CAP } from '@/lib/skills/level-names'
+import HowYouWork from './HowYouWork'
+import type { AcrossProjects } from '@/lib/workspace/across'
 import { LAYOUT } from '@/lib/theme/layout'
 
 interface EvidenceSource {
@@ -65,8 +67,10 @@ const VERIFICATION_LABEL: Record<string, string> = {
   attested: 'Confirmed by a collaborator',
 }
 
-export default function MyRecordClient({ record, sources, suggestedHandle, githubConnected, lastScannedAt }: {
+export default function MyRecordClient({ record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt }: {
   record: StudentRecord
+  /** Pooled across every project. Null for somebody who has not been on one. */
+  howYouWork: AcrossProjects | null
   sources: EvidenceSource[]
   suggestedHandle: string
   githubConnected: boolean
@@ -195,6 +199,16 @@ export default function MyRecordClient({ record, sources, suggestedHandle, githu
               </Card>
             )}
 
+            {/* The half of the record that is not about what they know.
+                Skills say what they can build; this says whether they finish
+                it and whether they said so when it was going to slip — the
+                thing a reference call exists to get at.
+
+                Not rendered at all for somebody who has never been on a
+                project: a card of "not enough yet" reads as the product being
+                broken rather than as them being new. */}
+            {howYouWork && <HowYouWork data={howYouWork} />}
+
             <Card hoverable={false} padding={19.5}>
               <Kicker style={{ marginBottom: 9 }}>Public profile</Kicker>
               <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, marginBottom: 13 }}>
@@ -212,14 +226,14 @@ export default function MyRecordClient({ record, sources, suggestedHandle, githu
                     onClick={() => { navigator.clipboard.writeText(profileUrl); toast('Link copied.', 'success') }}
                     aria-label="Copy profile link"
                     title="Copy link"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 12, color: C.textMuted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 12, color: C.textMuted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
                   >
                     <Icon name="link" size={11.5} />
                   </button>
                   {!editingHandle && (
                     <button
                       onClick={() => setEditingHandle(true)}
-                      style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                      style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}
                     >
                       Edit handle
                     </button>

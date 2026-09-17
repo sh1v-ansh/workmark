@@ -1,0 +1,150 @@
+import { NextResponse } from 'next/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { sweepVerification } from '@/lib/workspace/run-verification'
+import { rollupAll } from '@/lib/workspace/rollup'
+import { sweepWorkspaceEvidence } from '@/lib/workspace/evidence'
+import { recomputeCalibration } from '@/lib/skills/calibration'
+import { sweepAttention } from '@/lib/workspace/notify'
+import { backfillListingQuestions } from '@/lib/agents/application-questions'
+
+export const dynamic = 'force-dynamic'
+
+/**
+ * 60 is the value that is safe on every Vercel plan: a deployment whose
+ * maxDuration exceeds the plan limit fails to build rather than being
+ * clamped, and nothing in the repo settles which plan this project is on.
+ *
+ * 60 with a bounded sweep is the choice that cannot fail either way. If the
+ * project is on Pro, raising this and MAX_RUNS_PER_SWEEP together clears a
+ * backlog faster; the durable fix is a background job, not a bigger number.
+ */
+export const maxDuration = 60
+
+/**
+ * POST /api/cron/nightly — the evening pass over every project.
+ *
+ * Driven by pg_cron, like every other scheduled job here. v05_0016 moved
+ * scheduling into the database on purpose — Vercel's Hobby plan allows one
+ * run per day, which is useless as a recovery mechanism — and pg_net issues
+ * POST, which is why every /api/cron route in this codebase is a POST
+ * handler. `request_nightly_workspace_pass()` in v05_0036 is what calls this.
+ *
+ * One endpoint rather than three schedules because the order is a real
+ * dependency, not a preference:
+ *
+ *   verify, mint evidence, recalibrate, chase what is stuck, then rollups
+ *
+ * Verification first because the others read its verdicts. Minting second
+ * because a project that closed while GitHub was slow has a record owed to
+ * somebody and nothing else will notice. Rollups last: they turn a day of
+ * board moves into plan-versus-reality figures, and run before the verdicts
+ * land they would describe a day in which nothing was ever verified — every
+ * student's technical figures a day stale, for as long as the schedule stayed
+ * wrong. Cheap to get right once; very hard to notice afterwards. Calibration
+ * goes after minting for the same kind of reason: it recomputes each skill's
+ * bands from the spread of evidence, so running it first would calibrate
+ * against a distribution missing everything the night just wrote.
+ *
+ * Staggering four separate pg_cron entries by a few minutes would express
+ * that ordering as a hope about clock time. One call expresses it as
+ * sequence.
+ *
+ * Every part is bounded and resumable. Whatever a night does not reach stays
+ * claimable and goes the next night, so a slow evening delays work rather
+ * than losing it.
+ */
+export async function POST(request: Request) {
+  const secret = process.env.CRON_SECRET
+  if (!secret) {
+    return NextResponse.json({ error: 'CRON_SECRET is not configured.' }, { status: 503 })
+  }
+  if (request.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+  }
+
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  // Each step reports its own failure rather than taking the rest down with
+  // it. Rollups are pure arithmetic over rows that already exist; there is no
+  // reason a failed model call should also cost the night's figures.
+  let verification: unknown = null
+  let verifyError: string | null = null
+  try {
+    verification = await sweepVerification(admin)
+  } catch (err) {
+    verifyError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[cron/nightly] verification sweep failed:', err)
+  }
+
+  let evidence: unknown = null
+  let evidenceError: string | null = null
+  try {
+    evidence = await sweepWorkspaceEvidence(admin)
+  } catch (err) {
+    evidenceError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[cron/nightly] evidence sweep failed:', err)
+  }
+
+  // Calibration sits here rather than on its own schedule because it reads
+  // current_skill_evidence, and the step above is what writes to it. Run at an
+  // unrelated hour it would recompute every skill's bands from a distribution
+  // missing the evidence minted the same night — correct the following day,
+  // and wrong in a way nobody would ever look for.
+  let calibration: unknown = null
+  let calibrationError: string | null = null
+  try {
+    calibration = await recomputeCalibration(admin)
+  } catch (err) {
+    calibrationError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[cron/nightly] calibration failed:', err)
+  }
+
+  // Last, and after verification: what counts as a stuck review depends on
+  // the verdicts written earlier tonight, and a card the checker has just
+  // settled is not something to chase anybody about.
+  let attention: unknown = null
+  let attentionError: string | null = null
+  try {
+    attention = await sweepAttention(admin)
+  } catch (err) {
+    attentionError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[cron/nightly] attention sweep failed:', err)
+  }
+
+  // Catching up rather than rescuing: a listing with no questions of its own
+  // already shows the fallback pair. Last, and bounded, because it is the one
+  // step here whose only cost is money and whose absence nobody notices.
+  let questions: unknown = null
+  let questionsError: string | null = null
+  try {
+    questions = await backfillListingQuestions(admin)
+  } catch (err) {
+    questionsError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[cron/nightly] question backfill failed:', err)
+  }
+
+  let rollups: unknown = null
+  let rollupError: string | null = null
+  try {
+    rollups = await rollupAll(admin)
+  } catch (err) {
+    rollupError = err instanceof Error ? err.message : 'Unknown error'
+    console.error('[cron/nightly] rollups failed:', err)
+  }
+
+  // 200 even when a part failed. pg_net is fire-and-forget and reads nothing
+  // back, so a status code here reaches nobody — the body is for a person
+  // running it by hand, and the console is where a failure is actually found.
+  return NextResponse.json({
+    ok: !verifyError && !evidenceError && !calibrationError && !attentionError && !questionsError && !rollupError,
+    verification: verification ?? { error: verifyError },
+    evidence: evidence ?? { error: evidenceError },
+    calibration: calibration ?? { error: calibrationError },
+    attention: attention ?? { error: attentionError },
+    questions: questions ?? { error: questionsError },
+    rollups: rollups ?? { error: rollupError },
+  })
+}

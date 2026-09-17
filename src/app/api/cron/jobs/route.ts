@@ -38,13 +38,22 @@ const KEEP_FINISHED_DAYS = 7
  * sweep now runs every minute from pg_cron inside Postgres (see
  * v05_0016_queue_feedback_cron.sql), which is free on every Supabase tier.
  *
- * This route stays as the manual and belt-and-braces path: it still works if
- * called with the secret, and it also does the purge and recalibration that
- * belong on a slower cadence than the sweep. Kicking a job that is already progressing is harmless:
- * claim_job() refuses the lease and the extra call returns immediately.
+ * This route stays as the manual, belt-and-braces path: it still works when
+ * called by hand with the secret, which is what you want when a queue is
+ * visibly stuck and you do not want to wait for the next tick. Kicking a job
+ * that is already progressing is harmless — claim_job() refuses the lease and
+ * the extra call returns immediately.
  *
- * Vercel Cron sends `Authorization: Bearer $CRON_SECRET` automatically when
- * the env var is set, which is the same secret the worker checks.
+ * Nothing schedules it. A Vercel Cron entry pointing here was added and has
+ * been removed again: it contradicted the paragraph above, and both of the
+ * things it uniquely carried now run where they belong. Purging finished job
+ * rows is pure SQL on pg_cron (v05_0038). Recalibration moved into
+ * /api/cron/nightly, which is the pass that writes the evidence it reads —
+ * calibrating before that ran would score every skill against a distribution
+ * missing the night's work.
+ *
+ * Both still run here too, so calling this by hand remains a complete
+ * tidy-up rather than a partial one.
  */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET
@@ -78,9 +87,9 @@ export async function GET(request: Request) {
 
   for (const job of stalled ?? []) kickJob(job.id)
 
-  // Purge finished jobs past their keep window. Done here rather than in a
-  // separate cron because it is the same "once a minute, tidy the queue"
-  // responsibility, and a delete that finds nothing costs nothing.
+  // Purge finished jobs past their keep window. The scheduled copy of this is
+  // purge_finished_jobs() on pg_cron (v05_0038); it stays here so a manual run
+  // is a full tidy-up, and a delete that finds nothing costs nothing.
   const purgeBefore = new Date(Date.now() - KEEP_FINISHED_DAYS * 86_400_000).toISOString()
   const { error: purgeError } = await admin
     .from('jobs')
@@ -93,11 +102,12 @@ export async function GET(request: Request) {
   }
 
   // Recalibration used to be a script somebody had to remember to run, so a
-  // skill could sit past its threshold indefinitely being scored against
-  // bands that no longer described anyone. It runs here because this is
-  // already the once-a-tick tidy-up, and because it's cheap when there's
-  // nothing to do — the common case is a single query that finds no skill
-  // over the line.
+  // skill could sit past its threshold indefinitely being scored against bands
+  // that no longer described anyone. The scheduled copy now runs at the end of
+  // /api/cron/nightly, straight after the evidence it reads is written. Kept
+  // here for the same reason as the purge, and it is cheap when there is
+  // nothing to do — the common case is one query that finds no skill over the
+  // line.
   let calibration = null
   try {
     calibration = await recomputeCalibration(admin)
