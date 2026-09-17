@@ -76,6 +76,7 @@ export default function Board({
   userId,
   workspaceStatus,
   workspaceDeadline,
+  view,
   readOnly = false,
 }: {
   workspaceId: string
@@ -92,6 +93,8 @@ export default function Board({
   workspaceStatus: string
   /** The project's own end date, marked on the calendar. */
   workspaceDeadline: string | null
+  /** Which view the project's tabs have selected. */
+  view: 'board' | 'calendar'
   /** A closed project. The board becomes the record of what happened. */
   readOnly?: boolean
 }) {
@@ -139,7 +142,6 @@ export default function Board({
     .map((t) => ({ task: t, checkpoint: pending(checkpointsByTask.get(t.id) ?? []) }))
     .find((x) => x.checkpoint !== null && x.task.assigneeId === userId) ?? null
   const [checkpointAnswer, setCheckpointAnswer] = useState('')
-  const [view, setView] = useState<'board' | 'calendar'>('board')
 
 
 
@@ -589,22 +591,9 @@ export default function Board({
   return (
     <section>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <h2 style={{ fontSize: T.h2, fontWeight: 600, color: C.text }}>
-            {view === 'board' ? 'Board' : 'Calendar'}
-          </h2>
-          {/* Two views of one set of tasks, never two editors of it — the
-              calendar opens a card and nothing else. */}
-          <button
-            onClick={() => setView(view === 'board' ? 'calendar' : 'board')}
-            style={{
-              fontSize: T.meta, padding: '3px 9px', borderRadius: R.sm, cursor: 'pointer',
-              border: `1px solid ${C.border}`, background: C.surface, color: C.textMuted,
-            }}
-          >
-            {view === 'board' ? 'Calendar' : 'Board'}
-          </button>
-        </div>
+        {/* No heading. The tab above already says which view this is, and
+            repeating it was a line of chrome between somebody and their work. */}
+        <div />
         <div style={{ display: 'flex', gap: 8 }}>
           {readOnly && (
             <span style={{ fontSize: T.meta, color: C.textGhost, alignSelf: 'center' }}>

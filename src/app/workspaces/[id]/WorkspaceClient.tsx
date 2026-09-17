@@ -63,6 +63,12 @@ export default function WorkspaceClient({
   const [invitee, setInvitee] = useState('')
   const [repo, setRepo] = useState(workspace.repoFullName ?? '')
   const [closing, setClosing] = useState(false)
+  // Real navigation rather than a button that swaps a panel. Ordered by how
+  // often somebody opens each: the board is daily, the calendar is weekly,
+  // and plan-versus-reality is monthly at most — it was sitting in the main
+  // flow under the board, which is the wrong place for the least-read thing
+  // on the page.
+  const [tab, setTab] = useState<'board' | 'calendar' | 'progress'>('board')
   const [removing, setRemoving] = useState<TeamMember | null>(null)
   const [removeReason, setRemoveReason] = useState('')
 
@@ -132,19 +138,81 @@ export default function WorkspaceClient({
 
   return (
     <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, padding: '32px 24px 72px' }}>
-      <div style={{ maxWidth: 760, margin: '0 auto' }}>
+      {/* 760 is a reading measure and it is why the board felt cramped: six
+          columns and a 288px card do not fit in it. The work gets the room it
+          needs; everything read once — setup, the team, closing out — stays
+          at a width somebody can actually read. */}
+      <div style={{ maxWidth: tab === 'board' || tab === 'calendar' ? 1360 : 760, margin: '0 auto' }}>
         <Link href="/workspaces" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: T.meta, color: C.textFaint, textDecoration: 'none', marginBottom: 18 }}>
           ← All projects
         </Link>
 
-        <header style={{ marginBottom: 26 }}>
-          <h1 style={{ fontFamily: F.display, fontSize: T.display, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 8 }}>
-            {workspace.title}
-          </h1>
+        {/* A project you recognise, rather than a title on a generic page.
+            The four things somebody checks on arriving — what it is, whether
+            it is running, which repository it reads, and where the week is —
+            in one line under the name. */}
+        <header style={{ marginBottom: 18 }}>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+            <h1 style={{ fontFamily: F.display, fontSize: T.display, fontWeight: 600, letterSpacing: '-0.022em', color: C.text }}>
+              {workspace.title}
+            </h1>
+            <span className="wm-chip" style={{
+              color: isClosed ? C.textGhost : isDraft ? '#94500F' : '#0F7B4F',
+              border: `1px solid ${isClosed ? C.border : isDraft ? '#E4B9A6' : '#B7E0CC'}`,
+            }}>
+              {isClosed ? 'Finished' : isDraft ? 'Being set up' : 'In progress'}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', fontSize: T.meta, color: C.textFaint }}>
+            {workspace.repoFullName && (
+              <a
+                href={`https://github.com/${workspace.repoFullName}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, color: C.textFaint, textDecoration: 'none' }}
+              >
+                <Icon name="github" size={12} />{workspace.repoFullName}
+              </a>
+            )}
+            {(() => {
+              const open = sprints.find((sp) => sp.closedAt === null)
+              if (!open) return null
+              const mine = tasks.filter((t) => t.sprintId === open.id)
+              const done = mine.filter((t) => t.status === 'verified' || t.status === 'accepted').length
+              return (
+                <span>{open.name} · {done} of {mine.length} done</span>
+              )
+            })()}
+            {workspace.deadline && <span>Due {workspace.deadline}</span>}
+            <span>
+              {workspace.members.length === 1 ? 'On your own' : `${workspace.members.length} people`}
+            </span>
+          </div>
+
           {workspace.summary && (
-            <p style={{ fontSize: T.body, color: C.textMuted, lineHeight: 1.65, maxWidth: '62ch' }}>{workspace.summary}</p>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, maxWidth: '62ch', marginTop: 10 }}>
+              {workspace.summary}
+            </p>
           )}
         </header>
+
+        {/* Tabs, not a toggle. Three views of one project, in the order they
+            are opened. */}
+        {!isDraft && (
+          <div className="wm-tabs" role="tablist" style={{ marginBottom: 20 }}>
+            {([['board', 'Board'], ['calendar', 'Calendar'], ['progress', 'Progress']] as const).map(([key, label]) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => setTab(key)}
+                className={`wm-tab${tab === key ? ' wm-tab-on' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* A finished project opens on what it produced, not on the board it
             was worked from. This is the one screen the whole feature exists
@@ -211,9 +279,10 @@ export default function WorkspaceClient({
 
         {/* The board is the page once work has started. Setup and settings
             move below it — they are read once and the board is read daily. */}
-        {!isDraft && (
+        {!isDraft && (tab === 'board' || tab === 'calendar') && (
           <div style={{ marginBottom: 26 }}>
             <Board
+              view={tab}
               workspaceId={workspace.id}
               tasks={tasks}
               verdicts={verdicts}
@@ -231,8 +300,10 @@ export default function WorkspaceClient({
           </div>
         )}
 
-        {/* Below the board: read occasionally, where the board is read daily. */}
-        {!isDraft && (
+        {/* Behind its own tab. It was under the board, which is the wrong
+            place for the least-read thing on the page — and it meant scrolling
+            past it every day to reach the team and the settings. */}
+        {!isDraft && tab === 'progress' && (
           <PlanVsReality metrics={measured?.metrics ?? null} computedAt={measured?.computedAt ?? null} />
         )}
 

@@ -193,22 +193,42 @@ export default function WorkspacesClient({
           maxLength={120}
           style={{ marginBottom: 14 }}
         />
-        <label htmlFor="ws-summary" style={{ display: 'block', fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
-          What is it? <span style={{ fontWeight: 400, color: C.textGhost }}>Optional</span>
+        <label htmlFor="ws-summary" style={{ display: 'block', fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 4 }}>
+          What are you building?
         </label>
+        {/* No longer optional, and the reason is not tidiness. This is the
+            only thing the planner knows about the project when it writes the
+            first plan — with a title alone it produces twelve generic tasks
+            ending in "deploy", which is exactly what it was producing. Saying
+            what it costs to skip is more honest than marking it required and
+            letting somebody type one word to get past it. */}
+        <p style={{ fontSize: T.meta, color: C.textFaint, lineHeight: 1.5, marginBottom: 8 }}>
+          Workmark writes your first plan from this, so the more specific you are the
+          less generic the tasks. What it does, who it is for, what you are building it
+          with, and what finished looks like.
+        </p>
         <textarea
           id="ws-summary"
           className="dk-input"
           value={summary}
           onChange={(e) => setSummary(e.target.value)}
-          placeholder="A place students can find events happening on campus this week."
-          rows={3}
+          placeholder={'A web app where students can find events happening on campus this week. Next.js and Postgres. Finished means you can browse events by day, and a society can post one without me doing anything.'}
+          rows={5}
           maxLength={2000}
           style={{ marginBottom: 20, resize: 'vertical' }}
         />
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <Button variant="quiet" onClick={() => setCreating(false)}>Cancel</Button>
-          <Button onClick={create} disabled={busy || title.trim().length < 3}>
+          <Button
+            onClick={create}
+            disabled={busy || title.trim().length < 3 || summary.trim().length < 40}
+            title={
+              title.trim().length < 3 ? 'Give it a name.'
+                : summary.trim().length < 40
+                  ? 'A sentence or two about what you are building — the plan is written from it.'
+                  : undefined
+            }
+          >
             {busy ? 'Creating…' : 'Create project'}
           </Button>
         </div>
