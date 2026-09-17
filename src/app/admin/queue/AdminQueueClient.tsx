@@ -164,7 +164,7 @@ export default function AdminQueueClient({ items, counts, failedSources, taxonom
                   key={`${item.kind}:${item.id}`}
                   onClick={() => openItem(item)}
                   style={{
-                    display: 'block', width: '100%', textAlign: 'left', font: 'inherit', cursor: 'pointer',
+                    display: 'block', width: '100%', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', cursor: 'pointer',
                     background: C.surface,
                     // A severity stripe rather than a coloured row: the state
                     // reads at a glance without making overdue items harder
@@ -256,7 +256,7 @@ export default function AdminQueueClient({ items, counts, failedSources, taxonom
                           style={{
                             display: 'block', width: '100%', textAlign: 'left', padding: '9px 13px',
                             background: 'transparent', border: 'none', color: C.textSub, fontSize: 14,
-                            cursor: 'pointer', font: 'inherit',
+                            cursor: 'pointer', fontFamily: 'inherit',
                           }}
                         >
                           {s.name}

@@ -121,7 +121,7 @@ export default function EmailSection({
         <button
           type="button" disabled={busy}
           onClick={() => save(prefs, !allOff)}
-          style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 13.5, color: C.textFaint, textDecoration: 'underline', textUnderlineOffset: 2, cursor: 'pointer' }}
+          style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 13.5, color: C.textFaint, textDecoration: 'underline', textUnderlineOffset: 2, cursor: 'pointer' }}
         >
           {allOff ? 'Turn my email back on' : 'Turn off everything optional'}
         </button>

@@ -271,7 +271,11 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     role="menuitem"
                     className="nb-menu-item nb-menu-row"
                     style={{
-                      width: '100%', background: 'none', border: 'none', font: 'inherit',
+                      // Family only. The .nb-menu-item class sets the size and
+                      // weight, and an inline `fontSize` — even 'inherit' —
+                      // beats it, which is exactly how this row ended up in a
+                      // different face from the rows above it.
+                      width: '100%', background: 'none', border: 'none', fontFamily: 'inherit',
                       cursor: signing ? 'not-allowed' : 'pointer',
                       '--row': MENU.length + 3,
                     } as React.CSSProperties}

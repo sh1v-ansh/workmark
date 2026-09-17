@@ -202,7 +202,7 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
                   {activeCount > 0 && (
                     <button
                       type="button" onClick={clearAll}
-                      style={{ fontSize: 12.5, color: C.accent, fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                      style={{ fontSize: 12.5, color: C.accent, fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
                     >
                       Clear all
                     </button>

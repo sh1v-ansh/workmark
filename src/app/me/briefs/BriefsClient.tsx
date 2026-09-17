@@ -395,7 +395,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
                     <button
                       key={s.id} type="button"
                       onClick={() => { setSkillId(s.id); setSkillName(s.canonicalName); setQuery('') }}
-                      style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9.5px 14px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 14, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
+                      style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9.5px 14px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
                     >
                       {s.canonicalName}
                       {s.alreadyEvidenced && <span style={{ fontSize: 12, color: C.textGhost }}>already evidenced</span>}
@@ -418,7 +418,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
                       key={lvl} type="button" onClick={() => setSkillLevel(lvl)}
                       aria-pressed={active}
                       style={{
-                        textAlign: 'left', padding: '9px 11px', borderRadius: R.md, cursor: 'pointer', font: 'inherit',
+                        textAlign: 'left', padding: '9px 11px', borderRadius: R.md, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit',
                         background: active ? C.accentHover : C.surface,
                         border: `1px solid ${active ? C.accentBorder : C.border}`,
                       }}

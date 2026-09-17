@@ -254,7 +254,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           <button
             onClick={(e) => { e.preventDefault(); withdraw(a.id) }}
             disabled={withdrawing === a.id}
-            style={{ fontSize: 13.5, color: C.textGhost, background: 'none', border: 'none', padding: 0, cursor: 'pointer', font: 'inherit' }}
+            style={{ fontSize: 13.5, color: C.textGhost, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             {withdrawing === a.id ? 'Withdrawing…' : 'Withdraw'}
           </button>

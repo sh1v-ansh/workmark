@@ -226,14 +226,14 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
                     onClick={() => { navigator.clipboard.writeText(profileUrl); toast('Link copied.', 'success') }}
                     aria-label="Copy profile link"
                     title="Copy link"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 12, color: C.textMuted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 12, color: C.textMuted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
                   >
                     <Icon name="link" size={11.5} />
                   </button>
                   {!editingHandle && (
                     <button
                       onClick={() => setEditingHandle(true)}
-                      style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                      style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}
                     >
                       Edit handle
                     </button>

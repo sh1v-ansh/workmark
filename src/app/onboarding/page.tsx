@@ -28,7 +28,7 @@ function RoleChoice({ title, body, onClick }: { title: string; body: string; onC
       type="button"
       onClick={onClick}
       style={{
-        display: 'block', width: '100%', textAlign: 'left', font: 'inherit', cursor: 'pointer',
+        display: 'block', width: '100%', textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', cursor: 'pointer',
         background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.md,
         padding: '15px 18px',
       }}
@@ -463,7 +463,7 @@ export default function OnboardingPage() {
               <button
                 type="button"
                 onClick={() => setRole(null)}
-                style={{ background: 'none', border: 'none', padding: 0, marginBottom: 16, font: 'inherit', fontSize: 13, color: C.textFaint, cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', padding: 0, marginBottom: 16, fontFamily: 'inherit', fontSize: 13, color: C.textFaint, cursor: 'pointer' }}
               >
                 ← Not {role === 'faculty' ? 'faculty' : 'a student'}?
               </button>

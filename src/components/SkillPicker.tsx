@@ -82,7 +82,7 @@ export default function SkillPicker({ taxonomy, value, onChange, max = 8 }: {
                 key={s.id}
                 type="button"
                 onClick={() => add(s)}
-                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 15px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 15, cursor: 'pointer', font: 'inherit' }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 15px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 {s.canonical_name}
               </button>

@@ -171,7 +171,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                     aria-current={on ? 'true' : undefined}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
-                      padding: '13px 14px', borderRadius: R.md, cursor: 'pointer', font: 'inherit',
+                      padding: '13px 14px', borderRadius: R.md, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit',
                       background: on ? '#EDE9FF' : 'transparent',
                       border: `1px solid ${on ? '#D9D0F5' : 'transparent'}`,
                       marginBottom: 2,

@@ -185,7 +185,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => { setMode('signup'); setError(null) }}
-              style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 14.5, fontWeight: 600, color: C.accentInk, cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 14.5, fontWeight: 600, color: C.accentInk, cursor: 'pointer' }}
             >
               First time here? See what Workmark does →
             </button>
@@ -229,7 +229,7 @@ export default function LoginPage() {
                 onClick={() => { setMode(m); setError(null) }}
                 aria-pressed={mode === m}
                 style={{
-                  flex: 1, padding: '8.5px 0', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', borderRadius: R.sm, font: 'inherit',
+                  flex: 1, padding: '8.5px 0', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', borderRadius: R.sm, fontFamily: 'inherit',
                   background: mode === m ? C.surface : 'transparent',
                   color: mode === m ? C.text : C.textMuted,
                   boxShadow: mode === m ? '0 1px 2px rgba(25,30,46,0.08)' : 'none',

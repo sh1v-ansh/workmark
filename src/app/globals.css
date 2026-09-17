@@ -688,17 +688,26 @@
 .nb-card {
   background: #FFFFFF;
   border-radius: 13px;
-  /* No border.
-     A grey outline around every card on a grid of them draws a grid of grey
-     rectangles, and the eye reads the boxes before it reads anything in them.
-     Separation comes from the shadow and from the white sitting on a tinted
-     ground — which is how a card is separated from a page in practice, rather
-     than by being outlined like a form field. */
-  box-shadow: 0 1px 2px rgba(25, 30, 46, 0.04), 0 6px 18px -12px rgba(25, 30, 46, 0.16);
+  /* The edge is a border again, and a decisive one.
+     Removing it left white cards on a white ground held apart by a shadow
+     alone, which is not enough of an edge to read as a sheet — the grid went
+     soft. Putting back the old --border hairline (#ECEBF3, about 1.1:1 on
+     white) would not fix it either: that is the washed-out grey outline that
+     made every surface look like a form field.
+     So: darker, and cool rather than neutral, which reads as drawn on purpose
+     instead of as a browser default. The shadow drops to a hairline underneath
+     so the definition is border-led — a card with both a strong border and a
+     big soft shadow is claiming to be outlined and floating at once. */
+  border: 1px solid #CFD2E0;
+  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03);
 }
-.nb-card-interactive { transition: box-shadow 0.2s ease, transform 0.15s ease; }
+.nb-card-interactive { transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease; }
+/* Violet on hover, because violet means "you can click this" everywhere else
+   in the app. The shadow grows a little so the card lifts, but the edge is
+   still what changes first. */
 .nb-card-interactive:hover {
-  box-shadow: 0 2px 4px rgba(25, 30, 46, 0.05), 0 16px 34px -18px rgba(25, 30, 46, 0.3);
+  border-color: rgba(97, 66, 245, 0.45);
+  box-shadow: 0 2px 4px rgba(25, 30, 46, 0.05), 0 14px 30px -20px rgba(97, 66, 245, 0.4);
 }
 @media (prefers-reduced-motion: no-preference) {
   .nb-card-interactive:hover { transform: translateY(-2px); }
@@ -719,7 +728,11 @@
 .nb-card-focal {
   position: relative;
   overflow: hidden;
-  border-color: #DCD4F7;
+  /* Stronger than the ordinary card edge, not weaker. While .nb-card carried
+     no border this line did nothing, so it was tuned against a card that had
+     no edge to beat — #DCD4F7 would now read as a *softer* border than the
+     one every other card has, which is backwards for the focal one. */
+  border-color: rgba(97, 66, 245, 0.5);
   box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 16px 36px -20px rgba(97, 66, 245, 0.45);
 }
 .nb-card-focal::before {
@@ -864,18 +877,21 @@
   text-decoration: none;
   color: inherit;
   background: #FFFFFF;
-  /* Same shadow as every other card, because it belongs in the same grid.
+  /* Same edge as every other card, because it belongs in the same grid.
      The only difference is the rule down the left — the mark the assistant
      uses everywhere else in the product, so a written project reads as
      Workmark speaking rather than as a different feature. It was in a section
      of its own with a heading and a paragraph above it, which said "this is
      somewhere else" about something that is just another project. */
+  border: 1px solid #CFD2E0;
   border-left: 2px solid #6142F5;
-  box-shadow: 0 1px 2px rgba(25, 30, 46, 0.04), 0 6px 18px -12px rgba(25, 30, 46, 0.16);
-  transition: box-shadow 0.2s ease, transform 0.15s ease;
+  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 .nb-ai-card:hover {
-  box-shadow: 0 2px 4px rgba(25, 30, 46, 0.05), 0 16px 34px -18px rgba(25, 30, 46, 0.3);
+  border-color: rgba(97, 66, 245, 0.45);
+  border-left-color: #6142F5;
+  box-shadow: 0 2px 4px rgba(25, 30, 46, 0.05), 0 14px 30px -20px rgba(97, 66, 245, 0.4);
 }
 @media (prefers-reduced-motion: no-preference) {
   .nb-ai-card:hover { transform: translateY(-2px); }
@@ -983,9 +999,17 @@
 /* The panel they sit in. Sticky, because it is a sidebar beside a list that
    can be much taller than it — a filter you have to scroll back up to reach
    is a filter people stop using. */
+/* The facet panel down the left of Find work.
+   It keeps the borderless treatment the rest of the cards have just given up:
+   it is a panel of controls, not one of the results, and the sheet the results
+   sit on should be the thing with the edge. Left explicitly rather than by
+   accident, because .nb-card now carries a border and this would otherwise
+   have inherited one. */
 .nb-filters {
   position: sticky;
   top: 78px;
+  border-color: transparent;
+  box-shadow: 0 1px 2px rgba(25, 30, 46, 0.04), 0 6px 18px -12px rgba(25, 30, 46, 0.16);
 }
 @media (max-width: 900px) {
   .nb-filters { position: static; }
