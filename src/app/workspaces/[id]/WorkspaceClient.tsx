@@ -293,7 +293,14 @@ export default function WorkspaceClient({
                   </option>
                 ))}
               </select>
-              <Button onClick={linkRepo} disabled={!repo || repo === workspace.repoFullName || busy === 'repo'}>
+              <Button
+                onClick={linkRepo}
+                disabled={!repo || repo === workspace.repoFullName}
+                // A real wait, not a fakeable one: this reaches GitHub. So it
+                // gets an honest label and a spinner rather than a button that
+                // looks broken for two seconds.
+                busyLabel={busy === 'repo' ? 'Linking…' : null}
+              >
                 {busy === 'repo' ? 'Linking…' : workspace.repoFullName ? 'Change' : 'Link'}
               </Button>
             </div>

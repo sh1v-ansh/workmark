@@ -621,6 +621,14 @@
 .wm-app-ground button {
   font-family: inherit;
 }
+/* Off where it does not earn its place.
+   The wash reads as depth behind a page of cards with a lot of white in it.
+   Behind a dense list — Find Work is rows of listings, edge to edge — there
+   is no white for it to sit under, so it reads as a tint on the paper rather
+   than as light, which is the "cheap" look. One class turns it off rather
+   than a second ground style to keep in sync. */
+.wm-app-ground-flat::before { display: none; }
+
 .wm-app-ground::before {
   content: '';
   position: fixed;

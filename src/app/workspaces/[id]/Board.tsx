@@ -12,6 +12,7 @@ import {
 import { MENTION, type Message } from '@/lib/workspace/messages'
 import { pending, type Checkpoint } from '@/lib/workspace/checkpoints'
 import { rankToday, emptyReason } from '@/lib/workspace/today'
+import { useOptimistic, tempId } from '@/lib/ui/useOptimistic'
 import Calendar from './Calendar'
 import { useBoardRealtime } from './useBoardRealtime'
 import Modal from '@/components/ui/Modal'
@@ -64,7 +65,7 @@ const VERDICT_TONE: Record<string, { colour: string; label: string }> = {
 
 export default function Board({
   workspaceId,
-  tasks,
+  tasks: serverTasks,
   verdicts,
   sprints,
   messages,
@@ -123,6 +124,13 @@ export default function Board({
   const [offered, setOffered] = useState<{ title: string; why: string } | null>(null)
   const [splitting, setSplitting] = useState<BoardTask | null>(null)
   const [subtaskTitle, setSubtaskTitle] = useState('')
+  // Server data with pending writes shown on top. Every read of `tasks` below
+  // this line goes through the overlay, so a card moves, a subtask appears and
+  // a block turns red the moment they are asked for rather than when the
+  // server agrees. See lib/ui/optimistic.ts.
+  const optimistic = useOptimistic<BoardTask>(serverTasks, (m) => toast(m, 'error'))
+  const tasks = optimistic.items
+
   const threadsByTask = new Map(messages)
   const checkpointsByTask = new Map(checkpoints)
   // At most one, and only on a card that is yours. A question about what
@@ -132,6 +140,7 @@ export default function Board({
     .find((x) => x.checkpoint !== null && x.task.assigneeId === userId) ?? null
   const [checkpointAnswer, setCheckpointAnswer] = useState('')
   const [view, setView] = useState<'board' | 'calendar'>('board')
+
 
 
 
@@ -261,10 +270,42 @@ export default function Board({
     }
   }
 
+  /**
+   * A card that does not exist yet, drawn as though it does.
+   *
+   * Everything the board needs to render one, with the fields the server
+   * fills in left at their empty values — a pending card is deliberately not
+   * pretending to have a verdict or a position it has not been given.
+   */
+  function placeholder(over: Partial<BoardTask>): BoardTask {
+    return {
+      id: tempId(),
+      title: '', detail: null, acceptanceCriteria: null,
+      status: 'backlog', priority: 'normal', assigneeId: null, suggestedRole: null,
+      estimateHours: null, difficulty: null, dueOn: null, verifiable: true,
+      position: Number.MAX_SAFE_INTEGER, blockedAt: null, sprintId: null,
+      parentTaskId: null, abandonedReason: null, blockedReason: null,
+      origin: 'student_created', createdAt: new Date().toISOString(), startedAt: null,
+      ...over,
+    }
+  }
+
   async function createTask() {
-    const ok = await send(`/api/workspaces/${workspaceId}/tasks`,
-      { method: 'POST', body: JSON.stringify(draftBody(draft)) }, 'Task added.')
-    if (ok) { setCreating(false); setDraft(EMPTY) }
+    const body = draftBody(draft)
+    // Closed and cleared first. The dialog's job is done the moment they
+    // press Add; keeping it open while a request runs is the pause.
+    setCreating(false)
+    setDraft(EMPTY)
+
+    await optimistic.add(
+      placeholder({ title: draft.title, detail: draft.detail || null }),
+      () => fetch(`/api/workspaces/${workspaceId}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+      'Could not add that task.',
+    )
   }
 
   async function saveTask() {
@@ -275,13 +316,29 @@ export default function Board({
   }
 
   const move = (task: BoardTask, to: TaskStatus) =>
-    send(`/api/workspaces/${workspaceId}/tasks/${task.id}`,
-      { method: 'PATCH', body: JSON.stringify({ status: to }) })
+    optimistic.patch(
+      task.id,
+      { status: to } as Partial<BoardTask>,
+      () => fetch(`/api/workspaces/${workspaceId}/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: to }),
+      }),
+      'Could not move that card.',
+    )
 
   async function toggleBlocked(task: BoardTask) {
     if (task.blockedAt) {
-      await send(`/api/workspaces/${workspaceId}/tasks/${task.id}`,
-        { method: 'PATCH', body: JSON.stringify({ blocked: false }) }, 'Unblocked.')
+      await optimistic.patch(
+        task.id,
+        { blockedAt: null, blockedReason: null } as Partial<BoardTask>,
+        () => fetch(`/api/workspaces/${workspaceId}/tasks/${task.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ blocked: false }),
+        }),
+        'Could not unblock that.',
+      )
     } else {
       setBlocking(task)
       setBlockReason('')
@@ -290,10 +347,22 @@ export default function Board({
 
   async function confirmBlock() {
     if (!blocking) return
-    const ok = await send(`/api/workspaces/${workspaceId}/tasks/${blocking.id}`,
-      { method: 'PATCH', body: JSON.stringify({ blocked: true, blockedReason: blockReason }) },
-      'Flagged as blocked.')
-    if (ok) setBlocking(null)
+    // Closed first. The dialog has done its job the moment they press the
+    // button, and holding it open while a request runs is the pause.
+    const task = blocking
+    const reason = blockReason
+    setBlocking(null)
+
+    await optimistic.patch(
+      task.id,
+      { blockedAt: new Date().toISOString(), blockedReason: reason } as Partial<BoardTask>,
+      () => fetch(`/api/workspaces/${workspaceId}/tasks/${task.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blocked: true, blockedReason: reason }),
+      }),
+      'Could not flag that as blocked.',
+    )
   }
 
   const sprint = currentSprint(sprints)
@@ -357,20 +426,38 @@ export default function Board({
 
   async function addSubtask() {
     if (!splitting || subtaskTitle.trim().length < 2) return
-    const ok = await send(`/api/workspaces/${workspaceId}/tasks`, {
-      method: 'POST',
-      body: JSON.stringify({ title: subtaskTitle, parentTaskId: splitting.id }),
-    }, 'Subtask added.')
-    if (ok) setSubtaskTitle('')
+    const title = subtaskTitle
+    const parentId = splitting.id
+    // Cleared before the request so the box is ready for the next piece. The
+    // list above it already shows what was just typed.
+    setSubtaskTitle('')
+
+    await optimistic.add(
+      placeholder({ title, parentTaskId: parentId, status: splitting.status }),
+      () => fetch(`/api/workspaces/${workspaceId}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, parentTaskId: parentId }),
+      }),
+      'Could not add that piece.',
+    )
   }
 
   async function addOfferedSubtask() {
     if (!talking || !offered) return
-    const ok = await send(`/api/workspaces/${workspaceId}/tasks`, {
-      method: 'POST',
-      body: JSON.stringify({ title: offered.title, detail: offered.why, parentTaskId: talking.id }),
-    }, 'Added as a subtask.')
-    if (ok) setOffered(null)
+    const { title, why } = offered
+    const parentId = talking.id
+    setOffered(null)
+
+    await optimistic.add(
+      placeholder({ title, detail: why, parentTaskId: parentId }),
+      () => fetch(`/api/workspaces/${workspaceId}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, detail: why, parentTaskId: parentId }),
+      }),
+      'Could not add that as a subtask.',
+    )
   }
 
   async function checkScopeNow() {
@@ -844,7 +931,14 @@ export default function Board({
                     onDragStart={() => { if (!readOnly) setDragging(task.id) }}
                     onDragEnd={() => setDragging(null)}
                     style={{
-                      background: C.surface, border: `1px solid ${task.blockedAt ? '#E4B9A6' : C.border}`,
+                      background: C.surface,
+                      border: `1px solid ${task.blockedAt ? '#E4B9A6' : C.border}`,
+                      // Shown, not hidden. A card that is on screen but not
+                      // yet saved should say so — the point of optimistic
+                      // rendering is to remove the wait, not to claim a write
+                      // has landed when it has not.
+                      opacity: optimistic.isPending(task.id) ? 0.55 : 1,
+                      transition: 'opacity 0.18s ease',
                       borderRadius: R.md, padding: 11, cursor: 'grab',
                     }}
                   >
@@ -1045,6 +1139,8 @@ export default function Board({
                               style={{
                                 fontSize: T.meta, lineHeight: 1.5, color: C.textMuted,
                                 textDecoration: k.status === 'abandoned' ? 'line-through' : 'none',
+                                opacity: optimistic.isPending(k.id) ? 0.55 : 1,
+                                transition: 'opacity 0.18s ease',
                               }}
                             >
                               {k.status === 'verified' || k.status === 'accepted' ? '✓ ' : '· '}{k.title}
