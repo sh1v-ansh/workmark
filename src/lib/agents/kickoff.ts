@@ -1,16 +1,23 @@
-// Pressure-testing a week before it starts.
+// Checking a week is worth a week, before it starts.
 //
-// The half of a project manager's job that a retro cannot do. A review at the
-// end says what happened; this says "that is three weeks of work" while there
-// is still time to do something about it.
+// ── The question this used to ask, and why it was wrong ───────────────────
+// It asked whether the week was achievable — "that is three weeks of work" —
+// which assumes throughput this product's users do not have. A student with a
+// model open beside them can finish a week's plan in two days. Asking whether
+// they can fit it in is a question with a boring answer, and answering "yes"
+// to a week of trivial work is worse than useless: it confirms a plan that
+// will put nothing on their record.
+//
+// So the question is whether the week is worth doing. Three things decide it:
+// is any of this hard enough to be worth having done, is it aimed at one thing
+// or scattered across eight, and have they noticed which part is actually
+// difficult. Capacity is now one input rather than the verdict.
 //
 // ── Why this is worth a call ──────────────────────────────────────────────
-// Because of one number nobody has ever told a student about themselves.
-// workspace_metrics measures estimate bias — whether they are consistently
-// optimistic and by how much — and somebody who underestimates by 40% every
-// week is not bad at their job, they are predictably wrong in a direction
-// that can simply be multiplied out. That is a useful thing to hear and an
-// impossible thing to learn on your own.
+// The hard-part question is judgement and nothing else here can do it. The
+// estimate bias still goes in — somebody predictably 40% optimistic is worth
+// telling, because nobody has ever measured that about them — but as context
+// for the answer rather than as the answer.
 //
 // One call per week per project, and only when asked.
 
@@ -19,41 +26,51 @@ import { callStructuredAgent } from './client'
 import { untrusted } from './untrusted'
 
 export interface ScopeCheck {
-  /** Whether the week looks achievable. Three states, not a score. */
-  verdict: 'looks_right' | 'tight' | 'too_much'
+  /**
+   * Whether the week is worth doing, not whether it fits.
+   *
+   * `light` is the common one and the reason this was rebuilt: a week of
+   * small, safe tasks passes every capacity check and produces nothing worth
+   * showing anybody.
+   */
+  verdict: 'worth_it' | 'light' | 'scattered'
   /** Two sentences, addressed to the student. */
   reasoning: string
-  /** One concrete adjustment, or what to keep if the week is fine. */
+  /** One concrete change, or what to keep if the week is already good. */
   suggestion: string
 }
 
-const SYSTEM = `You are an experienced engineering manager sitting down with a computer science student at the start of a week, looking at what they have just committed to.
+const SYSTEM = `You are an experienced engineer sitting down with a computer science student at the start of a week, looking at what they have just committed to.
 
-Your job is to say whether the week is achievable, before it starts, while there is still time to change it.
+The question is NOT whether they can fit it in. Assume they can build fast — they have a language model open beside them and can produce a week of ordinary code in a couple of days. The question is whether this week is worth a week: whether anything in it is hard enough to be worth having done, whether it is aimed at one thing or scattered across eight, and whether they have noticed which part is actually difficult.
 
 Give three things.
 
-VERDICT — one of: looks_right, tight, too_much.
+VERDICT — one of:
+- worth_it: there is something genuinely hard here and the week is pointed at it.
+- light: they will finish this in two days and have little to show. The most common answer, and the one worth saying plainly.
+- scattered: enough work, but spread across unrelated things, so the week adds up to less than its parts.
 
-REASONING — two sentences, addressed to them as "you". Lead with the arithmetic where there is any. If they have a measured estimate bias, use it: "you have underestimated by about a third on past tasks, so these twelve hours have historically meant nearer sixteen" is the single most useful sentence you can say, because nobody has ever measured that about them before. If there is not enough history, say so plainly and judge on the hours and the difficulty alone.
+REASONING — two sentences, addressed to them as "you". Name the hard part if there is one, or say plainly that there is not. Where a measured estimate bias is given, use it as context rather than as the point: "your estimates run about a third under" explains why twelve planned hours is not the ceiling it looks like.
 
-SUGGESTION — one concrete change. Move a specific kind of task out, add an estimate to the ones missing one, or — if the week looks right — say what makes it look right so they repeat it.
+SUGGESTION — one concrete change. Usually: what to add, what to make harder, or which thing to cut so the rest connects. If the week is already good, say what makes it good so they do it again.
 
 How to write it:
 - Plainly, the way a senior colleague talks. Short sentences.
-- Arithmetic over adjectives. "Sixteen hours against your usual ten" beats "quite ambitious".
+- Specific to these tasks. Name them.
 - Never praise or scold. This is a planning conversation, not a performance review.
 
 Never do these:
-- Do not invent a bias, a velocity or a history you were not given. If it says there is not enough data, there is not enough data.
-- Do not tell them to work more hours. The point of the exercise is to fit the work to the week, not the week to the work.
-- Do not suggest dropping the hardest task by default. Difficulty is where the record is earned, and a week of easy work is worth less to them than a hard week that slips.`
+- Do not tell them the week is too much because the hours look high. Hours are the weakest signal here.
+- Do not invent a bias, a velocity or a history you were not given.
+- Do not suggest dropping the hardest task. Difficulty is where the record is earned, and a week of easy work is worth less to them than a hard week that slips.
+- Do not pad. Two sentences and one change.`
 
 const SCHEMA = {
   type: 'object',
   properties: {
-    verdict: { type: 'string', enum: ['looks_right', 'tight', 'too_much'] },
-    reasoning: { type: 'string', maxLength: 500 },
+    verdict: { type: 'string', enum: ['worth_it', 'light', 'scattered'] },
+    reasoning: { type: 'string', maxLength: 340 },
     suggestion: { type: 'string', maxLength: 300 },
   },
   required: ['verdict', 'reasoning', 'suggestion'],
@@ -85,14 +102,14 @@ export async function checkScope(
 
   // The enum in the schema is a hint rather than a guarantee: structured
   // outputs does not enforce enum, so client.ts folds it into the description
-  // where the model reads it as an instruction. Checked here because the
-  // board's fallback for an unrecognised verdict is "this looks about right",
-  // and telling somebody their over-stuffed week is fine is the one direction
-  // this must not fail in.
-  const known: ScopeCheck['verdict'][] = ['looks_right', 'tight', 'too_much']
+  // where the model reads it as an instruction.
+  const known: ScopeCheck['verdict'][] = ['worth_it', 'light', 'scattered']
   if (!known.includes(reply.verdict)) {
     console.error(`[agents] kickoff returned an unknown verdict: ${String(reply.verdict)}`)
-    return { ...reply, verdict: 'tight' }
+    // Falls to `light` rather than `worth_it`, for the same reason as before:
+    // telling somebody an empty week is fine is the direction this must not
+    // fail in.
+    return { ...reply, verdict: 'light' }
   }
 
   return reply

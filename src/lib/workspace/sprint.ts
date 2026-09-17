@@ -245,11 +245,15 @@ export function toSprint(row: Record<string, unknown>): Sprint {
 /**
  * The facts a scope check is made from.
  *
- * The one number that matters is estimate bias, and it is the reason this is
- * worth asking at all: somebody who underestimates by 40% every week is not
- * bad at their job, they are predictably optimistic, and the fix is arithmetic
- * rather than advice. Nobody tells a student that, because nobody has ever
- * measured it about them before.
+ * Difficulty leads, because the question is whether the week is worth doing
+ * rather than whether it fits. A student with a model beside them can build a
+ * week of ordinary code in two days, so hours are the weakest signal here and
+ * are reported last — as context for the estimate bias rather than as the
+ * thing being judged.
+ *
+ * The spread of difficulty is what says "scattered": eight tasks at level two
+ * is a different week from four at two and one at eight, and the counts alone
+ * cannot tell them apart.
  *
  * Null bias means not enough history to say, which is the common case early
  * on and must be stated rather than guessed around.
@@ -266,15 +270,28 @@ export function kickoffBrief(
 
   const lines = [
     `Week: ${sprint.name}${sprint.goal ? ` — goal: ${sprint.goal}` : ' (no goal set)'}`,
-    `Committed: ${mine.length} task(s), ${hours || 'no'} estimated hours.`,
+    `Committed: ${mine.length} task(s).`,
   ]
 
-  if (unestimated > 0) {
-    lines.push(`${unestimated} of them carry no estimate at all, so the hours above understate the week.`)
+  // The titles, so the answer can name what it is talking about. A scope check
+  // that says "some of these are light" is worth nothing next to one that says
+  // which.
+  if (mine.length > 0) {
+    lines.push('The tasks:')
+    for (const t of mine.slice(0, 12)) {
+      lines.push(`- ${t.title}${t.difficulty !== null ? ` (difficulty ${t.difficulty}/10)` : ' (no difficulty set)'}`)
+    }
   }
+
   if (hardest.length > 0) {
-    lines.push(`Hardest task is difficulty ${Math.max(...hardest)} of 10.`)
+    const top = Math.max(...hardest)
+    const typical = [...hardest].sort((a, b) => a - b)[Math.floor(hardest.length / 2)]
+    lines.push(`Hardest is ${top} of 10; the middle of the week sits at ${typical}.`)
+  } else {
+    lines.push('None of them carry a difficulty, so there is nothing to say about how hard the week is.')
   }
+
+  lines.push(`Estimated at ${hours || 'no'} hours${unestimated > 0 ? `, with ${unestimated} carrying no estimate` : ''}.`)
 
   if (estimation.bias === null || estimation.sample < 4) {
     lines.push('Not enough finished work yet to know how this person estimates. Do not guess at it.')

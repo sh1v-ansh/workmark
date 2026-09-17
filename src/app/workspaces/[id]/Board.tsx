@@ -14,6 +14,7 @@ import { pending, type Checkpoint } from '@/lib/workspace/checkpoints'
 import { rankToday, emptyReason } from '@/lib/workspace/today'
 import { useOptimistic, tempId } from '@/lib/ui/useOptimistic'
 import Calendar from './Calendar'
+import AgentSays from '@/components/AgentSays'
 import { useBoardRealtime } from './useBoardRealtime'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/Toast'
@@ -849,7 +850,7 @@ export default function Board({
                   onClick={checkScopeNow}
                   busyLabel={checkingScope ? 'Checking…' : null}
                 >
-                  Is this doable?
+                  Check this week
                 </Button>
                 <Button
                   variant="outline"
@@ -1223,22 +1224,22 @@ export default function Board({
               </p>
             ) : (
               <div style={{ display: 'grid', gap: 10, marginBottom: 16, maxHeight: 320, overflowY: 'auto' }}>
+                {/* Two voices that look different. A thread where the
+                    assistant and the people in it share a box shape is one you
+                    have to read to know who said what. */}
                 {(threadsByTask.get(talking.id) ?? []).map((m) => (
-                  <div
-                    key={m.id}
-                    style={{
-                      padding: '10px 12px', borderRadius: R.md,
-                      background: m.senderKind === 'agent' ? C.surfaceAlt : C.surface,
-                      border: `1px solid ${m.senderKind === 'agent' ? C.border : C.borderFaint}`,
-                    }}
-                  >
-                    <p style={{ fontSize: T.meta, fontWeight: 600, color: C.textFaint, marginBottom: 4 }}>
-                      {m.senderKind === 'agent' ? 'Workmark' : (nameOf(m.senderId) ?? 'Someone')}
-                    </p>
-                    <p style={{ fontSize: T.bodySm, color: C.textSub, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
-                      {m.body}
-                    </p>
-                  </div>
+                  m.senderKind === 'agent' ? (
+                    <AgentSays key={m.id} heading="Workmark" body={m.body} />
+                  ) : (
+                    <div key={m.id} style={{ paddingLeft: 16 }}>
+                      <p style={{ fontSize: T.meta, fontWeight: 600, color: C.textFaint, marginBottom: 3 }}>
+                        {nameOf(m.senderId) ?? 'Someone'}
+                      </p>
+                      <p style={{ fontSize: T.bodySm, color: C.textSub, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>
+                        {m.body}
+                      </p>
+                    </div>
+                  )
                 ))}
               </div>
             )}
@@ -1299,27 +1300,22 @@ export default function Board({
       <Modal
         open={scopeCheck !== null}
         onClose={() => setScopeCheck(null)}
-        title={
-          scopeCheck?.verdict === 'too_much' ? 'This is more than a week'
-            : scopeCheck?.verdict === 'tight' ? 'Tight, but possible'
-              : 'This looks about right'
-        }
+        title="This week"
       >
         {scopeCheck && (
           <>
-            <p style={{ fontSize: T.body, color: C.textMuted, lineHeight: 1.7, marginBottom: 14 }}>
-              {scopeCheck.reasoning}
-            </p>
-            <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '12px 14px', marginBottom: 20 }}>
-              <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.textFaint, marginBottom: 5 }}>
-                What to change
-              </p>
-              <p style={{ fontSize: T.bodySm, color: C.textSub, lineHeight: 1.65 }}>
-                {scopeCheck.suggestion}
-              </p>
-            </div>
+            <AgentSays
+              heading={
+                scopeCheck.verdict === 'light' ? 'Light for a week'
+                  : scopeCheck.verdict === 'scattered' ? 'Pulling in several directions'
+                    : 'Worth the week'
+              }
+              tone={scopeCheck.verdict === 'worth_it' ? 'good' : 'warn'}
+              body={scopeCheck.reasoning}
+              action={scopeCheck.suggestion}
+            />
             {/* Nothing is applied. It is advice, and the plan stays theirs. */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
               <Button onClick={() => setScopeCheck(null)}>Got it</Button>
             </div>
           </>
@@ -1387,9 +1383,14 @@ export default function Board({
 
       {/* The review, the moment it arrives. */}
       <Modal open={lastRetro !== null} onClose={() => setLastRetro(null)} title="How the week went">
-        <p style={{ fontSize: T.body, color: C.textMuted, lineHeight: 1.7, whiteSpace: 'pre-line', marginBottom: 20 }}>
-          {lastRetro}
-        </p>
+        {/* The retro arrives as a summary and a suggestion separated by a
+            blank line — split here so the thing to act on is not buried in the
+            middle of a paragraph. */}
+        <AgentSays
+          heading="The week"
+          body={(lastRetro ?? '').split('\n\n')[0] ?? ''}
+          action={(lastRetro ?? '').split('\n\n').slice(1).join('\n\n') || null}
+        />
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <Button onClick={() => setLastRetro(null)}>Got it</Button>
         </div>

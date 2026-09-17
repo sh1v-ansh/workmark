@@ -190,16 +190,32 @@ describe('kickoffBrief', () => {
       .toMatch(/Not enough finished work yet/)
   })
 
-  it('flags tasks carrying no estimate, which understate the week', () => {
+  it('notes estimates that are missing, as context rather than as the point', () => {
     const brief = kickoffBrief(s, [t({ id: 'a', estimateHours: 4 }), t({ id: 'b', estimateHours: null })],
       { bias: null, spread: null, sample: 0 })
-    expect(brief).toMatch(/1 of them carry no estimate/)
+    expect(brief).toMatch(/1 carrying no estimate/)
   })
 
-  it('names the hardest task', () => {
+  // Difficulty leads, because the question is whether the week is worth doing
+  // rather than whether it fits. Hours are the weakest signal when a student
+  // can build a week of ordinary code in two days.
+  it('leads with how hard the week is, not how long', () => {
     const brief = kickoffBrief(s, [t({ id: 'a', difficulty: 3 }), t({ id: 'b', difficulty: 8 })],
       { bias: null, spread: null, sample: 0 })
-    expect(brief).toMatch(/difficulty 8 of 10/)
+    expect(brief).toMatch(/Hardest is 8 of 10/)
+    expect(brief.indexOf('Hardest is')).toBeLessThan(brief.indexOf('Estimated at'))
+  })
+
+  // "Some of these are light" is worth nothing next to naming which.
+  it('names the tasks so the answer can point at one', () => {
+    const brief = kickoffBrief(s, [t({ id: 'a', title: 'Wire the callback' })],
+      { bias: null, spread: null, sample: 0 })
+    expect(brief).toMatch(/- Wire the callback/)
+  })
+
+  it('says plainly when nothing carries a difficulty', () => {
+    expect(kickoffBrief(s, [t({ difficulty: null })], { bias: null, spread: null, sample: 0 }))
+      .toMatch(/nothing to say about how hard the week is/)
   })
 
   it('reports overestimating in the other direction', () => {
@@ -210,6 +226,7 @@ describe('kickoffBrief', () => {
   it("counts only this weeks tasks", () => {
     const brief = kickoffBrief(s, [t({ id: 'a', estimateHours: 4 }), t({ id: 'b', estimateHours: 99, sprintId: 'other' })],
       { bias: null, spread: null, sample: 0 })
-    expect(brief).toMatch(/1 task\(s\), 4 estimated hours/)
+    expect(brief).toMatch(/Committed: 1 task/)
+    expect(brief).toMatch(/Estimated at 4 hours/)
   })
 })

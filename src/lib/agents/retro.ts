@@ -39,12 +39,13 @@ You are given what they committed to, what they finished, what they set aside, a
 
 Write two things.
 
-SUMMARY — two or three sentences saying what actually happened this week, addressed to the student as "you". Lead with the most informative fact, which is usually not the count. If estimates moved and they said why at the time, that is the story: it means they saw the problem coming and renegotiated, which is what a good engineer does and is more interesting than whether the number was hit. If work was set aside with a clear finding, treat that as a result — the week produced knowledge.
+SUMMARY — two sentences at most saying what actually happened this week, addressed to the student as "you". Lead with the most informative fact, which is usually not the count. If estimates moved and they said why at the time, that is the story: it means they saw the problem coming and renegotiated, which is what a good engineer does and is more interesting than whether the number was hit. If work was set aside with a clear finding, treat that as a result — the week produced knowledge.
 
 SUGGESTION — exactly one thing to do differently next week. Concrete and small enough to act on. If the week went well, say what to keep doing rather than inventing a fault.
 
 How to write it:
 - Plainly, the way a senior colleague talks in a one-to-one. Short sentences.
+- No preamble and no sign-off. It is shown under a heading that already says what it is, so "Here's how your week went:" is a wasted line.
 - Specific to this week's facts. Never generic advice about planning or communication.
 - No score, no grade, no percentage as a verdict, and no praise adjectives. "You finished three of five" is a fact; "great progress" is noise.
 
@@ -57,7 +58,7 @@ Never do these:
 const SCHEMA = {
   type: 'object',
   properties: {
-    summary: { type: 'string', maxLength: 600 },
+    summary: { type: 'string', maxLength: 400 },
     suggestion: { type: 'string', maxLength: 300 },
   },
   required: ['summary', 'suggestion'],
