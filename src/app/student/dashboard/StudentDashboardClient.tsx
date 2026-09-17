@@ -249,16 +249,30 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         a.posterName,
         a.fitTier ? FIT_TIER_LABEL[a.fitTier as FitTier] : null,
       ].filter(Boolean).join(' · '),
+      // Status first, then the action, because the status is what the row is
+      // reporting and the action is what you might do about it.
+      //
+      // The app's own button rather than a hand-rolled one. This was a bare
+      // <button> at 13.5px in textGhost, sitting in the same slot as the
+      // status labels on every other row — so the one clickable thing in the
+      // column was dressed as the things that are not, and in a different
+      // size and weight from every other control on the page. `quiet` is the
+      // variant Button.tsx already documents for exactly this: low-stakes and
+      // destructive-adjacent, withdraw and cancel.
+      //
+      // The negative right margin is the button's own side padding pulled
+      // back, so its label lines up with the plain status text on the rows
+      // above and below rather than sitting 14px short of them.
       right: a.status === 'submitted' ? (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
-          <button
-            onClick={(e) => { e.preventDefault(); withdraw(a.id) }}
-            disabled={withdrawing === a.id}
-            style={{ fontSize: 13.5, color: C.textGhost, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            {withdrawing === a.id ? 'Withdrawing…' : 'Withdraw'}
-          </button>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginRight: -14.5 }}>
           <span style={{ fontSize: 13.5, color: C.textFaint }}>{s.label}</span>
+          <Button
+            variant="quiet" size="sm"
+            onClick={() => withdraw(a.id)}
+            busyLabel={withdrawing === a.id ? 'Withdrawing…' : null}
+          >
+            Withdraw
+          </Button>
         </span>
       ) : (
         <span style={{ fontSize: 13.5, color: C.textFaint }}>{s.label}</span>
