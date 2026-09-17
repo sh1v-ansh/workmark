@@ -72,7 +72,7 @@ export async function checkScope(
   studentId: string,
   facts: string,
 ): Promise<ScopeCheck | null> {
-  return callStructuredAgent<ScopeCheck>(supabase, {
+  const reply = await callStructuredAgent<ScopeCheck>(supabase, {
     agentType: 'kickoff',
     system: SYSTEM,
     userContent: untrusted('What they have committed to this week', facts),
@@ -80,4 +80,20 @@ export async function checkScope(
     studentId,
     inputForAudit: { kind: 'sprint_kickoff' },
   })
+
+  if (!reply) return null
+
+  // The enum in the schema is a hint rather than a guarantee: structured
+  // outputs does not enforce enum, so client.ts folds it into the description
+  // where the model reads it as an instruction. Checked here because the
+  // board's fallback for an unrecognised verdict is "this looks about right",
+  // and telling somebody their over-stuffed week is fine is the one direction
+  // this must not fail in.
+  const known: ScopeCheck['verdict'][] = ['looks_right', 'tight', 'too_much']
+  if (!known.includes(reply.verdict)) {
+    console.error(`[agents] kickoff returned an unknown verdict: ${String(reply.verdict)}`)
+    return { ...reply, verdict: 'tight' }
+  }
+
+  return reply
 }

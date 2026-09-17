@@ -22,21 +22,39 @@ function agentSources(): { file: string; text: string }[] {
 }
 
 describe('structured output schemas', () => {
-  // "For 'array' type, 'minItems' values other than 0 or 1 are not supported".
-  // A floor higher than one belongs in the prompt and in a check after
-  // parsing, not in the schema.
-  it('never sets minItems above 1', () => {
-    const offenders: string[] = []
-    for (const { file, text } of agentSources()) {
-      for (const m of text.matchAll(/minItems:\s*([A-Za-z0-9_]+)/g)) {
-        const raw = m[1]
-        const value = /^\d+$/.test(raw) ? Number(raw) : null
-        // A named constant is a floor somebody meant, which is exactly the
-        // mistake — only a literal 0 or 1 is safe here.
-        if (value === null || value > 1) offenders.push(`${file}: minItems: ${raw}`)
-      }
-    }
-    expect(offenders, `structured outputs rejects these:\n${offenders.join('\n')}`).toEqual([])
+  // Schemas are no longer policed keyword by keyword — client.ts runs every
+  // one through the SDK's transformJSONSchema, which keeps what structured
+  // outputs supports and folds the rest into the description. What matters is
+  // that it is still being applied: without it, an unsupported keyword is a
+  // 400 on every call to that agent, discovered only by deploying.
+  it('sends every schema through the SDK transform', () => {
+    const client = readFileSync(path.join(AGENTS, 'client.ts'), 'utf-8')
+    expect(client).toMatch(/import \{ transformJSONSchema \}/)
+    expect(client).toMatch(/schema: transformJSONSchema\(args\.schema\)/)
+    // And nothing bypasses it by building its own request.
+    const bypass = agentSources().filter(
+      (a) => a.file !== 'client.ts' && /output_config|messages\.create\(/.test(a.text),
+    )
+    expect(bypass.map((b) => b.file)).toEqual([])
+  })
+
+  // What the transform actually keeps, pinned so an SDK upgrade that narrows
+  // it fails here rather than in production.
+  it('keeps the keywords our schemas rely on', async () => {
+    const { transformJSONSchema } = await import('@anthropic-ai/sdk/lib/transform-json-schema')
+    const out = transformJSONSchema({
+      type: 'object',
+      properties: { xs: { type: 'array', minItems: 5, items: { type: 'string' } } },
+      required: ['xs'],
+      additionalProperties: false,
+    }) as Record<string, unknown>
+
+    expect(out.type).toBe('object')
+    expect(out.required).toEqual(['xs'])
+    expect(out.additionalProperties).toBe(false)
+    // The unsupported floor survives as an instruction rather than vanishing.
+    const xs = (out.properties as Record<string, { description?: string }>).xs
+    expect(xs.description).toMatch(/minItems/)
   })
 
   it('has at least one schema to check, so this cannot pass by finding nothing', () => {

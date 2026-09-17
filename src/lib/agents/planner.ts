@@ -70,12 +70,11 @@ const SCHEMA = {
   properties: {
     tasks: {
       type: 'array',
-      // Structured outputs accepts a `minItems` of 0 or 1 and nothing else —
-      // anything higher is a 400 on every call, which is how this endpoint
-      // came to fail outright. The real floor is MIN_TASKS and it is enforced
-      // where floors belong for a language model: in the prompt, and checked
-      // after the fact rather than by the schema.
-      minItems: 1,
+      // Written as real constraints; client.ts runs the whole schema through
+      // the SDK transform, which keeps what structured outputs supports and
+      // turns the rest into description text the model still reads. So these
+      // are honest about the intent and cannot 400.
+      minItems: MIN_TASKS,
       maxItems: MAX_TASKS,
       description: `Between ${MIN_TASKS} and ${MAX_TASKS} tasks.`,
       items: {

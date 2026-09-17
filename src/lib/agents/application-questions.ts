@@ -31,10 +31,11 @@ const SCHEMA = {
   properties: {
     questions: {
       type: 'array',
-      // 0 or 1 only — see the note in planner.ts. questionsFor() already
-      // slices to QUESTION_COUNT and falls back when fewer arrive, so the
-      // count is handled where it can be handled.
-      minItems: 1,
+      // Real constraints; the SDK transform in client.ts folds whatever
+      // structured outputs cannot take into the description. questionsFor()
+      // still slices and falls back, because a model instruction is a strong
+      // hint rather than a guarantee.
+      minItems: QUESTION_COUNT,
       maxItems: QUESTION_COUNT,
       description: `Exactly ${QUESTION_COUNT} questions.`,
       items: {

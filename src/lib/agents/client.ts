@@ -14,6 +14,7 @@
 // from behavior.
 
 import Anthropic from '@anthropic-ai/sdk'
+import { transformJSONSchema } from '@anthropic-ai/sdk/lib/transform-json-schema'
 import { UNTRUSTED_BOUNDARY } from './untrusted'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -146,7 +147,24 @@ async function callInternal<T>(
         cache_control: { type: 'ephemeral' as const },
       },
       ],
-      output_config: { format: { type: 'json_schema', schema: args.schema } },
+      // Put through the SDK's own transform rather than sent as written.
+    //
+    // Structured outputs supports a narrow slice of JSON Schema: type,
+    // description, title, properties, required, additionalProperties, items,
+    // a fixed set of string formats, and minItems when it is 0 or 1. Anything
+    // else — maxItems, enum, minimum, maximum, maxLength — is a 400, and the
+    // API reports one offending keyword per response, so finding them by
+    // deploying is a loop that takes as many round trips as there are
+    // mistakes. Two of ours had already shipped that way.
+    //
+    // transformJSONSchema keeps what is supported and folds the rest into the
+    // description, so a constraint still reaches the model as an instruction
+    // instead of being silently dropped or rejected. It is the same function
+    // the SDK's own zod helper runs, which makes it the authority on what the
+    // endpoint accepts rather than a list we would have to keep in sync.
+    output_config: {
+      format: { type: 'json_schema', schema: transformJSONSchema(args.schema) },
+    },
       messages: [{ role: 'user', content: args.userContent }],
     })
   } catch (err) {
