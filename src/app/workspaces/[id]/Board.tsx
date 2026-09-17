@@ -15,6 +15,7 @@ import { rankToday, emptyReason } from '@/lib/workspace/today'
 import { useOptimistic, tempId } from '@/lib/ui/useOptimistic'
 import Calendar from './Calendar'
 import AgentSays from '@/components/AgentSays'
+import { LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { useBoardRealtime } from './useBoardRealtime'
 import Modal from '@/components/ui/Modal'
 import { useToast } from '@/components/Toast'
@@ -134,6 +135,15 @@ export default function Board({
   // server agrees. See lib/ui/optimistic.ts.
   const optimistic = useOptimistic<BoardTask>(serverTasks, (m) => toast(m, 'error'))
   const tasks = optimistic.items
+
+  // Motion is used in exactly one place: a card moving between columns. Those
+  // are different DOM parents, so CSS cannot tween it — before this the card
+  // vanished from one column and appeared in another, which with optimistic
+  // updates now happens instantly and so reads as a glitch rather than a move.
+  //
+  // Nothing else animates. Animation on everything is the thing that reads as
+  // a template, and every other transition here is CSS and costs nothing.
+  const still = useReducedMotion()
 
   const threadsByTask = new Map(messages)
   const checkpointsByTask = new Map(checkpoints)
@@ -963,8 +973,13 @@ export default function Board({
 
               <div style={{ display: 'grid', gap: 8 }}>
                 {inColumn.map((task) => (
-                  <article
+                  <motion.article
                     key={task.id}
+                    // Same layoutId across columns is what lets Motion see the
+                    // move rather than an unmount and a mount.
+                    layoutId={`card-${task.id}`}
+                    layout={still ? false : 'position'}
+                    transition={{ type: 'spring', stiffness: 520, damping: 42, mass: 0.7 }}
                     draggable={!readOnly}
                     onDragStart={() => { if (!readOnly) setDragging(task.id) }}
                     onDragEnd={() => setDragging(null)}
@@ -999,66 +1014,44 @@ export default function Board({
                         {task.title}
                       </p>
                     </button>
-
-                    {/* One row of signals instead of six paragraphs.
-                        Everything that used to live here — the checker's note,
-                        the checks it rested on, who confirmed it, the list of
-                        pieces — is in the card's own dialog. A board is for
-                        seeing where things are; reading is what opening a card
-                        is for. */}
+                    {/* One line, not a row of pills.
+                        Five coloured chips is five things asking to be looked
+                        at on a card whose job is to show a title. The same
+                        facts read faster as small muted text with dots between
+                        them, and colour is spent on the only one that changes
+                        what somebody should do today: blocked. */}
                     {(() => {
                       const v = verdictFor.get(task.id)
                       const kids = tasks.filter((k) => k.parentTaskId === task.id)
                       const kidsDone = kids.filter(
                         (k) => k.status === 'verified' || k.status === 'accepted',
                       ).length
-                      const chips: React.ReactNode[] = []
+                      const today = new Date().toISOString().slice(0, 10)
+                      const late = task.dueOn !== null && task.dueOn < today
+                        && task.status !== 'verified' && task.status !== 'accepted'
 
-                      if (task.blockedAt) {
-                        chips.push(
-                          <span key="blocked" className="wm-chip" style={{ background: '#DC2626', color: '#fff' }}>
-                            Blocked
-                          </span>,
-                        )
-                      }
+                      const parts: string[] = []
                       if (v && v.verdict !== 'pending') {
-                        const tone = VERDICT_TONE[v.verdict] ?? VERDICT_TONE.pending
-                        chips.push(
-                          <span key="verdict" className="wm-chip" style={{ color: tone.colour, border: `1px solid ${tone.colour}33` }}>
-                            {tone.label}
-                          </span>,
-                        )
+                        parts.push((VERDICT_TONE[v.verdict] ?? VERDICT_TONE.pending).label)
                       }
-                      if (kids.length > 0) {
-                        chips.push(
-                          <span key="kids" className="wm-chip" style={{ color: C.textMuted, border: `1px solid ${C.border}` }}>
-                            {kidsDone}/{kids.length} pieces
-                          </span>,
-                        )
-                      }
-                      if (task.dueOn) {
-                        const late = task.dueOn < new Date().toISOString().slice(0, 10)
-                          && task.status !== 'verified' && task.status !== 'accepted'
-                        chips.push(
-                          <span key="due" className="wm-chip" style={{
-                            color: late ? '#B91C1C' : C.textGhost,
-                            border: `1px solid ${late ? '#B91C1C33' : C.border}`,
-                          }}>
-                            {late ? 'Overdue' : `Due ${task.dueOn.slice(5)}`}
-                          </span>,
-                        )
-                      }
-                      if (task.origin === 'ai_proposed') {
-                        chips.push(
-                          <span key="ai" className="wm-chip" style={{ color: C.textGhost, border: `1px dashed ${C.border}` }}>
-                            Suggested
-                          </span>,
-                        )
-                      }
+                      if (kids.length > 0) parts.push(`${kidsDone} of ${kids.length} pieces`)
+                      if (task.dueOn) parts.push(late ? 'Overdue' : `Due ${task.dueOn.slice(5)}`)
+                      if (task.origin === 'ai_proposed' && parts.length === 0) parts.push('Suggested')
 
-                      if (chips.length === 0) return null
+                      if (!task.blockedAt && parts.length === 0) return null
+
                       return (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 7 }}>{chips}</div>
+                        <p style={{
+                          fontSize: 11.5, lineHeight: 1.5, marginTop: 6,
+                          color: late ? '#B91C1C' : C.textFaint,
+                        }}>
+                          {task.blockedAt && (
+                            <span style={{ color: '#DC2626', fontWeight: 600 }}>
+                              Blocked{parts.length > 0 ? ' · ' : ''}
+                            </span>
+                          )}
+                          {parts.join(' · ')}
+                        </p>
                       )
                     })()}
 
@@ -1090,7 +1083,7 @@ export default function Board({
                         )}
                       </div>
                     )}
-                  </article>
+                  </motion.article>
                 ))}
 
                 {/* Where the plan is about to land.

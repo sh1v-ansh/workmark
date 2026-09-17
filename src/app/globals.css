@@ -687,15 +687,30 @@
    only the link/button variants move. */
 .nb-card {
   background: #FFFFFF;
-  border: 1px solid #ECEBF3;
   border-radius: 13px;
-  box-shadow: 0 1px 1px rgba(25, 30, 46, 0.03), 0 8px 20px -12px rgba(25, 30, 46, 0.18);
+  /* No border.
+     A grey outline around every card on a grid of them draws a grid of grey
+     rectangles, and the eye reads the boxes before it reads anything in them.
+     Separation comes from the shadow and from the white sitting on a tinted
+     ground — which is how a card is separated from a page in practice, rather
+     than by being outlined like a form field. */
+  box-shadow: 0 1px 2px rgba(25, 30, 46, 0.04), 0 6px 18px -12px rgba(25, 30, 46, 0.16);
 }
-.nb-card-interactive { transition: border-color 0.15s ease, box-shadow 0.2s ease, transform 0.15s ease; }
+.nb-card-interactive { transition: box-shadow 0.2s ease, transform 0.15s ease; }
 .nb-card-interactive:hover {
-  border-color: #DCD4F7;
-  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 30px -16px rgba(97, 66, 245, 0.38);
-  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(25, 30, 46, 0.05), 0 16px 34px -18px rgba(25, 30, 46, 0.3);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nb-card-interactive:hover { transform: translateY(-2px); }
+}
+
+/* A project Workmark wrote, in the same grid as the ones people posted.
+   The distinction is a rule and a mark, the same language the assistant uses
+   everywhere else — not a separate section above the real work, which put a
+   heading, a paragraph and a link between somebody and the postings they came
+   for. */
+.nb-card-written {
+  border-left: 2px solid #6142F5;
 }
 
 /* The one card per screen that owns it. Violet edge, violet light pooling in
@@ -844,25 +859,27 @@
 .nb-ai-card {
   position: relative;
   display: block;
-  overflow: hidden;
   padding: 18px;
   border-radius: 13px;
   text-decoration: none;
   color: inherit;
-  /* Was a violet gradient with a sheen sweeping across it. Nothing about
-     the card being AI-written justifies more visual weight than the work
-     itself, and a gradient used to mean "special" is the cheapest signal
-     there is. A plain surface and a small label say the same thing without
-     asking to be looked at. */
-  border: 1px solid #E8E6F0;
   background: #FFFFFF;
-  box-shadow: 0 1px 2px rgba(97, 66, 245, 0.06), 0 14px 32px -18px rgba(97, 66, 245, 0.45);
-  transition: box-shadow 0.2s ease, border-color 0.15s ease, transform 0.15s ease;
+  /* Same shadow as every other card, because it belongs in the same grid.
+     The only difference is the rule down the left — the mark the assistant
+     uses everywhere else in the product, so a written project reads as
+     Workmark speaking rather than as a different feature. It was in a section
+     of its own with a heading and a paragraph above it, which said "this is
+     somewhere else" about something that is just another project. */
+  border-left: 2px solid #6142F5;
+  box-shadow: 0 1px 2px rgba(25, 30, 46, 0.04), 0 6px 18px -12px rgba(25, 30, 46, 0.16);
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
 }
-/* Light pooling in the bottom-right, the same move the focal card makes. */
-/* The violet wash in the corner and the lift on hover both went with the
-   gradient. It is a link to a project; it should read as one. */
-.nb-ai-card:hover { border-color: #CFCBE6; }
+.nb-ai-card:hover {
+  box-shadow: 0 2px 4px rgba(25, 30, 46, 0.05), 0 16px 34px -18px rgba(25, 30, 46, 0.3);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .nb-ai-card:hover { transform: translateY(-2px); }
+}
 
 /* The band above the grid that says what these are. Full width, once, so
    the cards themselves do not each have to carry the explanation. */
