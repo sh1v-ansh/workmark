@@ -34,6 +34,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null)
   const [resending, setResending] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
   // The honeypot. Never shown, never focusable, never filled by a person —
   // so anything in it came from something that parsed the form and completed
@@ -45,6 +46,25 @@ export default function LoginPage() {
     const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000)
     return () => clearTimeout(t)
   }, [resendCooldown])
+
+  /**
+   * What /auth/callback sends people back here with.
+   *
+   * Read from window rather than through useSearchParams, which forces this
+   * whole page behind a Suspense boundary at build time for the sake of one
+   * error string. The message is not worth that.
+   *
+   * The URL is cleaned afterwards so a refresh does not re-show a complaint
+   * about a link the person has already given up on.
+   */
+  useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get('error')
+    if (!reason) return
+    setError(reason === 'link_expired'
+      ? 'That link has expired. Recovery links work once and last an hour — ask for a new one below.'
+      : 'That link did not work. Ask for a new one below.')
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
 
   /**
    * Both of these used to call Supabase straight from the page.
@@ -82,6 +102,35 @@ export default function LoginPage() {
 
   function validateEdu(addr: string): boolean {
     return addr.toLowerCase().endsWith('.edu')
+  }
+
+  /**
+   * Send a recovery link to whatever is in the email box.
+   *
+   * Uses the field that is already filled in rather than opening a second
+   * form for the same address. Somebody who has just failed to sign in has
+   * typed it; asking again is a step for nothing.
+   *
+   * The confirmation says "if there is an account" on purpose. The route
+   * answers the same whether the address exists or not — that is what stops
+   * this being an account-enumeration oracle — so the page must not claim
+   * more than the server actually knows.
+   */
+  async function askReset() {
+    if (!email.trim()) {
+      setError('Enter your email address first, then press this again.')
+      return
+    }
+    setError(null)
+    setResetting(true)
+    try {
+      await postAuth('reset', { email })
+      toast(`If there is an account for ${email}, a reset link is on its way.`, 'success')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not send the link. Try again.', 'error')
+    } finally {
+      setResetting(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -306,6 +355,27 @@ export default function LoginPage() {
                 {mode === 'signin' ? 'Sign in' : 'Create account'}
               </Button>
             </div>
+
+            {/* Only where it is any use. On the signup tab there is no
+                password to have forgotten, and an account-recovery link
+                beside "Create account" is a small invitation to try
+                recovering an account somebody does not have. */}
+            {mode === 'signin' && (
+              <p style={{ textAlign: 'center', fontSize: 13, marginTop: 2 }}>
+                <button
+                  type="button"
+                  onClick={askReset}
+                  disabled={resetting}
+                  style={{
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 13, color: C.textMuted,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {resetting ? 'Sending…' : 'Forgot your password?'}
+                </button>
+              </p>
+            )}
           </form>
         </div>
 

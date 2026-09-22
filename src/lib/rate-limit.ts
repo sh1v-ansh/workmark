@@ -75,6 +75,10 @@ export const LIMITS = {
    *  send to an address chosen by whoever asked, which is the definition of
    *  a mail bomb if nothing counts them. */
   authResend: { limit: 4, windowSeconds: 3600 },
+  /** Password recovery. Same shape of abuse as authResend — mail to an
+   *  address the caller picks, at Workmark's expense — and the same answer.
+   *  Three is generous for somebody who genuinely cannot get in. */
+  authReset: { limit: 3, windowSeconds: 3600 },
 } as const
 
 export type LimitName = keyof typeof LIMITS
