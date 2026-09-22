@@ -28,6 +28,51 @@ export const maxDuration = 60
  * GitHub App install picker is not by itself consent to scan, particularly
  * for a private repo that might be an employer's IP.
  */
+/**
+ * GET /api/github/scan — is a scan running right now?
+ *
+ * ── Why this had to exist ─────────────────────────────────────────────────
+ * RescanButton knew about a scan only because it had started one: the job id
+ * lived in component state and nowhere else. So the moment a student
+ * navigated — from the dashboard to their record, say, which is the natural
+ * thing to do while waiting — the button remounted knowing nothing, and
+ * rendered as an ordinary "Rescan" as though nothing were happening.
+ *
+ * A scan takes minutes. A student who cannot tell "still working" from
+ * "finished" from "broken" concludes broken, presses the button again, and
+ * is told one is already running — which is the first confirmation they get
+ * that anything was happening at all.
+ *
+ * The GitHub page never had this problem because its server component looks
+ * the job up and seeds the client with it. This is the same answer, as an
+ * endpoint, so every copy of the button gets it without each page having to
+ * remember to pass it down.
+ */
+export async function GET() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+  const active = await findActiveJob(admin, user.id, 'github_scan')
+
+  // No job is the common answer and is not an error — the button asks this
+  // on every mount.
+  if (!active) return NextResponse.json({ job: null })
+
+  return NextResponse.json({
+    job: {
+      id: active.id,
+      status: active.status,
+      total_steps: active.total_steps,
+      completed_steps: active.completed_steps,
+    },
+  })
+}
+
 export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
