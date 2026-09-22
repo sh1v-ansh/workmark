@@ -54,8 +54,12 @@ export function computeSkillRelevance(args: {
   // Postgres reached through Supabase is a genuine claim, but it's one
   // inference removed from anything we directly observed.
   if (impliedFrom) {
+    // No floor. Raising a weak inference up to the evidence bar meant an
+    // implied skill could never fall below it — Postgres inherited from a
+    // Supabase line nobody wrote still landed on the record as evidence.
+    // An inference is at most as good as what it was inferred from.
     return {
-      relevance: Math.max(impliedFrom.relevance * 0.9, EVIDENCE_THRESHOLD),
+      relevance: impliedFrom.relevance * 0.9,
       reason: `implied by ${impliedFrom.skillId}`,
     }
   }
@@ -98,10 +102,51 @@ export function computeSkillRelevance(args: {
       const where = configDetections.find((d) => filesTouched.has(d.where))!.where
       return { relevance: 0.7, reason: `you set this up in ${where}` }
     }
-    return { relevance: 0.3, reason: `declared in ${configDetections[0].where}, which you didn't change` }
+    // Below the bar, deliberately, and this is the line that produced
+    // "Advanced at cryptography" from one bcrypt in a package.json.
+    //
+    // It used to return exactly EVIDENCE_THRESHOLD, and the gate in
+    // evidence.ts is `relevance < EVIDENCE_THRESHOLD` — so 0.3 < 0.3 was
+    // false and every dependency anybody had ever declared cleared the bar.
+    // The threshold's own comment says what should happen here: a library in
+    // a manifest the student never touched is a true fact about the repo and
+    // a false claim about them. It stays a prior.
+    return { relevance: 0.25, reason: `declared in ${configDetections[0].where}, which you didn't change` }
   }
 
-  return { relevance: 0.3, reason: 'found in this repo' }
+  // Detected somehow, but by nothing that says the student wrote any of it.
+  return { relevance: 0.2, reason: 'found in this repo' }
+}
+
+/**
+ * The highest level this kind of evidence can justify, whatever the repo
+ * scored.
+ *
+ * ── Why a ceiling exists at all ───────────────────────────────────────────
+ * The composite is a property of the *repository*: test ratio, CI, infra,
+ * how many days it was worked on, how much of it the student wrote. Roughly
+ * half its points have nothing to do with any particular skill. scaleComposite
+ * then keeps 45% of it regardless of relevance, so a serious repo dragged
+ * every skill in it above the level-3 band — which is how one line in a
+ * manifest became "Advanced at cryptography" on somebody's permanent record.
+ *
+ * Relevance already knows how good the evidence is. This turns that into a
+ * hard ceiling, so the question "how hard was this repo" can lower a level
+ * but can never raise it past what was actually observed about the person.
+ *
+ * ── Why these three bands ─────────────────────────────────────────────────
+ * They line up with what computeSkillRelevance can return:
+ *   ≥ 0.75  they imported it in their own non-test files — hands on the
+ *           keys, and the only evidence that can reach the top band.
+ *   ≥ 0.5   used in their tests, they configured it themselves, or it is a
+ *           meaningful share of the language they write. Real, but one step
+ *           removed from building something with it.
+ *   below   present, weakly. Level 1 at most.
+ */
+export function evidenceCeiling(relevance: number): 1 | 2 | 3 {
+  if (relevance >= 0.75) return 3
+  if (relevance >= 0.5) return 2
+  return 1
 }
 
 /**

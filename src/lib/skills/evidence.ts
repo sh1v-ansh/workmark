@@ -27,7 +27,7 @@ import { canonicalizeSkills } from '@/lib/skills/canonicalize'
 import { applyImplications } from '@/lib/skills/implications'
 import {
   computeLanguageShare, computeSkillRelevance, scaleComposite,
-  EVIDENCE_THRESHOLD, type SkillRelevance,
+  EVIDENCE_THRESHOLD, evidenceCeiling, type SkillRelevance,
 } from '@/lib/skills/relevance'
 import { computeDifficultyLevel } from '@/lib/skills/levels'
 
@@ -80,8 +80,16 @@ export async function processRepo(
   // skill back to every place it was seen, so the student can be shown why
   // their record says what it says.
   const rawSkillStrings = Array.from(new Set(scanResult.detections.map((d) => d.raw)))
+  // GitHub's own language statistics are not a guess that needs filtering,
+  // so they skip the noise check. Without this the filter's one-character
+  // rule deleted real R and C before either could match anything.
+  const trusted = new Set(
+    scanResult.detections
+      .filter((d) => d.source === 'language')
+      .map((d) => d.raw.trim().toLowerCase()),
+  )
   const canonicalized = await canonicalizeSkills(supabase, rawSkillStrings, {
-    studentId, repoFullName,
+    studentId, repoFullName, trusted,
   })
 
   const provenance = new Map<string, string[]>()
@@ -196,7 +204,12 @@ export async function processRepo(
     if (relevance < EVIDENCE_THRESHOLD) continue
 
     const skillComposite = scaleComposite(rawComposite, relevance)
-    const { difficultyCleared } = await computeDifficultyLevel(supabase, skillId, skillComposite)
+    const { difficultyCleared: scored } = await computeDifficultyLevel(supabase, skillId, skillComposite)
+    // Capped by what was actually observed about this person, not by how
+    // hard the repository was. The composite is mostly a property of the
+    // repo — tests, CI, how long it ran — and without this it dragged every
+    // skill in a serious project to the top band. See evidenceCeiling.
+    const difficultyCleared = Math.min(scored, evidenceCeiling(relevance)) as 1 | 2 | 3
     const changed = await writeOrCorrectEvidence(supabase, {
       studentId, skillId, artifactId, base, rawComposite: skillComposite, difficultyCleared,
       verificationMethod, engagementId, workspaceId,

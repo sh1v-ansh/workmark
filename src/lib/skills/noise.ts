@@ -127,10 +127,15 @@ export function isNoise(raw: string): boolean {
   const n = normalizeName(raw)
   if (!n) return true
 
-  // A single character is never a library name worth recording. Real
-  // one-letter skills (R, C) arrive through GitHub's language stats, which
-  // is a separate detection source and doesn't pass through here as a bare
-  // import.
+  // A single character is never a library name worth recording.
+  //
+  // This comment used to claim that real one-letter skills (R, C) arrived
+  // through GitHub's language stats on a separate path that did not pass
+  // through here. That was false — evidence.ts sends every detection,
+  // language ones included, through canonicalizeSkills and therefore through
+  // this function, so genuine R was being deleted at this line. Language
+  // detections are now passed as `trusted` and skip the whole filter; see
+  // canonicalize.ts. This rule is back to meaning only what it says.
   if (n.length <= 1) return true
 
   const lower = raw.trim().toLowerCase()
