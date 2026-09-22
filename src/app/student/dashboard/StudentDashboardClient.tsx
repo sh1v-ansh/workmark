@@ -321,7 +321,10 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
   )
 
   return (
-    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
+    // wm-soft-cards: this is somebody's own screen rather than a grid of
+    // options to compare, so the cards sit back into the page instead of
+    // being fenced off from it. See globals.css.
+    <div className="wm-app-ground wm-soft-cards" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 

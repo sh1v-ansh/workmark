@@ -33,6 +33,7 @@ import { computeDifficultyLevel } from '@/lib/skills/levels'
 import { retractionsFor, mayRetract } from '@/lib/skills/retraction'
 import { corroborationCeiling, capSkillsPerRepo } from '@/lib/skills/corroboration'
 import { knownCommitEmails, recordUnclaimedEmails } from '@/lib/github/emails'
+import { recordOnce } from '@/lib/analytics/record'
 
 export interface ProcessRepoResult {
   repoFullName: string
@@ -276,6 +277,15 @@ export async function processRepo(
     })
     evidenceWritten.push({ skillId: s.skillId, difficultyCleared, changed })
     supported.add(s.skillId)
+  }
+
+  // The moment the product first works for somebody: code they wrote became
+  // a skill on a record. Once per student, not once per scan — this loop
+  // runs per repository and again on every rescan, so without the guard the
+  // "students who got a first skill" count would include the same person
+  // forty times.
+  if (evidenceWritten.length > 0) {
+    void recordOnce(supabase, 'first_evidence', studentId, { skills: evidenceWritten.length })
   }
 
   // ── Taking things off ──────────────────────────────────────────────────

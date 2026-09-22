@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button'
 import { C, F, R, E } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 import { Icon } from '@/components/Icon'
+import { track } from '@/lib/analytics/track'
 
 type Mode = 'signin' | 'signup'
 // Student-only in MVP: company/faculty accounts are deferred to Tier 1+
@@ -46,6 +47,22 @@ export default function LoginPage() {
     const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000)
     return () => clearTimeout(t)
   }, [resendCooldown])
+
+  /**
+   * Somebody is actually looking at the signup form.
+   *
+   * This is the denominator the funnel was missing. A signup that is started
+   * and abandoned leaves no row in any table, so "how many invited people
+   * never finish" was unknowable rather than merely unknown — and with a
+   * waitlist it is the number that matters most.
+   *
+   * Keyed on the mode rather than on mount, because the page opens on the
+   * sign-in tab: firing this for every visitor would count returning users
+   * as abandoned signups and make the number worse than useless.
+   */
+  useEffect(() => {
+    if (mode === 'signup') track('signup_started')
+  }, [mode])
 
   /**
    * What /auth/callback sends people back here with.
@@ -148,9 +165,11 @@ export default function LoginPage() {
           return
         }
         await postAuth('signup', { email, password, role, website: honeypot })
+        track('signup_submitted')
         setPendingConfirmEmail(email)
       } else {
         const { redirectTo } = await postAuth('signin', { email, password })
+        track('signin_succeeded')
         // The server already held the session and both rows when it answered,
         // so it decided where this person belongs rather than the page
         // guessing from a student row alone — which sent faculty to the

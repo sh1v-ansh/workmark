@@ -1076,6 +1076,36 @@
 .wm-pill.wm-pill-on strong { color: #FFFFFF; }
 .wm-pill.wm-pill-on:hover { background: #262D42; border-color: #262D42; color: #FFFFFF; }
 
+/* ── Cards that sit back ──────────────────────────────────────────────────
+   A softer edge for pages that are somebody's own space rather than a list
+   of things to compare.
+
+   Find work is a grid of options, and a decisive border is what separates
+   one posting from the next — that is the page the stronger edge was drawn
+   for. The dashboard is not a grid of options. It is the screen somebody
+   opens every morning, and the same border there fences off six unrelated
+   panels from each other and from the page, which reads as busier than the
+   content actually is.
+
+   So: a lighter line and the blur put back, which is what carried the edge
+   before. Applied by an ancestor class rather than per card, so a page opts
+   in once instead of every Card call site remembering to. */
+.wm-soft-cards .nb-card,
+.wm-soft-cards .nb-ai-card {
+  border-color: #E7E9F1;
+  box-shadow: 0 1px 2px rgba(25, 30, 46, 0.04), 0 6px 18px -12px rgba(25, 30, 46, 0.16);
+}
+/* Hover keeps the violet, because "you can click this" is not what changed. */
+.wm-soft-cards .nb-card-interactive:hover {
+  border-color: rgba(97, 66, 245, 0.35);
+  box-shadow: 0 2px 4px rgba(25, 30, 46, 0.05), 0 16px 34px -18px rgba(97, 66, 245, 0.34);
+}
+/* The focal card still owns the screen — a softer ground makes it stand out
+   more, not less, so it keeps its own edge. */
+.wm-soft-cards .nb-card-focal {
+  border-color: rgba(97, 66, 245, 0.5);
+}
+
 /* The facet panel down the left of Find work.
    It keeps the borderless treatment the rest of the cards have just given up:
    it is a panel of controls, not one of the results, and the sheet the results

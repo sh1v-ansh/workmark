@@ -902,6 +902,34 @@ where se.retracted_at is null
 -- for views in some Postgres/Supabase setups — see migration v05_0003.
 grant select on current_skill_evidence to anon, authenticated;
 
+-- ─── What people actually did ───────────────────────────────────────────────
+-- First-party rather than a third party, because every other fact about a
+-- student already lives here and behaviour would otherwise be the one table
+-- we cannot join against the rest. See v05_0050.
+--
+-- It exists because the funnel derived from row timestamps has no failures
+-- in it: a signup started and abandoned leaves no row anywhere, so "how many
+-- invited people never finish" was unknowable rather than merely unknown.
+--
+-- RLS on with no policies. Writes go through /api/events under the service
+-- role after the name is checked against a fixed list; a table a browser can
+-- insert arbitrary rows into is one somebody will fill with junk.
+--
+-- Rows older than a year are deleted nightly by cron. Behaviour is the most
+-- sensitive thing here and the least valuable once it is old.
+create table events (
+  id          bigserial primary key,
+  -- Null before sign-in: a landing page view, an abandoned signup. Those are
+  -- exactly the rows worth having.
+  student_id  uuid references students(id) on delete set null,
+  session_id  text,
+  name        text not null,
+  -- Counts, ids, enums, durations. Never repository names, file paths,
+  -- addresses or anything a student typed — see lib/analytics/events.ts.
+  props       jsonb not null default '{}'::jsonb,
+  occurred_at timestamptz not null default now()
+);
+
 -- ============================================================
 --  Indexes
 -- ============================================================

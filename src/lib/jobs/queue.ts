@@ -8,6 +8,7 @@
 // would be more moving parts for no property we don't already get.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { record } from '@/lib/analytics/record'
 
 export type JobKind = 'github_scan'
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
@@ -156,6 +157,18 @@ export async function completeStep(
 
   if (done) {
     patch.status = failedCount === steps.length ? 'failed' : 'succeeded'
+    // Recorded here because this is the only place that knows a job has
+    // ended. The browser polls and would often miss it — a scan runs for
+    // minutes and the tab is usually gone by the time it lands, which is
+    // exactly the population whose experience is worth measuring.
+    void record(admin, 'scan_finished', job.student_id, {
+      status: patch.status as string,
+      repos: steps.length,
+      failed: failedCount,
+      seconds: job.started_at
+        ? Math.round((Date.now() - new Date(job.started_at).getTime()) / 1000)
+        : 0,
+    })
     patch.finished_at = new Date().toISOString()
     patch.result = { total: steps.length, failed: failedCount }
     if (exhausted && remaining) {

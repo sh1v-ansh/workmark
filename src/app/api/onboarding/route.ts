@@ -3,6 +3,7 @@ import { enforce } from '@/lib/rate-limit'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { consentFieldsForSignup } from '@/lib/notify/marketing'
+import { record } from '@/lib/analytics/record'
 
 /**
  * The domains that count as proof of being at a university.
@@ -183,6 +184,13 @@ export async function POST(request: Request) {
     // means sending marketing to somebody who never said yes.
     ...consentFieldsForSignup(body.marketingOptIn === true),
   })
+
+  if (!accountErr) {
+    // The end of the signup funnel. Recorded here rather than from the
+    // browser because this is the moment the account actually exists —
+    // a client-side event would fire before the write it is claiming.
+    void record(admin, 'onboarding_completed', user.id, { role })
+  }
 
   if (accountErr) {
     if (accountErr.code === '23505') {

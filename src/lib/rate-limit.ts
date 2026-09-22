@@ -79,6 +79,9 @@ export const LIMITS = {
    *  address the caller picks, at Workmark's expense — and the same answer.
    *  Three is generous for somebody who genuinely cannot get in. */
   authReset: { limit: 3, windowSeconds: 3600 },
+  /** Analytics. Generous on purpose: the point is to stop a loop, not to
+   *  ration a busy page that legitimately sends a handful per visit. */
+  events: { limit: 120, windowSeconds: 60 },
 } as const
 
 export type LimitName = keyof typeof LIMITS

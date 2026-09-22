@@ -4,6 +4,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { syncRepoGrants } from '@/lib/github/sync-grants'
 import { cancelJob, createJob, findActiveJob, kickJob, workerReachable, type JobStep } from '@/lib/jobs/queue'
+import { record } from '@/lib/analytics/record'
 
 // This route no longer scans anything — it builds the work list and hands
 // back a job id. It stays generous only because syncRepoGrants pages the
@@ -146,6 +147,9 @@ export async function POST() {
   }))
 
   const job = await createJob(admin, user.id, 'github_scan', steps)
+  // How many repositories somebody actually chose to scan, which is the
+  // number the repository picker exists to move.
+  void record(admin, 'scan_started', user.id, { repos: steps.length })
   kickJob(job.id)
 
   return NextResponse.json({ ok: true, jobId: job.id, totalSteps: steps.length })
