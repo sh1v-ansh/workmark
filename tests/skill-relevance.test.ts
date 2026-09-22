@@ -111,3 +111,37 @@ describe('what relevance says about where it saw things', () => {
     expect(evidenceCeiling(inTests)).toBeLessThan(3)
   })
 })
+
+describe('working with an AI coding tool', () => {
+  const collab = (where: string) =>
+    ({ raw: 'Claude Code', source: 'collaboration', where }) as Detection
+
+  // The regression this pins. 'collaboration' is in neither the hands-on nor
+  // the config source set, so it fell through to the bare fallback at the
+  // bottom of computeSkillRelevance. That used to return exactly
+  // EVIDENCE_THRESHOLD and squeak past the `<` gate — so closing the
+  // off-by-one for untouched dependencies silently took every agentic-tool
+  // detection below the bar with it, and Claude Code stopped appearing.
+  it('clears the evidence bar', () => {
+    expect(relevanceOf([collab('co-authored Claude Code commits')]))
+      .toBeGreaterThanOrEqual(EVIDENCE_THRESHOLD)
+  })
+
+  // Real and checkable, and not the same kind of claim as having written
+  // code in a language.
+  it('cannot reach the top band on its own', () => {
+    expect(evidenceCeiling(relevanceOf([collab('claude[bot] is a contributor')]))).toBeLessThan(3)
+  })
+
+  it('still rates a language the student actually writes above it', () => {
+    const imported = relevanceOf([detection({ source: 'import', where: 'src/a.ts' })])
+    expect(imported).toBeGreaterThan(relevanceOf([collab('CLAUDE.md')]))
+  })
+
+  it('says which signal it came from', () => {
+    expect(computeSkillRelevance({
+      detections: [collab('claude[bot] is a contributor')],
+      filesTouched: NOTHING_TOUCHED, languageShare: NO_LANGUAGES,
+    }).reason).toBe('claude[bot] is a contributor')
+  })
+})

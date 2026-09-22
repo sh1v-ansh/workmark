@@ -328,7 +328,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 5.5 }}>
                   <Kicker>Your repositories</Kicker>
                   <span style={{ fontSize: 13, color: C.textGhost }}>
-                    {syncing ? 'syncing with GitHub…' : `${grants.filter((g) => (overrides[g.id] ?? g.scan_enabled) || !g.is_private).length} of ${grants.length} enabled`}
+                    {syncing ? 'syncing with GitHub…' : `${grants.filter((g) => overrides[g.id] ?? g.scan_enabled).length} of ${grants.length} enabled`}
                   </span>
                 </div>
                 <Card hoverable={false} padding="3.5px 18px 7px">

@@ -114,6 +114,27 @@ export function computeSkillRelevance(args: {
     return { relevance: 0.25, reason: `declared in ${configDetections[0].where}, which you didn't change` }
   }
 
+  // Who they worked with, including which AI coding tools. A bot in the
+  // contributor list, a Co-Authored-By trailer on their own commits, or a
+  // CLAUDE.md in the repo.
+  //
+  // This needs its own branch because it belongs to neither set above, and
+  // for a while it did not have one. It fell through to the bare fallback at
+  // the bottom, which used to return exactly EVIDENCE_THRESHOLD and
+  // therefore squeaked past the `< EVIDENCE_THRESHOLD` gate. Closing that
+  // off-by-one — the right fix for dependencies nobody touched — silently
+  // took every agentic-tool detection below the bar with it, and Claude Code
+  // and Cursor stopped appearing on records at all.
+  //
+  // 0.55 rather than higher: working with a tool is a real, checkable fact
+  // about how the project was built, and it is not the same kind of claim as
+  // having written code in a language. evidenceCeiling caps it at 2, which
+  // is where it belongs.
+  const collaboration = detections.filter((d) => d.source === 'collaboration')
+  if (collaboration.length > 0) {
+    return { relevance: 0.55, reason: collaboration[0].where }
+  }
+
   // Detected somehow, but by nothing that says the student wrote any of it.
   return { relevance: 0.2, reason: 'found in this repo' }
 }
