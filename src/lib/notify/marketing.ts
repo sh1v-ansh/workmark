@@ -31,11 +31,18 @@ import type { SupabaseClient } from '@supabase/supabase-js'
  * from Workmark" is not specific and therefore is not consent.
  */
 export const CONSENT_TEXT =
-  'Email me when a role, internship, hackathon, fellowship or other '
-  + 'opportunity looks like a good fit for what my record shows I can build. '
-  + 'I can turn this off at any time.'
+  'Tell me when a role, internship, hackathon or fellowship comes up that '
+  + 'fits what my record shows I can build. This is how Workmark brings work '
+  + 'to me rather than waiting for me to find it. I can turn it off any time.'
 
-export const CONSENT_VERSION = '2026-09-22'
+/**
+ * Bumped whenever CONSENT_TEXT changes materially.
+ *
+ * Existing rows keep the version they agreed to. Somebody who consented to
+ * v1 has not consented to v2, and finding everyone who needs re-asking has
+ * to be one query rather than a diff across every stored string.
+ */
+export const CONSENT_VERSION = '2026-09-22b'
 
 export type ConsentSource = 'onboarding' | 'settings'
 

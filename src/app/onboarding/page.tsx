@@ -327,8 +327,10 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
           </span>
         </label>
         <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 10, paddingLeft: 25 }}>
-          Optional, and separate from everything above — your account works the same either
-          way. You&apos;ll still get the emails about your own applications and projects.
+          Most students leave this on — it is the part that finds things for you. Optional
+          and separate from everything above, though: your account works exactly the same
+          either way, and you will still get the emails about your own applications and
+          projects.
         </p>
       </div>
 

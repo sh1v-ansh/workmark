@@ -62,7 +62,10 @@ describe('the consent wording', () => {
     }
   })
 
-  it('says how to stop', () => {
-    expect(CONSENT_TEXT).toMatch(/turn this off/i)
+  // Withdrawal has to be as easy as the giving, and somebody agreeing has to
+  // have been told it is possible. Matched loosely on purpose — this is
+  // asserting the promise is present, not policing the phrasing.
+  it('says it can be switched off', () => {
+    expect(CONSENT_TEXT).toMatch(/turn it off|turn this off|unsubscribe|stop at any time/i)
   })
 })
