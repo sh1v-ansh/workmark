@@ -342,13 +342,32 @@ async function writeOrCorrectEvidence(
   supabase: SupabaseClient,
   args: { studentId: string; skillId: string; artifactId: string; base: number; rawComposite: number; difficultyCleared: number; verificationMethod: string; engagementId: string | null; workspaceId: string | null },
 ): Promise<boolean> {
-  const { data: existing } = await supabase
+  const { data: existing, error: readErr } = await supabase
     .from('current_skill_evidence')
     .select('id, difficulty_cleared')
     .eq('student_id', args.studentId)
     .eq('skill_id', args.skillId)
     .eq('artifact_id', args.artifactId)
     .maybeSingle()
+
+  // The error used to be discarded, and that made this function
+  // self-destructive in one specific case. current_skill_evidence has no
+  // uniqueness on (student, skill, artifact), so if two current rows ever
+  // exist — two scans of the same repo racing, or a correction chain that
+  // broke — maybeSingle returns PGRST116 and null data. Reading that as "no
+  // existing evidence" inserted a third row, which guaranteed the same
+  // error next time. The student's depth in that skill doubled, then
+  // tripled, with nothing in the UI to show why.
+  //
+  // Refusing to write is the safe direction: a scan that recorded nothing
+  // is fixed by the next scan, and a duplicate is not fixed by anything.
+  if (readErr) {
+    console.error(
+      `[evidence] refusing to write ${args.skillId} for ${args.studentId}:`,
+      readErr.message,
+    )
+    return false
+  }
 
   if (existing && existing.difficulty_cleared === args.difficultyCleared) {
     return false // unchanged — no-op

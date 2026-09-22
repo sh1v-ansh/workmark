@@ -218,7 +218,22 @@ async function getContributorStats(
   octokit: Octokit, owner: string, repo: string, githubLogin: string,
 ): Promise<{ studentCommits: number; totalCommits: number; distinctContributors: number; logins: string[] } | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
-    const { status, data } = await octokit.rest.repos.getContributorsStats({ owner, repo })
+    // Wrapped, because this was the one call in the round-one Promise.all
+    // that could throw, and throwing here failed the entire repo scan. This
+    // endpoint 403s on repos with very large contributor counts and 5xxs
+    // under load — and the function's own contract two paragraphs up says
+    // the caller already handles null. It was handing back an exception
+    // instead, which surfaced a raw Octokit message to a student for a
+    // signal that only chooses between Tier 0 and Tier 0.5.
+    let status: number
+    let data: unknown
+    try {
+      ({ status, data } = await octokit.rest.repos.getContributorsStats({ owner, repo }))
+    } catch (err) {
+      console.error(`[scan] contributor stats failed for ${owner}/${repo}:`,
+        err instanceof Error ? err.message : err)
+      return null
+    }
     if (status === 200 && Array.isArray(data)) {
       let studentCommits = 0
       let totalCommits = 0
