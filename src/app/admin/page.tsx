@@ -5,6 +5,7 @@ import { loadOverview, loadCalibration } from '@/lib/admin/stats'
 import AdminShell from './AdminShell'
 import { StatGrid, Panel, HealthRow } from './widgets'
 import { emailStatus } from '@/lib/notify/email'
+import TestEmailButton from './TestEmailButton'
 
 export const metadata = { title: 'Admin' }
 
@@ -82,6 +83,12 @@ export default async function AdminOverviewPage() {
           {!mail.ok && (
             <HealthRow state="bad" label="Email is not going out" detail={mail.reason} />
           )}
+          {/* The only way to tell a wrong key from an unverified domain from
+              a template that never rendered. All three fail identically and
+              silently from inside the app. */}
+          <div style={{ marginTop: 12 }}>
+            <TestEmailButton />
+          </div>
         </Panel>
 
         <Panel title="System">

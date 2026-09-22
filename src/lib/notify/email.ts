@@ -18,6 +18,7 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { wantsEmail, EMAIL_KINDS, type EmailKind } from './prefs'
 import { parseSender, formatSender } from './from'
+import { renderEmail } from './template'
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails'
 
@@ -55,6 +56,40 @@ function siteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://www.workmark.org'
 }
 
+/**
+ * The postal address in the footer.
+ *
+ * CAN-SPAM requires a valid physical address on every message that is not
+ * transactional, and a PO box registered to the sender counts. Absent here
+ * means the footer simply does not carry one — which is fine for the
+ * essential mail that is exempt, and is checked before anything marketing
+ * goes out. See marketingBlocked().
+ */
+function postalAddress(): string | null {
+  const value = process.env.EMAIL_POSTAL_ADDRESS?.trim()
+  return value ? value : null
+}
+
+/**
+ * Why marketing mail cannot go out yet, or null when it can.
+ *
+ * Separate from emailStatus() because the bar is higher: a notification
+ * somebody asked for needs a key and a sender, and an unsolicited message
+ * about an opportunity also needs an address to put in the footer. Getting
+ * this wrong is not a bug that shows up as a broken page — it is a fine per
+ * message sent.
+ */
+export function marketingBlocked(): string | null {
+  const status = emailStatus()
+  if (!status.ok) return status.reason
+  if (!postalAddress()) {
+    return 'EMAIL_POSTAL_ADDRESS is not set, and CAN-SPAM requires a physical '
+      + 'address in the footer of any email that is not the answer to something '
+      + 'the recipient just did.'
+  }
+  return null
+}
+
 interface SendArgs {
   to: string
   /**
@@ -76,10 +111,12 @@ interface SendArgs {
 }
 
 /**
- * Minimal HTML. No template engine, no images, no tracking pixels: these
- * are notifications a student needs to act on, and a plain message that
- * renders identically everywhere beats a designed one that trips spam
- * filters on a domain with no sending reputation yet.
+ * One message, in the Workmark template.
+ *
+ * Still no images, no web fonts and no tracking pixel — see template.ts for
+ * why that constraint is not negotiable on a young sending domain. What
+ * changed is that the same constraint is now met by something that looks
+ * like the product rather than by a bare div.
  */
 function render(
   { body, linkPath, linkLabel, kind }: SendArgs,
@@ -102,24 +139,16 @@ function render(
     : `${siteUrl()}/account/settings#email`
   const unsubLabel = essential ? 'Manage your email settings' : 'Unsubscribe from these'
 
-  const text = url
-    ? `${body}\n\n${linkLabel ?? 'Open Workmark'}: ${url}\n\n—\n${unsubLabel}: ${unsub}\n`
-    : `${body}\n\n—\n${unsubLabel}: ${unsub}\n`
-  const paragraphs = body
-    .split('\n\n')
-    .map((p) => `<p style="margin:0 0 16px;line-height:1.6">${escapeHtml(p)}</p>`)
-    .join('')
-  const cta = url
-    ? `<p style="margin:24px 0 0"><a href="${url}" style="color:#3E1FFF">${escapeHtml(linkLabel ?? 'Open Workmark')}</a></p>`
-    : ''
-  return {
-    text,
-    html: `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;color:#1a1a1a;max-width:520px">${paragraphs}${cta}<p style="margin:32px 0 0;font-size:12px;color:#888">Workmark · <a href="${unsub}" style="color:#888">${unsubLabel}</a></p></div>`,
-  }
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return renderEmail({
+    body,
+    link: url ? { url, label: linkLabel ?? 'Open Workmark' } : null,
+    footerLink: { url: unsub, label: unsubLabel },
+    // Only on mail that is not the direct answer to something the recipient
+    // just did. CAN-SPAM requires a postal address on everything else, and
+    // putting one on a "your application was accepted" message would be
+    // clutter on the one kind of email that is exempt.
+    postalAddress: EMAIL_KINDS[kind].essential ? null : postalAddress(),
+  })
 }
 
 export async function sendEmail(args: SendArgs): Promise<boolean> {
