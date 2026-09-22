@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import StudentDashboardClient, { type DashboardData } from './StudentDashboardClient'
 import { computeTrackRecord, type Stage } from '@/lib/engagements/lifecycle'
 import { lastScanFinishedAt } from '@/lib/github/last-scan'
+import { cleanIntents } from '@/lib/profile/intents'
 
 export const metadata = { title: 'Dashboard' }
 
@@ -24,6 +25,8 @@ export default async function StudentDashboardPage() {
     { data: myEngagements },
     { data: evidenceRows },
     { data: connection },
+    { data: intentRow },
+    { count: repoCount },
     lastScannedAt,
     { data: demandRows },
   ] = await Promise.all([
@@ -47,6 +50,16 @@ export default async function StudentDashboardPage() {
       .select('skill_id, difficulty_cleared')
       .eq('student_id', user.id),
     supabase.from('github_connections').select('student_id').eq('student_id', user.id).maybeSingle(),
+    // What they said they came for, and whether there is anything to scan.
+    // The second is what tells a first-year with an empty GitHub apart from
+    // somebody whose scan simply has not run — two situations that look
+    // identical from an empty record and need opposite answers.
+    supabase.from('students').select('intents').eq('id', user.id).maybeSingle(),
+    supabase
+      .from('github_repo_grants')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', user.id)
+      .is('revoked_at', null),
     lastScanFinishedAt(supabase, user.id),
     // What open projects keep asking for. Small — one row per requirement
     // across open listings only — and it rides along with the five queries
@@ -123,6 +136,12 @@ export default async function StudentDashboardPage() {
       activeApplicationCount: student.active_application_count ?? 0,
     },
     githubConnected: !!connection,
+    // What they picked during signup, and whether there is anything to read.
+    // nextStepFor needs all three to tell a first-year with an empty GitHub
+    // apart from somebody whose scan has not run — two situations that look
+    // identical from an empty record and want opposite answers.
+    intents: cleanIntents(intentRow?.intents),
+    repoCount: repoCount ?? 0,
     lastScannedAt,
     topGap,
     trackRecord,

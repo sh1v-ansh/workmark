@@ -316,6 +316,12 @@ export default function OnboardingPage() {
    * no row and nothing to come back to.
    */
   const [step, setStep] = useState<'profile' | 'intents'>('profile')
+
+  // Fired once, on arrival. Without it the funnel can see that somebody
+  // submitted the signup form and that somebody finished a profile, and
+  // nothing about the gap between — which is where the eighteen-field form
+  // was losing people and why this screen was rebuilt.
+  useEffect(() => { track('onboarding_started') }, [])
   const [intents, setIntents] = useState<Intent[]>([])
   const [userEmail, setUserEmail] = useState('')
   const [userId, setUserId] = useState('')

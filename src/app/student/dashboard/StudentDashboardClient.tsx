@@ -16,6 +16,8 @@ import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import type { TrackRecord } from '@/lib/engagements/lifecycle'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
+import type { Intent } from '@/lib/profile/intents'
+import NextStepCard from './NextStep'
 
 export interface DashboardData {
   student: {
@@ -28,6 +30,10 @@ export interface DashboardData {
     activeApplicationCount: number
   }
   githubConnected: boolean
+  /** What they said they came for, at signup. Orders what this page leads with. */
+  intents: Intent[]
+  /** Repositories Workmark may read — zero is the first-year case. */
+  repoCount: number
   /** When the last scan finished, so the record can say whether it is stale. */
   lastScannedAt: string | null
   /** The skill open listings ask for most that this student cannot show.
@@ -124,7 +130,7 @@ const ICON_BG: Record<Todo['kind'], string> = {
 }
 
 export default function StudentDashboardClient({ data }: { data: DashboardData }) {
-  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, topGap, trackRecord } = data
+  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, topGap, trackRecord, intents, repoCount } = data
   const router = useRouter()
   const { toast } = useToast()
   const [withdrawing, setWithdrawing] = useState<string | null>(null)
@@ -154,18 +160,10 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
   // the page's judgement about what to do first — it is not decoration.
   const todos: Todo[] = []
 
-  if (!githubConnected) {
-    todos.push({
-      key: 'github',
-      kind: 'github',
-      headline: 'Your record is empty until GitHub is connected',
-      body: 'Every skill here is read out of repositories you link.',
-      detail: 'Nothing else on Workmark does anything useful until this is done — matching, applying and your public profile all read from it.',
-      href: '/student/github',
-      cta: 'Connect GitHub',
-      eyebrow: 'Start here',
-    })
-  }
+  // "Connect GitHub" used to be a to-do here. It is NextStepCard's job now,
+  // which can tell the three reasons a record is empty apart — never
+  // connected, connected with nothing in it, connected and not yet scanned —
+  // and answers each differently. A to-do could only ever say the first.
   for (const a of applications) {
     if (a.status === 'accepted') {
       todos.push({
@@ -328,13 +326,25 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        {/* Header — the answer, not a greeting */}
+        <NextStepCard
+          intents={intents}
+          githubConnected={githubConnected}
+          repoCount={repoCount}
+          evidenceCount={skills.length}
+        />
+
+        {/* Header — the answer, not a greeting, except on the first visit
+            when there is no answer yet and "you're all caught up" reads as
+            though something has been taken care of that never happened. */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div>
             <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 4.5 }}>
-              {todos.length === 0
-                ? `You're all caught up${firstName ? `, ${firstName}` : ''}`
-                : `${todos.length === 1 ? 'One thing needs' : `${todos.length} things need`} you`}
+              {todos.length > 0
+                ? `${todos.length === 1 ? 'One thing needs' : `${todos.length} things need`} you`
+                : skills.length === 0
+                  // Nothing done yet is not the same as nothing outstanding.
+                  ? `Welcome${firstName ? `, ${firstName}` : ''}`
+                  : `You're all caught up${firstName ? `, ${firstName}` : ''}`}
             </h1>
             {(student.degreeType || student.major || student.university) && (
               <p style={{ fontSize: 14, color: C.textMuted }}>
