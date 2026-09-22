@@ -12,7 +12,48 @@
 // your platform doesn't support real newlines in env vars.
 
 import { App } from '@octokit/app'
-import { Octokit } from '@octokit/rest'
+import { Octokit as RestOctokit } from '@octokit/rest'
+import { throttling } from '@octokit/plugin-throttling'
+import { retry } from '@octokit/plugin-retry'
+
+/**
+ * The client every scan goes through, with the two plugins that stop a busy
+ * afternoon looking like an empty record.
+ *
+ * ── Why this matters more than it sounds ──────────────────────────────────
+ * There was no rate-limit handling anywhere. Every call site swallowed its
+ * own failures, so a student with twenty-five repositories who ran out of
+ * budget partway through got later repos recorded as "found nothing" — which
+ * is indistinguishable from a repository that genuinely demonstrates
+ * nothing, and lands on a permanent record either way.
+ *
+ * `throttling` waits out GitHub's own Retry-After instead of hammering
+ * through it, which is also what keeps us out of secondary rate limiting —
+ * the one that is triggered by concurrency rather than volume, and the one
+ * a scanner opening dozens of file reads per repo is most likely to meet.
+ *
+ * ── Why the retry counts are small ────────────────────────────────────────
+ * A scan step has sixty seconds. Retrying three times with GitHub's
+ * suggested backoff can exceed that on its own, and a step killed by the
+ * platform is worse than a repo that reported a problem: the first is
+ * invisible and gets re-run from scratch, the second is recorded and makes
+ * the scan refuse to retract. Twice is enough to ride out a blip.
+ */
+const Octokit = RestOctokit.plugin(throttling, retry)
+
+const THROTTLE = {
+  onRateLimit(retryAfter: number, options: { method: string; url: string }, _o: unknown, retryCount: number) {
+    console.warn(`[github] rate limited on ${options.method} ${options.url}; waiting ${retryAfter}s`)
+    return retryCount < 2
+  },
+  onSecondaryRateLimit(retryAfter: number, options: { method: string; url: string }, _o: unknown, retryCount: number) {
+    // Triggered by making too many requests at once rather than too many in
+    // total. Worth retrying once: it clears quickly and the alternative is
+    // recording an empty repository.
+    console.warn(`[github] secondary rate limit on ${options.method} ${options.url}; waiting ${retryAfter}s`)
+    return retryCount < 1
+  },
+}
 
 function readPrivateKey(): string {
   const raw = process.env.GITHUB_APP_PRIVATE_KEY
@@ -45,6 +86,10 @@ export function getGithubApp(): WorkmarkApp {
     privateKey: readPrivateKey(),
     webhooks: { secret: webhookSecret },
     Octokit,
+    // Applied to every client the App hands out, including the
+    // installation-scoped ones the scanner uses — which is the point, since
+    // those are the clients making hundreds of calls per student.
+    throttle: THROTTLE,
   })
   return cachedApp
 }

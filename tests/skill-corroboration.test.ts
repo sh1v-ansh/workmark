@@ -30,10 +30,31 @@ describe('corroborationCeiling', () => {
     expect(corroborationCeiling([at('package.json', 'manifest')])).toBe(1)
   })
 
-  // Deliberately a low bar. The aim is to stop one file minting a record,
-  // not to make ordinary projects hard to evidence.
-  it('lifts the cap once it appears in two places', () => {
-    expect(corroborationCeiling([at('package.json', 'manifest'), at('src/db.ts')])).toBe(3)
+  // The case that made the first, binary version insufficient: a student was
+  // told they were Advanced at cryptography for one `import bcrypt`, because
+  // the import plus the package.json line was two places and two places
+  // lifted the cap entirely.
+  it('holds two places at level 2 rather than lifting the cap', () => {
+    expect(corroborationCeiling([at('package.json', 'manifest'), at('src/db.ts')])).toBe(2)
+  })
+
+  it('allows the top band once it is threaded through the project', () => {
+    const spread = ['a.ts', 'b.ts', 'c.ts', 'd.ts'].map((f) => at(`src/${f}`))
+    expect(corroborationCeiling(spread)).toBe(3)
+  })
+
+  // A language arrives as one detection from GitHub's stats however many
+  // thousand lines were written in it, so counting places would cap every
+  // language at 1. Its real corroboration is the share of their own changed
+  // files, which relevance already reads.
+  it('does not count places for a language', () => {
+    expect(corroborationCeiling([at('GitHub language stats', 'language')])).toBe(3)
+  })
+
+  // evidenceCeiling already holds collaboration at 2; a second cap here
+  // would only be another way to get it wrong.
+  it('does not count places for an AI coding tool', () => {
+    expect(corroborationCeiling([at('co-authored Claude Code commits', 'collaboration')])).toBe(3)
   })
 
   it('is not fooled by many detections in the same file', () => {

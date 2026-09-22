@@ -1,6 +1,6 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { claimJob, completeStep, kickJob, nextPendingStep, releaseJob } from '@/lib/jobs/queue'
+import { claimJob, claimStep, completeStep, kickJob, releaseJob } from '@/lib/jobs/queue'
 import { runStep } from '@/lib/jobs/runners'
 
 // One step, not one job. The whole point of the queue is that this number
@@ -49,17 +49,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, claimed: false })
   }
 
-  const step = nextPendingStep(job)
+  // Counts the attempt before the work starts, so a step killed by the
+  // platform mid-run is still counted — which is the whole case this guards
+  // against, and the one a write-afterwards would miss.
+  const { step, steps } = await claimStep(admin, job)
   if (!step) {
     // Claimed a job with nothing left to do — finish it rather than leaving
     // it 'running' forever with a lease that keeps expiring and re-claiming.
-    await completeStep(admin, job, '', { ok: true, detail: '' })
+    await completeStep(admin, { ...job, steps }, '', { ok: true, detail: '' })
     return NextResponse.json({ ok: true, claimed: true, done: true })
   }
 
   let outcome
   try {
-    outcome = await runStep(admin, job, step)
+    // The refreshed steps, so completeStep writes on top of the attempt
+    // count rather than over it.
+    outcome = await runStep(admin, { ...job, steps }, step)
   } catch (err) {
     // The step's own failure, not the job's. Record it and move on so one
     // bad repo can't block the rest — completeStep counts it as finished.

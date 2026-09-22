@@ -34,15 +34,48 @@ export function placesFor(detections: Detection[]): number {
 }
 
 /**
+ * Sources whose strength is already measured by volume rather than by how
+ * many files mention them.
+ *
+ * A language arrives as a single detection from GitHub's language statistics
+ * — one "place", however many thousand lines the student wrote in it. Its
+ * real corroboration is the share of their own changed files, which
+ * computeSkillRelevance already reads. Counting places here would cap every
+ * language at level 1, which is the opposite of the intent.
+ *
+ * Collaboration is exempt for a different reason: evidenceCeiling already
+ * holds it at 2, so a second cap adds nothing but a way to get it wrong.
+ */
+const MEASURED_ELSEWHERE = new Set(['language', 'collaboration'])
+
+/**
  * The highest level this much corroboration can justify.
  *
- * One place is level 1 — real, recorded, not a claim about depth. Two or
- * more lifts the cap and lets the other rules (relevance, repo difficulty)
- * decide. Deliberately a low bar: the aim is to stop one file minting a
- * record, not to make ordinary projects hard to evidence.
+ * ── Why graduated rather than a single gate ───────────────────────────────
+ * The first version was binary: one place capped at 1, two or more lifted
+ * the cap entirely. That was not enough. `import bcrypt` in one file plus
+ * the line in package.json is two places, so cryptography still reached the
+ * top band — a student was told they were Advanced at cryptography for using
+ * a hashing library once, which is the complaint this was meant to fix.
+ *
+ * The binary version only asked "is this a complete fabrication". The
+ * question worth asking is how much of the project rests on the thing:
+ *
+ *   1 place   — it appears. Recorded, no claim about depth.
+ *   2-3       — they used it. Real, and not the same as building on it.
+ *   4+        — it is threaded through the project.
+ *
+ * Still a cap and never a floor, so repo difficulty and relevance can pull a
+ * level down from here but never push it past what the repository actually
+ * shows.
  */
-export function corroborationCeiling(detections: Detection[]): 1 | 3 {
-  return placesFor(detections) >= 2 ? 3 : 1
+export function corroborationCeiling(detections: Detection[]): 1 | 2 | 3 {
+  if (detections.some((d) => MEASURED_ELSEWHERE.has(d.source))) return 3
+
+  const places = placesFor(detections)
+  if (places >= 4) return 3
+  if (places >= 2) return 2
+  return 1
 }
 
 /**

@@ -90,6 +90,48 @@ export interface RepoScanResult {
   unclaimedEmails: UnclaimedEmail[]
 }
 
+/**
+ * Did this error mean "we could not read it" or "there is nothing there"?
+ *
+ * ── Why the distinction is load-bearing ───────────────────────────────────
+ * It decides `partial`, and `partial` decides whether the scan is allowed to
+ * retract evidence. Get it too strict and a rate limit empties somebody's
+ * record; get it too loose and nothing is ever retracted because every scan
+ * looks broken.
+ *
+ * The first version only forgave 404. That was too loose in the wrong
+ * direction: GitHub's contents API returns **403** for any file over 1MB,
+ * which happens on a lockfile in almost every real repository. So nearly
+ * every scan came back partial, and retraction — the whole point of the
+ * morning's work — silently never ran. Two students' records still said
+ * Advanced at cryptography after a rescan that was supposed to fix them.
+ *
+ * So the test is inverted: a failure counts only when it means GitHub
+ * refused to answer a question it normally answers.
+ */
+export function isRealFailure(err: unknown): boolean {
+  const status = (err as { status?: number }).status
+  const message = (err as Error)?.message ?? ''
+
+  // Nothing there, not readable this way, or legally blocked. All ordinary
+  // outcomes of asking about a file that might not exist.
+  //   404 — no such file. The common case, by a long way.
+  //   403 — usually "over 1MB", occasionally a rate limit; see below.
+  //   451 — DMCA takedown.
+  if (status === 404 || status === 451) return false
+
+  // A 403 is two different things wearing one number. Rate limiting and
+  // abuse detection are real failures; "this file is too big for this
+  // endpoint" is a fact about the file.
+  if (status === 403) {
+    return /rate limit|abuse|secondary/i.test(message)
+  }
+
+  // 429 and anything 5xx are GitHub failing to answer. So is a network
+  // error, which arrives with no status at all.
+  return true
+}
+
 const INFRA_PATH_PATTERN = /^(docker-compose\.ya?ml|\.terraform|main\.tf|k8s\/|kubernetes\/|helm\/)/i
 
 /**
@@ -253,7 +295,7 @@ async function fetchLanguages(octokit: Octokit, owner: string, repo: string, pro
     // language relevance collapses, and a scan that reports "no languages"
     // because GitHub was rate limiting is indistinguishable from a repo
     // that genuinely has none. See RepoScanResult.partial.
-    problems.push(`languages: ${(err as Error).message}`)
+    if (isRealFailure(err)) problems.push(`languages: ${(err as Error).message}`)
     return {}
   }
 }
@@ -365,7 +407,22 @@ async function fetchStudentCommits(
           authorEmail: c.commit.author?.email ?? null,
           authorName: c.commit.author?.name ?? null,
           message: c.commit.message ?? null,
-          date: c.commit.author?.date ?? null,
+          // The committer date, not the author date.
+          //
+          // Author date is whatever GIT_AUTHOR_DATE said and is trivially
+          // forged — `git commit --date="2 years ago"` takes one line. It
+          // feeds activeDays, spanDays and revisitRate, which are worth
+          // about fourteen points of the difficulty composite between them,
+          // so a weekend project could be dressed as two years of sustained
+          // work for no effort at all.
+          //
+          // Committer date is stamped when the commit object is written and
+          // rewritten by rebase, amend and squash. Still forgeable with
+          // GIT_COMMITTER_DATE and a push, but it takes deliberate work
+          // rather than a flag, and it is what GitHub itself displays. The
+          // author date is kept as a fallback for the rare commit that
+          // carries no committer.
+          date: c.commit.committer?.date ?? c.commit.author?.date ?? null,
         })
       }
       if (data.length < 100) break
@@ -410,7 +467,7 @@ async function fetchStudentCommits(
             // Not worth aborting the sample over, but it is lost file data:
             // every import and every touched path in that commit vanishes.
             // Recorded so a scan missing half its commits cannot retract.
-            problems.push(`commit ${sha.slice(0, 7)}: ${(err as Error).message}`)
+            if (isRealFailure(err)) problems.push(`commit ${sha.slice(0, 7)}: ${(err as Error).message}`)
             return []
           }
         }),
@@ -451,7 +508,7 @@ async function fetchStudentCommits(
     // the same outcome here, which is exactly the confusion that makes an
     // empty record look like a verdict. Return what was gathered, and say
     // that it is incomplete.
-    problems.push(`commits: ${(err as Error).message}`)
+    if (isRealFailure(err)) problems.push(`commits: ${(err as Error).message}`)
   }
 
   const spanDays = firstAt && lastAt
@@ -494,7 +551,7 @@ async function fetchTree(
     // A repo with no commits, or a branch name that doesn't resolve — but
     // also a rate limit, and those must not look the same. Without the tree
     // there are no manifests and no sampled files, which is most of a scan.
-    problems.push(`file tree: ${(err as Error).message}`)
+    if (isRealFailure(err)) problems.push(`file tree: ${(err as Error).message}`)
     return []
   }
 }
@@ -573,12 +630,7 @@ export async function getFileContent(octokit: Octokit, owner: string, repo: stri
     }
     return null
   } catch (err) {
-    // A 404 is the overwhelmingly common case and is not a failure — most
-    // repos do not have every manifest we look for. Anything else is, and
-    // is the difference between "no Dockerfile" and "GitHub stopped
-    // answering", which decides whether this scan may retract anything.
-    const status = (err as { status?: number }).status
-    if (status !== 404) problems.push(`${path}: ${(err as Error).message}`)
+    if (isRealFailure(err)) problems.push(`${path}: ${(err as Error).message}`)
     return null
   }
 }
