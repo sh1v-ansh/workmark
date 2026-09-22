@@ -11,6 +11,7 @@ import { Wordmark } from '@/app/landing/Wordmark'
 import { Combobox } from '@/components/Combobox'
 import { UNIVERSITIES } from '@/lib/data/universities'
 import { MAJORS } from '@/lib/data/majors'
+import { CONSENT_TEXT } from '@/lib/notify/marketing'
 
 // Asked before anything else, because a .edu address doesn't distinguish
 // the two — professors have university email too. Without this branch a
@@ -103,6 +104,11 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
   // One box. Ticking it is the representation that they are 18 or over and
   // have agreed to the three documents it links to.
   const [agreed, setAgreed] = useState(false)
+  // Its own box and its own state, deliberately not folded into `agreed`.
+  // Consent bundled into accepting the terms is not freely given, and
+  // consent that is not freely given is not consent. Starts false because a
+  // pre-ticked box is invalid for the same reason.
+  const [wantsOpportunities, setWantsOpportunities] = useState(false)
   const [heardAbout, setHeardAbout] = useState('')
   const [heardAboutDetail, setHeardAboutDetail] = useState('')
   const [university, setUniversity] = useState('')
@@ -124,6 +130,9 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
     onSubmit({
       full_name: fullName,
       age_attested: agreed,
+      // Pulled out by the parent before the profile insert, like heard_about
+      // — it belongs on the account, not on the profile the matcher reads.
+      marketing_opt_in: wantsOpportunities,
       // Not part of the profile the scanner and matcher read — the parent
       // pulls these two out before the insert. See handleSubmit.
       heard_about: heardAbout || null,
@@ -293,6 +302,36 @@ function StudentForm({ onSubmit, loading, emailDomain, role }: {
         </p>
       </div>
 
+      {/* Opportunities — its own box, its own decision, unticked.
+          Three rules that look like fussiness and are not:
+
+          Separate from the terms box, because bundling marketing consent
+          into "I agree to the Terms" makes it not freely given, and consent
+          that is not freely given is not consent (GDPR Art. 4(11)). One box
+          for both would be the most common way this is got wrong.
+
+          Unticked, for the same reason. A pre-ticked box is specifically
+          named as invalid in Art. 4(11) and in the Planet49 ruling.
+
+          Not required, so the button works either way. If refusing it
+          blocked the account it would not be freely given either. */}
+      <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: 16 }}>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+          <input
+            id="student-marketing" type="checkbox" checked={wantsOpportunities}
+            onChange={(e) => setWantsOpportunities(e.target.checked)}
+            className="dk-checkbox" style={{ marginTop: 2 }}
+          />
+          <span style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6 }}>
+            {CONSENT_TEXT}
+          </span>
+        </label>
+        <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 10, paddingLeft: 25 }}>
+          Optional, and separate from everything above — your account works the same either
+          way. You&apos;ll still get the emails about your own applications and projects.
+        </p>
+      </div>
+
       <Button type="submit" variant="accent" fullWidth disabled={loading || !agreed} busyLabel={loading ? 'Saving profile…' : null}>
         Complete profile
       </Button>
@@ -356,7 +395,7 @@ export default function OnboardingPage() {
       // no insert policy for users on purpose, because an account row says
       // what someone is allowed to be. A client that could write it could
       // grant itself admin.
-      const { heard_about, heard_about_detail, ...rest } = data as Record<string, unknown>
+      const { heard_about, heard_about_detail, marketing_opt_in, ...rest } = data as Record<string, unknown>
       const res = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -368,6 +407,7 @@ export default function OnboardingPage() {
           profile: rest,
           heardAbout: heard_about ?? undefined,
           heardAboutDetail: heard_about_detail ?? undefined,
+          marketingOptIn: marketing_opt_in === true,
         }),
       })
       const json = await res.json()

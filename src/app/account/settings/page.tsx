@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { EMAIL_KINDS, type EmailKind } from '@/lib/notify/prefs'
 import SettingsClient from './SettingsClient'
+import { mayEmail } from '@/lib/notify/marketing'
 
 export const dynamic = 'force-dynamic'
 
@@ -43,7 +44,7 @@ export default async function SettingsPage({
       .maybeSingle(),
     supabase
       .from('accounts')
-      .select('notification_prefs, email_unsubscribed_at')
+      .select('notification_prefs, email_unsubscribed_at, marketing_opted_in_at, marketing_opted_out_at')
       .eq('id', user.id)
       .maybeSingle(),
     supabase
@@ -67,6 +68,7 @@ export default async function SettingsPage({
       github={connection ? { login: connection.github_login, connectedAt: connection.connected_at } : null}
       initialPrefs={(account?.notification_prefs ?? {}) as Record<string, boolean>}
       initialUnsubscribedAll={!!account?.email_unsubscribed_at}
+      initialMarketing={mayEmail({ optedInAt: account?.marketing_opted_in_at ?? null, optedOutAt: account?.marketing_opted_out_at ?? null })}
       notice={noticeFor(searchParams.off, searchParams.stale)}
     />
   )

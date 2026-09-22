@@ -73,6 +73,7 @@ export default function SettingsClient({
   github,
   initialPrefs,
   initialUnsubscribedAll,
+  initialMarketing,
   notice,
 }: {
   email: string | null
@@ -81,6 +82,7 @@ export default function SettingsClient({
   github: { login: string | null; connectedAt: string | null } | null
   initialPrefs: Record<string, boolean>
   initialUnsubscribedAll: boolean
+  initialMarketing: boolean
   notice: string | null
 }) {
   const router = useRouter()
@@ -240,6 +242,7 @@ export default function SettingsClient({
             <EmailSection
               initialPrefs={initialPrefs}
               initialUnsubscribedAll={initialUnsubscribedAll}
+              initialMarketing={initialMarketing}
               notice={notice}
             />
           </Section>

@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { EMAIL_KINDS, type EmailKind } from '@/lib/notify/prefs'
+import { setConsent } from '@/lib/notify/marketing'
 
 /**
  * POST /api/account/notifications  { prefs, unsubscribeAll }
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
 
-  let body: { prefs?: Record<string, unknown>; unsubscribeAll?: boolean }
+  let body: { prefs?: Record<string, unknown>; unsubscribeAll?: boolean; marketingOptIn?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -49,6 +50,25 @@ export async function POST(request: Request) {
   if (error) {
     console.error('[api/account/notifications] save failed:', error)
     return NextResponse.json({ error: 'Could not save your settings.' }, { status: 500 })
+  }
+
+  // Written separately, and only when the request actually carries a
+  // decision. Marketing consent is not a notification preference: the map
+  // above treats an absent key as yes, which is the right default for "we
+  // told you somebody applied to your project" and would be an invented
+  // consent here. It also has to record the wording and the moment, which
+  // notification_prefs has nowhere to put.
+  //
+  // Withdrawal has to be as easy as the giving (GDPR Art. 7(3)) — which is
+  // why it is the same toggle in the same place, and not an email to
+  // support.
+  if (typeof body.marketingOptIn === 'boolean') {
+    try {
+      await setConsent(admin, user.id, body.marketingOptIn, 'settings')
+    } catch (err) {
+      console.error('[api/account/notifications] consent write failed:', err)
+      return NextResponse.json({ error: 'Could not save your settings.' }, { status: 500 })
+    }
   }
 
   return NextResponse.json({ ok: true })

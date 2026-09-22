@@ -1424,6 +1424,20 @@ create table accounts (
   email_unsubscribed_at timestamptz,
   -- Lets an unsubscribe link work from an email client with no session.
   unsubscribe_token   uuid default gen_random_uuid(),
+  -- Permission to send something they did not ask for: a role that fits, a
+  -- hackathon, a fellowship. Deliberately NOT a key in notification_prefs
+  -- above, where an absent key means on — that default is right for "somebody
+  -- applied to your project" and would be an invented consent here.
+  --
+  -- Five columns because a boolean cannot discharge the burden of proof.
+  -- GDPR Art. 7(1) requires showing that this person consented, so the
+  -- wording they actually read and the moment they read it are stored with
+  -- the flag. See v05_0048 and lib/notify/marketing.ts.
+  marketing_opted_in_at    timestamptz,
+  marketing_opted_out_at   timestamptz,
+  marketing_consent_text   text,
+  marketing_consent_version text,
+  marketing_consent_source text,
   faculty_requested_at timestamptz,
   faculty_verified_at timestamptz,
   faculty_verified_by uuid references auth.users(id),

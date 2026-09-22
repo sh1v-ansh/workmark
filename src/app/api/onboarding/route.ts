@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { enforce } from '@/lib/rate-limit'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { consentFieldsForSignup } from '@/lib/notify/marketing'
 
 /**
  * The domains that count as proof of being at a university.
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
     )
   }
 
-  let body: { role?: string; profile?: Record<string, unknown>; heardAbout?: unknown; heardAboutDetail?: unknown }
+  let body: { role?: string; profile?: Record<string, unknown>; heardAbout?: unknown; heardAboutDetail?: unknown; marketingOptIn?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -176,6 +177,11 @@ export async function POST(request: Request) {
     terms_version: TERMS_VERSION,
     heard_about: heardAbout,
     heard_about_detail: heardAboutDetail,
+    // Strict === true, not truthy. A missing field, a string "false" from a
+    // hand-rolled request, or anything else at all has to read as "did not
+    // agree" — this is the one field where being generous about the input
+    // means sending marketing to somebody who never said yes.
+    ...consentFieldsForSignup(body.marketingOptIn === true),
   })
 
   if (accountErr) {

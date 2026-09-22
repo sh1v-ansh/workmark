@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useToast } from '@/components/Toast'
 import { C, R } from '@/lib/theme/dark-tokens'
 import { EMAIL_KINDS, type EmailKind } from '@/lib/notify/prefs'
+import { CONSENT_TEXT } from '@/lib/notify/marketing'
 
 const KINDS = Object.keys(EMAIL_KINDS) as EmailKind[]
 
@@ -18,16 +19,49 @@ const KINDS = Object.keys(EMAIL_KINDS) as EmailKind[]
 export default function EmailSection({
   initialPrefs,
   initialUnsubscribedAll,
+  initialMarketing,
   notice,
 }: {
   initialPrefs: Record<string, boolean>
   initialUnsubscribedAll: boolean
+  /** Whether they have agreed to hear about opportunities. */
+  initialMarketing: boolean
   notice: string | null
 }) {
   const { toast } = useToast()
   const [prefs, setPrefs] = useState(initialPrefs)
   const [allOff, setAllOff] = useState(initialUnsubscribedAll)
+  const [marketing, setMarketing] = useState(initialMarketing)
   const [busy, setBusy] = useState(false)
+
+  /**
+   * Its own save, deliberately not folded into the one below.
+   *
+   * save() rebuilds the whole preference map every time, which is right for
+   * a set of checkboxes that always travel together. Sending the consent
+   * flag through it would mean every unrelated toggle also rewrote the
+   * consent record — and the consent record carries a timestamp that is
+   * legal proof of when this person agreed. Moving that because somebody
+   * switched off "a task is assigned to you" would quietly destroy it.
+   */
+  async function saveMarketing(next: boolean) {
+    const prev = marketing
+    setMarketing(next)
+    setBusy(true)
+    try {
+      const res = await fetch('/api/account/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prefs, unsubscribeAll: allOff, marketingOptIn: next }),
+      })
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Could not save.')
+    } catch (err) {
+      setMarketing(prev)
+      toast(err instanceof Error ? err.message : 'Could not save.', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const on = (kind: EmailKind) => prefs[kind] !== false && !(allOff && !EMAIL_KINDS[kind].essential)
 
@@ -115,6 +149,32 @@ export default function EmailSection({
             </label>
           )
         })}
+      </div>
+
+      {/* Opportunities, below the rule and visibly apart from the list.
+          Everything above is the outcome of something this person did —
+          somebody applied to their project, their work was checked. This is
+          the only one that is not, which makes it the only one that is
+          marketing, and it is governed by different rules: consent has to
+          have been freely given, and withdrawal has to be as easy as the
+          giving (GDPR Art. 7(3)). Hence: the same toggle, the same page, one
+          click, no email to support. */}
+      <div style={{ marginTop: 20, paddingTop: 18, borderTop: `1px solid ${C.borderFaint}` }}>
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: 13, cursor: 'pointer' }}>
+          <input
+            type="checkbox" checked={marketing} disabled={busy}
+            onChange={() => saveMarketing(!marketing)}
+            className="dk-checkbox" style={{ marginTop: 2 }}
+          />
+          <span style={{ flex: 1 }}>
+            <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 3 }}>
+              Opportunities that fit your record
+            </span>
+            <span style={{ display: 'block', fontSize: 13, color: C.textFaint, lineHeight: 1.55 }}>
+              {CONSENT_TEXT}
+            </span>
+          </span>
+        </label>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 16, marginTop: 14, flexWrap: 'wrap' }}>
