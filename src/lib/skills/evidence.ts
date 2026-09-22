@@ -31,6 +31,7 @@ import {
 } from '@/lib/skills/relevance'
 import { computeDifficultyLevel } from '@/lib/skills/levels'
 import { retractionsFor, mayRetract } from '@/lib/skills/retraction'
+import { corroborationCeiling, capSkillsPerRepo } from '@/lib/skills/corroboration'
 import { knownCommitEmails, recordUnclaimedEmails } from '@/lib/github/emails'
 
 export interface ProcessRepoResult {
@@ -168,7 +169,21 @@ export async function processRepo(
     engagementId, workspaceId,
   )
 
-  const { rawComposite } = extractComplexity(scanResult, resolvedSkillIds.length)
+  // ── What counts as an "external system" ────────────────────────────────
+  // This used to be resolvedSkillIds.length — every skill the repo resolved,
+  // including every dependency declared in a manifest nobody touched. So
+  // adding sixty unused libraries to a package.json raised the difficulty
+  // score of the repository, and therefore the level of every *other* skill
+  // in it. The one input a student could inflate for free was wired to the
+  // number that decides how hard their work was.
+  //
+  // Counted from what they actually integrated instead: distinct things they
+  // imported in their own code. A service wired into the app is an external
+  // system; a line in a lockfile is not.
+  const integrated = new Set(
+    scanResult.detections.filter((d) => d.source === 'import').map((d) => d.raw.toLowerCase()),
+  )
+  const { rawComposite } = extractComplexity(scanResult, integrated.size)
 
   // How much of this repo's difficulty each skill actually has a claim on.
   // Without this, every skill in the repo got the same number — so a hard
@@ -215,6 +230,10 @@ export async function processRepo(
   // the record claims on this repo's strength that is not in here is no
   // longer supported — see the retraction block below.
   const supported = new Set<string>()
+  // Scored first, written second. The per-repository cap needs to see every
+  // skill's level before it can decide which ones keep theirs, and deciding
+  // that while writing would mean the answer depended on iteration order.
+  const scoredSkills: { skillId: string; strength: number; level: 1 | 2 | 3; composite: number }[] = []
   for (const skillId of resolvedSkillIds) {
     const relevance = relevanceBySkill.get(skillId)?.relevance ?? 0.5
 
@@ -226,17 +245,37 @@ export async function processRepo(
 
     const skillComposite = scaleComposite(rawComposite, relevance)
     const { difficultyCleared: scored } = await computeDifficultyLevel(supabase, skillId, skillComposite)
-    // Capped by what was actually observed about this person, not by how
-    // hard the repository was. The composite is mostly a property of the
-    // repo — tests, CI, how long it ran — and without this it dragged every
-    // skill in a serious project to the top band. See evidenceCeiling.
-    const difficultyCleared = Math.min(scored, evidenceCeiling(relevance)) as 1 | 2 | 3
+
+    const level = Math.min(
+      scored,
+      // Capped by what was actually observed about this person, not by how
+      // hard the repository was. The composite is mostly a property of the
+      // repo — tests, CI, how long it ran — and without this it dragged
+      // every skill in a serious project to the top band.
+      evidenceCeiling(relevance),
+      // And capped again by how much of the repository supports it. One
+      // file of sixty imports is one piece of evidence however many names
+      // are in it; without this, one commit minted sixty skills above the
+      // floor with no code behind any of them.
+      corroborationCeiling(detectionsBySkill.get(skillId) ?? []),
+    ) as 1 | 2 | 3
+
+    scoredSkills.push({ skillId, strength: relevance, level, composite: skillComposite })
+  }
+
+  // The backstop, for somebody who spreads the same trick across three files
+  // rather than one. An honest project lands under the cap and is untouched.
+  const capped = capSkillsPerRepo(scoredSkills)
+
+  for (const s of scoredSkills) {
+    const difficultyCleared = capped.get(s.skillId) ?? s.level
     const changed = await writeOrCorrectEvidence(supabase, {
-      studentId, skillId, artifactId, base, rawComposite: skillComposite, difficultyCleared,
+      studentId, skillId: s.skillId, artifactId, base,
+      rawComposite: s.composite, difficultyCleared,
       verificationMethod, engagementId, workspaceId,
     })
-    evidenceWritten.push({ skillId, difficultyCleared, changed })
-    supported.add(skillId)
+    evidenceWritten.push({ skillId: s.skillId, difficultyCleared, changed })
+    supported.add(s.skillId)
   }
 
   // ── Taking things off ──────────────────────────────────────────────────
