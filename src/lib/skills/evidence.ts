@@ -31,6 +31,7 @@ import {
 } from '@/lib/skills/relevance'
 import { computeDifficultyLevel } from '@/lib/skills/levels'
 import { retractionsFor, mayRetract } from '@/lib/skills/retraction'
+import { knownCommitEmails, recordUnclaimedEmails } from '@/lib/github/emails'
 
 export interface ProcessRepoResult {
   repoFullName: string
@@ -73,7 +74,20 @@ export async function processRepo(
   grantId: string | null,
   options: { engagementId?: string; workspaceId?: string } = {},
 ): Promise<ProcessRepoResult> {
-  const scanResult = await scanRepo(installationId, githubLogin, repoFullName)
+  // Addresses the student has confirmed are theirs, so a commit from a lab
+  // machine or a university account counts as work they did. Without this
+  // the scan falls back to GitHub's own matching, which is what produced
+  // empty records for students who wrote every line — see attribution.ts.
+  const knownEmails = await knownCommitEmails(supabase, studentId)
+
+  const scanResult = await scanRepo(installationId, githubLogin, repoFullName, knownEmails)
+
+  // Asked about whether or not anything else worked. This is the signal that
+  // a record is empty for a fixable reason rather than a true one, and it is
+  // most valuable in exactly the case where the rest of the scan found
+  // nothing to write.
+  await recordUnclaimedEmails(supabase, studentId, repoFullName, scanResult.unclaimedEmails)
+
   if (scanResult.skip) {
     return { repoFullName, skipped: true, skipReason: scanResult.skipReason, priorsWritten: [], evidenceWritten: [], retracted: [] }
   }

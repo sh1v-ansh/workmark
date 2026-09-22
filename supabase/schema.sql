@@ -378,6 +378,44 @@ create table github_repo_grants (
   unique (student_id, repo_full_name)
 );
 
+-- ─── Which addresses a student's commits are signed with ────────────────────
+-- The scanner used to ask GitHub "which commits here are by this login".
+-- GitHub answers by matching the commit's author email against the addresses
+-- verified on that account, so a student who committed from a lab machine,
+-- with their university address, or with git's default user@hostname got
+-- nothing attributed and therefore no evidence at all from a repository they
+-- wrote entirely. See v05_0049 and src/lib/github/attribution.ts.
+create table student_commit_emails (
+  student_id   uuid not null references students(id) on delete cascade,
+  -- Lowercased; attribution normalizes before comparing.
+  email        text not null,
+  -- 'github'    — GitHub already verified it against their account.
+  -- 'confirmed' — we found it on commits and they said it was theirs.
+  source       text not null check (source in ('github', 'confirmed')),
+  confirmed_at timestamptz not null default now(),
+  primary key (student_id, email)
+);
+
+-- Addresses seen on commits that belong to nobody GitHub knows about, so the
+-- student can be asked. A question, not an answer — hence separate from the
+-- table above, and hence dismissible.
+create table observed_commit_emails (
+  id             uuid primary key default gen_random_uuid(),
+  student_id     uuid not null references students(id) on delete cascade,
+  email          text not null,
+  -- The name git had configured next to it. An address alone is often
+  -- unrecognisable; this is what makes the question answerable at a glance.
+  display_name   text,
+  repo_full_name text not null,
+  commit_count   int not null default 0,
+  first_seen_at  timestamptz not null default now(),
+  last_seen_at   timestamptz not null default now(),
+  -- Set when they say "not me". Distinct from deleting the row, which would
+  -- only make the next scan ask again.
+  dismissed_at   timestamptz,
+  unique (student_id, email, repo_full_name)
+);
+
 create index github_repo_grants_rank_idx
   on github_repo_grants (student_id, rank_score desc nulls last)
   where revoked_at is null;

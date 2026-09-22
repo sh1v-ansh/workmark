@@ -15,6 +15,17 @@ import {
   detection, extractImports, parseComposeServices, parseDockerfile, parseOrmConfig,
   parsePrismaSchema, parseSqlFile, parseTerraform, parseWorkflow, type Detection,
 } from './detectors'
+import {
+  attributeCommits, sampleAcross,
+  type StudentIdentity, type UnclaimedEmail, type CommitIdentity,
+} from './attribution'
+
+/**
+ * How many commits get a file-level fetch. Raised from 20 alongside the move
+ * to sampling across history: 20 points spread over two years is a thin
+ * description of a project, and each one is a single cheap request.
+ */
+const COMMIT_DETAIL_SAMPLE = 40
 
 export interface RepoScanResult {
   repoFullName: string
@@ -72,6 +83,11 @@ export interface RepoScanResult {
   partial: boolean
   /** What went wrong, for the operator. Never shown to the student. */
   problems: string[]
+  /**
+   * Addresses on commits here that belong to nobody GitHub knows about.
+   * The student is asked whether they are theirs — see attribution.ts.
+   */
+  unclaimedEmails: UnclaimedEmail[]
 }
 
 const INFRA_PATH_PATTERN = /^(docker-compose\.ya?ml|\.terraform|main\.tf|k8s\/|kubernetes\/|helm\/)/i
@@ -85,7 +101,17 @@ export async function scanRepo(
   installationId: string,
   githubLogin: string,
   repoFullName: string,
+  /**
+   * Addresses the student has confirmed are theirs, lowercased.
+   *
+   * Optional so callers that have not been updated keep working on GitHub's
+   * own attribution alone — which is exactly what they did before, so the
+   * default is no worse than the old behaviour rather than silently
+   * different. See attribution.ts.
+   */
+  knownEmails: Set<string> = new Set(),
 ): Promise<RepoScanResult> {
+  const identity: StudentIdentity = { login: githubLogin, emails: knownEmails }
   const [owner, repo] = repoFullName.split('/')
   const octokit = await getInstallationOctokit(installationId)
 
@@ -106,7 +132,7 @@ export async function scanRepo(
     studentCommitCount: 0, totalCommitCount: null,
     fractionAuthored: null, distinctContributors: null, firstCommitAt: null, lastCommitAt: null,
     filesTouchedByStudent: [], hasTests: false, hasCi: false, hasDockerfile: false, hasInfraConfig: false,
-    partial: false, problems: [],
+    partial: false, problems: [], unclaimedEmails: [],
   }
 
   let repoMeta
@@ -145,7 +171,7 @@ export async function scanRepo(
   const [languages, contributorStats, studentCommits, tree] = await Promise.all([
     fetchLanguages(octokit, owner, repo, problems),
     getContributorStats(octokit, owner, repo, githubLogin),
-    fetchStudentCommits(octokit, owner, repo, githubLogin, problems),
+    fetchStudentCommits(octokit, owner, repo, identity, problems),
     fetchTree(octokit, owner, repo, repoMeta.default_branch, problems),
   ])
 
@@ -214,6 +240,7 @@ export async function scanRepo(
     revisitRate: studentCommits.revisitRate,
     partial: problems.length > 0,
     problems,
+    unclaimedEmails: studentCommits.unclaimedEmails,
   }
 }
 
@@ -297,10 +324,12 @@ interface StudentCommits {
   activeDays: number
   spanDays: number
   revisitRate: number | null
+  /** Addresses seen here that nobody owns. See attribution.ts. */
+  unclaimedEmails: UnclaimedEmail[]
 }
 
 async function fetchStudentCommits(
-  octokit: Octokit, owner: string, repo: string, githubLogin: string,
+  octokit: Octokit, owner: string, repo: string, identity: StudentIdentity,
   problems: string[],
 ): Promise<StudentCommits> {
   const commits: string[] = []
@@ -312,37 +341,64 @@ async function fetchStudentCommits(
   let firstAt: string | null = null
   let lastAt: string | null = null
   let revisitRate: number | null = null
+  let unclaimedEmails: UnclaimedEmail[] = []
 
   try {
-    // Capped at 3 pages (300 commits) — plenty for a student project; this
-    // is meant to characterize authorship, not build a complete history.
-    for (let page = 1; page <= 3; page++) {
-      const { data } = await octokit.rest.repos.listCommits({ owner, repo, author: githubLogin, per_page: 100, page })
+    // ── Every commit, then decide ourselves ──────────────────────────────
+    // This used to pass `author: githubLogin` and let GitHub do the
+    // matching. GitHub matches on emails verified against the account, so a
+    // student who committed from a lab machine or with their university
+    // address got nothing — no commits, no evidence, from a repository they
+    // wrote entirely. See attribution.ts.
+    //
+    // Reading everyone's commits costs more pages on a team repo, hence 5
+    // rather than 3. Still a cap: this characterises authorship, it does
+    // not build a complete history.
+    const seen: CommitIdentity[] = []
+    for (let page = 1; page <= 5; page++) {
+      const { data } = await octokit.rest.repos.listCommits({ owner, repo, per_page: 100, page })
       if (data.length === 0) break
       for (const c of data) {
-        commits.push(c.sha)
-        if (c.commit.message) messages.push(c.commit.message)
-        const date = c.commit.author?.date ?? null
-        if (date && (!firstAt || date < firstAt)) firstAt = date
-        if (date && (!lastAt || date > lastAt)) lastAt = date
-        // Distinct calendar days, not commit count: ten commits in one
-        // evening is one day's work however it's split up.
-        if (date) commitDays.add(date.slice(0, 10))
+        seen.push({
+          sha: c.sha,
+          authorLogin: c.author?.login ?? null,
+          authorEmail: c.commit.author?.email ?? null,
+          authorName: c.commit.author?.name ?? null,
+          message: c.commit.message ?? null,
+          date: c.commit.author?.date ?? null,
+        })
       }
       if (data.length < 100) break
     }
 
+    const attribution = attributeCommits(seen, identity)
+    unclaimedEmails = attribution.unclaimed
+
+    for (const c of attribution.mine) {
+      commits.push(c.sha)
+      if (c.message) messages.push(c.message)
+      const date = c.date ?? null
+      if (date && (!firstAt || date < firstAt)) firstAt = date
+      if (date && (!lastAt || date > lastAt)) lastAt = date
+      // Distinct calendar days, not commit count: ten commits in one
+      // evening is one day's work however it's split up.
+      if (date) commitDays.add(date.slice(0, 10))
+    }
+
     // File-level detail requires a per-commit fetch, which is expensive at
-    // scale — sample the most recent 20 rather than every commit, enough
-    // to characterize which parts of the repo the student actually touches
-    // without a request-per-commit blowup on large histories.
+    // scale, so it is sampled rather than exhaustive.
     //
-    // Fetched in parallel: these were previously awaited one at a time,
-    // which made a single repo cost 20 serial round trips (~5s) for what is
-    // 20 independent reads. Capped concurrency rather than a bare
-    // Promise.all so a student with many repos doesn't open 20 sockets per
-    // repo and trip GitHub's abuse-detection secondary rate limit.
-    const sample = commits.slice(0, 20)
+    // Spread across the whole history rather than taken from the end of it.
+    // `commits.slice(0, 20)` meant everything the scanner knows about what
+    // somebody writes came from their last fortnight — so a year-long
+    // project that finished with README edits produced an empty language
+    // share and no evidence for the language it was written in. Same number
+    // of requests, and it describes the project instead. See sampleAcross.
+    //
+    // Fetched in parallel at capped concurrency rather than a bare
+    // Promise.all, so a student with many repos doesn't open dozens of
+    // sockets per repo and trip GitHub's secondary rate limit.
+    const sample = sampleAcross(commits, COMMIT_DETAIL_SAMPLE)
     const CONCURRENCY = 5
     for (let i = 0; i < sample.length; i += CONCURRENCY) {
       const details = await Promise.all(
@@ -411,6 +467,7 @@ async function fetchStudentCommits(
     activeDays: commitDays.size,
     spanDays,
     revisitRate,
+    unclaimedEmails,
   }
 }
 

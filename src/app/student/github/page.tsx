@@ -108,8 +108,21 @@ export default async function GithubScanPage() {
     .eq('student_id', user.id)
     .order('requested_at', { ascending: false })
 
+  // "We read it, but found no commits of yours" is the message a student
+  // reads as "Workmark thinks I did nothing", and the commonest cause is a
+  // commit signed with an address GitHub never verified against their
+  // account. When there is one to ask about, asking beats telling.
+  const { data: unclaimedEmails } = await supabase
+    .from('observed_commit_emails')
+    .select('email, display_name, repo_full_name, commit_count')
+    .eq('student_id', user.id)
+    .is('dismissed_at', null)
+    .order('commit_count', { ascending: false })
+    .limit(5)
+
   return (
     <GithubScanClient
+      unclaimedEmails={unclaimedEmails ?? []}
       reviewRequests={reviewRequests ?? []}
       studentName={student.full_name}
       connection={connection}

@@ -13,6 +13,7 @@ import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import { levelName as levelLabel } from '@/lib/skills/level-names'
 import { LAYOUT } from '@/lib/theme/layout'
+import UnclaimedEmails, { type UnclaimedEmailRow } from './UnclaimedEmails'
 
 // Local types — deliberately not sourced from src/lib/types.ts, which is
 // still the pre-rebuild shape (Phase 1 task #16 rewrites it). This page
@@ -99,13 +100,14 @@ interface JobView {
   error: string | null
 }
 
-export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests, activeJobId }: {
+export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests, unclaimedEmails, activeJobId }: {
   studentName: string | null
   connection: GithubConnection | null
   grants: RepoGrant[]
   priors: SkillPrior[]
   evidence: SkillEvidenceRow[]
   reviewRequests: ReviewRequest[]
+  unclaimedEmails: UnclaimedEmailRow[]
   activeJobId: string | null
 }) {
   const { toast } = useToast()
@@ -304,6 +306,11 @@ export default function GithubScanClient({ studentName, connection, grants, prio
             Every skill on your record comes from one of these repositories. Turn one off and it stops being scanned — anything already on your record stays, because the record is append-only.
           </p>
         </div>
+
+        {/* Above the repository list, because it is the answer to the
+            question somebody comes to this page with — "why is my work not
+            showing up" — and it is answerable in one click. */}
+        <UnclaimedEmails rows={unclaimedEmails} />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 22, alignItems: 'start' }} className="mob-1col">
 
