@@ -61,6 +61,17 @@ export interface RepoScanResult {
   hasCi: boolean
   hasDockerfile: boolean
   hasInfraConfig: boolean
+  /**
+   * True when something failed that the scan carried on past.
+   *
+   * A partial scan's findings are still worth recording — half a record
+   * beats none — but they are not a verdict. Nothing may be retracted on the
+   * strength of one, because "we could not read it" and "it is not there"
+   * produce identical output and only this flag tells them apart.
+   */
+  partial: boolean
+  /** What went wrong, for the operator. Never shown to the student. */
+  problems: string[]
 }
 
 const INFRA_PATH_PATTERN = /^(docker-compose\.ya?ml|\.terraform|main\.tf|k8s\/|kubernetes\/|helm\/)/i
@@ -78,6 +89,16 @@ export async function scanRepo(
   const [owner, repo] = repoFullName.split('/')
   const octokit = await getInstallationOctokit(installationId)
 
+  // Everything that went wrong without stopping the scan.
+  //
+  // These failures used to be swallowed individually, which meant a scan
+  // that hit a rate limit returned exactly what a scan of an empty repo
+  // returns: no languages, no tree, no commits. Nothing downstream could
+  // tell the difference, so "GitHub said no" was recorded as "this student
+  // has demonstrated nothing" — and now that a scan can retract evidence,
+  // that confusion would empty somebody's record. See RepoScanResult.partial.
+  const problems: string[] = []
+
   const empty: RepoScanResult = {
     repoFullName, skip: true, defaultBranch: '', isFork: false,
     languages: {}, detections: [], sampledSources: [],
@@ -85,6 +106,7 @@ export async function scanRepo(
     studentCommitCount: 0, totalCommitCount: null,
     fractionAuthored: null, distinctContributors: null, firstCommitAt: null, lastCommitAt: null,
     filesTouchedByStudent: [], hasTests: false, hasCi: false, hasDockerfile: false, hasInfraConfig: false,
+    partial: false, problems: [],
   }
 
   let repoMeta
@@ -121,10 +143,10 @@ export async function scanRepo(
   // what gets read next is chosen from what's actually there instead of
   // guessing at fixed paths and eating a 404 for each miss.
   const [languages, contributorStats, studentCommits, tree] = await Promise.all([
-    fetchLanguages(octokit, owner, repo),
+    fetchLanguages(octokit, owner, repo, problems),
     getContributorStats(octokit, owner, repo, githubLogin),
-    fetchStudentCommits(octokit, owner, repo, githubLogin),
-    fetchTree(octokit, owner, repo, repoMeta.default_branch),
+    fetchStudentCommits(octokit, owner, repo, githubLogin, problems),
+    fetchTree(octokit, owner, repo, repoMeta.default_branch, problems),
   ])
 
   const plan = planFiles(tree)
@@ -134,8 +156,8 @@ export async function scanRepo(
   // concurrency — a repo shouldn't be able to open dozens of sockets and
   // trip GitHub's secondary rate limit.
   const [planned, sampledSources] = await Promise.all([
-    fetchPlanned(octokit, owner, repo, plan.files),
-    fetchStudentSources(octokit, owner, repo, studentCommits.filesTouched),
+    fetchPlanned(octokit, owner, repo, plan.files, problems),
+    fetchStudentSources(octokit, owner, repo, studentCommits.filesTouched, problems),
   ])
 
   const detections: Detection[] = [
@@ -190,14 +212,21 @@ export async function scanRepo(
     activeDays: studentCommits.activeDays,
     spanDays: studentCommits.spanDays,
     revisitRate: studentCommits.revisitRate,
+    partial: problems.length > 0,
+    problems,
   }
 }
 
-async function fetchLanguages(octokit: Octokit, owner: string, repo: string): Promise<Record<string, number>> {
+async function fetchLanguages(octokit: Octokit, owner: string, repo: string, problems: string[]): Promise<Record<string, number>> {
   try {
     const { data } = await octokit.rest.repos.listLanguages({ owner, repo })
     return data
-  } catch {
+  } catch (err) {
+    // Recorded, not just swallowed. Without the language stats every
+    // language relevance collapses, and a scan that reports "no languages"
+    // because GitHub was rate limiting is indistinguishable from a repo
+    // that genuinely has none. See RepoScanResult.partial.
+    problems.push(`languages: ${(err as Error).message}`)
     return {}
   }
 }
@@ -272,6 +301,7 @@ interface StudentCommits {
 
 async function fetchStudentCommits(
   octokit: Octokit, owner: string, repo: string, githubLogin: string,
+  problems: string[],
 ): Promise<StudentCommits> {
   const commits: string[] = []
   const messages: string[] = []
@@ -320,8 +350,11 @@ async function fetchStudentCommits(
           try {
             const { data } = await octokit.rest.repos.getCommit({ owner, repo, ref: sha })
             return data.files ?? []
-          } catch {
-            // A single commit detail failing isn't worth aborting the sample over.
+          } catch (err) {
+            // Not worth aborting the sample over, but it is lost file data:
+            // every import and every touched path in that commit vanishes.
+            // Recorded so a scan missing half its commits cannot retract.
+            problems.push(`commit ${sha.slice(0, 7)}: ${(err as Error).message}`)
             return []
           }
         }),
@@ -357,9 +390,12 @@ async function fetchStudentCommits(
       }
       revisitRate = revisits / (chronological.length - 1)
     }
-  } catch {
-    // No commits attributable to this login (or the API call failed) —
-    // return whatever was gathered before the failure.
+  } catch (err) {
+    // "No commits attributable to this login" and "the API call failed" were
+    // the same outcome here, which is exactly the confusion that makes an
+    // empty record look like a verdict. Return what was gathered, and say
+    // that it is incomplete.
+    problems.push(`commits: ${(err as Error).message}`)
   }
 
   const spanDays = firstAt && lastAt
@@ -388,6 +424,7 @@ async function fetchStudentCommits(
  */
 async function fetchTree(
   octokit: Octokit, owner: string, repo: string, branch: string,
+  problems: string[],
 ): Promise<TreeEntry[]> {
   try {
     const { data } = await octokit.rest.git.getTree({
@@ -396,9 +433,11 @@ async function fetchTree(
     return (data.tree ?? []).map((e) => ({
       path: e.path ?? '', type: e.type ?? '', size: e.size,
     })).filter((e) => e.path)
-  } catch {
-    // A repo with no commits, or a branch name that doesn't resolve. The
-    // scan continues on languages and commits alone.
+  } catch (err) {
+    // A repo with no commits, or a branch name that doesn't resolve — but
+    // also a rate limit, and those must not look the same. Without the tree
+    // there are no manifests and no sampled files, which is most of a scan.
+    problems.push(`file tree: ${(err as Error).message}`)
     return []
   }
 }
@@ -408,13 +447,14 @@ const FETCH_CONCURRENCY = 6
 
 async function fetchPlanned(
   octokit: Octokit, owner: string, repo: string, files: { path: string; plan: { kind: string; manifest?: string } }[],
+  problems: string[],
 ): Promise<Detection[]> {
   const out: Detection[] = []
 
   for (let i = 0; i < files.length; i += FETCH_CONCURRENCY) {
     const batch = files.slice(i, i + FETCH_CONCURRENCY)
     const contents = await Promise.all(
-      batch.map(async (f) => ({ file: f, content: await getFileContent(octokit, owner, repo, f.path) })),
+      batch.map(async (f) => ({ file: f, content: await getFileContent(octokit, owner, repo, f.path, problems) })),
     )
     for (const { file, content } of contents) {
       if (!content) continue
@@ -451,6 +491,7 @@ const SOURCE_FILE_SAMPLE_LIMIT = 15
 
 async function fetchStudentSources(
   octokit: Octokit, owner: string, repo: string, filesTouched: string[],
+  problems: string[],
 ): Promise<{ path: string; content: string }[]> {
   const sample = filesTouched.filter((p) => SOURCE_FILE_PATTERN.test(p)).slice(0, SOURCE_FILE_SAMPLE_LIMIT)
   const out: { path: string; content: string }[] = []
@@ -458,7 +499,7 @@ async function fetchStudentSources(
   for (let i = 0; i < sample.length; i += FETCH_CONCURRENCY) {
     const contents = await Promise.all(
       sample.slice(i, i + FETCH_CONCURRENCY).map(async (path) => ({
-        path, content: await getFileContent(octokit, owner, repo, path),
+        path, content: await getFileContent(octokit, owner, repo, path, problems),
       })),
     )
     for (const c of contents) if (c.content) out.push({ path: c.path, content: c.content })
@@ -467,15 +508,21 @@ async function fetchStudentSources(
   return out
 }
 
-export async function getFileContent(octokit: Octokit, owner: string, repo: string, path: string): Promise<string | null> {
+export async function getFileContent(octokit: Octokit, owner: string, repo: string, path: string, problems: string[] = []): Promise<string | null> {
   try {
     const { data } = await octokit.rest.repos.getContent({ owner, repo, path })
     if ('content' in data && typeof data.content === 'string') {
       return Buffer.from(data.content, 'base64').toString('utf-8')
     }
     return null
-  } catch {
-    return null // 404 is the overwhelmingly common case — most repos don't have every manifest
+  } catch (err) {
+    // A 404 is the overwhelmingly common case and is not a failure — most
+    // repos do not have every manifest we look for. Anything else is, and
+    // is the difference between "no Dockerfile" and "GitHub stopped
+    // answering", which decides whether this scan may retract anything.
+    const status = (err as { status?: number }).status
+    if (status !== 404) problems.push(`${path}: ${(err as Error).message}`)
+    return null
   }
 }
 

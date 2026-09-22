@@ -30,6 +30,7 @@ import {
   EVIDENCE_THRESHOLD, evidenceCeiling, type SkillRelevance,
 } from '@/lib/skills/relevance'
 import { computeDifficultyLevel } from '@/lib/skills/levels'
+import { retractionsFor, mayRetract } from '@/lib/skills/retraction'
 
 export interface ProcessRepoResult {
   repoFullName: string
@@ -37,6 +38,8 @@ export interface ProcessRepoResult {
   skipReason?: string
   priorsWritten: string[]
   evidenceWritten: { skillId: string; difficultyCleared: number; changed: boolean }[]
+  /** Skills this repo used to support and no longer does. */
+  retracted: string[]
 }
 
 /**
@@ -72,7 +75,7 @@ export async function processRepo(
 ): Promise<ProcessRepoResult> {
   const scanResult = await scanRepo(installationId, githubLogin, repoFullName)
   if (scanResult.skip) {
-    return { repoFullName, skipped: true, skipReason: scanResult.skipReason, priorsWritten: [], evidenceWritten: [] }
+    return { repoFullName, skipped: true, skipReason: scanResult.skipReason, priorsWritten: [], evidenceWritten: [], retracted: [] }
   }
 
   // Detections carry where they came from; canonicalization only deals in
@@ -117,7 +120,7 @@ export async function processRepo(
   const resolvedSkillIds = Array.from(expandedIds)
 
   if (resolvedSkillIds.length === 0) {
-    return { repoFullName, skipped: false, priorsWritten: [], evidenceWritten: [] }
+    return { repoFullName, skipped: false, priorsWritten: [], evidenceWritten: [], retracted: [] }
   }
 
   // Priors: unconditional, one per resolved skill this scan touched.
@@ -125,7 +128,7 @@ export async function processRepo(
 
   const willBeEvidence = scanResult.studentCommitCount > 0
   if (!willBeEvidence) {
-    return { repoFullName, skipped: false, priorsWritten: resolvedSkillIds, evidenceWritten: [] }
+    return { repoFullName, skipped: false, priorsWritten: resolvedSkillIds, evidenceWritten: [], retracted: [] }
   }
 
   const engagementId = options.engagementId ?? null
@@ -194,6 +197,10 @@ export async function processRepo(
   await recordProvenance(supabase, artifactId, provenance, relevanceBySkill)
 
   const evidenceWritten: ProcessRepoResult['evidenceWritten'] = []
+  // What this scan is prepared to stand behind for this repository. Anything
+  // the record claims on this repo's strength that is not in here is no
+  // longer supported — see the retraction block below.
+  const supported = new Set<string>()
   for (const skillId of resolvedSkillIds) {
     const relevance = relevanceBySkill.get(skillId)?.relevance ?? 0.5
 
@@ -215,9 +222,64 @@ export async function processRepo(
       verificationMethod, engagementId, workspaceId,
     })
     evidenceWritten.push({ skillId, difficultyCleared, changed })
+    supported.add(skillId)
   }
 
-  return { repoFullName, skipped: false, priorsWritten: resolvedSkillIds, evidenceWritten }
+  // ── Taking things off ──────────────────────────────────────────────────
+  // This loop only ever added. A skill that fell below the bar was skipped
+  // and the row already on the record stayed there, so every mistake the
+  // scanner ever made was permanent and fixing the rule helped nobody
+  // already affected.
+  //
+  // Guarded by mayRetract, which is the part that matters: a scan that hit a
+  // rate limit produces exactly what a scan of an empty repo produces, and
+  // without the guard a bad afternoon at GitHub would empty people's
+  // records. Scoped to this artifact, so a scan of a toy repo can never
+  // strip a skill proved by a real one.
+  const retracted: string[] = []
+  if (mayRetract({
+    scanned: true,
+    partial: scanResult.partial,
+    studentCommitCount: scanResult.studentCommitCount,
+    resolvedCount: resolvedSkillIds.length,
+  })) {
+    const { data: current, error: readErr } = await supabase
+      .from('current_skill_evidence')
+      .select('id, skill_id')
+      .eq('student_id', studentId)
+      .eq('artifact_id', artifactId)
+
+    // Same reasoning as the dedup read in writeOrCorrectEvidence: a failed
+    // read must not be treated as "there is nothing on the record".
+    if (readErr) {
+      console.error(`[evidence] could not read current claims for ${repoFullName}:`, readErr.message)
+    } else {
+      const toRetract = retractionsFor(
+        (current ?? []).map((r) => ({ evidenceId: r.id as string, skillId: r.skill_id as string })),
+        { supported },
+      )
+      for (const r of toRetract) {
+        const { error } = await supabase
+          .from('skill_evidence')
+          .update({ retracted_at: new Date().toISOString() })
+          .eq('id', r.evidenceId)
+        // Retraction is append-safe and idempotent, so one failure is worth
+        // logging and carrying past rather than aborting the whole scan.
+        if (error) {
+          console.error(`[evidence] retraction failed for ${r.skillId}:`, error.message)
+          continue
+        }
+        retracted.push(r.skillId)
+      }
+    }
+  } else if (scanResult.partial) {
+    console.warn(
+      `[evidence] ${repoFullName} scanned only partially, leaving the record alone:`,
+      scanResult.problems.slice(0, 5).join('; '),
+    )
+  }
+
+  return { repoFullName, skipped: false, priorsWritten: resolvedSkillIds, evidenceWritten, retracted }
 }
 
 /**
