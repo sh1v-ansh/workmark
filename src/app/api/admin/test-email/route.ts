@@ -60,6 +60,10 @@ export async function POST() {
     link: { url: `${site}/admin`, label: 'Back to the admin overview' },
     footerLink: { url: `${site}/account/settings#email`, label: 'Manage your email settings' },
     postalAddress: null,
+    // The whole point of a test email is that it is the real thing, so this
+    // carries the logo too — and a broken one here is exactly the failure
+    // worth catching before a student sees it.
+    logoUrl: `${site}/workmark-logo-transparent.png`,
   })
 
   try {

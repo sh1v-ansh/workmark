@@ -148,7 +148,20 @@ function render(
     // putting one on a "your application was accepted" message would be
     // clutter on the one kind of email that is exempt.
     postalAddress: EMAIL_KINDS[kind].essential ? null : postalAddress(),
+    logoUrl: logoUrl(),
   })
+}
+
+/**
+ * Absolute URL of the logo, for the one image in the template.
+ *
+ * Absolute because a mail client has no origin to resolve a relative path
+ * against — "/workmark-logo-transparent.png" is a broken image in every
+ * inbox. Built from the same site URL as every link in the message, so a
+ * preview deployment mails its own logo rather than production's.
+ */
+function logoUrl(): string {
+  return `${siteUrl()}/workmark-logo-transparent.png`
 }
 
 export async function sendEmail(args: SendArgs): Promise<boolean> {

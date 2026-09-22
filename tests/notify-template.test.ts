@@ -70,11 +70,49 @@ describe('renderEmail', () => {
   // designed email is the word in the logo, so every message in the list
   // reads "Workmark Workmark Workmark".
   it('opens with a preheader taken from the body, not from the logo', () => {
-    const { html } = render()
-    expect(html.indexOf('First line.')).toBeLessThan(html.indexOf('Workmark</td>'))
+    const { html } = render({ logoUrl: 'https://www.workmark.org/logo.png' })
+    // The hidden preheader carries the body, and it has to come before the
+    // sheet — anything earlier in the document is what the inbox previews.
+    expect(html).toMatch(/mso-hide:all[^>]*>First line\./)
+    expect(html.indexOf('First line.')).toBeLessThan(html.indexOf('alt="Workmark"'))
   })
 
   it('renders no call to action when there is no link', () => {
     expect(render({ link: null }).html).not.toMatch(/border-radius:9px/)
+  })
+})
+
+describe('the logo', () => {
+  const LOGO = 'https://www.workmark.org/workmark-logo-transparent.png'
+
+  it('is the only thing loaded from anywhere', () => {
+    const { html } = render({ logoUrl: LOGO })
+    expect(html.match(/<img/g)?.length).toBe(1)
+    expect(html).toMatch(/src="https:\/\/www\.workmark\.org\/workmark-logo/)
+  })
+
+  // Outlook on Windows blocks remote images by default, and so does Gmail
+  // for a sender it has not seen before — which is everybody on a young
+  // domain. The alt text is what they actually see, so it has to be the
+  // wordmark rather than nothing.
+  it('degrades to the word rather than to a broken-image icon', () => {
+    const { html } = render({ logoUrl: LOGO })
+    expect(html).toMatch(/alt="Workmark"/)
+    // Styled, so blocked alt text renders in the right face and weight.
+    expect(html).toMatch(/alt="Workmark"[^>]*font-weight:700/)
+  })
+
+  it('falls back to text when there is no logo to point at', () => {
+    const { html } = render({ logoUrl: null })
+    expect(html).not.toMatch(/<img/)
+    expect(html).toMatch(/>Workmark</)
+  })
+
+  // A relative path has no origin to resolve against in a mail client, so it
+  // is a broken image in every inbox.
+  it('is given dimensions so the layout does not jump while it loads', () => {
+    const { html } = render({ logoUrl: LOGO })
+    expect(html).toMatch(/width="132"/)
+    expect(html).toMatch(/height="27"/)
   })
 })

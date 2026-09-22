@@ -1,11 +1,14 @@
 // What a Workmark email looks like.
 //
 // ── The constraint that shapes all of this ────────────────────────────────
-// No images, no web fonts, no external stylesheet, no tracking pixel. Not an
-// aesthetic choice: a young sending domain has no reputation, and remote
-// content is the single biggest thing that gets a message filtered or
-// clipped. Everything here is inline styles on tables, which is the one
-// layout method every mail client from Outlook 2007 onwards agrees about.
+// No web fonts, no external stylesheet, no tracking pixel, and exactly one
+// image: the logo, from our own domain. Not an aesthetic choice — a young
+// sending domain has no reputation, and remote content is the single biggest
+// thing that gets a message filtered or clipped. The risk is tracking pixels
+// and image-heavy layouts, which is why there is one image and why it is
+// allowed to fail; see logo(). Everything else is inline styles on tables,
+// the one layout method every mail client from Outlook 2007 onwards agrees
+// about.
 //
 // So the design has to be carried by type, spacing, one rule and one colour.
 // That happens to be what the app looks like anyway.
@@ -49,6 +52,12 @@ export interface TemplateArgs {
    * rather than read here so the caller is the one that has to have decided.
    */
   postalAddress?: string | null
+  /**
+   * Absolute URL of the logo. Must be absolute — a mail client has no origin
+   * to resolve a relative path against, so "/workmark-logo.png" renders as a
+   * broken image in every inbox. Null falls back to the wordmark as text.
+   */
+  logoUrl?: string | null
 }
 
 export function escapeHtml(s: string): string {
@@ -75,21 +84,37 @@ function preheader(body: string): string {
 }
 
 /**
- * The mark, drawn rather than fetched.
+ * The logo.
  *
- * The same violet square with a W in it that the app puts beside anything
- * Workmark says. As a background colour on a table cell it survives Outlook;
- * as an <img> it would be blocked by default in most clients, which is
- * exactly the wrong first impression.
+ * ── Why this is the one image in the file ─────────────────────────────────
+ * The rest of this template loads nothing from anywhere, and that rule is
+ * about deliverability. But the risk it guards against is tracking pixels
+ * and image-heavy layouts, not a single logo served from the sender's own
+ * domain — that is what every legitimate sender does, and going without one
+ * made Workmark's mail look like a plain-text alert rather than like the
+ * product.
+ *
+ * ── Why the alt text is styled ────────────────────────────────────────────
+ * Outlook on Windows blocks remote images by default, and so does Gmail for
+ * a sender it has not seen before — which is every recipient, on a young
+ * domain. So the image must degrade to something deliberate rather than to a
+ * broken-image icon. Styling the alt text means a blocked image renders as
+ * the word "Workmark" in the right face, size, weight and colour: the design
+ * loses its logo and keeps its header.
+ *
+ * `display:block` and `border:0` are for Outlook, which otherwise leaves a
+ * gap under the image and a blue link border around it.
  */
-function wordmark(): string {
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>`
-    + `<td width="22" height="22" align="center" valign="middle" bgcolor="${ACCENT}"`
-    + ` style="width:22px;height:22px;border-radius:6px;background:${ACCENT};color:${PAPER};`
-    + `font-family:${FONT};font-size:12px;font-weight:700;line-height:22px;text-align:center">W</td>`
-    + `<td style="padding-left:9px;font-family:${FONT};font-size:15px;font-weight:600;`
-    + `letter-spacing:-0.01em;color:${INK}">Workmark</td>`
-    + `</tr></table>`
+function logo(url: string | null): string {
+  if (!url) {
+    return `<div style="font-family:${FONT};font-size:17px;font-weight:700;`
+      + `letter-spacing:-0.01em;color:${INK}">Workmark</div>`
+  }
+  return `<img src="${escapeHtml(url)}" width="132" height="27" alt="Workmark"`
+    + ` style="display:block;border:0;outline:none;text-decoration:none;`
+    + `width:132px;height:27px;`
+    // Everything from here is only ever seen when the image does not load.
+    + `font-family:${FONT};font-size:17px;font-weight:700;letter-spacing:-0.01em;color:${INK}">`
 }
 
 /**
@@ -115,7 +140,7 @@ function button(url: string, label: string): string {
  * part is scored as spam by most filters, and it is what a screen reader and
  * a watch notification actually use.
  */
-export function renderEmail({ body, link, footerLink, postalAddress }: TemplateArgs): Rendered {
+export function renderEmail({ body, link, footerLink, postalAddress, logoUrl }: TemplateArgs): Rendered {
   const paragraphs = body
     .split('\n\n')
     .filter((p) => p.trim() !== '')
@@ -151,7 +176,7 @@ ${preheader(body)}
   <!-- The sheet. One border, no shadow: a shadow is a box-shadow and Outlook
        does not have one, so the edge has to be the border. -->
   <tr><td bgcolor="${PAPER}" style="background:${PAPER};border:1px solid ${EDGE};border-radius:14px;padding:26px 30px 30px">
-    ${wordmark()}
+    ${logo(logoUrl ?? null)}
     <div style="height:1px;background:${HAIRLINE};margin:20px 0 22px;font-size:0;line-height:0">&nbsp;</div>
     ${paragraphs}
     ${cta}

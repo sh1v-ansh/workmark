@@ -24,15 +24,24 @@ select
   a.raw_string,
   a.skill_id,
   s.canonical_name,
-  a.created_at,
+  a.resolved_at,
+  -- A heuristic, not a fact: skill_aliases does not record which pass wrote
+  -- a row. But the two passes that compare strings — the exact-match step
+  -- and the seed map — can only produce a raw that matches either the
+  -- canonical name or the id with its punctuation stripped (`r-lang` is
+  -- normalized to `rlang` by resolveExact). Anything else against a
+  -- one- or two-character name came from similarity, which is the pass that
+  -- cannot be trusted here.
   case
-    when lower(a.raw_string) = lower(s.canonical_name) then 'exact — keep'
-    else 'SUSPECT — the embedding guessed this'
+    when lower(a.raw_string) = lower(s.canonical_name)
+      or lower(a.raw_string) = regexp_replace(lower(a.skill_id), '[^a-z0-9]', '', 'g')
+      then 'exact — keep'
+    else 'SUSPECT — similarity guessed this'
   end as verdict
 from skill_aliases a
 join skills s on s.id = a.skill_id
 where length(trim(s.canonical_name)) <= 2
-order by verdict desc, a.created_at desc;
+order by verdict desc, a.resolved_at desc;
 
 -- ─── 2. How many students each wrong alias has already affected ──────────────
 -- Run this before deleting anything: it says whether a bad alias put a skill
