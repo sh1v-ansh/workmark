@@ -4,6 +4,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { consentFieldsForSignup } from '@/lib/notify/marketing'
 import { record } from '@/lib/analytics/record'
+import { cleanIntents } from '@/lib/profile/intents'
 
 /**
  * The domains that count as proof of being at a university.
@@ -228,4 +229,80 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ ok: true, role, verificationPending: role === 'faculty' })
+}
+
+/**
+ * PATCH /api/onboarding — the screens after the account exists.
+ *
+ * ── Why the route had to split ────────────────────────────────────────────
+ * POST was everything or nothing: one submit carrying eighteen fields, and a
+ * student who closed the tab halfway had no account, no row and nothing to
+ * come back to. They started again from the first field.
+ *
+ * So the account is created by POST after the first screen — the one
+ * carrying the identity and the terms, which are the two things that have to
+ * be true before an account may exist at all — and everything after it lands
+ * here.
+ *
+ * ── What deliberately cannot be changed here ──────────────────────────────
+ * The role. POST refuses a second run precisely because self-declaring
+ * yourself faculty is only defensible as a signup-time decision; letting
+ * PATCH touch `roles` would hand that back. Same for the terms and age
+ * timestamps, which are a record of a moment rather than settings.
+ *
+ * This route writes profile fields and nothing else.
+ */
+export async function PATCH(request: Request) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  const limited = await enforce('profile', user.id)
+  if (limited) return limited
+
+  let body: { intents?: unknown; step?: unknown }
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid body.' }, { status: 400 })
+  }
+
+  const admin = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+
+  // No account means POST has not run, so there is nothing to patch. Said
+  // plainly rather than silently doing nothing, because a client that gets
+  // "ok" for a write that did not happen is the hardest kind of bug to see.
+  const { data: account } = await admin
+    .from('accounts')
+    .select('id')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!account) {
+    return NextResponse.json({ error: 'Finish the first step before this one.' }, { status: 409 })
+  }
+
+  // Where they got to, so an interrupted signup resumes rather than
+  // restarting. Written even when nothing else in the body is valid — the
+  // step is the part that makes the next visit cheap.
+  if (typeof body.step === 'string' && body.step.length <= 40) {
+    await admin
+      .from('accounts')
+      .update({ onboarding_step: body.step === 'done' ? null : body.step })
+      .eq('id', user.id)
+  }
+
+  if (body.intents !== undefined) {
+    const intents = cleanIntents(body.intents)
+    const { error } = await admin.from('students').update({ intents }).eq('id', user.id)
+    if (error) {
+      console.error('[api/onboarding] intents write failed:', error)
+      return NextResponse.json({ error: 'Could not save that.' }, { status: 500 })
+    }
+    void record(admin, 'onboarding_intents_chosen', user.id, { count: intents.length })
+  }
+
+  return NextResponse.json({ ok: true })
 }

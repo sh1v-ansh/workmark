@@ -106,6 +106,12 @@ create table students (
   is_international          boolean default false not null,
   visa_type                 text,
   skills                    text[],  -- self-reported, display only — never feeds tier_weight
+  -- What they said they came for: build_record, join_project, post_project,
+  -- guided_project. Orders their dashboard, and is the only honest read on
+  -- whether students want to work alone or with other people — the
+  -- alternative was inferring it from behaviour, which measures what the
+  -- product made easy rather than what anybody wanted. See v05_0051.
+  intents                   text[] not null default '{}',
   github_url                text,
   github_username           text,
   linkedin_url               text,
@@ -1504,6 +1510,12 @@ create table accounts (
   marketing_consent_text   text,
   marketing_consent_version text,
   marketing_consent_source text,
+  -- Which onboarding screen they got to, null once through. Onboarding used
+  -- to be one submit of eighteen fields, so somebody who closed the tab
+  -- halfway had no account and nothing to come back to — the account is
+  -- created after the first screen now, and this is what makes the rest
+  -- resumable. See v05_0051.
+  onboarding_step     text,
   faculty_requested_at timestamptz,
   faculty_verified_at timestamptz,
   faculty_verified_by uuid references auth.users(id),

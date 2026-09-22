@@ -32,6 +32,7 @@ export const EVENTS = {
   // terms" are different problems with different fixes.
   onboarding_started: 'Reached the onboarding form',
   onboarding_role_chosen: 'Picked student or faculty — props.role',
+  onboarding_intents_chosen: 'Said what they came for — props.count',
   onboarding_completed: 'Finished the profile',
 
   // ── The thing that makes the product work ───────────────────────────────
