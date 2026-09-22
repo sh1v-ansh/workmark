@@ -43,6 +43,21 @@ export interface ProcessRepoResult {
   evidenceWritten: { skillId: string; difficultyCleared: number; changed: boolean }[]
   /** Skills this repo used to support and no longer does. */
   retracted: string[]
+  /**
+   * What the scan actually saw, for the line the student reads.
+   *
+   * These were all computed and discarded, so "the rescan changed nothing"
+   * was a sentence nobody could check — not the student, and not us. Every
+   * one of them distinguishes a real outcome from a broken scan.
+   */
+  diagnostics?: {
+    /** Commits attributed to this student. Zero is the interesting case. */
+    commits: number
+    /** True when something failed that the scan carried on past. */
+    partial: boolean
+    /** Whether retraction was allowed to run at all. */
+    couldRetract: boolean
+  }
 }
 
 /**
@@ -342,7 +357,23 @@ export async function processRepo(
     )
   }
 
-  return { repoFullName, skipped: false, priorsWritten: resolvedSkillIds, evidenceWritten, retracted }
+  return {
+    repoFullName,
+    skipped: false,
+    priorsWritten: resolvedSkillIds,
+    evidenceWritten,
+    retracted,
+    diagnostics: {
+      commits: scanResult.studentCommitCount,
+      partial: scanResult.partial,
+      couldRetract: mayRetract({
+        scanned: true,
+        partial: scanResult.partial,
+        studentCommitCount: scanResult.studentCommitCount,
+        resolvedCount: resolvedSkillIds.length,
+      }),
+    },
+  }
 }
 
 /**
