@@ -84,17 +84,19 @@ export default function NextStepCard({
   const copy = COPY[step]
 
   return (
-    <Card focal style={{ marginBottom: 18 }}>
-      <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.accent, marginBottom: 7 }}>
-        {copy.eyebrow}
-      </p>
-      <p style={{ fontFamily: F.display, fontSize: 19, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, lineHeight: 1.3, marginBottom: 7 }}>
-        {copy.headline}
-      </p>
-      <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 17, maxWidth: '58ch' }}>
-        {copy.body}
-      </p>
-      <Button href={copy.href} variant="accent">{copy.cta}</Button>
+    // A slim row under the greeting, not a banner over it: it is a pointer
+    // to the next thing, and the page's own content should still lead.
+    <Card hoverable={false} padding="12px 16px" style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <p style={{ fontSize: T.bodySm, color: C.textSub, minWidth: 0 }}>
+          <span style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.accent, marginRight: 8 }}>
+            {copy.eyebrow}
+          </span>
+          <strong style={{ fontWeight: 600, color: C.text }}>{copy.headline}</strong>
+          <span style={{ color: C.textMuted }}> · {copy.body}</span>
+        </p>
+        <Button href={copy.href} variant="accent" size="sm">{copy.cta}</Button>
+      </div>
     </Card>
   )
 }

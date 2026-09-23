@@ -32,6 +32,8 @@ export default function FinishProfile() {
   const [hours, setHours] = useState('')
   const [linkedin, setLinkedin] = useState('')
   const [busy, setBusy] = useState(false)
+  // A one-line notice until asked for; the four fields only open on click.
+  const [open, setOpen] = useState(false)
 
   async function save() {
     setBusy(true)
@@ -61,14 +63,24 @@ export default function FinishProfile() {
 
   const label: React.CSSProperties = { display: 'block', fontSize: 13, fontWeight: 600, color: C.textSub, marginBottom: 6 }
 
+  if (!open) {
+    return (
+      <Card hoverable={false} padding="12px 16px" style={{ marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <p style={{ fontSize: T.bodySm, color: C.textSub }}>
+            <strong style={{ fontWeight: 600, color: C.text }}>Finish your profile</strong>
+            <span style={{ color: C.textMuted }}> · major, availability and LinkedIn help posters find you</span>
+          </p>
+          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>Add details</Button>
+        </div>
+      </Card>
+    )
+  }
+
   return (
-    <Card style={{ marginBottom: 18 }}>
-      <p style={{ fontSize: T.h3, fontWeight: 600, color: C.text, marginBottom: 4 }}>
-        A few details for people reading your record
-      </p>
-      <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 16, maxWidth: '60ch' }}>
-        All optional. Posters filter on these when they are looking for help, so filling them in
-        is how your record reaches the people it should.
+    <Card hoverable={false} padding={18} style={{ marginBottom: 12 }}>
+      <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text, marginBottom: 12 }}>
+        Finish your profile <span style={{ fontWeight: 400, color: C.textMuted }}>· all optional</span>
       </p>
 
       <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>

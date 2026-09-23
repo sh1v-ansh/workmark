@@ -19,7 +19,6 @@ import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
 import type { Intent } from '@/lib/profile/intents'
 import NextStepCard from './NextStep'
-import { nextStepFor } from '@/lib/profile/intents'
 import GithubConnectNotice from '@/components/GithubConnectNotice'
 import FinishProfile from './FinishProfile'
 
@@ -288,12 +287,6 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
   const firstName = student.fullName?.trim().split(/\s+/)[0]
 
-  // One main card at a time. The next-step card only appears when nothing
-  // else needs the student, and it replaces the project nudge rather than
-  // sitting beside it — both used to show, each with its own button.
-  const showNextStep = todos.length === 0 &&
-    nextStepFor({ intents, githubConnected, repoCount, evidenceCount: skills.length }) !== 'nothing'
-  const showNudge = !showNextStep
 
   // "Not sure what to build next?" asked the reader a question and described
   // nothing. It is a project recommender, so it says so — and when we know
@@ -307,6 +300,9 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           {topGap
             ? `${topGap.listingCount} open project${topGap.listingCount === 1 ? '' : 's'} want ${topGap.skillName}. Your record doesn't have it.`
             : 'We can tell you what to build next'}
+        </p>
+        <p style={{ fontSize: 13.5, color: '#C6C2E4', lineHeight: 1.55 }}>
+          We&apos;ll write you a project that closes your biggest gap.
         </p>
       </div>
       <div style={{ position: 'relative', marginTop: 17 }}>
@@ -351,14 +347,16 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           </span>
         </div>
 
-        {showNextStep && (
-          <NextStepCard
-            intents={intents}
-            githubConnected={githubConnected}
-            repoCount={repoCount}
-            evidenceCount={skills.length}
-          />
-        )}
+        {/* Under the greeting rather than above it, and one line each: they
+            point at the next thing without pushing the page down. */}
+        <NextStepCard
+          intents={intents}
+          githubConnected={githubConnected}
+          repoCount={repoCount}
+          evidenceCount={skills.length}
+        />
+        {/* After the first record lands, not before — see FinishProfile. */}
+        {skills.length > 0 && !student.major && <FinishProfile />}
 
         {/* Focal band. The lead item is roughly four times the area of a
             supporting tile, so the eye lands rather than searches. When the
@@ -410,7 +408,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
             {/* With no rail items the third column would sit empty, so the
                 page's one accent panel moves up to fill it. */}
-            {rail.length === 0 && showNudge && nudge}
+            {rail.length === 0 && nudge}
           </div>
         )}
 
@@ -429,7 +427,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         )}
 
         {/* Second band — the record at two thirds against the accent panel */}
-        <div className={(lead && rail.length === 0) || !showNudge ? undefined : 'nb-g2'} style={{ marginBottom: 18 }}>
+        <div className={lead && rail.length === 0 ? undefined : 'nb-g2'} style={{ marginBottom: 18 }}>
           <Card ruled hoverable={false} padding={23}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 19, marginBottom: 18, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 35, flexWrap: 'wrap' }}>
@@ -497,12 +495,9 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
             )}
           </Card>
 
-          {!(lead && rail.length === 0) && showNudge && nudge}
+          {!(lead && rail.length === 0) && nudge}
         </div>
 
-        {/* After the first record lands, not before — see FinishProfile.
-            Below the record, so it never competes with the day's to-dos. */}
-        {skills.length > 0 && !student.major && <FinishProfile />}
 
         {/* Closing strip — everything that isn't the reader's move */}
         {waiting.length > 0 && (
