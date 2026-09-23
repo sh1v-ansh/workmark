@@ -20,20 +20,20 @@
 
 export const INTENTS = {
   build_record: {
-    label: 'Turn code I have already written into a record',
-    detail: 'Workmark reads the repositories you choose and works out what you can actually build.',
+    label: 'Build a work portfolio I can show employers',
+    detail: 'We read the code you choose and turn it into a verified profile of your skills.',
   },
   join_project: {
-    label: 'Work on a project with other students',
-    detail: 'Apply to projects other students and faculty have posted, with your record attached.',
+    label: 'Join a project with other students',
+    detail: 'Apply to projects posted by students and faculty.',
   },
   post_project: {
-    label: 'Post my own project and find people to build it with',
-    detail: 'Describe what you are making and say which skills you need. Applicants arrive with proof.',
+    label: 'Find people for my own project',
+    detail: 'Post your idea and the skills you need. We show you who can do it.',
   },
   guided_project: {
-    label: 'Be given a project to build',
-    detail: 'If you have not got much to show yet, Workmark writes you a project and takes you through it a task at a time.',
+    label: 'Get a guided project',
+    detail: 'New to building? We give you a project at your level and help you through it step by step.',
   },
 } as const
 

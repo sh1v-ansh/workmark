@@ -199,8 +199,9 @@ export default function SettingsClient({
                   </Field>
                 </div>
 
-                {/* Asked because paid roles carry work authorization rules
-                    (CPT) for students on a visa. Never shown to anybody. */}
+                {/* Decides whether paid roles are shown (CPT). Deliberately
+                    unexplained here: saying what it unlocks invites a wrong
+                    answer. It will matter to employers later. */}
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, cursor: 'pointer', fontSize: 14, color: C.textSub, lineHeight: 1.5 }}>
                   <input
                     type="checkbox"
@@ -209,12 +210,7 @@ export default function SettingsClient({
                     onChange={(e) => set('isInternational', e.target.checked)}
                     style={{ marginTop: 3 }}
                   />
-                  <span>
-                    I&apos;m an international student on a student visa (for example F-1 or J-1)
-                    <span style={{ display: 'block', fontSize: 13, color: C.textMuted }}>
-                      Paid roles are hidden while this is on, because of work authorization rules. Private to you.
-                    </span>
-                  </span>
+                  <span>I&apos;m an international student on a student visa (for example F-1 or J-1)</span>
                 </label>
 
                 {/* Beside the last field, not floating at the bottom of the

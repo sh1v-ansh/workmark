@@ -42,8 +42,7 @@ export default function IntentStep({
   return (
     <div>
       <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 20 }}>
-        Pick as many as you like. This decides what your dashboard leads with, and you can
-        change your mind at any point.
+        Pick as many as you like. You can change this later.
       </p>
 
       <div style={{ display: 'grid', gap: 9, marginBottom: 22 }}>
