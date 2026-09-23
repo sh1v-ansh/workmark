@@ -2,7 +2,6 @@
 
 import Button from '@/components/ui/Button'
 import { C } from '@/lib/theme/dark-tokens'
-import { track } from '@/lib/analytics/track'
 
 /**
  * The last screen: connect the thing the record is read from.
@@ -45,9 +44,9 @@ export default function GithubStep({ onSkip: _onSkip, busy: _busy }: { onSkip: (
         variant="accent"
         fullWidth
       >
-        <span onClick={() => track('github_connect_started', { from: 'onboarding' })}>
-          Connect GitHub
-        </span>
+        {/* Counted on the server when the install route is hit, which
+            covers every Connect button, not just this one. */}
+        Connect GitHub
       </Button>
 
       <p style={{ fontSize: 13, color: C.textFaint, textAlign: 'center', marginTop: 12 }}>

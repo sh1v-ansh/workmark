@@ -13,7 +13,7 @@ import { UNIVERSITIES } from '@/lib/data/universities'
 import { MAJORS } from '@/lib/data/majors'
 import { CONSENT_TEXT } from '@/lib/notify/marketing'
 import { universityFromEmail } from '@/lib/profile/university-from-email'
-import { track } from '@/lib/analytics/track'
+import { track, currentSessionId } from '@/lib/analytics/track'
 import IntentStep from './IntentStep'
 import GithubStep from './GithubStep'
 import type { Intent } from '@/lib/profile/intents'
@@ -427,6 +427,7 @@ export default function OnboardingPage() {
           heardAbout: heard_about ?? undefined,
           heardAboutDetail: heard_about_detail ?? undefined,
           marketingOptIn: marketing_opt_in === true,
+          analyticsSessionId: currentSessionId(),
         }),
       })
       const json = await res.json()

@@ -28,6 +28,12 @@ const SESSION_KEY = 'wm-session'
  * and an analytics helper that breaks a page in Safari private browsing is
  * precisely the thing rule one is about.
  */
+/** The tab's analytics session id, so the server can stitch pre-account
+ *  events to the student once their profile exists. */
+export function currentSessionId(): string | null {
+  return sessionId()
+}
+
 function sessionId(): string | null {
   try {
     const existing = sessionStorage.getItem(SESSION_KEY)

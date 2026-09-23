@@ -52,8 +52,20 @@ export async function POST(request: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     )
 
+    // events.student_id points at students, and somebody who has signed in
+    // but not finished onboarding step 1 has no row there yet. Inserting
+    // their id anyway was rejected by the foreign key and the event lost,
+    // which blanked out "Verified email and signed in" and the early
+    // onboarding steps. They are kept against the session instead, and
+    // attached to the student when the profile is created (api/onboarding).
+    let studentId: string | null = null
+    if (user) {
+      const { data: profile } = await admin.from('students').select('id').eq('id', user.id).maybeSingle()
+      studentId = profile ? user.id : null
+    }
+
     const { error } = await admin.from('events').insert({
-      student_id: user?.id ?? null,
+      student_id: studentId,
       session_id: typeof body.sessionId === 'string' ? body.sessionId.slice(0, 64) : null,
       name: body.name,
       props: cleanProps(body.props),

@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     )
   }
 
-  let body: { role?: string; profile?: Record<string, unknown>; heardAbout?: unknown; heardAboutDetail?: unknown; marketingOptIn?: unknown }
+  let body: { role?: string; profile?: Record<string, unknown>; heardAbout?: unknown; heardAboutDetail?: unknown; marketingOptIn?: unknown; analyticsSessionId?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -240,6 +240,20 @@ export async function POST(request: Request) {
         { status: 500 },
       )
     }
+  }
+
+  // Stitch this tab's earlier events (opened signup, signed in, onboarding
+  // started) to the student, so the funnel follows one person rather than a
+  // session that becomes an account. Only rows with no student yet, and
+  // only this session: a session id is not secret, but claiming somebody
+  // else's anonymous page views would gain nothing.
+  if (role === 'student' && typeof body.analyticsSessionId === 'string' && body.analyticsSessionId) {
+    const { error: stitchErr } = await admin
+      .from('events')
+      .update({ student_id: user.id })
+      .eq('session_id', body.analyticsSessionId.slice(0, 64))
+      .is('student_id', null)
+    if (stitchErr) console.error('[api/onboarding] event stitch failed:', stitchErr.message)
   }
 
   return NextResponse.json({ ok: true, role, verificationPending: role === 'faculty' })
