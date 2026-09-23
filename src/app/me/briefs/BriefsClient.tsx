@@ -31,6 +31,8 @@ export interface BriefRow {
   repoFullName: string | null
   startedAt: string | null
   issuedAt: string
+  /** Set once this brief has been turned into a project workspace. */
+  workspaceId: string | null
   completedAt: string | null
 }
 
@@ -149,6 +151,39 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
       toast(err instanceof Error ? err.message : 'Could not generate.', 'error')
     } finally {
       setGenerating(false)
+    }
+  }
+
+  /**
+   * Turn a brief into a project.
+   *
+   * The gap this closes: /api/workspaces has accepted a briefId since the
+   * workspace feature shipped and nothing ever sent one, so a generated brief
+   * and a project workspace were two features that could not reach each
+   * other. A student could only get the higher-trust tier — criteria written
+   * before the work, checked afterwards — by typing the project in by hand
+   * and never connecting it to the brief that suggested it.
+   */
+  async function startAsProject(brief: BriefRow) {
+    setBusyId(brief.id)
+    try {
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: brief.title,
+          // The brief itself becomes the project's description, so the
+          // planner has the scope it was written against rather than a name.
+          summary: brief.body.slice(0, 2000),
+          briefId: brief.id,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Could not start that project.')
+      router.push(`/workspaces/${json.id}`)
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not start that project.', 'error')
+      setBusyId(null)
     }
   }
 
@@ -279,9 +314,27 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
             "I built this" was being offered on ideas suggested seconds
             earlier, which is the wrong verb at the wrong time. */}
         <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
-          {!b.repoFullName && (
-            <Button variant="ink" size="sm" onClick={() => { setStartingBrief(b); setRepoChoice('') }} disabled={busyId === b.id}>
-              {b.completedAt ? 'Link the repo' : 'Start this project'}
+          {/* The full path, and the primary one. A project gets a board, a
+              plan, verification against criteria agreed in advance, and the
+              tier that comes with that. Linking a repo below is the lighter
+              route: it gets the code read, and nothing set the bar first. */}
+          {b.workspaceId ? (
+            <Button variant="ink" size="sm" href={`/workspaces/${b.workspaceId}`}>
+              Open the project
+            </Button>
+          ) : (
+            <Button
+              variant="ink"
+              size="sm"
+              onClick={() => startAsProject(b)}
+              busyLabel={busyId === b.id ? 'Starting…' : null}
+            >
+              Start as a project
+            </Button>
+          )}
+          {!b.repoFullName && !b.workspaceId && (
+            <Button variant="outline" size="sm" onClick={() => { setStartingBrief(b); setRepoChoice('') }} disabled={busyId === b.id}>
+              {b.completedAt ? 'Link the repo' : 'Just link a repo'}
             </Button>
           )}
           {b.repoFullName && (
@@ -342,7 +395,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
                     <button
                       key={s.id} type="button"
                       onClick={() => { setSkillId(s.id); setSkillName(s.canonicalName); setQuery('') }}
-                      style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9.5px 14px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 14, cursor: 'pointer', textAlign: 'left', font: 'inherit' }}
+                      style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9.5px 14px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
                     >
                       {s.canonicalName}
                       {s.alreadyEvidenced && <span style={{ fontSize: 12, color: C.textGhost }}>already evidenced</span>}
@@ -365,7 +418,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
                       key={lvl} type="button" onClick={() => setSkillLevel(lvl)}
                       aria-pressed={active}
                       style={{
-                        textAlign: 'left', padding: '9px 11px', borderRadius: R.md, cursor: 'pointer', font: 'inherit',
+                        textAlign: 'left', padding: '9px 11px', borderRadius: R.md, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit',
                         background: active ? C.accentHover : C.surface,
                         border: `1px solid ${active ? C.accentBorder : C.border}`,
                       }}

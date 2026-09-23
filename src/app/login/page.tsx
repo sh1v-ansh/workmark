@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button'
 import { C, F, R, E } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 import { Icon } from '@/components/Icon'
+import { track } from '@/lib/analytics/track'
 
 type Mode = 'signin' | 'signup'
 // Student-only in MVP: company/faculty accounts are deferred to Tier 1+
@@ -34,6 +35,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [pendingConfirmEmail, setPendingConfirmEmail] = useState<string | null>(null)
   const [resending, setResending] = useState(false)
+  const [resetting, setResetting] = useState(false)
   const [resendCooldown, setResendCooldown] = useState(0)
   // The honeypot. Never shown, never focusable, never filled by a person —
   // so anything in it came from something that parsed the form and completed
@@ -45,6 +47,41 @@ export default function LoginPage() {
     const t = setTimeout(() => setResendCooldown((s) => s - 1), 1000)
     return () => clearTimeout(t)
   }, [resendCooldown])
+
+  /**
+   * Somebody is actually looking at the signup form.
+   *
+   * This is the denominator the funnel was missing. A signup that is started
+   * and abandoned leaves no row in any table, so "how many invited people
+   * never finish" was unknowable rather than merely unknown — and with a
+   * waitlist it is the number that matters most.
+   *
+   * Keyed on the mode rather than on mount, because the page opens on the
+   * sign-in tab: firing this for every visitor would count returning users
+   * as abandoned signups and make the number worse than useless.
+   */
+  useEffect(() => {
+    if (mode === 'signup') track('signup_started')
+  }, [mode])
+
+  /**
+   * What /auth/callback sends people back here with.
+   *
+   * Read from window rather than through useSearchParams, which forces this
+   * whole page behind a Suspense boundary at build time for the sake of one
+   * error string. The message is not worth that.
+   *
+   * The URL is cleaned afterwards so a refresh does not re-show a complaint
+   * about a link the person has already given up on.
+   */
+  useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get('error')
+    if (!reason) return
+    setError(reason === 'link_expired'
+      ? 'That link has expired. Recovery links work once and last an hour — ask for a new one below.'
+      : 'That link did not work. Ask for a new one below.')
+    window.history.replaceState(null, '', window.location.pathname)
+  }, [])
 
   /**
    * Both of these used to call Supabase straight from the page.
@@ -84,6 +121,35 @@ export default function LoginPage() {
     return addr.toLowerCase().endsWith('.edu')
   }
 
+  /**
+   * Send a recovery link to whatever is in the email box.
+   *
+   * Uses the field that is already filled in rather than opening a second
+   * form for the same address. Somebody who has just failed to sign in has
+   * typed it; asking again is a step for nothing.
+   *
+   * The confirmation says "if there is an account" on purpose. The route
+   * answers the same whether the address exists or not — that is what stops
+   * this being an account-enumeration oracle — so the page must not claim
+   * more than the server actually knows.
+   */
+  async function askReset() {
+    if (!email.trim()) {
+      setError('Enter your email address first, then press this again.')
+      return
+    }
+    setError(null)
+    setResetting(true)
+    try {
+      await postAuth('reset', { email })
+      toast(`If there is an account for ${email}, a reset link is on its way.`, 'success')
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not send the link. Try again.', 'error')
+    } finally {
+      setResetting(false)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -99,9 +165,11 @@ export default function LoginPage() {
           return
         }
         await postAuth('signup', { email, password, role, website: honeypot })
+        track('signup_submitted')
         setPendingConfirmEmail(email)
       } else {
         const { redirectTo } = await postAuth('signin', { email, password })
+        track('signin_succeeded')
         // The server already held the session and both rows when it answered,
         // so it decided where this person belongs rather than the page
         // guessing from a student row alone — which sent faculty to the
@@ -185,7 +253,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => { setMode('signup'); setError(null) }}
-              style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 14.5, fontWeight: 600, color: C.accentInk, cursor: 'pointer' }}
+              style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 14.5, fontWeight: 600, color: C.accentInk, cursor: 'pointer' }}
             >
               First time here? See what Workmark does →
             </button>
@@ -229,7 +297,7 @@ export default function LoginPage() {
                 onClick={() => { setMode(m); setError(null) }}
                 aria-pressed={mode === m}
                 style={{
-                  flex: 1, padding: '8.5px 0', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', borderRadius: R.sm, font: 'inherit',
+                  flex: 1, padding: '8.5px 0', fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', borderRadius: R.sm, fontFamily: 'inherit',
                   background: mode === m ? C.surface : 'transparent',
                   color: mode === m ? C.text : C.textMuted,
                   boxShadow: mode === m ? '0 1px 2px rgba(25,30,46,0.08)' : 'none',
@@ -306,6 +374,27 @@ export default function LoginPage() {
                 {mode === 'signin' ? 'Sign in' : 'Create account'}
               </Button>
             </div>
+
+            {/* Only where it is any use. On the signup tab there is no
+                password to have forgotten, and an account-recovery link
+                beside "Create account" is a small invitation to try
+                recovering an account somebody does not have. */}
+            {mode === 'signin' && (
+              <p style={{ textAlign: 'center', fontSize: 13, marginTop: 2 }}>
+                <button
+                  type="button"
+                  onClick={askReset}
+                  disabled={resetting}
+                  style={{
+                    background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                    fontFamily: 'inherit', fontSize: 13, color: C.textMuted,
+                    textDecoration: 'underline',
+                  }}
+                >
+                  {resetting ? 'Sending…' : 'Forgot your password?'}
+                </button>
+              </p>
+            )}
           </form>
         </div>
 

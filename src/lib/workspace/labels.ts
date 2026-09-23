@@ -1,0 +1,19 @@
+// What the stored values are called on screen.
+//
+// One copy, because the draft checklist, the team list and the role picker
+// all name the same thing and three copies drift. The values themselves live
+// in membership.ts; this is only how they read.
+
+import type { WorkRole } from './membership'
+
+export const ROLE_LABEL: Record<WorkRole, string> = {
+  backend: 'Backend',
+  frontend: 'Frontend',
+  fullstack: 'Full-stack',
+  mobile: 'Mobile',
+  data: 'Data',
+  ml: 'ML / AI',
+  infra: 'Infrastructure',
+  design: 'Design',
+  other: 'Other',
+}

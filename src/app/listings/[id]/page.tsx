@@ -7,6 +7,8 @@ import { computeFit, assignTier } from '@/lib/matching/fit'
 import ListingDetailClient from './ListingDetailClient'
 import { verifiedFacultyPosterIds } from '@/lib/listings/verified-faculty'
 
+export const metadata = { title: 'Posting' }
+
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
@@ -103,6 +105,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         brief: listing.brief,
         posterId: listing.poster_id,
         posterDisplayName: listing.poster_display_name,
+        applicationQuestions: listing.application_questions,
         // Confirmed faculty only. A pending claim shows nothing at all —
         // "faculty, unverified" would still say professor, which is the
         // part nobody has checked.

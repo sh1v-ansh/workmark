@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { enforce } from '@/lib/rate-limit'
 import { clientIp } from '@/lib/http/request-ip'
+import { PASSWORD_MIN, PASSWORD_MAX } from '@/lib/auth/password'
 import {
   readJsonBody,
   requireEmail,
@@ -32,11 +33,9 @@ import {
  * anything is spent on it.
  */
 
-/** Deliberately generous. Supabase's own floor is 6; this is 8 because the
- *  difference is free to us and not to someone guessing. The ceiling is
- *  bcrypt's 72-byte input limit, beyond which characters are ignored. */
-const PASSWORD_MIN = 8
-const PASSWORD_MAX = 72
+// The rules live in lib/auth/password.ts now, because reset sets a password
+// too and two copies of a minimum length is how an account ends up
+// creatable with eight characters and resettable with six.
 
 function siteUrl(request: Request): string {
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')

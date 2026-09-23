@@ -50,7 +50,7 @@ export default function AiProjectCard({ project }: { project: AiProjectCardData 
             Workmark AI
           </span>
           {reason && (
-            <span style={{ fontSize: 11.5, fontWeight: 600, color: C.accentInk, background: 'rgba(97,66,245,0.10)', border: '1px solid rgba(97,66,245,0.18)', borderRadius: R.pill, padding: '3px 9px' }}>
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: C.accentInk, background: 'rgba(97,66,245,0.09)', borderRadius: R.pill, padding: '3px 9px' }}>
               {reason.label}
             </span>
           )}

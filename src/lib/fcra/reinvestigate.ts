@@ -16,8 +16,10 @@
 // and disputes, none of which accept user writes.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { resolutionKey } from '@/lib/skills/group-detections'
 import { scanRepo } from '@/lib/github/scan'
 import { extractComplexity } from '@/lib/github/complexity'
+import { checkBasis, scanMayRetract, needsAPerson, type BasisFinding, type LiveTask, type RecordedTask } from './task-basis'
 import { canonicalizeSkills } from '@/lib/skills/canonicalize'
 import { applyImplications } from '@/lib/skills/implications'
 import {
@@ -61,7 +63,7 @@ export async function reinvestigate(
 
   const { data: evidence } = await supabase
     .from('skill_evidence')
-    .select('id, student_id, skill_id, artifact_id, base, difficulty_cleared, verification_method, engagement_id')
+    .select('id, student_id, skill_id, artifact_id, base, difficulty_cleared, verification_method, engagement_id, workspace_id')
     .eq('id', dispute.evidence_id)
     .maybeSingle()
   if (!evidence) {
@@ -73,17 +75,47 @@ export async function reinvestigate(
   }
 
   const { data: artifact } = evidence.artifact_id
-    ? await supabase.from('artifacts').select('id, repo_full_name').eq('id', evidence.artifact_id).maybeSingle()
+    ? await supabase
+        .from('artifacts')
+        .select('id, repo_full_name, workspace_id')
+        .eq('id', evidence.artifact_id)
+        .maybeSingle()
     : { data: null }
+
   const { data: connection } = await supabase
     .from('github_connections')
     .select('installation_id, github_login')
     .eq('student_id', evidence.student_id)
     .maybeSingle()
 
+  // Project evidence was read through the WORKSPACE's installation — one
+  // person on the team linked the repository and everyone's commits are read
+  // through it. Rescanning through the disputing student's own installation
+  // asks a different question of a repository they may have no personal
+  // access to, gets back "cannot see it", and — before this — treated that as
+  // "no commits are yours" and retracted their evidence.
+  //
+  // A dispute filed to ask a question must never be the thing that deletes
+  // the record.
+  const workspaceId = (artifact?.workspace_id as string | null) ?? evidence.workspace_id ?? null
+  let installationId = connection?.installation_id ?? null
+
+  if (workspaceId) {
+    const { data: repo } = await supabase
+      .from('workspace_repos')
+      .select('installation_id')
+      .eq('workspace_id', workspaceId)
+      .is('unlinked_at', null)
+      .limit(1)
+      .maybeSingle()
+    if (repo?.installation_id) installationId = repo.installation_id as string
+  }
+
   // Can't rescan without a repo and a live connection — route to a human
-  // rather than guessing, and never silently leave the dispute open.
-  if (!artifact?.repo_full_name || !connection?.github_login) {
+  // rather than guessing, and never silently leave the dispute open. The
+  // login is still the student's: the question is what THEY committed, read
+  // through whichever installation can see the repository.
+  if (!artifact?.repo_full_name || !connection?.github_login || !installationId) {
     return finish({
       status: 'resolved_manual',
       note: 'This evidence has no re-readable repository on file, so it needs a person to review it.',
@@ -96,8 +128,22 @@ export async function reinvestigate(
   let recomputedLevel: number | null = null
 
   try {
-    const scan = await scanRepo(connection.installation_id, connection.github_login, artifact.repo_full_name)
-    if (!scan.skip) {
+    const scan = await scanRepo(installationId, connection.github_login, artifact.repo_full_name)
+
+    // A skipped scan is "we could not read it", not "there is nothing there",
+    // and the two must never collapse. Falling through with
+    // hasAttributedCommits still false would retract the evidence of anybody
+    // whose repository went private, was renamed, or whose App install was
+    // removed — on a dispute they may have filed only to ask a question.
+    if (scan.skip) {
+      return finish({
+        status: 'resolved_manual',
+        note: 'The repository could not be read on this pass, so nothing about your record has been changed. A person will review this.',
+        correctionEvidenceId: null,
+      })
+    }
+
+    {
       hasAttributedCommits = scan.studentCommitCount > 0
 
       // Must mirror processRepo exactly, implications included. A skill that
@@ -122,7 +168,9 @@ export async function reinvestigate(
         // the scan produced — and on a dispute that reads as the record
         // having been wrong, when nothing changed but the arithmetic.
         const detectionsForSkill = scan.detections.filter((d) => {
-          const r = canonical.get(d.raw)
+          // By the normalised key, which is what canonicalizeSkills stores
+          // results under. Looking up the raw string missed every language.
+          const r = canonical.get(resolutionKey(d.raw))
           return r?.resolved && r.skillId === evidence.skill_id
         })
         const impliedSource = causedBy.get(evidence.skill_id)
@@ -155,6 +203,49 @@ export async function reinvestigate(
     })
   }
 
+  // ── Reconsider the basis the claim was actually made on ──
+  //
+  // Everything above asked the repository a question. For a row that came out
+  // of a scan that is the right question, because the scan was the basis. A
+  // project row was minted on something else — tasks whose acceptance
+  // criteria were agreed before the work started, and a checker or teammate
+  // who confirmed each one — and §611 requires reconsidering the information
+  // the claim rests on, not a different one that happens to be cheaper.
+  //
+  // Concretely: a repository that went private, was renamed, had its history
+  // rewritten or simply stopped tripping a detector could retract evidence
+  // whose real basis is three confirmed tasks still sitting verified in the
+  // database. That is the same class of mistake as reading a skipped scan as
+  // "no commits are yours".
+  const basis = workspaceId
+    ? await checkTaskBasis(supabase, evidence.id, workspaceId)
+    : null
+
+  if (basis) {
+    if (needsAPerson(basis)) {
+      return finish({
+        status: 'resolved_manual',
+        note: `${basis.note} A person will review this, and nothing about your record has been changed.`,
+        correctionEvidenceId: null,
+      })
+    }
+
+    // The tasks still stand, so whatever the repository says, the claim does.
+    // Corroboration failing is not the claim failing.
+    if (!scanMayRetract(basis)) {
+      if (!hasAttributedCommits || !skillStillDetected) {
+        return finish({
+          status: 'resolved_verified',
+          note: `${basis.note} The repository could not corroborate it on this pass, but the tasks are what this evidence rests on, so it stands unchanged.`,
+          correctionEvidenceId: null,
+        })
+      }
+      // Corroborated as well. A level recomputed downwards is still allowed
+      // through below — that is a correction, not a retraction.
+      skillStillDetected = true
+    }
+  }
+
   const outcome = reinvestigationOutcome({
     category: dispute.category as DisputeCategory,
     hasAttributedCommits,
@@ -178,6 +269,10 @@ export async function reinvestigate(
       skill_id: evidence.skill_id,
       artifact_id: evidence.artifact_id,
       engagement_id: evidence.engagement_id,
+      // Carried through, or a correction silently detaches the row from the
+      // project that produced it and /me stops being able to say where it
+      // came from.
+      workspace_id: evidence.workspace_id,
       base: evidence.base,
       difficulty_cleared: retracting ? evidence.difficulty_cleared : recomputedLevel,
       verification_method: evidence.verification_method,
@@ -213,4 +308,55 @@ export async function reinvestigate(
   if (auditErr) console.error('[fcra/reinvestigate] audit insert failed:', auditErr)
 
   return finish({ ...outcome, correctionEvidenceId: correction.id })
+}
+
+
+/**
+ * The recorded basis for one piece of project evidence, checked against the
+ * board as it stands now.
+ *
+ * Reads `evidence_audit` rather than recomputing, because the question is
+ * whether the claim that was made still holds — not whether a claim made
+ * today would look the same. Returns null when this row has no workspace
+ * basis to check, which is every scan-derived row and is the normal case.
+ */
+async function checkTaskBasis(
+  supabase: SupabaseClient,
+  evidenceId: string,
+  workspaceId: string,
+): Promise<BasisFinding | null> {
+  const { data: audit } = await supabase
+    .from('evidence_audit')
+    .select('raw_input')
+    .eq('evidence_id', evidenceId)
+    .eq('source', 'workspace_close')
+    .maybeSingle()
+
+  const raw = (audit?.raw_input ?? null) as { tasks?: unknown[] } | null
+  const recordedTasks: RecordedTask[] = Array.isArray(raw?.tasks)
+    ? (raw.tasks as Record<string, unknown>[]).map((t) => ({
+        id: String(t.id ?? ''),
+        title: String(t.title ?? 'A task'),
+        settledBy: (t.settled_by as string | null) ?? null,
+        verifiedAt: (t.verified_at as string | null) ?? null,
+      })).filter((t) => t.id !== '')
+    : []
+
+  // No audit row at all is 'unknown' rather than 'gone' — see checkBasis.
+  if (recordedTasks.length === 0) return checkBasis([], new Map())
+
+  const { data: taskRows } = await supabase
+    .from('tasks')
+    .select('id, status')
+    .eq('workspace_id', workspaceId)
+    .in('id', recordedTasks.map((t) => t.id))
+
+  const live = new Map<string, LiveTask>(
+    (taskRows ?? []).map((t) => [
+      t.id as string,
+      { id: t.id as string, status: t.status as string, latestVerdict: null },
+    ]),
+  )
+
+  return checkBasis(recordedTasks, live)
 }

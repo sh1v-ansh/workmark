@@ -13,6 +13,8 @@ import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
 import { levelName as levelLabel } from '@/lib/skills/level-names'
 import { LAYOUT } from '@/lib/theme/layout'
+import UnclaimedEmails, { type UnclaimedEmailRow } from './UnclaimedEmails'
+import GithubConnectNotice from '@/components/GithubConnectNotice'
 
 // Local types — deliberately not sourced from src/lib/types.ts, which is
 // still the pre-rebuild shape (Phase 1 task #16 rewrites it). This page
@@ -99,20 +101,63 @@ interface JobView {
   error: string | null
 }
 
-export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests, activeJobId }: {
+export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests, unclaimedEmails, activeJobId, lastJob }: {
   studentName: string | null
   connection: GithubConnection | null
   grants: RepoGrant[]
   priors: SkillPrior[]
   evidence: SkillEvidenceRow[]
   reviewRequests: ReviewRequest[]
+  unclaimedEmails: UnclaimedEmailRow[]
   activeJobId: string | null
+  /** The last scan that finished, so its per-repo results survive a reload. */
+  lastJob: JobView | null
 }) {
   const { toast } = useToast()
   const router = useRouter()
+
+  /**
+   * Which of the three jobs this page does is on screen.
+   *
+   * ── Why this page needed splitting ──────────────────────────────────────
+   * It was one column with four stacked sections: every repository with a
+   * switch, every skill grouped by repo, the form for work that has no
+   * repository, and a list of unverified skills. With thirty-three repos the
+   * first section alone was most of a screen, so the form for submitting
+   * design or research work — the thing a student with no scannable code
+   * needs — sat below several hundred pixels of settings they had already
+   * dealt with once.
+   *
+   * These are three different jobs at three different frequencies: choosing
+   * what may be read is done once, reading the results is done often, and
+   * submitting other work is an action. Stacking them made the rarest one
+   * cheapest to reach.
+   *
+   * ── Why it opens where it does ──────────────────────────────────────────
+   * On the results, once there are any. Somebody who has scanned comes back
+   * to see what came out; somebody who has not has nothing to look at and
+   * needs the repository list.
+   */
+  const [tab, setTab] = useState<'repos' | 'evidence' | 'other'>(
+    evidence.length > 0 ? 'evidence' : 'repos',
+  )
+
+  // Just back from connecting: the repositories are the next thing, whatever
+  // the default would otherwise be. Read after mount, like the notice, so
+  // the page does not need a Suspense boundary for one flag.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('gh_connected')) setTab('repos')
+  }, [])
+
+  /** Narrows a long repository list. Thirty-three rows needs it; three hundred demands it. */
+  const [repoQuery, setRepoQuery] = useState('')
+  const [repoFilter, setRepoFilter] = useState<'all' | 'on' | 'off'>('all')
+
   const [scanning, setScanning] = useState(false)
   const [jobId, setJobId] = useState<string | null>(activeJobId)
-  const [job, setJob] = useState<JobView | null>(null)
+  // Seeded with the last finished scan, so its per-repo results are on
+  // screen after a reload rather than only in the visit that ran it.
+  const [job, setJob] = useState<JobView | null>(lastJob)
   const [syncing, setSyncing] = useState(false)
   // Only holds repos the student has toggled in this session — the stored
   // value is read from `grants` otherwise, so a router.refresh() after a
@@ -291,19 +336,61 @@ export default function GithubScanClient({ studentName, connection, grants, prio
 
   const hasPending = reviewRequests.some((r) => r.status === 'pending')
 
+  const isOn = (g: RepoGrant) => overrides[g.id] ?? g.scan_enabled
+  const enabledCount = grants.filter(isOn).length
+
+  // Search first, then the on/off filter. A student looking for one repo by
+  // name does not want it hidden because it happens to be switched off.
+  const visibleGrants = grants.filter((g) => {
+    const q = repoQuery.trim().toLowerCase()
+    if (q && !g.repo_full_name.toLowerCase().includes(q)) return false
+    if (repoFilter === 'on') return isOn(g)
+    if (repoFilter === 'off') return !isOn(g)
+    return true
+  })
+
   return (
     <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <div style={{ marginBottom: 23 }}>
+        <div style={{ marginBottom: 18 }}>
+          {/* The old heading was "Choose what we may read", which named one
+              of the three things this page does and made the other two look
+              like they belonged somewhere else. */}
           <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
-            Choose what we may read
+            Your work
           </h1>
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 630 }}>
-            Every skill on your record comes from one of these repositories. Turn one off and it stops being scanned — anything already on your record stays, because the record is append-only.
+            Everything on your record comes from code you wrote, or from work a person checked. You choose which repositories Workmark may read, and each scan is the current answer: switch a repository off and its skills come off your record at the next scan.
           </p>
         </div>
+
+        {/* Above the tabs, because it is the answer to the question
+            somebody arrives with — "why is my work not showing up" — and
+            that thought does not belong to one tab. */}
+        <GithubConnectNotice />
+        <UnclaimedEmails rows={unclaimedEmails} />
+
+        <div className="wm-tabs" role="tablist" style={{ marginBottom: 20 }}>
+          {([
+            ['evidence', `Your skills${evidence.length > 0 ? ` · ${evidence.length}` : ''}`],
+            ['repos', `Repositories${grants.length > 0 ? ` · ${enabledCount}/${grants.length}` : ''}`],
+            ['other', 'Work without code'],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              role="tab"
+              aria-selected={tab === key}
+              onClick={() => setTab(key)}
+              className={`wm-tab${tab === key ? ' wm-tab-on' : ''}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <UnclaimedEmails rows={unclaimedEmails} />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 22, alignItems: 'start' }} className="mob-1col">
 
@@ -316,16 +403,68 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 private repo may well be an employer's IP. Combined into one
                 list, ordered public-first, because the visibility badge
                 already tells the story per row. */}
-            {grants.length > 0 && (
+            {tab === 'repos' && grants.length === 0 && (
+              <Card hoverable={false} padding={19.5}>
+                <p style={{ fontSize: 14.5, fontWeight: 600, color: C.text, marginBottom: 5 }}>
+                  No repositories yet
+                </p>
+                <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 15, maxWidth: '58ch' }}>
+                  {connection
+                    ? 'GitHub is connected but has not shared any repositories with Workmark. Open the GitHub app settings and pick which ones it may see.'
+                    : 'Connect GitHub and choose which repositories Workmark may read. Nothing is read until you say so.'}
+                </p>
+                <Button href={connection ? 'https://github.com/settings/installations' : '/student/github/consent'} variant="ink" size="sm">
+                  {connection ? 'Choose repositories on GitHub' : 'Connect GitHub'}
+                </Button>
+              </Card>
+            )}
+
+            {tab === 'repos' && grants.length > 0 && (
               <div>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 5.5 }}>
-                  <Kicker>Your repositories</Kicker>
-                  <span style={{ fontSize: 13, color: C.textGhost }}>
-                    {syncing ? 'syncing with GitHub…' : `${grants.filter((g) => (overrides[g.id] ?? g.scan_enabled) || !g.is_private).length} of ${grants.length} enabled`}
+                {/* Said first, not last. This used to be a paragraph below
+                    the list, which on a thirty-three repo account meant the
+                    one sentence explaining the privacy rule was off the
+                    bottom of the screen while the switches were on it. */}
+                <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 13, maxWidth: 620 }}>
+                  Private repositories are off until you turn them on — only enable ones you have
+                  the right to share, never an employer&apos;s code. Public ones are ranked and the
+                  most useful are on by default. Your choice always wins.
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
+                  <input
+                    value={repoQuery}
+                    onChange={(e) => setRepoQuery(e.target.value)}
+                    className="dk-input"
+                    placeholder="Find a repository…"
+                    aria-label="Find a repository"
+                    style={{ flex: '1 1 220px', maxWidth: 320 }}
+                  />
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {([['all', 'All'], ['on', 'On'], ['off', 'Off']] as const).map(([key, label]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setRepoFilter(key)}
+                        aria-pressed={repoFilter === key}
+                        className={`wm-pill${repoFilter === key ? ' wm-pill-on' : ''}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <span style={{ fontSize: 13, color: C.textGhost, marginLeft: 'auto' }}>
+                    {syncing ? 'syncing with GitHub…' : `${enabledCount} of ${grants.length} enabled`}
                   </span>
                 </div>
+
                 <Card hoverable={false} padding="3.5px 18px 7px">
-                  {grants.map((g, i) => {
+                  {visibleGrants.length === 0 && (
+                    <p style={{ fontSize: 13.5, color: C.textMuted, padding: '14px 0' }}>
+                      No repositories match that.
+                    </p>
+                  )}
+                  {visibleGrants.map((g, i) => {
                     // Every repo gets a real switch now. Public ones used to
                     // read "Always scanned", which stopped being true when
                     // ranking started deciding what's on by default — and
@@ -333,7 +472,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                     // ones matter.
                     const enabled = overrides[g.id] ?? g.scan_enabled
                     return (
-                      <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 15, padding: '12.5px 0', borderBottom: i < grants.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
+                      <div key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 15, padding: '12.5px 0', borderBottom: i < visibleGrants.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
                         <div style={{ flexGrow: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8.5, marginBottom: 3, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 14.5, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.repo_full_name}</span>
@@ -369,9 +508,6 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                     )
                   })}
                 </Card>
-                <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginTop: 9.5 }}>
-                  Private repos are always off until you say otherwise — only enable ones you have the right to share, not an employer&apos;s code. Public repos are ranked, and the ones most likely to show your work are on by default. Switch on anything we got wrong; your choice sticks.
-                </p>
               </div>
             )}
 
@@ -379,6 +515,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 gets one row per repo that demonstrates it (independent
                 evidence, independent level), which reads as "duplicates"
                 without knowing which repo each one came from. */}
+            {tab === 'evidence' && (
             <div>
               <Kicker style={{ marginBottom: 12 }}>Skill evidence · {evidence.length}</Kicker>
               {evidence.length === 0 ? (
@@ -417,8 +554,13 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 </div>
               )}
             </div>
+            )}
 
-            {/* Human review — §3's fallback for work with no scannable repo */}
+            {/* Human review — §3's fallback for work with no scannable repo.
+                Its own tab now. It used to sit under every repository and
+                every skill, which put the one route available to a student
+                with no scannable code at the very bottom of the page. */}
+            {tab === 'other' && (
             <div>
               <Kicker style={{ marginBottom: 5.5 }}>Work without a repo</Kicker>
               <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginBottom: 13, maxWidth: 540 }}>
@@ -468,11 +610,12 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 </div>
               )}
             </div>
+            )}
 
             {/* Skills detected in repos the student hasn't personally
                 committed to. Shown only when there are any, and kept plain
                 — no internal scoring vocabulary in the UI. */}
-            {priors.length > 0 && (
+            {tab === 'evidence' && priors.length > 0 && (
               <div>
                 <Kicker style={{ marginBottom: 5.5 }}>Detected but unverified</Kicker>
                 <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginBottom: 11, maxWidth: 540 }}>
@@ -539,10 +682,37 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                         <button
                           type="button"
                           onClick={stopScan}
-                          style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', fontSize: 12.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
+                          style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 12.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
                         >
                           Stop
                         </button>
+                      </div>
+                    </div>
+                  )}
+                  {/* What each repository actually produced.
+                      The step results were written and never rendered, so
+                      "the rescan changed nothing" was a sentence nobody
+                      could check — including me, for three rounds. A repo
+                      that recorded nine skills, one that had no commits we
+                      could attribute, and one GitHub cut us off partway
+                      through all looked identical from out here. */}
+                  {job && job.steps.some((st) => st.detail) && (
+                    <div style={{ marginTop: 14, borderTop: `1px solid ${C.borderFaint}`, paddingTop: 12 }}>
+                      <Kicker style={{ marginBottom: 8 }}>Last scan</Kicker>
+                      <div style={{ display: 'grid', gap: 7, maxHeight: 260, overflowY: 'auto' }}>
+                        {job.steps.filter((st) => st.detail).map((st) => (
+                          <div key={st.id}>
+                            <p style={{ fontSize: 12.5, fontWeight: 600, color: C.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {st.label}
+                            </p>
+                            <p style={{
+                              fontSize: 12.5, lineHeight: 1.45,
+                              color: st.status === 'failed' ? '#B91C1C' : C.textGhost,
+                            }}>
+                              {st.detail}
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

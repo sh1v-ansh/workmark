@@ -112,6 +112,7 @@ export function isVerifiedFaculty(account: Account | null): boolean {
 
 export type AdminSubject =
   | 'review_request' | 'dispute' | 'unresolved_skill' | 'job' | 'account' | 'student_file'
+  | 'task_verification'
 
 /**
  * Record a staff action — including a read.

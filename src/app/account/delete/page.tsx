@@ -4,7 +4,7 @@ import { DeleteClient } from './DeleteClient'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata = { title: 'Delete your account' }
+export const metadata = { title: 'Delete' }
 
 export default async function DeleteAccountPage() {
   const supabase = await createClient()

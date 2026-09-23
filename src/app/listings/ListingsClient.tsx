@@ -171,47 +171,6 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
           )}
         </div>
 
-        {/* ── Projects Workmark wrote ─────────────────────────────────────
-            Above the real postings, and only for a signed-in student who
-            has some. The order is deliberate: on a young marketplace this
-            is often the only thing on the page, and burying it under "No
-            open projects right now" would waste the one section that is
-            never empty.
-
-            The band says once what the cards are, so the cards do not each
-            have to carry a disclaimer. */}
-        {signedIn && aiProjects.length > 0 && (
-          <section aria-label="Projects suggested for you" style={{ marginBottom: 26 }}>
-            <div className="nb-ai-band">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 11, minWidth: 0 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: R.md, background: 'rgba(97,66,245,0.10)', color: C.accent, flexShrink: 0 }}>
-                  <Icon name="spark" size={16} />
-                </span>
-                <span style={{ minWidth: 0 }}>
-                  <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>
-                    Written for you, not posted by anyone
-                  </span>
-                  <span style={{ display: 'block', fontSize: 13, color: C.textMuted, lineHeight: 1.5 }}>
-                    Workmark reads your record every night and writes projects that would move it. Nobody is waiting on these — start one whenever you like.
-                  </span>
-                </span>
-              </div>
-              <Link
-                href="/me/briefs"
-                style={{ fontSize: 13, fontWeight: 600, color: C.accent, textDecoration: 'none', whiteSpace: 'nowrap' }}
-              >
-                Ask for something specific →
-              </Link>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14.5 }} className="mob-1col">
-              {aiProjects.map((p) => (
-                <AiProjectCard key={p.id} project={p} />
-              ))}
-            </div>
-          </section>
-        )}
-
         {listings.length === 0 ? (
           <Card hoverable={false} padding={36}>
             <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center', lineHeight: 1.6 }}>
@@ -243,7 +202,7 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
                   {activeCount > 0 && (
                     <button
                       type="button" onClick={clearAll}
-                      style={{ fontSize: 12.5, color: C.accent, fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, font: 'inherit' }}
+                      style={{ fontSize: 12.5, color: C.accent, fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
                     >
                       Clear all
                     </button>
@@ -301,6 +260,19 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
                 </Card>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14.5 }} className="mob-1col">
+                  {/* Written projects sit in the same grid as posted ones.
+                      They were in a section of their own above, behind a
+                      heading, a paragraph and a link — three things between
+                      somebody and the postings they came for, and a layout
+                      that said these are a different feature rather than a
+                      different kind of project.
+
+                      They lead because nothing is waiting on them: a student
+                      can start one now, where a posting needs somebody to
+                      reply. The rule down the left says which is which. */}
+                  {signedIn && aiProjects.map((project) => (
+                    <AiProjectCard key={project.id} project={project} />
+                  ))}
                   {filtered.map((l) => (
                     <Card key={l.id} href={`/listings/${l.id}`} padding={18}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 9, flexWrap: 'wrap' }}>
@@ -330,7 +302,7 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
                           {l.skills.map((s) => {
                             const c = tagColor(s)
                             return (
-                              <span key={s} style={{ fontSize: 12, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                              <span key={s} style={{ fontSize: 12, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, color: c.text }}>
                                 {s}
                               </span>
                             )

@@ -15,6 +15,17 @@ import {
   detection, extractImports, parseComposeServices, parseDockerfile, parseOrmConfig,
   parsePrismaSchema, parseSqlFile, parseTerraform, parseWorkflow, type Detection,
 } from './detectors'
+import {
+  attributeCommits, sampleAcross,
+  type StudentIdentity, type UnclaimedEmail, type CommitIdentity,
+} from './attribution'
+
+/**
+ * How many commits get a file-level fetch. Raised from 20 alongside the move
+ * to sampling across history: 20 points spread over two years is a thin
+ * description of a project, and each one is a single cheap request.
+ */
+const COMMIT_DETAIL_SAMPLE = 40
 
 export interface RepoScanResult {
   repoFullName: string
@@ -61,6 +72,64 @@ export interface RepoScanResult {
   hasCi: boolean
   hasDockerfile: boolean
   hasInfraConfig: boolean
+  /**
+   * True when something failed that the scan carried on past.
+   *
+   * A partial scan's findings are still worth recording — half a record
+   * beats none — but they are not a verdict. Nothing may be retracted on the
+   * strength of one, because "we could not read it" and "it is not there"
+   * produce identical output and only this flag tells them apart.
+   */
+  partial: boolean
+  /** What went wrong, for the operator. Never shown to the student. */
+  problems: string[]
+  /**
+   * Addresses on commits here that belong to nobody GitHub knows about.
+   * The student is asked whether they are theirs — see attribution.ts.
+   */
+  unclaimedEmails: UnclaimedEmail[]
+}
+
+/**
+ * Did this error mean "we could not read it" or "there is nothing there"?
+ *
+ * ── Why the distinction is load-bearing ───────────────────────────────────
+ * It decides `partial`, and `partial` decides whether the scan is allowed to
+ * retract evidence. Get it too strict and a rate limit empties somebody's
+ * record; get it too loose and nothing is ever retracted because every scan
+ * looks broken.
+ *
+ * The first version only forgave 404. That was too loose in the wrong
+ * direction: GitHub's contents API returns **403** for any file over 1MB,
+ * which happens on a lockfile in almost every real repository. So nearly
+ * every scan came back partial, and retraction — the whole point of the
+ * morning's work — silently never ran. Two students' records still said
+ * Advanced at cryptography after a rescan that was supposed to fix them.
+ *
+ * So the test is inverted: a failure counts only when it means GitHub
+ * refused to answer a question it normally answers.
+ */
+export function isRealFailure(err: unknown): boolean {
+  const status = (err as { status?: number }).status
+  const message = (err as Error)?.message ?? ''
+
+  // Nothing there, not readable this way, or legally blocked. All ordinary
+  // outcomes of asking about a file that might not exist.
+  //   404 — no such file. The common case, by a long way.
+  //   403 — usually "over 1MB", occasionally a rate limit; see below.
+  //   451 — DMCA takedown.
+  if (status === 404 || status === 451) return false
+
+  // A 403 is two different things wearing one number. Rate limiting and
+  // abuse detection are real failures; "this file is too big for this
+  // endpoint" is a fact about the file.
+  if (status === 403) {
+    return /rate limit|abuse|secondary/i.test(message)
+  }
+
+  // 429 and anything 5xx are GitHub failing to answer. So is a network
+  // error, which arrives with no status at all.
+  return true
 }
 
 const INFRA_PATH_PATTERN = /^(docker-compose\.ya?ml|\.terraform|main\.tf|k8s\/|kubernetes\/|helm\/)/i
@@ -74,9 +143,29 @@ export async function scanRepo(
   installationId: string,
   githubLogin: string,
   repoFullName: string,
+  /**
+   * Addresses the student has confirmed are theirs, lowercased.
+   *
+   * Optional so callers that have not been updated keep working on GitHub's
+   * own attribution alone — which is exactly what they did before, so the
+   * default is no worse than the old behaviour rather than silently
+   * different. See attribution.ts.
+   */
+  knownEmails: Set<string> = new Set(),
 ): Promise<RepoScanResult> {
+  const identity: StudentIdentity = { login: githubLogin, emails: knownEmails }
   const [owner, repo] = repoFullName.split('/')
   const octokit = await getInstallationOctokit(installationId)
+
+  // Everything that went wrong without stopping the scan.
+  //
+  // These failures used to be swallowed individually, which meant a scan
+  // that hit a rate limit returned exactly what a scan of an empty repo
+  // returns: no languages, no tree, no commits. Nothing downstream could
+  // tell the difference, so "GitHub said no" was recorded as "this student
+  // has demonstrated nothing" — and now that a scan can retract evidence,
+  // that confusion would empty somebody's record. See RepoScanResult.partial.
+  const problems: string[] = []
 
   const empty: RepoScanResult = {
     repoFullName, skip: true, defaultBranch: '', isFork: false,
@@ -85,6 +174,7 @@ export async function scanRepo(
     studentCommitCount: 0, totalCommitCount: null,
     fractionAuthored: null, distinctContributors: null, firstCommitAt: null, lastCommitAt: null,
     filesTouchedByStudent: [], hasTests: false, hasCi: false, hasDockerfile: false, hasInfraConfig: false,
+    partial: false, problems: [], unclaimedEmails: [],
   }
 
   let repoMeta
@@ -121,10 +211,10 @@ export async function scanRepo(
   // what gets read next is chosen from what's actually there instead of
   // guessing at fixed paths and eating a 404 for each miss.
   const [languages, contributorStats, studentCommits, tree] = await Promise.all([
-    fetchLanguages(octokit, owner, repo),
+    fetchLanguages(octokit, owner, repo, problems),
     getContributorStats(octokit, owner, repo, githubLogin),
-    fetchStudentCommits(octokit, owner, repo, githubLogin),
-    fetchTree(octokit, owner, repo, repoMeta.default_branch),
+    fetchStudentCommits(octokit, owner, repo, identity, problems),
+    fetchTree(octokit, owner, repo, repoMeta.default_branch, problems),
   ])
 
   const plan = planFiles(tree)
@@ -134,8 +224,8 @@ export async function scanRepo(
   // concurrency — a repo shouldn't be able to open dozens of sockets and
   // trip GitHub's secondary rate limit.
   const [planned, sampledSources] = await Promise.all([
-    fetchPlanned(octokit, owner, repo, plan.files),
-    fetchStudentSources(octokit, owner, repo, studentCommits.filesTouched),
+    fetchPlanned(octokit, owner, repo, plan.files, problems),
+    fetchStudentSources(octokit, owner, repo, studentCommits.filesTouched, problems),
   ])
 
   const detections: Detection[] = [
@@ -190,14 +280,22 @@ export async function scanRepo(
     activeDays: studentCommits.activeDays,
     spanDays: studentCommits.spanDays,
     revisitRate: studentCommits.revisitRate,
+    partial: problems.length > 0,
+    problems,
+    unclaimedEmails: studentCommits.unclaimedEmails,
   }
 }
 
-async function fetchLanguages(octokit: Octokit, owner: string, repo: string): Promise<Record<string, number>> {
+async function fetchLanguages(octokit: Octokit, owner: string, repo: string, problems: string[]): Promise<Record<string, number>> {
   try {
     const { data } = await octokit.rest.repos.listLanguages({ owner, repo })
     return data
-  } catch {
+  } catch (err) {
+    // Recorded, not just swallowed. Without the language stats every
+    // language relevance collapses, and a scan that reports "no languages"
+    // because GitHub was rate limiting is indistinguishable from a repo
+    // that genuinely has none. See RepoScanResult.partial.
+    if (isRealFailure(err)) problems.push(`languages: ${(err as Error).message}`)
     return {}
   }
 }
@@ -218,7 +316,22 @@ async function getContributorStats(
   octokit: Octokit, owner: string, repo: string, githubLogin: string,
 ): Promise<{ studentCommits: number; totalCommits: number; distinctContributors: number; logins: string[] } | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
-    const { status, data } = await octokit.rest.repos.getContributorsStats({ owner, repo })
+    // Wrapped, because this was the one call in the round-one Promise.all
+    // that could throw, and throwing here failed the entire repo scan. This
+    // endpoint 403s on repos with very large contributor counts and 5xxs
+    // under load — and the function's own contract two paragraphs up says
+    // the caller already handles null. It was handing back an exception
+    // instead, which surfaced a raw Octokit message to a student for a
+    // signal that only chooses between Tier 0 and Tier 0.5.
+    let status: number
+    let data: unknown
+    try {
+      ({ status, data } = await octokit.rest.repos.getContributorsStats({ owner, repo }))
+    } catch (err) {
+      console.error(`[scan] contributor stats failed for ${owner}/${repo}:`,
+        err instanceof Error ? err.message : err)
+      return null
+    }
     if (status === 200 && Array.isArray(data)) {
       let studentCommits = 0
       let totalCommits = 0
@@ -253,10 +366,13 @@ interface StudentCommits {
   activeDays: number
   spanDays: number
   revisitRate: number | null
+  /** Addresses seen here that nobody owns. See attribution.ts. */
+  unclaimedEmails: UnclaimedEmail[]
 }
 
 async function fetchStudentCommits(
-  octokit: Octokit, owner: string, repo: string, githubLogin: string,
+  octokit: Octokit, owner: string, repo: string, identity: StudentIdentity,
+  problems: string[],
 ): Promise<StudentCommits> {
   const commits: string[] = []
   const messages: string[] = []
@@ -267,37 +383,79 @@ async function fetchStudentCommits(
   let firstAt: string | null = null
   let lastAt: string | null = null
   let revisitRate: number | null = null
+  let unclaimedEmails: UnclaimedEmail[] = []
 
   try {
-    // Capped at 3 pages (300 commits) — plenty for a student project; this
-    // is meant to characterize authorship, not build a complete history.
-    for (let page = 1; page <= 3; page++) {
-      const { data } = await octokit.rest.repos.listCommits({ owner, repo, author: githubLogin, per_page: 100, page })
+    // ── Every commit, then decide ourselves ──────────────────────────────
+    // This used to pass `author: githubLogin` and let GitHub do the
+    // matching. GitHub matches on emails verified against the account, so a
+    // student who committed from a lab machine or with their university
+    // address got nothing — no commits, no evidence, from a repository they
+    // wrote entirely. See attribution.ts.
+    //
+    // Reading everyone's commits costs more pages on a team repo, hence 5
+    // rather than 3. Still a cap: this characterises authorship, it does
+    // not build a complete history.
+    const seen: CommitIdentity[] = []
+    for (let page = 1; page <= 5; page++) {
+      const { data } = await octokit.rest.repos.listCommits({ owner, repo, per_page: 100, page })
       if (data.length === 0) break
       for (const c of data) {
-        commits.push(c.sha)
-        if (c.commit.message) messages.push(c.commit.message)
-        const date = c.commit.author?.date ?? null
-        if (date && (!firstAt || date < firstAt)) firstAt = date
-        if (date && (!lastAt || date > lastAt)) lastAt = date
-        // Distinct calendar days, not commit count: ten commits in one
-        // evening is one day's work however it's split up.
-        if (date) commitDays.add(date.slice(0, 10))
+        seen.push({
+          sha: c.sha,
+          authorLogin: c.author?.login ?? null,
+          authorEmail: c.commit.author?.email ?? null,
+          authorName: c.commit.author?.name ?? null,
+          message: c.commit.message ?? null,
+          // The committer date, not the author date.
+          //
+          // Author date is whatever GIT_AUTHOR_DATE said and is trivially
+          // forged — `git commit --date="2 years ago"` takes one line. It
+          // feeds activeDays, spanDays and revisitRate, which are worth
+          // about fourteen points of the difficulty composite between them,
+          // so a weekend project could be dressed as two years of sustained
+          // work for no effort at all.
+          //
+          // Committer date is stamped when the commit object is written and
+          // rewritten by rebase, amend and squash. Still forgeable with
+          // GIT_COMMITTER_DATE and a push, but it takes deliberate work
+          // rather than a flag, and it is what GitHub itself displays. The
+          // author date is kept as a fallback for the rare commit that
+          // carries no committer.
+          date: c.commit.committer?.date ?? c.commit.author?.date ?? null,
+        })
       }
       if (data.length < 100) break
     }
 
+    const attribution = attributeCommits(seen, identity)
+    unclaimedEmails = attribution.unclaimed
+
+    for (const c of attribution.mine) {
+      commits.push(c.sha)
+      if (c.message) messages.push(c.message)
+      const date = c.date ?? null
+      if (date && (!firstAt || date < firstAt)) firstAt = date
+      if (date && (!lastAt || date > lastAt)) lastAt = date
+      // Distinct calendar days, not commit count: ten commits in one
+      // evening is one day's work however it's split up.
+      if (date) commitDays.add(date.slice(0, 10))
+    }
+
     // File-level detail requires a per-commit fetch, which is expensive at
-    // scale — sample the most recent 20 rather than every commit, enough
-    // to characterize which parts of the repo the student actually touches
-    // without a request-per-commit blowup on large histories.
+    // scale, so it is sampled rather than exhaustive.
     //
-    // Fetched in parallel: these were previously awaited one at a time,
-    // which made a single repo cost 20 serial round trips (~5s) for what is
-    // 20 independent reads. Capped concurrency rather than a bare
-    // Promise.all so a student with many repos doesn't open 20 sockets per
-    // repo and trip GitHub's abuse-detection secondary rate limit.
-    const sample = commits.slice(0, 20)
+    // Spread across the whole history rather than taken from the end of it.
+    // `commits.slice(0, 20)` meant everything the scanner knows about what
+    // somebody writes came from their last fortnight — so a year-long
+    // project that finished with README edits produced an empty language
+    // share and no evidence for the language it was written in. Same number
+    // of requests, and it describes the project instead. See sampleAcross.
+    //
+    // Fetched in parallel at capped concurrency rather than a bare
+    // Promise.all, so a student with many repos doesn't open dozens of
+    // sockets per repo and trip GitHub's secondary rate limit.
+    const sample = sampleAcross(commits, COMMIT_DETAIL_SAMPLE)
     const CONCURRENCY = 5
     for (let i = 0; i < sample.length; i += CONCURRENCY) {
       const details = await Promise.all(
@@ -305,8 +463,11 @@ async function fetchStudentCommits(
           try {
             const { data } = await octokit.rest.repos.getCommit({ owner, repo, ref: sha })
             return data.files ?? []
-          } catch {
-            // A single commit detail failing isn't worth aborting the sample over.
+          } catch (err) {
+            // Not worth aborting the sample over, but it is lost file data:
+            // every import and every touched path in that commit vanishes.
+            // Recorded so a scan missing half its commits cannot retract.
+            if (isRealFailure(err)) problems.push(`commit ${sha.slice(0, 7)}: ${(err as Error).message}`)
             return []
           }
         }),
@@ -342,9 +503,12 @@ async function fetchStudentCommits(
       }
       revisitRate = revisits / (chronological.length - 1)
     }
-  } catch {
-    // No commits attributable to this login (or the API call failed) —
-    // return whatever was gathered before the failure.
+  } catch (err) {
+    // "No commits attributable to this login" and "the API call failed" were
+    // the same outcome here, which is exactly the confusion that makes an
+    // empty record look like a verdict. Return what was gathered, and say
+    // that it is incomplete.
+    if (isRealFailure(err)) problems.push(`commits: ${(err as Error).message}`)
   }
 
   const spanDays = firstAt && lastAt
@@ -360,6 +524,7 @@ async function fetchStudentCommits(
     activeDays: commitDays.size,
     spanDays,
     revisitRate,
+    unclaimedEmails,
   }
 }
 
@@ -373,6 +538,7 @@ async function fetchStudentCommits(
  */
 async function fetchTree(
   octokit: Octokit, owner: string, repo: string, branch: string,
+  problems: string[],
 ): Promise<TreeEntry[]> {
   try {
     const { data } = await octokit.rest.git.getTree({
@@ -381,9 +547,11 @@ async function fetchTree(
     return (data.tree ?? []).map((e) => ({
       path: e.path ?? '', type: e.type ?? '', size: e.size,
     })).filter((e) => e.path)
-  } catch {
-    // A repo with no commits, or a branch name that doesn't resolve. The
-    // scan continues on languages and commits alone.
+  } catch (err) {
+    // A repo with no commits, or a branch name that doesn't resolve — but
+    // also a rate limit, and those must not look the same. Without the tree
+    // there are no manifests and no sampled files, which is most of a scan.
+    if (isRealFailure(err)) problems.push(`file tree: ${(err as Error).message}`)
     return []
   }
 }
@@ -393,13 +561,14 @@ const FETCH_CONCURRENCY = 6
 
 async function fetchPlanned(
   octokit: Octokit, owner: string, repo: string, files: { path: string; plan: { kind: string; manifest?: string } }[],
+  problems: string[],
 ): Promise<Detection[]> {
   const out: Detection[] = []
 
   for (let i = 0; i < files.length; i += FETCH_CONCURRENCY) {
     const batch = files.slice(i, i + FETCH_CONCURRENCY)
     const contents = await Promise.all(
-      batch.map(async (f) => ({ file: f, content: await getFileContent(octokit, owner, repo, f.path) })),
+      batch.map(async (f) => ({ file: f, content: await getFileContent(octokit, owner, repo, f.path, problems) })),
     )
     for (const { file, content } of contents) {
       if (!content) continue
@@ -436,6 +605,7 @@ const SOURCE_FILE_SAMPLE_LIMIT = 15
 
 async function fetchStudentSources(
   octokit: Octokit, owner: string, repo: string, filesTouched: string[],
+  problems: string[],
 ): Promise<{ path: string; content: string }[]> {
   const sample = filesTouched.filter((p) => SOURCE_FILE_PATTERN.test(p)).slice(0, SOURCE_FILE_SAMPLE_LIMIT)
   const out: { path: string; content: string }[] = []
@@ -443,7 +613,7 @@ async function fetchStudentSources(
   for (let i = 0; i < sample.length; i += FETCH_CONCURRENCY) {
     const contents = await Promise.all(
       sample.slice(i, i + FETCH_CONCURRENCY).map(async (path) => ({
-        path, content: await getFileContent(octokit, owner, repo, path),
+        path, content: await getFileContent(octokit, owner, repo, path, problems),
       })),
     )
     for (const c of contents) if (c.content) out.push({ path: c.path, content: c.content })
@@ -452,15 +622,16 @@ async function fetchStudentSources(
   return out
 }
 
-export async function getFileContent(octokit: Octokit, owner: string, repo: string, path: string): Promise<string | null> {
+export async function getFileContent(octokit: Octokit, owner: string, repo: string, path: string, problems: string[] = []): Promise<string | null> {
   try {
     const { data } = await octokit.rest.repos.getContent({ owner, repo, path })
     if ('content' in data && typeof data.content === 'string') {
       return Buffer.from(data.content, 'base64').toString('utf-8')
     }
     return null
-  } catch {
-    return null // 404 is the overwhelmingly common case — most repos don't have every manifest
+  } catch (err) {
+    if (isRealFailure(err)) problems.push(`${path}: ${(err as Error).message}`)
+    return null
   }
 }
 

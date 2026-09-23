@@ -2,6 +2,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { getInstallationOctokit } from '@/lib/github/app'
 import { syncRepoGrants } from '@/lib/github/sync-grants'
+import { record } from '@/lib/analytics/record'
 
 // This route does slow third-party work — syncs the whole repo grant list on install. Without an explicit
 // maxDuration it inherits the platform default and gets killed mid-flight.
@@ -78,7 +79,26 @@ export async function GET(request: Request) {
       await admin.from('students').update({ github_username: accountLogin }).eq('id', cookieUserId)
     }
 
-    dashboardUrl.searchParams.set('gh_connected', '1')
+    // Connected is the funnel step between "finished a profile" and "ran a
+    // scan", and it was never recorded — so that row of the funnel read
+    // zero for everybody. Server-side, because this is where it becomes true.
+    void record(admin, 'github_connected', cookieUserId)
+
+    // If they came here from signup, signup is now finished: the last screen
+    // was this one. Cleared here rather than on the client, because the
+    // client that started this flow is gone — GitHub is sending them back.
+    await admin.from('accounts').update({ onboarding_step: null }).eq('id', cookieUserId)
+
+    // Straight to the repository list, not the dashboard. The next thing a
+    // student who has just connected needs is to see which repositories are
+    // switched on and press scan; landing them on the dashboard put that four
+    // clicks away at exactly the moment they were most likely to do it.
+    const reposUrl = new URL('/student/github', url)
+    reposUrl.searchParams.set('gh_connected', '1')
+    const done = NextResponse.redirect(reposUrl)
+    done.cookies.delete('gh_app_state')
+    done.cookies.delete('gh_app_user')
+    return done
   } catch (err) {
     console.error('GitHub App callback failed:', err)
     dashboardUrl.searchParams.set('gh_error', 'callback_failed')

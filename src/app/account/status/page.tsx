@@ -5,6 +5,8 @@ import { getAccountRecord } from '@/lib/auth/roles'
 import { C, R } from '@/lib/theme/dark-tokens'
 import { Wordmark } from '@/app/landing/Wordmark'
 
+export const metadata = { title: 'Status' }
+
 /**
  * Where an account that isn't active goes.
  *

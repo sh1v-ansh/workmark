@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { countWords, MIN_ANSWER_WORDS, MAX_ANSWER_WORDS } from '@/lib/applications/gate'
+import { readFields, requireUuid } from '@/lib/http/validate'
 import { getStudentDepth } from '@/lib/matching/depth'
 import { getListingRequirements, getApplicantPools } from '@/lib/matching/listing'
 import { computeFit, assignTier } from '@/lib/matching/fit'
@@ -15,8 +17,6 @@ const CONSENT_VERSION = 'application_disclosure_v1'
 // §8. The floor is the real mechanism: it makes applying cost something,
 // asymmetrically — a student who has done the work writes 50 words about
 // it quickly, one who hasn't finds it slow.
-const MIN_RESPONSE_WORDS = 50
-const MAX_RESPONSE_WORDS = 250
 
 /**
  * POST /api/applications
@@ -50,31 +50,58 @@ export async function POST(request: Request) {
   const limited = await enforce('apply', user.id)
   if (limited) return limited
 
-  let body: { listingId?: string; responseText?: string; claimedSkills?: string[]; consented?: boolean }
+  let body: {
+    listingId?: string; responseText?: string; claimedSkills?: string[]; consented?: boolean
+    responses?: { question_id?: string; question?: string; answer?: string }[]
+  }
   try {
     body = await request.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
   }
 
-  const listingId = body.listingId
-  if (!listingId) return NextResponse.json({ error: 'Missing listing.' }, { status: 400 })
+  // The id goes into a .eq() below; a malformed uuid there is a Postgres
+  // 22P02 and a 500 rather than the 404 it means.
+  const ids = readFields(() => ({ listingId: requireUuid(body.listingId, 'Listing') }))
+  if (!ids.ok) return ids.response
+  const { listingId } = ids.values
 
   // §8: the response is the application cost, and it's the right kind —
   // cheaper to write for a student who has the skill than one who
   // doesn't. Bounded on both ends: a floor so it can't degenerate back
   // into one-click apply, a ceiling so it can't become a cover letter.
-  const responseText = body.responseText?.trim() ?? ''
-  const wordCount = responseText ? responseText.split(/\s+/).length : 0
-  if (wordCount < MIN_RESPONSE_WORDS) {
+  const responseText = typeof body.responseText === 'string' ? body.responseText.trim() : ''
+
+  // Per answer now rather than over one essay. The drawer sends structured
+  // responses; responseText is still filled in alongside them so an
+  // application made today is readable by everything written before v05_0043.
+  const responses = Array.isArray(body.responses)
+    ? body.responses
+        .filter((r) => typeof r?.answer === 'string')
+        .map((r) => ({
+          question_id: String(r.question_id ?? ''),
+          question: String(r.question ?? ''),
+          answer: String(r.answer ?? '').trim(),
+        }))
+    : []
+
+  if (responses.length === 0) {
+    return NextResponse.json({ error: 'Answer the questions on this listing.' }, { status: 400 })
+  }
+
+  // The same rules the drawer enforces, applied again here. A gate that only
+  // exists in the browser is not a gate.
+  const shortAnswer = responses.find((r) => countWords(r.answer) < MIN_ANSWER_WORDS)
+  if (shortAnswer) {
     return NextResponse.json(
-      { error: `Write at least ${MIN_RESPONSE_WORDS} words about the skill this listing weights highest.` },
+      { error: `Each answer needs at least ${MIN_ANSWER_WORDS} words.` },
       { status: 400 },
     )
   }
-  if (wordCount > MAX_RESPONSE_WORDS) {
+  const longAnswer = responses.find((r) => countWords(r.answer) > MAX_ANSWER_WORDS)
+  if (longAnswer) {
     return NextResponse.json(
-      { error: `Keep it under ${MAX_RESPONSE_WORDS} words — this is one focused answer, not a cover letter.` },
+      { error: `Keep each answer under ${MAX_ANSWER_WORDS} words — a choice, not a cover letter.` },
       { status: 400 },
     )
   }
@@ -159,6 +186,7 @@ export async function POST(request: Request) {
       student_id: user.id,
       consent_id: consent.id,
       response_text: responseText,
+      responses,
       claimed_skills: claimedSkills,
       fit_tier_at_apply: fitTier,
       rank_score_at_apply: fit.rankScore,
@@ -171,6 +199,17 @@ export async function POST(request: Request) {
     // 23505 = the (listing_id, student_id) unique constraint.
     if (appErr.code === '23505') {
       return NextResponse.json({ error: "You've already applied to this listing." }, { status: 409 })
+    }
+    // 42703 / PGRST204 = a column the code writes does not exist on the
+    // table. That is always a migration that has not been run, and it is worth
+    // saying so: the generic message sends somebody hunting through their own
+    // input for a problem that is not there.
+    if (appErr.code === '42703' || appErr.code === 'PGRST204') {
+      console.error('[api/applications] schema is behind the code:', appErr)
+      return NextResponse.json(
+        { error: 'Applications are temporarily unavailable — the database is behind the app. This is our problem, not yours.' },
+        { status: 503 },
+      )
     }
     console.error('[api/applications] application insert failed:', appErr)
     return NextResponse.json({ error: 'Could not submit your application.' }, { status: 500 })

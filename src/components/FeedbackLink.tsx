@@ -115,7 +115,7 @@ export default function FeedbackLink({
         type="button"
         onClick={() => setOpen(true)}
         style={{
-          background: 'none', border: 'none', padding: 0, font: 'inherit',
+          background: 'none', border: 'none', padding: 0, fontFamily: 'inherit',
           fontSize: 13, color: C.textFaint, cursor: 'pointer', ...style,
         }}
       >
@@ -148,7 +148,7 @@ export default function FeedbackLink({
                   key={k} type="button" onClick={() => setPickedKind(k)}
                   aria-pressed={kind === k}
                   style={{
-                    flex: 1, padding: '10px 12px', borderRadius: R.md, cursor: 'pointer', font: 'inherit',
+                    flex: 1, padding: '10px 12px', borderRadius: R.md, cursor: 'pointer', fontFamily: 'inherit',
                     fontSize: 14, fontWeight: 600,
                     background: kind === k ? C.accentHover : C.surface,
                     border: `1px solid ${kind === k ? C.accentBorder : C.border}`,

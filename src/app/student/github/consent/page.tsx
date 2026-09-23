@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { hasGithubConsent } from '@/lib/github/consent'
 import { ConsentClient } from './ConsentClient'
 
+export const metadata = { title: 'Consent' }
+
 export const dynamic = 'force-dynamic'
 
 /**

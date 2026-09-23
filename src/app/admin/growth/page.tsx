@@ -1,10 +1,14 @@
 import { requireAdmin } from '@/lib/admin/guard'
 import { loadQueue } from '@/lib/admin/queue'
 import { loadFunnel } from '@/lib/admin/stats'
+import { loadFunnelEvents } from '@/lib/admin/load-events'
+import { buildFunnel, buildCohorts, worstDrop } from '@/lib/admin/funnel'
 import AdminShell from '../AdminShell'
 import { Panel, Bar, HealthRow } from '../widgets'
 import { tableStyles as ts } from '../table-styles'
 import { C, state } from '@/lib/theme/dark-tokens'
+
+export const metadata = { title: 'Growth' }
 
 /**
  * /admin/growth — is the product doing its job?
@@ -16,10 +20,23 @@ import { C, state } from '@/lib/theme/dark-tokens'
  */
 export default async function AdminGrowthPage() {
   const { admin } = await requireAdmin()
-  const [{ funnel, health, enoughData }, { items }] = await Promise.all([
+  const [{ funnel, health, enoughData }, { items }, events] = await Promise.all([
     loadFunnel(admin),
     loadQueue(admin),
+    loadFunnelEvents(admin),
   ])
+
+  // The measured funnel, as opposed to the one derived from row counts. The
+  // old one has no failures in it: somebody who opened the signup form and
+  // left leaves no row in any table, so its top step is "accounts that
+  // exist" and the question "how many invited people never finish" cannot be
+  // asked of it at all.
+  const measured = buildFunnel(events)
+  const leak = worstDrop(measured)
+  const cohorts = buildCohorts(events, [
+    'signup_submitted', 'onboarding_completed', 'github_connected', 'first_evidence',
+  ]).slice(0, 8)
+  const measuredTop = measured[0]?.reached ?? 0
 
   const top = funnel[0]?.count ?? 0
   const matched = funnel.find((f) => f.label === 'Got accepted')?.count ?? 0
@@ -72,8 +89,103 @@ export default async function AdminGrowthPage() {
         </div>
       </div>
 
+      {/* Measured, not derived. Above the old table because it can see the
+          step the old one cannot: people who never became a row. */}
       <div style={{ marginBottom: 24 }}>
-        <Panel title="Where people stop">
+        <Panel title="Where people stop — measured">
+          {measuredTop === 0 ? (
+            <p style={{ fontSize: 13.5, color: C.textFaint, lineHeight: 1.6 }}>
+              No events recorded yet. This fills in as people arrive — it starts at the signup
+              form rather than at accounts that exist, so it can show the ones who never
+              finished.
+            </p>
+          ) : (
+            <>
+              {leak && (
+                <div style={{ background: state.cautionBg, borderRadius: 9, padding: '12px 15px', marginBottom: 16 }}>
+                  <p style={{ fontSize: 13.5, color: state.caution, lineHeight: 1.6 }}>
+                    Biggest drop is <strong>{leak.name}</strong> — {Math.round(leak.ofPrevious! * 100)}%
+                    of the people above it get through. That is the screen to look at.
+                  </p>
+                </div>
+              )}
+              <div style={{ overflowX: 'auto' }}>
+                <table style={ts.table}>
+                  <thead>
+                    <tr>
+                      <th style={ts.th}>Step</th>
+                      <th style={ts.th}>People</th>
+                      <th style={ts.th}></th>
+                      <th style={ts.th}>Of previous</th>
+                      <th style={ts.th}>Of everyone</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {measured.map((f) => {
+                      const leaky = f.ofPrevious !== null && f.ofPrevious < 0.5
+                      return (
+                        <tr key={f.event}>
+                          <td style={{ ...ts.td, fontWeight: 600, color: C.text, whiteSpace: 'nowrap' }}>{f.name}</td>
+                          <td style={{ ...ts.td, ...ts.num }}>{f.reached}</td>
+                          <td style={{ ...ts.td, minWidth: 110 }}><Bar value={f.reached} max={measuredTop} /></td>
+                          <td style={{ ...ts.td, ...ts.num, color: leaky ? state.caution : C.textSub, fontWeight: leaky ? 700 : 400 }}>
+                            {f.ofPrevious === null ? '—' : `${Math.round(f.ofPrevious * 100)}%`}
+                          </td>
+                          <td style={{ ...ts.td, ...ts.num, color: C.textFaint }}>
+                            {f.ofStart === null ? '—' : `${Math.round(f.ofStart * 100)}%`}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </Panel>
+      </div>
+
+      {/* By week, because a single all-time number moves too slowly to tell
+          you whether the thing you changed on Tuesday worked. */}
+      {cohorts.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <Panel title="By the week they arrived">
+            <div style={{ overflowX: 'auto' }}>
+              <table style={ts.table}>
+                <thead>
+                  <tr>
+                    <th style={ts.th}>Week of</th>
+                    <th style={ts.th}>Arrived</th>
+                    <th style={ts.th}>Submitted</th>
+                    <th style={ts.th}>Finished profile</th>
+                    <th style={ts.th}>Connected GitHub</th>
+                    <th style={ts.th}>First skill</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cohorts.map((c) => (
+                    <tr key={c.week}>
+                      <td style={{ ...ts.td, fontWeight: 600, color: C.text, whiteSpace: 'nowrap' }}>{c.week}</td>
+                      <td style={{ ...ts.td, ...ts.num }}>{c.size}</td>
+                      <td style={{ ...ts.td, ...ts.num }}>{c.reached.signup_submitted ?? 0}</td>
+                      <td style={{ ...ts.td, ...ts.num }}>{c.reached.onboarding_completed ?? 0}</td>
+                      <td style={{ ...ts.td, ...ts.num }}>{c.reached.github_connected ?? 0}</td>
+                      <td style={{ ...ts.td, ...ts.num }}>{c.reached.first_evidence ?? 0}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 11 }}>
+              Somebody is counted in the week they first appeared, and in a later column if they
+              ever reached it — not only if they reached it that week.
+            </p>
+          </Panel>
+        </div>
+      )}
+
+      <div style={{ marginBottom: 24 }}>
+        <Panel title="Where people stop — from row counts">
           <div style={{ overflowX: 'auto' }}>
             <table style={ts.table}>
               <thead>

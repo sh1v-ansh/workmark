@@ -36,6 +36,27 @@ export const AGENT_LIMITS: Record<AgentType, RateLimit> = {
   // Closing out an engagement is rare and the notes are short, but people
   // do regenerate a couple of times to get the wording right.
   work_summary: { max: 15, windowHours: 24 },
+  // One per sprint per project, and a sprint is a week. Four a day is a
+  // student closing out several projects on the same evening, which happens
+  // at the end of a term; anything beyond that is a loop.
+  retro: { max: 4, windowHours: 24 },
+  // Once at the start of a week, and people do re-check after moving cards
+  // around. Six a day covers somebody planning three projects and changing
+  // their mind twice.
+  kickoff: { max: 6, windowHours: 24 },
+  // The only conversational call here, and the only one somebody can hold a
+  // back-and-forth with. Thirty a day is a student stuck on three different
+  // things and working through each; beyond that they are using it as a
+  // compiler, which the prompt refuses to be anyway.
+  helper: { max: 30, windowHours: 24 },
+  // A project gets planned once, then topped up occasionally as it grows.
+  // Six a day covers a student with three projects who redrafts one of them,
+  // and stops a loop that would draft eight tasks a second.
+  planner: { max: 6, windowHours: 24 },
+  // A batch, not a task — one run covers everything submitted since the last
+  // one. Twelve a day is a student checking their work after each sitting
+  // and still leaves the nightly sweep room.
+  verification: { max: 12, windowHours: 24 },
 }
 
 export interface RateLimitResult {

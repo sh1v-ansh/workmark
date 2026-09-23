@@ -1,7 +1,8 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
-import { claimJob, completeStep, kickJob, nextPendingStep, releaseJob } from '@/lib/jobs/queue'
+import { claimJob, claimStep, completeStep, kickJob, releaseJob } from '@/lib/jobs/queue'
 import { runStep } from '@/lib/jobs/runners'
+import { pruneStalePriors, retractUnscannedRepos } from '@/lib/skills/evidence'
 
 // One step, not one job. The whole point of the queue is that this number
 // bounds a single unit of work — one repo — rather than all of them, so it
@@ -49,17 +50,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, claimed: false })
   }
 
-  const step = nextPendingStep(job)
+  // Counts the attempt before the work starts, so a step killed by the
+  // platform mid-run is still counted — which is the whole case this guards
+  // against, and the one a write-afterwards would miss.
+  const { step, steps } = await claimStep(admin, job)
   if (!step) {
     // Claimed a job with nothing left to do — finish it rather than leaving
     // it 'running' forever with a lease that keeps expiring and re-claiming.
-    await completeStep(admin, job, '', { ok: true, detail: '' })
+    await completeStep(admin, { ...job, steps }, '', { ok: true, detail: '' })
     return NextResponse.json({ ok: true, claimed: true, done: true })
   }
 
   let outcome
   try {
-    outcome = await runStep(admin, job, step)
+    // The refreshed steps, so completeStep writes on top of the attempt
+    // count rather than over it.
+    outcome = await runStep(admin, { ...job, steps }, step)
   } catch (err) {
     // The step's own failure, not the job's. Record it and move on so one
     // bad repo can't block the rest — completeStep counts it as finished.
@@ -67,8 +73,9 @@ export async function POST(request: Request) {
   }
 
   let done: boolean
+  let failed = 0
   try {
-    ;({ done } = await completeStep(admin, job, step.id, outcome))
+    ;({ done, failed } = await completeStep(admin, { ...job, steps }, step.id, outcome))
   } catch (err) {
     // Couldn't even record the result — release the lease so the sweeper
     // retries rather than leaving the job wedged behind a live lease.
@@ -78,6 +85,22 @@ export async function POST(request: Request) {
   }
 
   if (!done) kickJob(job.id)
+
+  // Once every repository has been read, and only if none of them failed,
+  // take off the "detected but unverified" skills this scan did not see
+  // again. Priors only ever accumulated, so a skill detected once stayed on
+  // that list forever — see pruneStalePriors. A repository that could not
+  // be read is one whose priors we would be deleting on no evidence, so any
+  // failed step leaves the list alone.
+  if (done && job.kind === 'github_scan' && failed === 0 && job.started_at) {
+    await pruneStalePriors(admin, job.student_id, job.started_at)
+    // A scan is the current answer, not an addition to every previous one:
+    // a repository switched off or no longer shared stops counting. Step
+    // labels are the repository names this job was built from — a skipped
+    // step still counts as read, so only repositories absent from the job
+    // entirely are affected.
+    await retractUnscannedRepos(admin, job.student_id, new Set(steps.map((st) => st.label)))
+  }
 
   return NextResponse.json({ ok: true, claimed: true, done, step: step.label })
 }

@@ -30,6 +30,33 @@ export function Bar({ width = '100%', height = 14, radius = R.sm, style }: {
   )
 }
 
+/**
+ * The block almost every page opens with: a back link, a heading, and a line
+ * of context under it.
+ *
+ * Added because nine of the ten skeletons in this app were drawing their
+ * cards and no header at all, so the whole page jumped down by the height of
+ * a title the moment the data landed. A skeleton whose layout differs from
+ * what arrives is worse than no skeleton — the eye settles on a shape and
+ * then has to start again.
+ */
+export function HeaderSkeleton({ back, title = 240, sub = 300, gap = 20 }: {
+  /** Pages reached from somewhere else open with a back link. */
+  back?: boolean
+  title?: number
+  /** The line under the heading, or false on pages that have none. */
+  sub?: number | false
+  gap?: number
+}) {
+  return (
+    <div style={{ marginBottom: gap }}>
+      {back && <Bar width={96} height={11} style={{ marginBottom: 14 }} />}
+      <Bar width={title} height={28} style={{ marginBottom: sub === false ? 0 : 9 }} />
+      {sub !== false && <Bar width={sub} height={13} />}
+    </div>
+  )
+}
+
 /** A skeleton shaped like an `.nb-card` — the unit most pages are built from. */
 export function CardSkeleton({ lines = 3, height }: { lines?: number; height?: number }) {
   return (

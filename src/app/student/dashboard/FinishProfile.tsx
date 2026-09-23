@@ -1,0 +1,102 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import Card from '@/components/Card'
+import Button from '@/components/ui/Button'
+import { Combobox } from '@/components/Combobox'
+import { useToast } from '@/components/Toast'
+import { MAJORS } from '@/lib/data/majors'
+import { C, T } from '@/lib/theme/dark-tokens'
+
+/**
+ * The fields signup stopped asking for.
+ *
+ * ── Why here, and why now ─────────────────────────────────────────────────
+ * Signup used to ask for eighteen things before showing anything, and every
+ * field before somebody had seen the point was a chance to leave. None of
+ * these is needed to produce a record, so they moved to after the first
+ * scan: at that moment a student has something on screen that these make
+ * more useful — a poster filtering for part-time help, a profile with a
+ * LinkedIn beside the evidence.
+ *
+ * Only shown once there is a record, and gone once the major is filled in.
+ * Every field is optional, because an incomplete profile with a real record
+ * is worth far more than a complete one without.
+ */
+export default function FinishProfile() {
+  const router = useRouter()
+  const { toast } = useToast()
+  const [major, setMajor] = useState('')
+  const [availability, setAvailability] = useState('')
+  const [hours, setHours] = useState('')
+  const [linkedin, setLinkedin] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function save() {
+    setBusy(true)
+    try {
+      const res = await fetch('/api/onboarding', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          details: {
+            major: major || null,
+            availability: availability || null,
+            hours_per_week: hours || null,
+            linkedin_url: linkedin || null,
+          },
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Could not save that.')
+      toast('Saved.', 'success')
+      router.refresh()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Could not save that.', 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const label: React.CSSProperties = { display: 'block', fontSize: 13, fontWeight: 600, color: C.textSub, marginBottom: 6 }
+
+  return (
+    <Card style={{ marginBottom: 18 }}>
+      <p style={{ fontSize: T.h3, fontWeight: 600, color: C.text, marginBottom: 4 }}>
+        A few details for people reading your record
+      </p>
+      <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 16, maxWidth: '60ch' }}>
+        All optional. Posters filter on these when they are looking for help, so filling them in
+        is how your record reaches the people it should.
+      </p>
+
+      <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label htmlFor="fp-major" style={label}>Major</label>
+          <Combobox id="fp-major" value={major} onChange={setMajor} options={MAJORS} placeholder="Search majors…" />
+        </div>
+        <div>
+          <label htmlFor="fp-availability" style={label}>Availability</label>
+          <select id="fp-availability" value={availability} onChange={(e) => setAvailability(e.target.value)} className="dk-select">
+            <option value="">Not saying</option>
+            <option value="part-time">Part-time</option>
+            <option value="full-time">Full-time</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="fp-hours" style={label}>Hours a week</label>
+          <input id="fp-hours" type="number" min={1} max={60} value={hours} onChange={(e) => setHours(e.target.value)} className="dk-input" placeholder="10" />
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label htmlFor="fp-linkedin" style={label}>LinkedIn</label>
+          <input id="fp-linkedin" type="url" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className="dk-input" placeholder="https://linkedin.com/in/you" />
+        </div>
+      </div>
+
+      <Button onClick={save} busyLabel={busy ? 'Saving…' : null} disabled={!major && !availability && !hours && !linkedin}>
+        Save
+      </Button>
+    </Card>
+  )
+}

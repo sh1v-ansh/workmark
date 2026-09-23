@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import EngagementClient, { type EngagementData } from './EngagementClient'
 import type { Stage } from '@/lib/engagements/lifecycle'
 
+export const metadata = { title: 'Engagement' }
+
 export default async function EngagementPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()

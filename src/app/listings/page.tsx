@@ -7,6 +7,8 @@ import type { AiProjectCardData } from '@/components/briefs/AiProjectCard'
 import type { RecommendationReason } from '@/lib/briefs/targets'
 import { splitBriefText } from '@/lib/briefs/format'
 
+export const metadata = { title: 'Work' }
+
 /**
  * Open listings. Visible to everyone including logged-out visitors —
  * presence gates applying, never seeing (§7). Signed-in students

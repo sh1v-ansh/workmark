@@ -7,6 +7,8 @@ import Badge from '@/components/ui/Badge'
 import { C } from '@/lib/theme/dark-tokens'
 import { tableStyles as ts } from '../table-styles'
 
+export const metadata = { title: 'People' }
+
 /**
  * /admin/people — everyone, and what state they're in.
  *

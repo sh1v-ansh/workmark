@@ -215,14 +215,26 @@ describe('per-skill relevance', () => {
     expect(reason).toContain('supabase-platform')
   })
 
-  it('never drops an implied skill below the evidence bar', () => {
-    // Postgres reached via Supabase is a real claim even when the Supabase
-    // detection itself was weak — it should not silently vanish.
+  // This test used to assert the opposite, on the reasoning that Postgres
+  // reached via Supabase is a real claim even when the Supabase detection
+  // was weak, and should not silently vanish.
+  //
+  // Both halves were wrong. If the evidence for Supabase is too thin to put
+  // Supabase on the record, then Postgres — which we only suspect *because*
+  // of Supabase — is strictly thinner still, and claiming it is claiming
+  // more than we know. And nothing vanishes: priors are written
+  // unconditionally, so it stays recorded as "we saw this" and only fails
+  // to become evidence.
+  //
+  // The floor it asserted was doing real damage. It meant an implied skill
+  // could never fall below the bar no matter how weak its cause, so every
+  // inference in the table minted evidence for everybody.
+  it('does not prop an inference up past the strength of its cause', () => {
     const { relevance } = computeSkillRelevance({
       detections: [], filesTouched: new Set(), languageShare: noLangs,
       impliedFrom: { skillId: 'supabase-platform', relevance: 0.1 },
     })
-    expect(relevance).toBeGreaterThanOrEqual(EVIDENCE_THRESHOLD)
+    expect(relevance).toBeLessThan(EVIDENCE_THRESHOLD)
   })
 })
 

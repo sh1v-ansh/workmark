@@ -4,6 +4,8 @@ import { agentsAvailable } from '@/lib/agents/client'
 import BriefsClient, { type BriefRow } from './BriefsClient'
 import { splitBriefText } from '@/lib/briefs/format'
 
+export const metadata = { title: 'Briefs' }
+
 /**
  * /me/briefs — private project ideas.
  *
@@ -19,7 +21,7 @@ export default async function BriefsPage() {
   const { data: student } = await supabase.from('students').select('full_name').eq('id', user.id).maybeSingle()
   if (!student) redirect('/onboarding')
 
-  const [{ data: briefs }, { data: taxonomy }, { data: evidence }, { data: grants }] = await Promise.all([
+  const [{ data: briefs }, { data: taxonomy }, { data: evidence }, { data: grants }, { data: startedProjects }] = await Promise.all([
     supabase
       .from('project_briefs')
       .select('id, target_skill_id, target_role, brief_text, difficulty, skill_level, career_track, repo_full_name, started_at, issued_at, completed_at')
@@ -35,8 +37,20 @@ export default async function BriefsPage() {
       .eq('student_id', user.id)
       .is('revoked_at', null)
       .order('repo_full_name'),
+    // Which briefs have already been turned into a project. A brief carries
+    // no pointer to its workspace — the link runs the other way — so this is
+    // the only way to tell "start one" from "open the one you have".
+    supabase
+      .from('workspaces')
+      .select('id, brief_id')
+      .eq('created_by', user.id)
+      .not('brief_id', 'is', null)
+      .order('repo_full_name'),
   ])
 
+  const workspaceByBrief = new Map(
+    (startedProjects ?? []).map((w) => [w.brief_id as string, w.id as string]),
+  )
   const nameById = new Map((taxonomy ?? []).map((s) => [s.id, s.canonical_name]))
   const evidencedSkillIds = new Set((evidence ?? []).map((e) => e.skill_id))
 
@@ -56,6 +70,7 @@ export default async function BriefsPage() {
       startedAt: b.started_at,
       issuedAt: b.issued_at,
       completedAt: b.completed_at,
+      workspaceId: workspaceByBrief.get(b.id) ?? null,
     }
   })
 

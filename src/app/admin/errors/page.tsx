@@ -5,6 +5,8 @@ import { Panel } from '../widgets'
 import { tableStyles as ts } from '../table-styles'
 import { C, state } from '@/lib/theme/dark-tokens'
 
+export const metadata = { title: 'Errors' }
+
 export const dynamic = 'force-dynamic'
 
 interface ErrorRow {

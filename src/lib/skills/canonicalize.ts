@@ -30,6 +30,29 @@ import { SEED_ALIASES } from '@/lib/skills/seed-aliases'
 const CONFIDENCE_THRESHOLD = 0.85
 const CANDIDATE_COUNT = 3
 
+/**
+ * Taxonomy nodes that similarity must never be allowed to pick.
+ *
+ * ── The bug this exists for ───────────────────────────────────────────────
+ * Taxonomy embeddings are built from the canonical name alone
+ * (scripts/backfill-taxonomy-embeddings.mjs). For a node called "R" that
+ * means the stored vector is the embedding of a single letter, which carries
+ * almost no meaning — so it sits in the middle of everything, and short or
+ * opaque tokens land within 0.85 of it by accident. Students were being told
+ * they were good at R on the strength of a match against one character.
+ *
+ * Worse, an auto-accepted match is written to skill_aliases, so the wrong
+ * answer is cached and re-fires on every future scan for everybody.
+ *
+ * One- and two-character names are not guessed at. They still resolve
+ * perfectly well through the alias cache and the exact-match pass above,
+ * both of which compare strings rather than meanings — and "R" is a name you
+ * either match exactly or have no business inferring.
+ */
+function degenerateTarget(canonicalName: string): boolean {
+  return canonicalName.trim().length <= 2
+}
+
 function normalize(raw: string): string {
   return raw.trim().toLowerCase()
 }
@@ -103,8 +126,19 @@ export async function canonicalizeSkill(
  * Alias writes are one bulk insert at the end rather than one per hit.
  */
 export interface ScanContext {
-  studentId: string
-  repoFullName: string
+  /**
+   * Whose scan this is. Optional: the dispute path passes a context only to
+   * carry `trusted`, and must not record sightings — so sightings are
+   * recorded only when these are present.
+   */
+  studentId?: string
+  repoFullName?: string
+  /**
+   * Raw names, already normalized, that came from a source we trust to be
+   * naming a real technology — currently GitHub's language statistics.
+   * These bypass the noise filter. See the note at step 0.
+   */
+  trusted?: Set<string>
 }
 
 export async function canonicalizeSkills(
@@ -128,8 +162,18 @@ export async function canonicalizeSkills(
   //    review queue as work for a human whose only possible answer is "no,
   //    that isn't a skill". Dropped silently: an unresolved entry is a
   //    request for a decision, and there is no decision here.
+  //
+  //    `trusted` skips the check. It carries the names GitHub's own language
+  //    statistics reported, and those are not guesses that need filtering —
+  //    they are the API telling us what the repository is written in. The
+  //    noise filter drops anything one character long, which is right for a
+  //    bare `import r` and wrong for the language R, and since every
+  //    detection went through here together, real R and C were being deleted
+  //    before they could match. (The comment in noise.ts claimed language
+  //    stats arrived by another path. They did not.)
+  const trusted = context?.trusted ?? new Set<string>()
   const unique = Array.from(new Set(
-    rawTexts.map(normalize).filter((r) => r && !isNoise(r)),
+    rawTexts.map(normalize).filter((r) => r && (trusted.has(r) || !isNoise(r))),
   ))
   if (unique.length === 0) return results
 
@@ -205,7 +249,7 @@ export async function canonicalizeSkills(
   const unresolved: { raw: string; candidates: CanonicalizeResult['candidates'] }[] = []
   for (const { raw, candidates } of looked) {
     const top = candidates[0]
-    if (top && top.similarity >= CONFIDENCE_THRESHOLD) {
+    if (top && top.similarity >= CONFIDENCE_THRESHOLD && !degenerateTarget(top.canonicalName)) {
       results.set(raw, { resolved: true, skillId: top.skillId, source: 'embedding' })
       newAliases.push({ raw_string: raw, skill_id: top.skillId })
     } else {
@@ -317,7 +361,7 @@ async function recordUnresolved(
       })),
       { onConflict: 'raw_string', ignoreDuplicates: true },
     )
-    if (context) {
+    if (context?.studentId && context.repoFullName) {
       // Per-row rather than bulk: each call also folds this student and repo
       // into the row's affected list, deduped in SQL so two students'
       // concurrent scans can't overwrite each other.

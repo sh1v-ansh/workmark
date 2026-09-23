@@ -89,7 +89,7 @@ export default function SkillChip({
     <button
       type="button"
       onClick={onClick}
-      style={{ ...style, cursor: 'pointer', font: 'inherit', fontWeight: 600 }}
+      style={{ ...style, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 600 }}
       aria-label={`${name}, ${label} — see where this came from`}
     >
       {inner}
@@ -141,7 +141,7 @@ export function PlainChip({
     <button
       type="button"
       onClick={onClick}
-      style={{ ...style, cursor: 'pointer', font: 'inherit', fontWeight: 500 }}
+      style={{ ...style, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 500 }}
       aria-label={`${name} — see where this came from`}
     >
       {name}

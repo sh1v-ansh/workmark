@@ -7,6 +7,8 @@ import { Wordmark } from '@/app/landing/Wordmark'
 import { GRACE_DAYS, purgesAt } from '@/lib/account/deletion'
 import { RestoreButton } from './RestoreButton'
 
+export const metadata = { title: 'Deleted' }
+
 export const dynamic = 'force-dynamic'
 
 /**

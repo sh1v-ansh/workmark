@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import ApplicantsClient, { type ApplicantRow } from './ApplicantsClient'
 import type { FitTier } from '@/lib/matching/fit'
 
+export const metadata = { title: 'Applicants' }
+
 /**
  * Poster's applicant inbox, ranked.
  *
@@ -31,7 +33,7 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
 
   const { data: applications } = await supabase
     .from('applications')
-    .select('id, student_id, status, response_text, fit_tier_at_apply, rank_score_at_apply, computed_snapshot, created_at')
+    .select('id, student_id, status, response_text, responses, fit_tier_at_apply, rank_score_at_apply, computed_snapshot, created_at')
     .eq('listing_id', id)
     .order('rank_score_at_apply', { ascending: false, nullsFirst: false })
 
@@ -69,6 +71,7 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
       githubUsername: profile?.github_username ?? null,
       status: a.status,
       responseText: a.response_text,
+      responses: a.responses,
       fitTier: (a.fit_tier_at_apply as FitTier | null) ?? null,
       rankScore: a.rank_score_at_apply,
       perSkill: snapshot.per_skill ?? [],

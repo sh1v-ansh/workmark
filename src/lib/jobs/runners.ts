@@ -64,14 +64,43 @@ async function runGithubScanStep(
     return { ok: true, detail: result.skipReason ?? 'Skipped.' }
   }
 
+  // ── Say what happened, not just that something did ────────────────────
+  // This used to report a count and nothing else, so "the rescan changed
+  // nothing" was a claim neither the student nor we could check. A scan that
+  // read no commits, a scan that hit a rate limit and a scan that genuinely
+  // found nothing all produced the same sentence, and they need opposite
+  // responses.
   const count = result.evidenceWritten.length
+  const gone = result.retracted.length
+  const d = result.diagnostics
+
   if (count === 0 && result.priorsWritten.length > 0) {
-    return { ok: true, detail: 'Read, but no commits of yours found here.' }
+    // Three different situations, which the old message collapsed into one.
+    // It said "no commits of yours" whenever nothing became evidence, which
+    // was false for a repository with plenty of their commits whose skills
+    // simply did not clear the bar — and told them to go and fix an email
+    // address that was never the problem.
+    return {
+      ok: true,
+      detail: d?.partial
+        ? 'Read, but GitHub cut us off partway — nothing was changed.'
+        : d && d.commits > 0
+          ? `Read ${d.commits} of your commits — nothing here is on your record yet.${gone > 0 ? ` ${gone} no longer supported.` : ''}`
+          : 'Read, but no commits of yours found here. If you commit from another email, tell us on this page.',
+    }
   }
-  return {
-    ok: true,
-    detail: count === 0 ? 'Nothing recognisable found.' : `${count} skill${count === 1 ? '' : 's'} recorded.`,
-  }
+
+  const parts: string[] = []
+  if (count > 0) parts.push(`${count} skill${count === 1 ? '' : 's'} recorded`)
+  if (gone > 0) parts.push(`${gone} no longer supported`)
+  if (parts.length === 0) parts.push('Nothing recognisable found')
+  // Only when it matters: a partial scan is why nothing was taken off, and a
+  // student comparing two runs deserves to know that rather than conclude
+  // the product ignored them.
+  if (d?.partial) parts.push('read partially, so nothing was removed')
+  else if (d && !d.couldRetract && gone === 0) parts.push('nothing removed')
+
+  return { ok: true, detail: `${parts.join(' · ')}.` }
 }
 
 export async function runStep(

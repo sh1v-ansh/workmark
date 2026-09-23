@@ -8,6 +8,7 @@
 // would be more moving parts for no property we don't already get.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { record } from '@/lib/analytics/record'
 
 export type JobKind = 'github_scan'
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
@@ -21,6 +22,17 @@ export interface JobStep {
   status: StepStatus
   /** Populated on done/failed: a one-line outcome the user can read. */
   detail?: string | null
+  /**
+   * How many times this step has been picked up.
+   *
+   * Counted per step, not per job. A step killed by the platform mid-run
+   * never reaches completeStep, so it stays pending, and the sweeper hands
+   * the same step back on the next pass — forever, until the job-level cap
+   * of 40 is reached. One slow repository could therefore burn forty full
+   * scans at full API cost while the other repositories never ran at all,
+   * because the doomed step is always the next pending one.
+   */
+  attempts?: number
 }
 
 export interface Job {
@@ -41,8 +53,19 @@ export interface Job {
   updated_at: string
 }
 
-/** A step that fails this many times is abandoned rather than retried forever. */
+/** A job that keeps failing is abandoned rather than retried forever. */
 const MAX_ATTEMPTS_PER_JOB = 40
+
+/**
+ * How many times one step may be started before it is given up on.
+ *
+ * Three, because the two reasons a step gets restarted are a lost chain
+ * (worth one retry) and a step too slow to finish inside the function's
+ * sixty seconds (worth one more, in case the first was a cold start). A
+ * fourth attempt has never succeeded where three failed, and each one costs
+ * a full repository scan.
+ */
+const MAX_ATTEMPTS_PER_STEP = 3
 
 export async function createJob(
   admin: SupabaseClient,
@@ -115,7 +138,7 @@ export async function completeStep(
   job: Job,
   stepId: string,
   outcome: { ok: boolean; detail: string },
-): Promise<{ done: boolean }> {
+): Promise<{ done: boolean; failed: number }> {
   const steps = job.steps.map((s): JobStep =>
     s.id === stepId ? { ...s, status: outcome.ok ? 'done' : 'failed', detail: outcome.detail } : s,
   )
@@ -134,6 +157,18 @@ export async function completeStep(
 
   if (done) {
     patch.status = failedCount === steps.length ? 'failed' : 'succeeded'
+    // Recorded here because this is the only place that knows a job has
+    // ended. The browser polls and would often miss it — a scan runs for
+    // minutes and the tab is usually gone by the time it lands, which is
+    // exactly the population whose experience is worth measuring.
+    void record(admin, 'scan_finished', job.student_id, {
+      status: patch.status as string,
+      repos: steps.length,
+      failed: failedCount,
+      seconds: job.started_at
+        ? Math.round((Date.now() - new Date(job.started_at).getTime()) / 1000)
+        : 0,
+    })
     patch.finished_at = new Date().toISOString()
     patch.result = { total: steps.length, failed: failedCount }
     if (exhausted && remaining) {
@@ -143,7 +178,7 @@ export async function completeStep(
 
   const { error } = await admin.from('jobs').update(patch).eq('id', job.id)
   if (error) throw error
-  return { done }
+  return { done, failed: failedCount }
 }
 
 export async function failJob(admin: SupabaseClient, jobId: string, message: string): Promise<void> {
@@ -159,6 +194,51 @@ export async function failJob(admin: SupabaseClient, jobId: string, message: str
 /** Mark the next pending step as running, so the UI can name it. */
 export function nextPendingStep(job: Job): JobStep | null {
   return job.steps.find((s) => s.status === 'pending' || s.status === 'running') ?? null
+}
+
+/**
+ * Take the next step, counting the attempt — or give up on it.
+ *
+ * Returns the step to run, or null when there is nothing left. A step that
+ * has already been started MAX_ATTEMPTS_PER_STEP times is marked failed and
+ * the search moves on, which is the difference between "one repository could
+ * not be read" and "the scan stopped after this repository and never reached
+ * the other twenty-four".
+ *
+ * The write happens before the work, so an attempt is counted even when the
+ * function is killed mid-step — which is precisely the case this exists for
+ * and the one a write-afterwards would miss.
+ */
+export async function claimStep(
+  admin: SupabaseClient,
+  job: Job,
+): Promise<{ step: JobStep | null; steps: JobStep[] }> {
+  const steps = job.steps.map((s) => ({ ...s }))
+
+  for (const step of steps) {
+    if (step.status !== 'pending' && step.status !== 'running') continue
+
+    const attempts = (step.attempts ?? 0) + 1
+    if (attempts > MAX_ATTEMPTS_PER_STEP) {
+      step.status = 'failed'
+      step.detail = 'Gave up after three attempts — this one kept timing out.'
+      continue
+    }
+
+    step.status = 'running'
+    step.attempts = attempts
+    await admin.from('jobs')
+      .update({ steps, updated_at: new Date().toISOString() })
+      .eq('id', job.id)
+    return { step, steps }
+  }
+
+  // Nothing runnable left. Persist any steps just abandoned, so the counts
+  // the UI reads match what actually happened.
+  await admin.from('jobs')
+    .update({ steps, updated_at: new Date().toISOString() })
+    .eq('id', job.id)
+  return { step: null, steps }
 }
 
 /**

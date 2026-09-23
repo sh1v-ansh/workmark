@@ -9,7 +9,7 @@ import type { Metadata } from 'next'
  * Next gives a client page a title.
  */
 export const metadata: Metadata = {
-  title: 'Sign in',
+  title: 'Login',
   description: 'Sign in to Workmark, or create a student account with your .edu address.',
 }
 

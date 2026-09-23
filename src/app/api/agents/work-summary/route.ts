@@ -41,8 +41,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
   }
 
-  const notes = (body.notes ?? '').trim()
-  if (!body.engagementId) {
+  const notes = typeof body.notes === 'string' ? body.notes.trim() : ''
+  if (typeof body.engagementId !== 'string' || !body.engagementId) {
     return NextResponse.json({ error: 'Missing engagement.' }, { status: 400 })
   }
   // Refused rather than guessed at. A draft written from nothing would be

@@ -310,7 +310,7 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
                     ) : (
                       <button
                         type="button" onClick={() => setNotesOpen(true)}
-                        style={{ background: 'none', border: 'none', padding: 0, marginTop: 11, font: 'inherit', fontSize: 13.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer' }}
+                        style={{ background: 'none', border: 'none', padding: 0, marginTop: 11, fontFamily: 'inherit', fontSize: 13.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer' }}
                       >
                         Help me write this
                       </button>
@@ -389,7 +389,7 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
                     <button
                       key={n} onClick={() => setSatisfaction(n)} aria-label={`${n} out of 5`} aria-pressed={satisfaction === n}
                       style={{
-                        width: 38, height: 38, borderRadius: R.md, cursor: 'pointer', font: 'inherit', fontSize: 14, fontWeight: 600,
+                        width: 38, height: 38, borderRadius: R.md, cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, fontWeight: 600,
                         background: satisfaction >= n ? '#EDE9FF' : C.bg,
                         border: `1.5px solid ${satisfaction >= n ? C.accentBorder : C.border}`,
                         color: satisfaction >= n ? C.accentInk : C.textFaint,
@@ -404,7 +404,7 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
                     <button
                       key={String(v)} onClick={() => setWouldRehire(v)} aria-pressed={wouldRehire === v}
                       style={{
-                        padding: '8px 14.5px', borderRadius: R.md, cursor: 'pointer', font: 'inherit', fontSize: 13.5, fontWeight: 500,
+                        padding: '8px 14.5px', borderRadius: R.md, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13.5, fontWeight: 500,
                         background: wouldRehire === v ? '#EDE9FF' : C.bg,
                         border: `1.5px solid ${wouldRehire === v ? C.accentBorder : C.border}`,
                         color: wouldRehire === v ? C.accentInk : C.textMuted,

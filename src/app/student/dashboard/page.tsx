@@ -3,6 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 import StudentDashboardClient, { type DashboardData } from './StudentDashboardClient'
 import { computeTrackRecord, type Stage } from '@/lib/engagements/lifecycle'
 import { lastScanFinishedAt } from '@/lib/github/last-scan'
+import { cleanIntents } from '@/lib/profile/intents'
+
+export const metadata = { title: 'Dashboard' }
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
@@ -16,12 +19,27 @@ export default async function StudentDashboardPage() {
     .maybeSingle()
   if (!student) redirect('/onboarding')
 
+  // Part-way through signup. The account is created after the first screen,
+  // so somebody who closed the tab there has an account and a student row —
+  // and sign-in sends everyone here. Without this they would never see the
+  // screen asking what they came for, and the dashboard it orders would
+  // have nothing to go on. The GitHub screen is not forced the same way:
+  // NextStepCard already leads with it, and it has to stay skippable.
+  const { data: acct } = await supabase
+    .from('accounts')
+    .select('onboarding_step')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (acct?.onboarding_step === 'intents') redirect('/onboarding')
+
   const [
     { data: myApplications },
     { data: myListings },
     { data: myEngagements },
     { data: evidenceRows },
     { data: connection },
+    { data: intentRow },
+    { count: repoCount },
     lastScannedAt,
     { data: demandRows },
   ] = await Promise.all([
@@ -45,6 +63,16 @@ export default async function StudentDashboardPage() {
       .select('skill_id, difficulty_cleared')
       .eq('student_id', user.id),
     supabase.from('github_connections').select('student_id').eq('student_id', user.id).maybeSingle(),
+    // What they said they came for, and whether there is anything to scan.
+    // The second is what tells a first-year with an empty GitHub apart from
+    // somebody whose scan simply has not run — two situations that look
+    // identical from an empty record and need opposite answers.
+    supabase.from('students').select('intents').eq('id', user.id).maybeSingle(),
+    supabase
+      .from('github_repo_grants')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', user.id)
+      .is('revoked_at', null),
     lastScanFinishedAt(supabase, user.id),
     // What open projects keep asking for. Small — one row per requirement
     // across open listings only — and it rides along with the five queries
@@ -121,6 +149,12 @@ export default async function StudentDashboardPage() {
       activeApplicationCount: student.active_application_count ?? 0,
     },
     githubConnected: !!connection,
+    // What they picked during signup, and whether there is anything to read.
+    // nextStepFor needs all three to tell a first-year with an empty GitHub
+    // apart from somebody whose scan has not run — two situations that look
+    // identical from an empty record and want opposite answers.
+    intents: cleanIntents(intentRow?.intents),
+    repoCount: repoCount ?? 0,
     lastScannedAt,
     topGap,
     trackRecord,

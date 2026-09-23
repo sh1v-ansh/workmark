@@ -5,7 +5,14 @@ import { type Audience } from './audience'
 import { C, F } from './tokens'
 
 /**
- * The externship, given the room it deserves.
+ * The guided project, given the room it deserves.
+ *
+ * Deliberately NOT called an externship or an internship. Those words carry
+ * meaning Workmark does not deliver and cannot promise — an internship is an
+ * employment relationship, and for an international student on an F-1 visa
+ * calling this one would imply work authorisation they may not have. A
+ * guided project is exactly what this is: a real project, planned with you,
+ * that produces real evidence. No employer, no paperwork, nobody to ask.
  *
  * It was one clause inside somebody else's step — "Workmark writes you a
  * project that closes your biggest gap" — which is a footnote for the
@@ -42,10 +49,10 @@ const FRAMING: Record<Audience, {
   cta: { label: string; href: string }
 }> = {
   students: {
-    eyebrow: 'Work experience, without the internship',
-    headline: 'The externship you don’t have to apply for',
+    eyebrow: 'Real work, without the application',
+    headline: 'A guided project you don’t have to apply for',
     lede:
-      'Workmark hands you a real project aimed at the exact skill you are missing, then reads what you build the same way it reads everything else. No interview, no rejection email, no waiting until next summer.',
+      'Workmark hands you a real project aimed at the exact skill you are missing, plans it with you, then reads what you build the same way it reads everything else. No application, no interview, no rejection email, no waiting until next summer.',
     steps: [
       {
         title: 'Workmark picks the project',
@@ -63,7 +70,7 @@ const FRAMING: Record<Audience, {
     soonEyebrow: 'Being built',
     soonHeadline: 'And soon, the job around the project',
     soonLede:
-      'An externship is not just a task list. It is having somewhere to work, someone senior breaking the problem down, and something at the end that says you actually finished it.',
+      'A guided project is not just a task list. It is having somewhere to work, someone senior breaking the problem down, and something at the end that says you actually finished it.',
     soonPoints: [
       {
         title: 'A senior dev who plans it with you',
@@ -95,9 +102,13 @@ const FRAMING: Record<Audience, {
 
   businesses: {
     eyebrow: 'Where the work comes from',
-    headline: 'Candidates who have shipped something on purpose',
+    // Not "shipped something on purpose" — that describes the student and
+    // says nothing about what the employer gets. What they get is an
+    // assessment they did not have to run, covering the half a take-home
+    // never reaches.
+    headline: 'A technical screen you didn’t have to run',
     lede:
-      'A student with no internship is not a student with no evidence. Workmark writes them scoped projects aimed at real gaps and reads the result exactly as it reads anything else, so what reaches you is finished work against a brief.',
+      'Every guided project is a scoped brief, worked in the open against a deadline, and checked against its own acceptance criteria. What reaches you is not only whether somebody can build the thing. It is how they planned it, what they did when it slipped, and whether they finished.',
     steps: [
       {
         title: 'The brief is not theirs to pick',
@@ -113,7 +124,7 @@ const FRAMING: Record<Audience, {
       },
     ],
     soonEyebrow: 'Being built',
-    soonHeadline: 'And soon, how they work — not just what they shipped',
+    soonHeadline: 'And soon, how they work, not just what they shipped',
     soonLede:
       'The questions you ask on a reference call, answered by what actually happened rather than by someone remembering it kindly.',
     soonPoints: [
@@ -155,13 +166,13 @@ const BOARD: { label: string; tone: 'idle' | 'active' | 'check' | 'done'; tasks:
   { label: 'Verified', tone: 'done', tasks: ['Schema', 'Search'] },
 ]
 
-export function TheExternship({ audience }: { audience: Audience }) {
+export function TheGuidedProject({ audience }: { audience: Audience }) {
   const copy = FRAMING[audience]
 
   return (
-    <section className="wm-section" style={{ paddingTop: 0 }}>
+    <section className="wm-section">
       <div className="wm-section-inner">
-        <div className="wm-externship">
+        <div className="wm-guided">
           {/* ── Live today ─────────────────────────────────────────────── */}
           <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1.05fr)', gap: 52, alignItems: 'center' }} className="mob-1col">
             <div>

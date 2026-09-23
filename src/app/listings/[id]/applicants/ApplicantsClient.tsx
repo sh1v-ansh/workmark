@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge, { type BadgeTone } from '@/components/ui/Badge'
+import { answerPairs } from '@/lib/applications/questions'
 import { Kicker } from '@/components/ui/Section'
 import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
@@ -26,6 +27,8 @@ export interface ApplicantRow {
   githubUsername: string | null
   status: string
   responseText: string | null
+  /** Question-and-answer pairs, for applications made after v05_0043. */
+  responses: unknown
   fitTier: FitTier | null
   rankScore: number | null
   perSkill: { skillId: string; requiredLevel: number; depth: number; present: boolean }[]
@@ -168,7 +171,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                     aria-current={on ? 'true' : undefined}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 12, width: '100%', textAlign: 'left',
-                      padding: '13px 14px', borderRadius: R.md, cursor: 'pointer', font: 'inherit',
+                      padding: '13px 14px', borderRadius: R.md, cursor: 'pointer', fontFamily: 'inherit', fontSize: 'inherit',
                       background: on ? '#EDE9FF' : 'transparent',
                       border: `1px solid ${on ? '#D9D0F5' : 'transparent'}`,
                       marginBottom: 2,
@@ -309,14 +312,38 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                 </div>
               )}
 
-              {selected.responseText && (
+              {/* The question with the answer, because the answer alone is
+                  not readable — "I'd cut the export and accept slower
+                  onboarding" means nothing without knowing what was asked.
+                  The text is stored per application rather than read off the
+                  listing, so editing a listing does not rewrite history.
+
+                  Falls back to the old single block for applications made
+                  before the questions existed. */}
+              {answerPairs(selected.responses).length > 0 ? (
+                <div style={{ marginBottom: 22 }}>
+                  <Kicker style={{ marginBottom: 10 }}>What they said</Kicker>
+                  <div style={{ display: 'grid', gap: 12 }}>
+                    {answerPairs(selected.responses).map((qa, i) => (
+                      <div key={i} style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '14px 18.5px' }}>
+                        <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, marginBottom: 7 }}>
+                          {qa.question}
+                        </p>
+                        <p style={{ fontSize: 15, lineHeight: 1.65, color: C.textSub, whiteSpace: 'pre-wrap' }}>
+                          {qa.answer}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : selected.responseText ? (
                 <div style={{ marginBottom: 22 }}>
                   <Kicker style={{ marginBottom: 10 }}>In their words</Kicker>
                   <div style={{ background: C.surfaceAlt, borderRadius: R.md, padding: '16.5px 18.5px', fontSize: 15, lineHeight: 1.65, color: C.textSub, whiteSpace: 'pre-wrap' }}>
                     {selected.responseText}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               {selected.status === 'accepted' && selected.studentEmail && (
                 <div style={{ background: state.positiveBg, borderRadius: R.md, padding: '13px 16.5px', marginBottom: 20 }}>

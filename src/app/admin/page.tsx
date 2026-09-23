@@ -4,6 +4,10 @@ import { loadQueue } from '@/lib/admin/queue'
 import { loadOverview, loadCalibration } from '@/lib/admin/stats'
 import AdminShell from './AdminShell'
 import { StatGrid, Panel, HealthRow } from './widgets'
+import { emailStatus } from '@/lib/notify/email'
+import TestEmailButton from './TestEmailButton'
+
+export const metadata = { title: 'Admin' }
 
 /**
  * /admin — what's happening, and what's wrong.
@@ -21,6 +25,7 @@ export default async function AdminOverviewPage() {
     loadCalibration(admin),
   ])
 
+  const mail = emailStatus()
   const overdue = items.filter((i) => i.severity === 'overdue').length
   const onPercentile = calibration.filter((c) => c.method === 'percentile').length
 
@@ -70,6 +75,20 @@ export default async function AdminOverviewPage() {
               detail={`${failedSources.join(', ')} — the queue is incomplete.`}
             />
           )}
+          {/* Workmark is asynchronous by nature: somebody applies, and the
+              poster finds out when they next open the site. With mail off
+              that becomes "if they next open the site", and nothing anywhere
+              in the product says so — every send just returns false. This is
+              the one place it is visible without reading a server log. */}
+          {!mail.ok && (
+            <HealthRow state="bad" label="Email is not going out" detail={mail.reason} />
+          )}
+          {/* The only way to tell a wrong key from an unverified domain from
+              a template that never rendered. All three fail identically and
+              silently from inside the app. */}
+          <div style={{ marginTop: 12 }}>
+            <TestEmailButton />
+          </div>
         </Panel>
 
         <Panel title="System">

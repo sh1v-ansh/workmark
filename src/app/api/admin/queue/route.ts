@@ -4,9 +4,10 @@ import { NextResponse } from 'next/server'
 import { getAccount, hasRole, recordAdminAction, type AdminSubject } from '@/lib/auth/roles'
 import {
   resolveReviewRequest, resolveDispute, resolveUnresolvedSkill, retryJob, verifyFaculty,
-  createSkillNode, resolveFeedback,
+  createSkillNode, resolveFeedback, resolveTaskVerification,
   type DisputeResolution,
 } from '@/lib/admin/actions'
+import { HUMAN_VERDICTS, type HumanVerdict } from '@/lib/workspace/review'
 import { suggestTaxonomy, slugify } from '@/lib/agents/taxonomy'
 import type { QueueKind } from '@/lib/admin/queue'
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
   }
 
   const { kind, id, action } = body
-  if (!kind || !id || !action) {
+  if (typeof kind !== 'string' || typeof id !== 'string' || typeof action !== 'string' || !kind || !id || !action) {
     return NextResponse.json({ error: 'kind, id and action are required.' }, { status: 400 })
   }
 
@@ -174,6 +175,25 @@ export async function POST(request: Request) {
       }
       studentId = id
       result = await verifyFaculty(admin, { accountId: id, adminId, approve: action === 'approve' })
+      break
+    }
+
+    case 'task_verification': {
+      if (!HUMAN_VERDICTS.includes(action as HumanVerdict)) {
+        return NextResponse.json({ error: 'Unknown action.' }, { status: 400 })
+      }
+      const { data } = await admin
+        .from('task_submissions')
+        .select('submitted_by')
+        .eq('id', id)
+        .maybeSingle()
+      studentId = (data?.submitted_by as string | null) ?? null
+      result = await resolveTaskVerification(admin, {
+        id,
+        verdict: action as HumanVerdict,
+        adminId,
+        note: body.note?.trim() || null,
+      })
       break
     }
 

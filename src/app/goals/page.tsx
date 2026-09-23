@@ -7,6 +7,8 @@ import { computeFit, assignTier } from '@/lib/matching/fit'
 import { agentsAvailable } from '@/lib/agents/client'
 import GoalsClient, { type GoalsData } from './GoalsClient'
 
+export const metadata = { title: 'Goals' }
+
 /**
  * /goals — the student agent (§8).
  *

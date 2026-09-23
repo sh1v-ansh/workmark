@@ -12,7 +12,69 @@
 // your platform doesn't support real newlines in env vars.
 
 import { App } from '@octokit/app'
-import { Octokit } from '@octokit/rest'
+import { Octokit as RestOctokit } from '@octokit/rest'
+import { throttling } from '@octokit/plugin-throttling'
+import { retry } from '@octokit/plugin-retry'
+
+/**
+ * The client every scan goes through, with the two plugins that stop a busy
+ * afternoon looking like an empty record.
+ *
+ * ── Why this matters more than it sounds ──────────────────────────────────
+ * There was no rate-limit handling anywhere. Every call site swallowed its
+ * own failures, so a student with twenty-five repositories who ran out of
+ * budget partway through got later repos recorded as "found nothing" — which
+ * is indistinguishable from a repository that genuinely demonstrates
+ * nothing, and lands on a permanent record either way.
+ *
+ * `throttling` waits out GitHub's own Retry-After instead of hammering
+ * through it, which is also what keeps us out of secondary rate limiting —
+ * the one that is triggered by concurrency rather than volume, and the one
+ * a scanner opening dozens of file reads per repo is most likely to meet.
+ *
+ * ── Why the retry counts are small ────────────────────────────────────────
+ * A scan step has sixty seconds. Retrying three times with GitHub's
+ * suggested backoff can exceed that on its own, and a step killed by the
+ * platform is worse than a repo that reported a problem: the first is
+ * invisible and gets re-run from scratch, the second is recorded and makes
+ * the scan refuse to retract. Twice is enough to ride out a blip.
+ */
+const THROTTLE = {
+  onRateLimit(retryAfter: number, options: { method: string; url: string }, _o: unknown, retryCount: number) {
+    console.warn(`[github] rate limited on ${options.method} ${options.url}; waiting ${retryAfter}s`)
+    return retryCount < 2
+  },
+  onSecondaryRateLimit(retryAfter: number, options: { method: string; url: string }, _o: unknown, retryCount: number) {
+    // Triggered by making too many requests at once rather than too many in
+    // total. Worth retrying once: it clears quickly and the alternative is
+    // recording an empty repository.
+    console.warn(`[github] secondary rate limit on ${options.method} ${options.url}; waiting ${retryAfter}s`)
+    return retryCount < 1
+  },
+}
+
+/**
+ * The handlers have to be baked into the class, not passed to the App.
+ *
+ * ── The bug this is a fix for ─────────────────────────────────────────────
+ * They were passed as `throttle` to `new App({...})`. @octokit/app does not
+ * forward that to the Octokit instances it builds, so every installation
+ * client was constructed without them — and plugin-throttling refuses to be
+ * constructed without them, by design: it throws "You must pass the
+ * onSecondaryRateLimit and onRateLimit error handlers".
+ *
+ * That threw inside getInstallationOctokit, which is the first line of
+ * scanRepo. So every scan of every repository failed at the first step from
+ * the moment rate limiting was added, and a rescan that appeared to complete
+ * had in fact done nothing at all — which is exactly the symptom I spent
+ * three rounds attributing to the retraction rules.
+ *
+ * .defaults() is the fix because it sets them on the class, so every
+ * instance carries them however it was constructed and by whom.
+ */
+const Octokit = RestOctokit.plugin(throttling, retry).defaults({
+  throttle: THROTTLE,
+})
 
 function readPrivateKey(): string {
   const raw = process.env.GITHUB_APP_PRIVATE_KEY

@@ -49,6 +49,10 @@ export const LIMITS = {
   /** The data export. Assembles seventeen queries; not a page to refresh. */
   export: { limit: 5, windowSeconds: 3600 },
 
+  /** Creating projects and inviting people. Generous — a student setting up
+   *  a project and getting three teammates in does a lot in five minutes. */
+  workspace: { limit: 40, windowSeconds: 3600 },
+
   // ── Before anyone is signed in ──
   // These four are keyed on an IP or an email address rather than a user id,
   // because the whole point is that no user exists yet. Everything above
@@ -71,6 +75,13 @@ export const LIMITS = {
    *  send to an address chosen by whoever asked, which is the definition of
    *  a mail bomb if nothing counts them. */
   authResend: { limit: 4, windowSeconds: 3600 },
+  /** Password recovery. Same shape of abuse as authResend — mail to an
+   *  address the caller picks, at Workmark's expense — and the same answer.
+   *  Three is generous for somebody who genuinely cannot get in. */
+  authReset: { limit: 3, windowSeconds: 3600 },
+  /** Analytics. Generous on purpose: the point is to stop a loop, not to
+   *  ration a busy page that legitimately sends a handful per visit. */
+  events: { limit: 120, windowSeconds: 60 },
 } as const
 
 export type LimitName = keyof typeof LIMITS

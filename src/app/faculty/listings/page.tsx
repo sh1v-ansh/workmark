@@ -9,6 +9,8 @@ import { Kicker } from '@/components/ui/Section'
 import { C, R, T } from '@/lib/theme/dark-tokens'
 import { LAYOUT } from '@/lib/theme/layout'
 
+export const metadata = { title: 'Postings' }
+
 /** Every project this person posted, with what's happened to each. */
 export default async function FacultyListingsPage() {
   const supabase = await createClient()

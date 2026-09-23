@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import GithubScanClient from './GithubScanClient'
 
+export const metadata = { title: 'GitHub' }
+
 /**
  * Minimal, standalone verification page for the Phase 1 scan pipeline —
  * deliberately NOT integrated into the main student dashboard, which
@@ -98,6 +100,20 @@ export default async function GithubScanPage() {
     .limit(1)
     .maybeSingle()
 
+  // The most recent scan that finished, so what each repository produced is
+  // still on screen after a reload. The step results were only ever held in
+  // client state, so leaving the page threw away the one explanation of why
+  // a record did or did not change.
+  const { data: lastJob } = await supabase
+    .from('jobs')
+    .select('id, status, steps, total_steps, completed_steps, result, error, finished_at')
+    .eq('student_id', user.id)
+    .eq('kind', 'github_scan')
+    .in('status', ['succeeded', 'failed', 'cancelled'])
+    .order('finished_at', { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle()
+
   // §3 fallback path: work with no scannable repo. Surfaced here because
   // this is the page where "my work isn't showing up" actually happens.
   const { data: reviewRequests } = await supabase
@@ -106,8 +122,21 @@ export default async function GithubScanPage() {
     .eq('student_id', user.id)
     .order('requested_at', { ascending: false })
 
+  // "We read it, but found no commits of yours" is the message a student
+  // reads as "Workmark thinks I did nothing", and the commonest cause is a
+  // commit signed with an address GitHub never verified against their
+  // account. When there is one to ask about, asking beats telling.
+  const { data: unclaimedEmails } = await supabase
+    .from('observed_commit_emails')
+    .select('email, display_name, repo_full_name, commit_count')
+    .eq('student_id', user.id)
+    .is('dismissed_at', null)
+    .order('commit_count', { ascending: false })
+    .limit(5)
+
   return (
     <GithubScanClient
+      unclaimedEmails={unclaimedEmails ?? []}
       reviewRequests={reviewRequests ?? []}
       studentName={student.full_name}
       connection={connection}
@@ -115,6 +144,7 @@ export default async function GithubScanPage() {
       priors={priors ?? []}
       evidence={evidence}
       activeJobId={activeJob?.id ?? null}
+      lastJob={lastJob ?? null}
     />
   )
 }
