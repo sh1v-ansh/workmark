@@ -49,111 +49,107 @@ const FRAMING: Record<Audience, {
   cta: { label: string; href: string }
 }> = {
   students: {
-    eyebrow: 'Real work, without the application',
-    headline: 'A guided project you don’t have to apply for',
+    eyebrow: 'Guided projects',
+    headline: 'Start a guided project today, no application needed',
     lede:
-      'Workmark hands you a real project aimed at the exact skill you are missing, plans it with you, then reads what you build the same way it reads everything else. No application, no interview, no rejection email, no waiting until next summer.',
+      'We give you a real project at your skill level. Build it alone or with other students, and it counts on your profile like any other work.',
     steps: [
       {
-        title: 'Workmark picks the project',
-        body: 'It compares what open projects keep asking for against what you can prove, then writes a brief for the biggest gap.',
+        title: 'We pick a project for your level',
+        body: 'It is matched to the skills you have and the skills open projects ask for.',
       },
       {
-        title: 'You build it in your own repo',
-        body: 'Link a repository and Workmark starts reading it. Your account, your code, yours to show anyone.',
+        title: 'You build it in your own repository',
+        body: 'Your code stays yours. Link the repository and we read what you build.',
       },
       {
         title: 'It counts like real work',
-        body: 'Same scan, same levels, same evidence. There is no asterisk on your record saying it was practice.',
+        body: 'Same scan and same skill levels as everything else on your profile.',
       },
     ],
-    soonEyebrow: 'Being built',
-    soonHeadline: 'And soon, the job around the project',
+    soonEyebrow: 'Inside your workspace',
+    soonHeadline: 'Work on your project the way a real team works',
     soonLede:
-      'A guided project is not just a task list. It is having somewhere to work, someone senior breaking the problem down, and something at the end that says you actually finished it.',
+      'Every guided project comes with a workspace, a task board and an AI tech lead who reviews your work.',
     soonPoints: [
       {
-        title: 'A senior dev who plans it with you',
-        body: 'Workmark reads the brief and proposes the tasks: schema, then endpoints, then auth, then tests. Edit them, reorder them, throw them out. You commit to the plan, not the AI.',
+        title: 'An AI tech lead who plans with you',
+        body: 'It splits the project into tasks and hands you one or two at a time. Edit anything you want.',
       },
       {
-        title: 'A board, not a pile of good intentions',
-        body: 'Backlog, Doing, Submitted, Verified. Your own deadlines and estimates on every task, in one place instead of six browser tabs.',
+        title: 'A board that shows where you are',
+        body: 'Backlog, Doing, Submitted and Verified, with your own estimates and deadlines.',
       },
       {
-        title: 'Told what to do today',
-        body: 'A short daily list built from what is due, what is blocked and what everything else depends on. Two hours on OAuth, one on the tests, thirty minutes reviewing a teammate.',
+        title: 'Build it with other students',
+        body: 'Invite teammates to the same project. Everyone gets credit for the commits they wrote.',
       },
       {
-        title: 'Stuck is a status, not a failure',
-        body: 'Flag a blocker and say why. Reporting early and recovering is worth more to an employer than a deadline you quietly missed, and it gets recorded as such.',
+        title: 'Help when you are stuck',
+        body: 'Flag a blocker and your tech lead helps you break the problem down.',
       },
       {
-        title: 'Done is checked, not claimed',
-        body: 'Move a task to Submitted and Workmark checks the commits, the tests and the CI against what the task actually asked for.',
+        title: 'Finished work gets checked',
+        body: 'Submit a task and your tech lead checks your commits against what the task asked for.',
       },
       {
-        title: 'Use AI, and get credit for using it well',
-        body: 'Claude, Copilot, Cursor, all fine. What gets measured is whether you specified the work clearly, caught the bad output and shipped something that holds up.',
+        title: 'Use AI tools freely',
+        body: 'Claude, Copilot and Cursor are all fine. What counts is the working code you ship.',
       },
     ],
     cta: { label: 'Get my first project', href: '/login' },
   },
 
   businesses: {
-    eyebrow: 'Where the work comes from',
-    // Not "shipped something on purpose" — that describes the student and
-    // says nothing about what the employer gets. What they get is an
-    // assessment they did not have to run, covering the half a take-home
-    // never reaches.
-    headline: 'A technical screen you didn’t have to run',
+    eyebrow: 'Guided projects',
+    headline: 'See how candidates plan, build and finish real projects',
     lede:
-      'Every guided project is a scoped brief, worked in the open against a deadline, and checked against its own acceptance criteria. What reaches you is not only whether somebody can build the thing. It is how they planned it, what they did when it slipped, and whether they finished.',
+      'Students build guided projects in a workspace with an AI tech lead. You see the finished work and how they got there.',
     steps: [
       {
-        title: 'The brief is not theirs to pick',
-        body: 'The skill comes from what open projects are actually asking for, not from what a candidate already finds easy.',
+        title: 'Projects matched to a skill and level',
+        body: 'Each project targets a specific skill, so similar projects show similar ability.',
       },
       {
-        title: 'Scoped, so it is comparable',
-        body: 'Every brief carries a target skill and a difficulty. Two candidates who finished comparable projects did comparable work.',
+        title: 'Built in the candidate’s own repository',
+        body: 'Every commit is attributed to the person who wrote it.',
       },
       {
-        title: 'Read like everything else',
-        body: 'No separate scoring path and no bonus for having tried. Same scan, same levels.',
+        title: 'Checked like everything else',
+        body: 'Guided work goes through the same scan and the same levels as paid work.',
       },
     ],
-    soonEyebrow: 'Being built',
-    soonHeadline: 'And soon, how they work, not just what they shipped',
+    soonEyebrow: 'What the workspace records',
+    soonHeadline: 'See how they work, not just what they shipped',
     soonLede:
-      'The questions you ask on a reference call, answered by what actually happened rather than by someone remembering it kindly.',
+      'The questions you would ask on a reference call, answered by what happened on the project.',
     soonPoints: [
       {
-        title: 'Estimates against reality',
-        body: 'They said four hours and it took seven. Whether somebody knows their own pace, and whether that improves, is visible over dozens of tasks.',
+        title: 'See if they hit their estimates',
+        body: 'They said four hours and it took seven. You see whether their estimates improve over time.',
       },
       {
-        title: 'Did they finish what they started',
-        body: 'Commitments made, commitments met, work abandoned halfway. Counted across every project rather than asked about once.',
+        title: 'See if they finish what they start',
+        body: 'Commitments made, met or dropped, counted across every project.',
       },
       {
-        title: 'How they behave when it goes wrong',
-        body: 'Someone who sees a slip coming, says so early and renegotiates is a different hire from someone who goes quiet. Both are recorded.',
+        title: 'See how they handle problems',
+        body: 'Someone who flags a slip early and recovers looks different from someone who goes quiet.',
       },
       {
-        title: 'Verified, not self-reported',
-        body: 'Tasks are checked against their own acceptance criteria using the commits, tests and CI. A commit is not proof that something works.',
+        title: 'See work checked against the task',
+        body: 'Each task is checked against its own acceptance criteria using commits, tests and CI.',
       },
       {
-        title: 'Difficulty they can actually handle',
-        body: 'Tasks carry a difficulty, so you see where somebody is reliable and where they start to struggle. That line moves as they improve.',
+        title: 'See the difficulty they can handle',
+        body: 'Tasks carry a difficulty, so you see where someone is reliable and where they struggle.',
       },
       {
-        title: 'AI fluency, measured honestly',
-        body: 'Everyone uses AI. What separates candidates is whether they catch what it gets wrong. That is observable, and it is what gets recorded.',
+        title: 'See how well they use AI',
+        body: 'Everyone uses AI. You see whether they catch what it gets wrong.',
       },
     ],
-    cta: { label: 'See how the record works', href: '/how-it-works' },
+    cta: { label: 'See how profiles work', href: '/how-it-works' },
   },
 }
 

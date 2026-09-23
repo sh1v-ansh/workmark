@@ -82,14 +82,14 @@ const TRACK = 40
 const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: string; footer: string }> = {
   students: {
     eyebrow: 'Where you are going',
-    headline: 'See the edge of what you can do',
-    lede: 'Your record is a map, not a list. It shows what is one project away, so the next thing to learn is never a guess.',
+    headline: 'See which skill to learn next',
+    lede: 'Your profile shows which skills are one project away, so you know what to build next.',
     footer: 'Two more projects in PostgreSQL and it moves to Advanced.',
   },
   businesses: {
     eyebrow: 'What you can see',
-    headline: 'Including what they cannot do yet',
-    lede: 'A CV only shows you the good half. This shows the edge as well, so you find out now rather than in month two.',
+    headline: 'See what candidates cannot do yet',
+    lede: 'A resume only shows the good half. A verified profile shows the gaps too, so you find out before you hire.',
     footer: 'Two more projects in PostgreSQL and it moves to Advanced.',
   },
 }
