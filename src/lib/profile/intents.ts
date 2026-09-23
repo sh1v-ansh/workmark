@@ -75,12 +75,18 @@ export interface NextStepInput {
   repoCount: number
   /** Skills actually on their record. */
   evidenceCount: number
+  /** Listed in the student directory, so others looking for collaborators
+   *  can find them. Omitted means unknown, which is treated as yes. */
+  openToCollab?: boolean
+  /** Projects they have posted. */
+  postedCount?: number
 }
 
 export type NextStep =
   | 'connect_github'
   | 'start_guided_project'
   | 'scan'
+  | 'be_discoverable'
   | 'post_project'
   | 'find_work'
   | 'nothing'
@@ -100,7 +106,15 @@ export function nextStepFor(input: NextStepInput): NextStep {
   }
 
   // They have a record. Now what they said they wanted decides.
-  if (input.intents.includes('post_project')) return 'post_project'
+  // Anyone here for collaboration is first asked to be findable. Posting a
+  // project reaches the people who go looking; being in the directory
+  // reaches the ones who don't. It is also one click, where posting is a form.
+  const wantsPeople = input.intents.includes('post_project') || input.intents.includes('join_project')
+  if (wantsPeople && input.openToCollab === false) return 'be_discoverable'
+
+  // Only until they have posted one. It kept asking after the project was
+  // up, which read as though the first one had not worked.
+  if (input.intents.includes('post_project') && (input.postedCount ?? 0) === 0) return 'post_project'
   if (input.intents.includes('join_project')) return 'find_work'
   if (input.intents.includes('guided_project')) return 'start_guided_project'
   return 'nothing'

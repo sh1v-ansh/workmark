@@ -50,7 +50,7 @@ export function ConsentClient({ alreadyConsented }: { alreadyConsented: boolean 
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '40px 24px 72px' }}>
-      <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 10 }}>
+      <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 10 }}>
         Before you connect GitHub
       </h1>
       <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.65, marginBottom: 26 }}>
@@ -61,8 +61,8 @@ export function ConsentClient({ alreadyConsented }: { alreadyConsented: boolean 
 
       <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: '6px 22px 18px' }}>
         <Row label="What we read">
-          Dependency and config files (<code style={{ fontFamily: F.mono, fontSize: 12.5 }}>package.json</code>,{' '}
-          <code style={{ fontFamily: F.mono, fontSize: 12.5 }}>requirements.txt</code>, Dockerfiles and
+          Dependency and config files (<code style={{ fontFamily: F.mono, fontSize: 13 }}>package.json</code>,{' '}
+          <code style={{ fontFamily: F.mono, fontSize: 13 }}>requirements.txt</code>, Dockerfiles and
           the like), the import lines at the top of your files, file names and sizes, and commit
           dates and messages on commits you authored.
         </Row>
@@ -117,7 +117,7 @@ export function ConsentClient({ alreadyConsented }: { alreadyConsented: boolean 
         <Link href="/student/dashboard" className="nb-btn nb-btn-quiet">Not now</Link>
       </div>
 
-      <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.6, marginTop: 20 }}>
+      <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.6, marginTop: 20 }}>
         Saying no is fine. Your account works without it — you just won&apos;t have a verified
         record, which is most of what Workmark does.
       </p>

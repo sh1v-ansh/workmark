@@ -61,14 +61,14 @@ export default function MultiSelect({
   return (
     <div ref={ref} style={{ position: 'relative' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 7 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.11em', textTransform: 'uppercase', color: C.textGhost }}>
+        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.11em', textTransform: 'uppercase', color: C.textGhost }}>
           {label}
         </span>
         {count > 0 && (
           <button
             type="button"
             onClick={onClear}
-            style={{ fontSize: 11.5, color: C.textFaint, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textDecoration: 'underline' }}
+            style={{ fontSize: 13, color: C.textFaint, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', textDecoration: 'underline' }}
           >
             Clear
           </button>
@@ -118,7 +118,7 @@ export default function MultiSelect({
 
           <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
             {matches.length === 0 ? (
-              <p style={{ fontSize: 12.5, color: C.textFaint, padding: '8px 6px' }}>Nothing matches.</p>
+              <p style={{ fontSize: 13, color: C.textFaint, padding: '8px 6px' }}>Nothing matches.</p>
             ) : (
               matches.map((o) => {
                 const on = selected.has(o)

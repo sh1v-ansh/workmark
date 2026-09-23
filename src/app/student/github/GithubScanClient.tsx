@@ -1,5 +1,7 @@
 'use client'
 
+import SkillChip from '@/components/skills/SkillChip'
+import SkillTag from '@/components/skills/SkillTag'
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Card from '@/components/Card'
@@ -10,8 +12,6 @@ import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import { createClient } from '@/lib/supabase/client'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
-import { tagColor } from '@/lib/theme/tagColors'
-import { levelName as levelLabel } from '@/lib/skills/level-names'
 import { LAYOUT } from '@/lib/theme/layout'
 import UnclaimedEmails, { type UnclaimedEmailRow } from './UnclaimedEmails'
 import GithubConnectNotice from '@/components/GithubConnectNotice'
@@ -138,9 +138,10 @@ export default function GithubScanClient({ studentName, connection, grants, prio
    * to see what came out; somebody who has not has nothing to look at and
    * needs the repository list.
    */
-  const [tab, setTab] = useState<'repos' | 'evidence' | 'other'>(
-    evidence.length > 0 ? 'evidence' : 'repos',
-  )
+  // Always the repositories: choosing what is read is what this page is
+  // for. The skills themselves have their own page (/me), and the per-repo
+  // results of the last scan sit in the side panel.
+  const [tab, setTab] = useState<'repos' | 'evidence' | 'other'>('repos')
 
   // Just back from connecting: the repositories are the next thing, whatever
   // the default would otherwise be. Read after mount, like the notice, so
@@ -354,16 +355,25 @@ export default function GithubScanClient({ studentName, connection, grants, prio
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
-        <div style={{ marginBottom: 18 }}>
-          {/* The old heading was "Choose what we may read", which named one
-              of the three things this page does and made the other two look
-              like they belonged somewhere else. */}
-          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
-            Your work
-          </h1>
-          <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 630 }}>
-            Everything on your record comes from code you wrote, or from work a person checked. You choose which repositories Workmark may read, and each scan is the current answer: switch a repository off and its skills come off your record at the next scan.
-          </p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 18 }}>
+          <div>
+            {/* The old heading was "Choose what we may read", which named one
+                of the three things this page does and made the other two look
+                like they belonged somewhere else. */}
+            <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 6 }}>
+              Your work
+            </h1>
+            <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, maxWidth: 560 }}>
+              Choose which repos we read. Switch one off and its skills leave your record at the next scan.
+            </p>
+          </div>
+          {/* Up here rather than in the side panel, which stacks below
+              every repository on a phone. */}
+          {connection && (
+            <Button variant="accent" onClick={runScan} busyLabel={scanning ? 'Scanning…' : null}>
+              Scan now
+            </Button>
+          )}
         </div>
 
         {/* Above the tabs, because it is the answer to the question
@@ -389,8 +399,6 @@ export default function GithubScanClient({ studentName, connection, grants, prio
             </button>
           ))}
         </div>
-
-        <UnclaimedEmails rows={unclaimedEmails} />
 
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 22, alignItems: 'start' }} className="mob-1col">
 
@@ -426,9 +434,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                     one sentence explaining the privacy rule was off the
                     bottom of the screen while the switches were on it. */}
                 <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 13, maxWidth: 620 }}>
-                  Private repositories are off until you turn them on — only enable ones you have
-                  the right to share, never an employer&apos;s code. Public ones are ranked and the
-                  most useful are on by default. Your choice always wins.
+                  Private repos stay off until you turn them on. Never turn on an employer&apos;s code.
                 </p>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
@@ -477,13 +483,13 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8.5, marginBottom: 3, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 14.5, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.repo_full_name}</span>
                             <Badge tone={g.is_private ? 'caution' : 'neutral'}>{g.is_private ? 'Private' : 'Public'}</Badge>
-                            {g.primary_language && <span style={{ fontSize: 12, color: C.textGhost }}>{g.primary_language}</span>}
+                            {g.primary_language && <span style={{ fontSize: 13, color: C.textGhost }}>{g.primary_language}</span>}
                           </div>
                           {/* Why this repo is on or off. The override is what
                               makes a default cut fair, so the reason has to
                               be visible rather than tucked away. */}
                           {g.rank_reason && (
-                            <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.45 }}>{g.rank_reason}</p>
+                            <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.45 }}>{g.rank_reason}</p>
                           )}
                         </div>
                         <button
@@ -541,11 +547,8 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6.5 }}>
                         {rows.map((e) => {
                           const name = e.skills?.canonical_name ?? e.skill_id
-                          const c = tagColor(name)
                           return (
-                            <span key={e.id} style={{ fontSize: 12, fontWeight: 600, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
-                              {name} <span style={{ fontWeight: 400, opacity: 0.75 }}>{levelLabel(e.difficulty_cleared)}</span>
-                            </span>
+                            <SkillChip key={e.id} name={name} level={e.difficulty_cleared} size="sm" />
                           )
                         })}
                       </div>
@@ -624,11 +627,8 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5.5 }}>
                   {priors.map((p) => {
                     const name = p.skills?.canonical_name ?? p.skill_id
-                    const c = tagColor(name)
                     return (
-                      <span key={p.id} style={{ fontSize: 12, padding: '3px 8.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text, opacity: 0.7 }}>
-                        {name}
-                      </span>
+                      <SkillTag key={p.id} name={name} muted />
                     )
                   })}
                 </div>
@@ -652,9 +652,6 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                       <p style={{ fontSize: 13, color: C.textFaint }}>{grants.length} repo{grants.length === 1 ? '' : 's'} granted</p>
                     </div>
                   </div>
-                  <Button variant="ink" size="sm" fullWidth onClick={runScan} busyLabel={scanning ? 'Scanning…' : null}>
-                    Scan now
-                  </Button>
                   {scanning && (
                     <div style={{ marginTop: 12 }}>
                       {/* Named progress, not a spinner: a scan can take minutes,
@@ -670,19 +667,19 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                           }}
                         />
                       </div>
-                      <p style={{ fontSize: 12.5, color: C.textFaint, marginTop: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <p style={{ fontSize: 13, color: C.textFaint, marginTop: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {job
                           ? `${job.completed_steps} of ${job.total_steps}${currentStepLabel ? ` · ${currentStepLabel}` : ''}`
                           : 'Queueing…'}
                       </p>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 3 }}>
-                        <p style={{ fontSize: 12.5, color: C.textFaint }}>
+                        <p style={{ fontSize: 13, color: C.textFaint }}>
                           Runs in the background — you can leave this page.
                         </p>
                         <button
                           type="button"
                           onClick={stopScan}
-                          style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 12.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
+                          style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 13, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
                         >
                           Stop
                         </button>
@@ -702,11 +699,11 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                       <div style={{ display: 'grid', gap: 7, maxHeight: 260, overflowY: 'auto' }}>
                         {job.steps.filter((st) => st.detail).map((st) => (
                           <div key={st.id}>
-                            <p style={{ fontSize: 12.5, fontWeight: 600, color: C.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: C.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {st.label}
                             </p>
                             <p style={{
-                              fontSize: 12.5, lineHeight: 1.45,
+                              fontSize: 13, lineHeight: 1.45,
                               color: st.status === 'failed' ? '#B91C1C' : C.textGhost,
                             }}>
                               {st.detail}
@@ -720,25 +717,10 @@ export default function GithubScanClient({ studentName, connection, grants, prio
               ) : (
                 <>
                   <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 13 }}>Not connected yet.</p>
-                  <a href="/api/github/app/install" className="nb-btn nb-btn-ink" style={{ width: '100%' }}>
-                    <Icon name="github" size={13.5} /> Connect GitHub
-                  </a>
+                  <Button href="/student/github/consent" variant="accent" fullWidth>Connect GitHub</Button>
                 </>
               )}
             </Card>
-
-            <Card hoverable={false} padding={19.5}>
-              <Kicker style={{ marginBottom: 9 }}>What a scan reads</Kicker>
-              <p style={{ fontSize: 13.5, color: C.textFaint, lineHeight: 1.6 }}>
-                Only commits attributed to your GitHub identity. Forks with no commits of yours are skipped. We look at what the code does, not how much of it there is.
-              </p>
-            </Card>
-
-            <div style={{ background: state.cautionBg, borderRadius: R.md, padding: '12px 15px' }}>
-              <p style={{ fontSize: 13, color: '#6B3A0A', lineHeight: 1.5 }}>
-                Only enable a private repository if you have the right to share it.
-              </p>
-            </div>
           </div>
         </div>
       </main>

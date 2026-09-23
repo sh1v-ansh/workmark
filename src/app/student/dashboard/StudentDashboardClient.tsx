@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import { type BadgeTone } from '@/components/ui/Badge'
+import { APPLICATION_STATUS } from '@/lib/applications/status-label'
 import { Kicker, Stat } from '@/components/ui/Section'
 import RescanButton from '@/components/RescanButton'
 import SkillChip from '@/components/skills/SkillChip'
@@ -36,6 +37,9 @@ export interface DashboardData {
   intents: Intent[]
   /** Repositories Workmark may read — zero is the first-year case. */
   repoCount: number
+  /** Listed in the student directory. */
+  openToCollab: boolean
+  studentId: string
   /** When the last scan finished, so the record can say whether it is stale. */
   lastScannedAt: string | null
   /** The skill open listings ask for most that this student cannot show.
@@ -58,13 +62,6 @@ export interface DashboardData {
 
 const MAX_ACTIVE_APPLICATIONS = 5
 
-const APPLICATION_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
-  submitted:   { label: 'Not read yet',       tone: 'neutral' },
-  shortlisted: { label: "They're interested", tone: 'info' },
-  accepted:    { label: "You're in",          tone: 'positive' },
-  rejected:    { label: 'Not this time',      tone: 'neutral' },
-  withdrawn:   { label: 'Withdrawn',          tone: 'neutral' },
-}
 
 const STAGE_LABEL: Record<string, string> = {
   accepted: 'Getting started',
@@ -132,7 +129,7 @@ const ICON_BG: Record<Todo['kind'], string> = {
 }
 
 export default function StudentDashboardClient({ data }: { data: DashboardData }) {
-  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, topGap, trackRecord, intents, repoCount } = data
+  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, topGap, trackRecord, intents, repoCount, openToCollab, studentId } = data
   const router = useRouter()
   const { toast } = useToast()
   const [withdrawing, setWithdrawing] = useState<string | null>(null)
@@ -184,7 +181,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         kind: 'message',
         headline: `${a.posterName ?? 'A poster'} is deciding`,
         body: a.title,
-        detail: `They shortlisted you ${relativeDays(a.createdAt)} and can send two more messages before choosing. Not replying reads as not interested.`,
+        detail: `They shortlisted you ${relativeDays(a.createdAt)}. Reply before they decide.`,
         href: `/listings/${a.listingId}`,
         cta: 'Reply',
         eyebrow: 'Do this first',
@@ -198,7 +195,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         kind: 'signoff',
         headline: 'Agree on what was built',
         body: e.title,
-        detail: 'Nothing lands on your record until you both sign off, and neither of you can write the other’s version of what happened.',
+        detail: 'Nothing lands on your record until you both sign off.',
         href: `/engagements/${e.id}`,
         cta: 'Review it',
         eyebrow: 'Waiting on you',
@@ -293,6 +290,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
   const firstName = student.fullName?.trim().split(/\s+/)[0]
 
+
   // "Not sure what to build next?" asked the reader a question and described
   // nothing. It is a project recommender, so it says so — and when we know
   // which skill open projects keep asking for that they cannot show, it
@@ -307,9 +305,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
             : 'We can tell you what to build next'}
         </p>
         <p style={{ fontSize: 13.5, color: '#C6C2E4', lineHeight: 1.55 }}>
-          {topGap
-            ? 'We compare what open projects ask for against what your code proves, then write you something specific to build that closes the biggest gap.'
-            : 'We compare what open projects ask for against what your code proves, and write you a project worth building to close the biggest gap.'}
+          We&apos;ll write you a project that closes your biggest gap.
         </p>
       </div>
       <div style={{ position: 'relative', marginTop: 17 }}>
@@ -329,16 +325,6 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <GithubConnectNotice />
-
-        <NextStepCard
-          intents={intents}
-          githubConnected={githubConnected}
-          repoCount={repoCount}
-          evidenceCount={skills.length}
-        />
-
-        {/* After the first record lands, not before — see FinishProfile. */}
-        {skills.length > 0 && !student.major && <FinishProfile />}
 
         {/* Header — the answer, not a greeting, except on the first visit
             when there is no answer yet and "you're all caught up" reads as
@@ -363,6 +349,20 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
             {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
           </span>
         </div>
+
+        {/* Under the greeting rather than above it, and one line each: they
+            point at the next thing without pushing the page down. */}
+        <NextStepCard
+          intents={intents}
+          githubConnected={githubConnected}
+          repoCount={repoCount}
+          evidenceCount={skills.length}
+          openToCollab={openToCollab}
+          postedCount={listings.length}
+          studentId={studentId}
+        />
+        {/* After the first record lands, not before — see FinishProfile. */}
+        {skills.length > 0 && !student.major && <FinishProfile />}
 
         {/* Focal band. The lead item is roughly four times the area of a
             supporting tile, so the eye lands rather than searches. When the
@@ -463,9 +463,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
                     showLastScan={false}
                   />
                 )}
-                <Link href="/me" style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                  See it all →
-                </Link>
+                <Button href="/me" variant="outline" size="sm">View record</Button>
               </div>
             </div>
 
@@ -493,7 +491,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
                   {skills.length > topSkills.length && (
                     <Link
                       href="/me"
-                      style={{ fontSize: 12.5, fontWeight: 600, color: C.textMuted, textDecoration: 'none', padding: '6px 4px' }}
+                      style={{ fontSize: 13, fontWeight: 600, color: C.textMuted, textDecoration: 'none', padding: '6px 4px' }}
                     >
                       +{skills.length - topSkills.length} more
                     </Link>
@@ -506,10 +504,11 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           {!(lead && rail.length === 0) && nudge}
         </div>
 
+
         {/* Closing strip — everything that isn't the reader's move */}
         {waiting.length > 0 && (
           <Card hoverable={false} padding="14.5px 22px 16.5px">
-            <Kicker style={{ marginBottom: 5.5 }}>Your postings</Kicker>
+            <Kicker style={{ marginBottom: 5.5 }}>Waiting on others</Kicker>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {waiting.map((w) => (
                 <div key={w.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 13, padding: '10px 0' }}>

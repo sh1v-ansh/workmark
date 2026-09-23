@@ -762,6 +762,8 @@
   .mob-show { display: flex !important; }
   .mob-col  { flex-direction: column !important; }
   .mob-1col { grid-template-columns: 1fr !important; }
+  /* Side column that should come after the main content once stacked. */
+  .mob-after { order: 1; }
   .mob-2col { grid-template-columns: repeat(2, 1fr) !important; }
   .mob-wrap { flex-wrap: wrap !important; }
   .mob-p16  { padding: 16px !important; }
@@ -1120,6 +1122,71 @@
 }
 @media (max-width: 900px) {
   .nb-filters { position: static; }
+}
+
+/* ══ GLASS ═══════════════════════════════════════════════════════════════
+   Cards as panes of glass lifted off a white page. No drawn border: the
+   edge is a white rim, a highlight along the top, a half-pixel outline for
+   definition, and a soft shadow underneath for the lift. Project ideas
+   Workmark wrote get the same glass tinted violet.
+
+   (A film-grain ground was tried and taken out — the page is plain white.)
+
+   Self-contained. Deleting this block restores the previous cards exactly.
+   Only app pages carry .wm-app-ground, so the landing page is untouched. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .wm-app-ground .nb-card,
+  .wm-app-ground .nb-ai-card,
+  .wm-app-ground .nb-focal {
+    background: rgba(255, 255, 255, 0.7);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 0 0 0.5px rgba(20, 20, 24, 0.09),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 1px 2px rgba(20, 20, 24, 0.04),
+      0 12px 30px -16px rgba(20, 20, 24, 0.22);
+  }
+  .wm-app-ground .nb-card-interactive:hover {
+    border-color: rgba(255, 255, 255, 1);
+    box-shadow:
+      0 0 0 0.5px rgba(97, 66, 245, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 2px 4px rgba(20, 20, 24, 0.05),
+      0 18px 36px -18px rgba(97, 66, 245, 0.35);
+  }
+  /* The focal card keeps its violet, as a faint tint in the glass and a
+     violet outline rather than a heavy border. */
+  .wm-app-ground .nb-card-focal,
+  .wm-app-ground .nb-focal {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(251, 250, 255, 0.8) 100%);
+    box-shadow:
+      0 0 0 0.5px rgba(97, 66, 245, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 1px 2px rgba(97, 66, 245, 0.06),
+      0 16px 36px -18px rgba(97, 66, 245, 0.4);
+  }
+  /* Project ideas Workmark wrote. Same glass, tinted violet, so they sit in
+     the same grid as posted projects but are plainly a different kind of
+     thing — the violet the product uses whenever it is the one speaking. */
+  .wm-app-ground .nb-ai-card {
+    background:
+      linear-gradient(160deg, rgba(251, 249, 255, 0.9) 0%, rgba(245, 241, 255, 0.82) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 0 0 0.5px rgba(97, 66, 245, 0.22),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 1px 2px rgba(97, 66, 245, 0.06),
+      0 12px 30px -16px rgba(97, 66, 245, 0.32);
+  }
+  .wm-app-ground .nb-ai-card:hover {
+    box-shadow:
+      0 0 0 0.5px rgba(97, 66, 245, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 2px 4px rgba(97, 66, 245, 0.08),
+      0 18px 36px -18px rgba(97, 66, 245, 0.45);
+  }
 }
 
 /* ══ MARKETING ═════════════════════════════════════════════════════════════

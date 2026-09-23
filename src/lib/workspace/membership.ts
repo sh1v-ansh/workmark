@@ -22,7 +22,7 @@ export type MemberRole = 'owner' | 'member'
  * backend, and 'fullstack' matches anything.
  */
 export const WORK_ROLES = [
-  'backend', 'frontend', 'fullstack', 'mobile',
+  'fullstack', 'backend', 'frontend', 'mobile',
   'data', 'ml', 'infra', 'design', 'other',
 ] as const
 export type WorkRole = (typeof WORK_ROLES)[number]
@@ -30,8 +30,11 @@ export type WorkRole = (typeof WORK_ROLES)[number]
 /** Who a task wants. A task with no match stays unassigned rather than
  *  landing on whoever happens to be listed first. */
 export function assigneeForRole(rows: MemberRow[], wanted: WorkRole | null): string | null {
-  if (!wanted) return null
   const active = activeMembers(rows)
+  // Alone, every task is yours — whatever role it wants, and whether or not
+  // you ever said what you work on.
+  if (active.length === 1) return active[0].account_id
+  if (!wanted) return null
   const exact = active.find((r) => r.work_role === wanted)
   if (exact) return exact.account_id
   const generalist = active.find((r) => r.work_role === 'fullstack')

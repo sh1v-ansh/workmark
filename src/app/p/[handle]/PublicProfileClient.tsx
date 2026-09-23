@@ -117,7 +117,7 @@ export default function PublicProfileClient({
                     <div key={s.skillId}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, marginBottom: 6.5 }}>
                         <span style={{ fontSize: 15, fontWeight: 600 }}>{s.name}</span>
-                        <span style={{ fontSize: 12, color: C.textGhost }}>
+                        <span style={{ fontSize: 13, color: C.textGhost }}>
                           {LEVEL_NAMES[s.bestLevel] ?? s.bestLevel} · {s.artifactCount} project{s.artifactCount === 1 ? '' : 's'}
                         </span>
                       </div>
@@ -147,7 +147,7 @@ export default function PublicProfileClient({
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5.5 }}>
                   {claimedOnly.map((s) => (
-                    <span key={s} style={{ fontSize: 12, padding: '3.5px 9.5px', borderRadius: R.pill, background: 'transparent', border: `1px dashed ${C.border}`, color: C.textGhost }}>
+                    <span key={s} style={{ fontSize: 13, padding: '3.5px 9.5px', borderRadius: R.pill, background: 'transparent', border: `1px dashed ${C.border}`, color: C.textGhost }}>
                       {s}
                     </span>
                   ))}
@@ -155,7 +155,7 @@ export default function PublicProfileClient({
               </div>
             )}
 
-            <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 16.5 }}>
+            <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.6, borderTop: `1px solid ${C.border}`, paddingTop: 16.5 }}>
               Verified by <Link href="/" style={{ color: C.textMuted, textDecoration: 'none' }}>Workmark</Link> — skills evidenced by commit-attributed code, not self-reported.
             </p>
           </div>
@@ -172,7 +172,7 @@ export default function PublicProfileClient({
                     {e.redacted ? (
                       <div>
                         <p style={{ fontSize: 14, fontWeight: 600, color: C.textMuted, marginBottom: 3 }}>Confidential engagement</p>
-                        <p style={{ fontSize: 12, color: C.textGhost }}>
+                        <p style={{ fontSize: 13, color: C.textGhost }}>
                           Completed{e.closedAt ? ` ${new Date(e.closedAt).toLocaleDateString()}` : ''} · details withheld
                         </p>
                       </div>
@@ -181,7 +181,7 @@ export default function PublicProfileClient({
                         <p style={{ fontFamily: F.display, fontSize: 15.5, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 3 }}>
                           {e.listingTitle ?? 'Untitled project'}
                         </p>
-                        <p style={{ fontSize: 12, color: C.textGhost, marginBottom: e.description ? 9.5 : 0 }}>
+                        <p style={{ fontSize: 13, color: C.textGhost, marginBottom: e.description ? 9.5 : 0 }}>
                           {[e.posterDisplayName, e.closedAt ? `completed ${new Date(e.closedAt).toLocaleDateString()}` : null].filter(Boolean).join(' · ')}
                         </p>
                         {e.description && (

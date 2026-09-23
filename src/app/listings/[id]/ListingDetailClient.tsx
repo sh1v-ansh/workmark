@@ -1,5 +1,6 @@
 'use client'
 
+import SkillTag from '@/components/skills/SkillTag'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -14,9 +15,9 @@ import { Kicker } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
 import { C, F, R, state } from '@/lib/theme/dark-tokens'
 import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
-import { tagColor } from '@/lib/theme/tagColors'
 import { FIT_TIER_LABEL, FIT_TIER_BLURB, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
+import { APPLICATION_STATUS } from '@/lib/applications/status-label'
 
 const MAX_ACTIVE_APPLICATIONS = 5
 // Must match MIN/MAX_RESPONSE_WORDS in the apply route — the server is
@@ -144,6 +145,28 @@ export default function ListingDetailClient({
     }
   }
 
+  const [removing, setRemoving] = useState(false)
+
+  // Leaves at once rather than waiting on the database. The request is sent
+  // with keepalive so it survives the navigation, and Find work is told
+  // which listing to hide so it is gone even if the server render beats the
+  // delete. Whether it ends up deleted or closed (people applied) is the
+  // server's call; either way it is off the page.
+  function removeListing() {
+    if (!confirm('Delete this project? If anyone has applied, it will be closed instead so their applications stay on record.')) return
+    setRemoving(true)
+    fetch(`/api/listings/${listing.id}`, { method: 'DELETE', keepalive: true })
+      .then(async (res) => {
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}))
+          toast(json.error ?? 'Could not remove the project. It is still posted.', 'error')
+        }
+      })
+      .catch(() => toast('Could not remove the project. It is still posted.', 'error'))
+    toast('Project removed.', 'success')
+    router.push(`/listings?removed=${listing.id}`)
+  }
+
   // Whether the apply action is reachable at all right now — governs both
   // the top verdict card's CTA and whether the bottom bar renders.
   const applyState: 'apply' | 'applied' | 'closed' | 'capped' | 'owner' | 'signedOut' =
@@ -182,7 +205,15 @@ export default function ListingDetailClient({
           <Card hoverable={false} padding="14.5px 20px" style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <p style={{ fontSize: 14, color: C.textMuted }}>This is your project.</p>
-              <Button href={`/listings/${listing.id}/applicants`} variant="ink" size="sm">View applicants</Button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Button href={`/listings/${listing.id}/edit`} variant="outline" size="sm">Edit</Button>
+                {listing.status !== 'closed' && (
+                  <Button type="button" variant="danger" size="sm" onClick={removeListing} busyLabel={removing ? 'Removing…' : null}>
+                    Delete
+                  </Button>
+                )}
+                <Button href={`/listings/${listing.id}/applicants`} variant="ink" size="sm">View applicants</Button>
+              </div>
             </div>
           </Card>
         )}
@@ -195,24 +226,22 @@ export default function ListingDetailClient({
               <div>
                 <Kicker style={{ color: C.accentInk, marginBottom: 9 }}>Where you stand</Kicker>
                 <p style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', lineHeight: 1.2, color: C.text, marginBottom: 10.5 }}>
-                  {FIT_TIER_LABEL[fit.tier]}{fit.missingNames.length > 0 ? ', one gap.' : '.'}
+                  {FIT_TIER_LABEL[fit.tier]}{fit.missingNames.length === 1 ? ', one gap.' : fit.missingNames.length > 1 ? `, ${fit.missingNames.length} gaps.` : '.'}
                 </p>
                 <p style={{ fontSize: 15, lineHeight: 1.6, color: C.textMuted }}>
                   {FIT_TIER_BLURB[fit.tier]}
                   {fit.poolSize > 0 && ` Compared against ${fit.poolSize} current applicant${fit.poolSize === 1 ? '' : 's'}.`}
                   {fit.missingNames.length > 0 && (
-                    <> No evidence yet in <strong style={{ color: C.textSub }}>{fit.missingNames.join(', ')}</strong> — apply anyway, this is information, not a gate.</>
+                    <> No evidence yet in <strong style={{ color: C.textSub }}>{fit.missingNames.join(', ')}</strong>. You can still apply.</>
                   )}
                 </p>
               </div>
               <div style={{ borderLeft: `1px solid ${C.border}`, paddingLeft: 25 }} className="mob-static">
                 <Ring pct={fit.confidence * 100} />
                 <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, marginTop: 11 }}>
-                  {fit.confidence >= 0.99
-                    ? 'backed by projects we confirmed run'
-                    : fit.confidence <= 0.01
-                      ? 'backed by projects that run — none yet, it is all repo links'
-                      : 'backed by projects we confirmed run'}
+                  {fit.confidence <= 0.01
+                    ? 'from repo links only — no project confirmed running yet'
+                    : 'backed by projects we confirmed run'}
                 </p>
               </div>
             </div>
@@ -241,14 +270,11 @@ export default function ListingDetailClient({
             <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 12 }}>Weighting, not a bar you have to clear.</p>
             <Card hoverable={false} padding="5px 16.5px 9px">
               {requirements.map((r, i) => {
-                const c = tagColor(r.name)
                 const mine = fit?.perSkill.find((s) => s.skillId === r.skillId)
                 return (
                   <div key={r.skillId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 0', borderBottom: i < requirements.length - 1 ? `1px solid ${C.borderFaint}` : 'none', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
-                      {r.name}
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9.5, fontSize: 12 }}>
+                    <SkillTag name={r.name} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9.5, fontSize: 13 }}>
                       {mine && (
                         <span style={{ color: mine.present ? state.positive : state.caution, fontWeight: 500 }}>
                           {mine.present ? 'evidenced' : 'no evidence yet'}
@@ -266,7 +292,7 @@ export default function ListingDetailClient({
         {application && !isOwner && (
           <div style={{ marginTop: 23, background: C.surfaceAlt, borderRadius: R.md, padding: '13px 16.5px' }}>
             <p style={{ fontSize: 14, color: C.textSub }}>
-              You applied on {new Date(application.created_at).toLocaleDateString()} — status <strong>{application.status}</strong>.
+              You applied on {new Date(application.created_at).toLocaleDateString()} · <strong>{APPLICATION_STATUS[application.status]?.label ?? application.status}</strong>
             </p>
           </div>
         )}
@@ -325,7 +351,7 @@ export default function ListingDetailClient({
                           />
                           <span style={{ fontSize: 14, color: C.textSub, fontWeight: 500 }}>{r.name}</span>
                         </span>
-                        <span style={{ fontSize: 12, color: mine?.present ? state.positive : C.textGhost, fontWeight: 600 }}>
+                        <span style={{ fontSize: 13, color: mine?.present ? state.positive : C.textGhost, fontWeight: 600 }}>
                           {mine?.present ? 'evidenced' : 'no evidence'}
                         </span>
                       </label>
@@ -384,7 +410,7 @@ export default function ListingDetailClient({
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9.5, cursor: 'pointer' }}>
                 <input type="checkbox" checked={consented} onChange={(e) => setConsented(e.target.checked)} className="dk-checkbox" style={{ marginTop: 3 }} />
                 <span style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.6 }}>
-                  I agree to share my verified skill record with this poster — the skills evidenced by my linked repos, the depth computed for each, and which of their required skills I have no evidence in. A record of exactly what was shared is kept in my file.
+                  Share my verified record with this poster: my skills, how strong each is, and which of their skills I have no evidence for. A copy is kept in my file.
                 </span>
               </label>
 
@@ -398,7 +424,7 @@ export default function ListingDetailClient({
       {applyState === 'apply' && fit && (
         <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'rgba(250,247,240,0.94)', backdropFilter: 'blur(6px)', borderTop: `1px solid ${C.border}`, padding: '14.5px 28px', zIndex: 30 }}>
           <div style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 14, color: C.textMuted }}>Four checkboxes and one short answer. About five minutes.</span>
+            <span style={{ fontSize: 14, color: C.textMuted }}>About five minutes.</span>
             <Button variant="accent" onClick={() => setShowApply(true)}>Apply to this project</Button>
           </div>
         </div>

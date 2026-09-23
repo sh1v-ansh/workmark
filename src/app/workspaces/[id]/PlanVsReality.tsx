@@ -5,7 +5,7 @@ import { C, T } from '@/lib/theme/dark-tokens'
 import { estimatorProfile, type WorkspaceMetrics, type Figure } from '@/lib/workspace/metrics'
 
 const ROLE_LABEL: Record<string, string> = {
-  backend: 'Backend', frontend: 'Frontend', fullstack: 'Full-stack', mobile: 'Mobile',
+  backend: 'Backend', frontend: 'Frontend', fullstack: 'Everything', mobile: 'Mobile',
   data: 'Data', ml: 'ML / AI', infra: 'Infra', design: 'Design', other: 'Other',
 }
 

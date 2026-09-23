@@ -40,8 +40,18 @@ export interface RankedRepo extends RankableRepo {
   enabled: boolean
 }
 
-/** How many repos get switched on by default. */
-export const DEFAULT_SCAN_LIMIT = 25
+/**
+ * How many repos get switched on by default.
+ *
+ * Was 25, which quietly left out a quarter of an ordinary student's work
+ * after they had granted access to all of it — granting is the choice, and
+ * this should not second-guess it for a normal-sized account. The cap only
+ * exists for the unusual one: a repo costs roughly 70 GitHub requests to
+ * scan, and an installation gets 5,000 an hour, so 50 keeps a full scan
+ * inside one hour's budget with room for a rescan. Past 50, ranking decides
+ * what goes first, and anything the student switches on is scanned anyway.
+ */
+export const DEFAULT_SCAN_LIMIT = 50
 
 /**
  * Nobody gets fewer than this, whatever the scores say. A first-year with

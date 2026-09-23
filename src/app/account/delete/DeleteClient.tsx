@@ -63,7 +63,7 @@ export function DeleteClient({ liveEngagements }: { liveEngagements: number }) {
         ← Back to settings
       </Link>
 
-      <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, margin: '20px 0 10px' }}>
+      <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, margin: '20px 0 10px' }}>
         Delete your account
       </h1>
       <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.65, marginBottom: 26 }}>
@@ -141,7 +141,7 @@ export function DeleteClient({ liveEngagements }: { liveEngagements: number }) {
         <Link href="/student/dashboard" className="nb-btn nb-btn-quiet">Keep my account</Link>
       </div>
 
-      <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.6, marginTop: 24 }}>
+      <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.6, marginTop: 24 }}>
         Want a copy of everything we hold about you before you go?{' '}
         <a href="/api/account/export" download style={{ color: C.textFaint }}>Download it now</a>{' '}
         — one JSON file, no waiting.

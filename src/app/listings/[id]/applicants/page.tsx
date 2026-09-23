@@ -53,6 +53,15 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
     : { data: [] as { application_id: string; student_email: string | null }[] }
   const emailByApplication = new Map((shares ?? []).map((s) => [s.application_id, s.student_email]))
 
+  // Snapshots store skill ids, which are database keys rather than names a
+  // poster would recognise. One lookup for every id across all applicants.
+  const skillIds = Array.from(new Set(apps.flatMap((a) =>
+    ((a.computed_snapshot as { per_skill?: { skillId: string }[] } | null)?.per_skill ?? []).map((s) => s.skillId))))
+  const { data: skillRows } = skillIds.length > 0
+    ? await supabase.from('skills').select('id, canonical_name').in('id', skillIds)
+    : { data: [] as { id: string; canonical_name: string }[] }
+  const skillName = new Map((skillRows ?? []).map((r) => [r.id as string, r.canonical_name as string]))
+
   const rows: ApplicantRow[] = apps.map((a) => {
     const snapshot = (a.computed_snapshot ?? {}) as {
       per_skill?: { skillId: string; requiredLevel: number; depth: number; present: boolean }[]
@@ -74,7 +83,7 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ id:
       responses: a.responses,
       fitTier: (a.fit_tier_at_apply as FitTier | null) ?? null,
       rankScore: a.rank_score_at_apply,
-      perSkill: snapshot.per_skill ?? [],
+      perSkill: (snapshot.per_skill ?? []).map((s) => ({ ...s, name: skillName.get(s.skillId) ?? s.skillId })),
       claimedSkills: snapshot.claimed_skills ?? [],
       confidence: typeof snapshot.confidence === 'number' ? snapshot.confidence : null,
       missingCount: snapshot.missing_skill_ids?.length ?? 0,

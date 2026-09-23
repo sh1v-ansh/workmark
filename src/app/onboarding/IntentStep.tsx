@@ -99,7 +99,7 @@ export default function IntentStep({
         {chosen.length === 0 ? 'Skip for now' : 'Continue'}
       </Button>
       {chosen.length === 0 && (
-        <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 10, textAlign: 'center' }}>
+        <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.55, marginTop: 10, textAlign: 'center' }}>
           Not sure yet is a fine answer — you will see all four on your dashboard either way.
         </p>
       )}

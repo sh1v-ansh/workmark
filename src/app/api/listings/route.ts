@@ -2,7 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { writeApplicationQuestions } from '@/lib/agents/application-questions'
 import { getAccount, hasRole } from '@/lib/auth/roles'
-import { readFields, requireString, requireArray } from '@/lib/http/validate'
+import { parseBody } from '@/lib/http/validate'
+import { parseListingFields } from '@/lib/listings/fields'
 
 /**
  * POST /api/listings
@@ -23,52 +24,28 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
 
-  const { data: student } = await supabase.from('students').select('full_name').eq('id', user.id).maybeSingle()
-  if (!student) return NextResponse.json({ error: 'Complete your profile before posting.' }, { status: 400 })
+  const account = await getAccount(supabase)
+  if (!account) return NextResponse.json({ error: 'Complete your profile before posting.' }, { status: 400 })
 
-  let body: {
-    title?: string
-    brief?: string
-    est_hours?: number | null
-    hours_per_week?: number | null
-    duration?: string | null
-    work_mode?: string | null
-    team_size?: number | null
-    declared_difficulty?: number | null
-    requirements?: { skillId: string; requiredLevel: number }[]
-  }
-  try {
-    body = await request.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 })
-  }
+  // Faculty have no students row by design, so the name has to come from
+  // wherever the poster's name actually lives. Requiring a students row
+  // here meant no professor could post at all.
+  const [{ data: student }, { data: accountRow }] = await Promise.all([
+    supabase.from('students').select('full_name').eq('id', user.id).maybeSingle(),
+    supabase.from('accounts').select('display_name').eq('id', user.id).maybeSingle(),
+  ])
+  const posterName = student?.full_name ?? accountRow?.display_name ?? null
 
-  // requirements was read as an array without being one. A string or an
-  // object here threw inside .filter, which is a 500 for what is really a
-  // malformed request.
-  const fields = readFields(() => ({
-    title: requireString(body.title, 'A title', { max: 200 }),
-    brief: requireString(body.brief, 'A brief', { max: 8000 }),
-    requirements: requireArray(body.requirements ?? [], 'Requirements', { max: 20 }),
-  }))
+  const parsed = await parseBody(request)
+  if (!parsed.ok) return parsed.response
+  const fields = parseListingFields(parsed.body)
   if (!fields.ok) return fields.response
-  const { title, brief } = fields.values
-
-  const requirements = (fields.values.requirements as { skillId?: unknown; requiredLevel?: unknown }[])
-    .filter((r) =>
-      r && typeof r === 'object' &&
-      typeof r.skillId === 'string' && r.skillId.length > 0 && r.skillId.length <= 120 &&
-      typeof r.requiredLevel === 'number' && Number.isInteger(r.requiredLevel) &&
-      r.requiredLevel >= 1 && r.requiredLevel <= 5)
-  if (requirements.length === 0) {
-    return NextResponse.json({ error: 'Add at least one required skill so applicants can be matched.' }, { status: 400 })
-  }
+  const { title, brief, requirements, ...details } = fields.values
 
   // Read from the account rather than hardcoded. A faculty account could
   // previously log in and post nothing, because this said 'student' and the
   // database rejected anything else — so the account type existed and meant
   // nothing.
-  const account = await getAccount(supabase)
   const isFaculty = hasRole(account, 'faculty')
 
   const { data: listing, error: listingErr } = await supabase
@@ -80,15 +57,10 @@ export async function POST(request: Request) {
       // student hiring another, and is weighted differently once
       // attestation exists.
       tier: isFaculty ? 'faculty_project' : 'listing_driven',
-      poster_display_name: student.full_name,
+      poster_display_name: posterName,
       title,
       brief,
-      est_hours: body.est_hours ?? null,
-      hours_per_week: body.hours_per_week ?? null,
-      duration: body.duration ?? null,
-      work_mode: body.work_mode ?? null,
-      team_size: body.team_size ?? null,
-      declared_difficulty: body.declared_difficulty ?? null,
+      ...details,
       status: 'draft',
     })
     .select('id')

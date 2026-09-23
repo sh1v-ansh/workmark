@@ -1,4 +1,10 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Card from '@/components/Card'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/Toast'
 import Button from '@/components/ui/Button'
 import { C, F, T } from '@/lib/theme/dark-tokens'
 import { nextStepFor, type Intent, type NextStep } from '@/lib/profile/intents'
@@ -40,28 +46,35 @@ const COPY: Record<Exclude<NextStep, 'nothing'>, {
   start_guided_project: {
     eyebrow: 'Start here',
     headline: 'Nothing to read yet — so let’s build something',
-    body: 'Your GitHub is empty, which is exactly where most people start. Workmark will write you a project worth building and take you through it one task at a time, and everything you write along the way lands on your record.',
+    body: 'Most people start with an empty GitHub. We’ll suggest a project and guide you through it.',
     cta: 'Get a project to build',
     href: '/goals',
   },
   scan: {
     eyebrow: 'Nearly there',
     headline: 'Read your repositories',
-    body: 'GitHub is connected and nothing has been read yet. A scan takes a few minutes and you can leave the page while it runs.',
+    body: 'Takes a few minutes. You can leave the page while it runs.',
     cta: 'Choose what to scan',
     href: '/student/github',
   },
+  be_discoverable: {
+    eyebrow: 'Next step',
+    headline: 'Let other students find you',
+    body: 'Show up in the student directory for people starting projects.',
+    cta: 'Make me findable',
+    href: '/students',
+  },
   post_project: {
-    eyebrow: 'You said you wanted this',
-    headline: 'Post your project and find people to build it with',
-    body: 'Describe what you are making and which skills you need. Applicants arrive with a record you can check rather than a list of claims.',
+    eyebrow: 'Next step',
+    headline: 'Find people to build your project with',
+    body: 'Say what you’re making and which skills you need.',
     cta: 'Post a project',
     href: '/listings/new',
   },
   find_work: {
-    eyebrow: 'You said you wanted this',
+    eyebrow: 'Next step',
     headline: 'Find a project to work on',
-    body: 'Your record goes with every application, so a poster can see what you have actually built rather than take your word for it.',
+    body: 'Your verified record goes with every application.',
     cta: 'Find work',
     href: '/listings',
   },
@@ -72,29 +85,58 @@ export default function NextStepCard({
   githubConnected,
   repoCount,
   evidenceCount,
+  openToCollab,
+  postedCount,
+  studentId,
 }: {
   intents: Intent[]
   githubConnected: boolean
   repoCount: number
   evidenceCount: number
+  openToCollab: boolean
+  postedCount: number
+  studentId: string
 }) {
-  const step = nextStepFor({ intents, githubConnected, repoCount, evidenceCount })
+  const router = useRouter()
+  const { toast } = useToast()
+  const [busy, setBusy] = useState(false)
+
+  const step = nextStepFor({ intents, githubConnected, repoCount, evidenceCount, openToCollab, postedCount })
   if (step === 'nothing') return null
+
+  // Done in place, not by sending them to the directory to find a switch.
+  async function makeFindable() {
+    setBusy(true)
+    const { error } = await createClient().from('students').update({ open_to_collab: true }).eq('id', studentId)
+    setBusy(false)
+    if (error) {
+      toast('Could not update that. Try again from the Students page.', 'error')
+      return
+    }
+    toast('You now show up in the student directory.', 'success')
+    router.refresh()
+  }
 
   const copy = COPY[step]
 
   return (
-    <Card focal style={{ marginBottom: 18 }}>
-      <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.accent, marginBottom: 7 }}>
-        {copy.eyebrow}
-      </p>
-      <p style={{ fontFamily: F.display, fontSize: 19, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, lineHeight: 1.3, marginBottom: 7 }}>
-        {copy.headline}
-      </p>
-      <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 17, maxWidth: '58ch' }}>
-        {copy.body}
-      </p>
-      <Button href={copy.href} variant="accent">{copy.cta}</Button>
+    // A slim row under the greeting, not a banner over it: it is a pointer
+    // to the next thing, and the page's own content should still lead.
+    <Card hoverable={false} padding="12px 16px" style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <p style={{ fontSize: T.bodySm, color: C.textSub, minWidth: 0 }}>
+          <span style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.accent, marginRight: 8 }}>
+            {copy.eyebrow}
+          </span>
+          <strong style={{ fontWeight: 600, color: C.text }}>{copy.headline}</strong>
+          <span style={{ color: C.textMuted }}> · {copy.body}</span>
+        </p>
+        {step === 'be_discoverable' ? (
+          <Button variant="accent" size="sm" onClick={makeFindable} busyLabel={busy ? 'Saving…' : null}>{copy.cta}</Button>
+        ) : (
+          <Button href={copy.href} variant="accent" size="sm">{copy.cta}</Button>
+        )}
+      </div>
     </Card>
   )
 }

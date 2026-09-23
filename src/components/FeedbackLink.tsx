@@ -181,7 +181,7 @@ export default function FeedbackLink({
             />
           </div>
 
-          <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55 }}>
+          <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.55 }}>
             We&apos;ll also see the page you were on and which browser you&apos;re using. Nothing else.
           </p>
         </div>

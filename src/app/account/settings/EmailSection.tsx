@@ -185,7 +185,7 @@ export default function EmailSection({
         >
           {allOff ? 'Turn my email back on' : 'Turn off everything optional'}
         </button>
-        <span style={{ fontSize: 12.5, color: C.textGhost }}>Saves as you change it</span>
+        <span style={{ fontSize: 13, color: C.textGhost }}>Saves as you change it</span>
       </div>
     </>
   )

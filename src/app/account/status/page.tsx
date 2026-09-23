@@ -87,7 +87,7 @@ export default async function AccountStatusPage() {
               gap: 16,
             }}
           >
-            <h1 style={{ fontSize: 25, fontWeight: 600, color: C.text, margin: 0, lineHeight: 1.22 }}>
+            <h1 style={{ fontSize: 24, fontWeight: 600, color: C.text, margin: 0, lineHeight: 1.22 }}>
               {copy.title}
             </h1>
 

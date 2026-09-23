@@ -143,7 +143,7 @@ describe('choosing which repos to scan', () => {
   it('does not let forks eat the language slots', () => {
     const ranked = rankRepos([
       repo({ repoFullName: 'me/fork', primaryLanguage: 'Haskell', isFork: true }),
-      ...Array.from({ length: 30 }, (_, i) => repo({ repoFullName: `me/p${i}` })),
+      ...Array.from({ length: DEFAULT_SCAN_LIMIT + 5 }, (_, i) => repo({ repoFullName: `me/p${i}` })),
     ], { now: NOW })
     expect(enabledNames(ranked)).not.toContain('me/fork')
   })

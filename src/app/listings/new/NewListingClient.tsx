@@ -17,23 +17,42 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.Re
   )
 }
 
-export default function NewListingClient({ studentName, taxonomy, agentsAvailable }: {
-  studentName: string | null
+/** A listing as the form holds it — every number as the text in its box. */
+export interface ListingDraft {
+  title: string
+  brief: string
+  requirements: PickedRequirement[]
+  hoursPerWeek: string
+  estHours: string
+  duration: string
+  workMode: string
+  teamSize: string
+  difficulty: string
+}
+
+/**
+ * Posting and editing are the same form. With `editing` it starts filled
+ * in, saves with PATCH, and drops the draft-from-a-description box — that
+ * would overwrite what the poster already wrote.
+ */
+export default function NewListingClient({ taxonomy, agentsAvailable, editing }: {
   taxonomy: TaxonomySkill[]
   agentsAvailable: boolean
+  editing?: { id: string; initial: ListingDraft }
 }) {
+  const init = editing?.initial
   const router = useRouter()
   const { toast } = useToast()
 
-  const [title, setTitle] = useState('')
-  const [brief, setBrief] = useState('')
-  const [requirements, setRequirements] = useState<PickedRequirement[]>([])
-  const [hoursPerWeek, setHoursPerWeek] = useState('')
-  const [estHours, setEstHours] = useState('')
-  const [duration, setDuration] = useState('')
-  const [workMode, setWorkMode] = useState('remote')
-  const [teamSize, setTeamSize] = useState('')
-  const [difficulty, setDifficulty] = useState('')
+  const [title, setTitle] = useState(init?.title ?? '')
+  const [brief, setBrief] = useState(init?.brief ?? '')
+  const [requirements, setRequirements] = useState<PickedRequirement[]>(init?.requirements ?? [])
+  const [hoursPerWeek, setHoursPerWeek] = useState(init?.hoursPerWeek ?? '')
+  const [estHours, setEstHours] = useState(init?.estHours ?? '')
+  const [duration, setDuration] = useState(init?.duration ?? '')
+  const [workMode, setWorkMode] = useState(init?.workMode ?? 'remote')
+  const [teamSize, setTeamSize] = useState(init?.teamSize ?? '')
+  const [difficulty, setDifficulty] = useState(init?.difficulty ?? '')
   const [saving, setSaving] = useState(false)
   const [rough, setRough] = useState('')
   const [drafting, setDrafting] = useState(false)
@@ -77,8 +96,8 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
     }
     setSaving(true)
     try {
-      const res = await fetch('/api/listings', {
-        method: 'POST',
+      const res = await fetch(editing ? `/api/listings/${editing.id}` : '/api/listings', {
+        method: editing ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
@@ -93,12 +112,12 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
         }),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Could not create the listing.')
-      toast('Project posted.', 'success')
-      router.push(`/listings/${json.id}`)
+      if (!res.ok) throw new Error(json.error ?? (editing ? 'Could not save your changes.' : 'Could not create the listing.'))
+      toast(editing ? 'Changes saved.' : 'Project posted.', 'success')
+      router.push(`/listings/${editing?.id ?? json.id}`)
       router.refresh()
     } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Could not create the listing.', 'error')
+      toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
     } finally {
       setSaving(false)
     }
@@ -110,14 +129,16 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
     <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: 680, margin: '0 auto', padding: '30px 28px 72px' }}>
-        <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
-          Post a project
+        <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
+          {editing ? 'Edit project' : 'Post a project'}
         </h1>
         <p style={{ fontSize: 15, color: C.textMuted, marginBottom: 23 }}>
-          Applicants are matched on whether their linked repos actually demonstrate the skills you list.
+          {editing
+            ? 'Anyone who already applied keeps the questions they answered.'
+            : 'Applicants are matched on whether their linked repos actually demonstrate the skills you list.'}
         </p>
 
-        {agentsAvailable && (
+        {agentsAvailable && !editing && (
           <div className="nb-focal" style={{ padding: 21, marginBottom: 20 }}>
             <Kicker style={{ color: C.accentInk, marginBottom: 8.5 }}>Start from a description</Kicker>
             <p style={{ fontSize: 13.5, color: C.textMuted, marginBottom: 13, lineHeight: 1.5 }}>
@@ -192,9 +213,12 @@ export default function NewListingClient({ studentName, taxonomy, agentsAvailabl
               </div>
             </div>
 
-            <Button type="submit" variant="accent" fullWidth disabled={saving} busyLabel={saving ? 'Posting…' : null}>
-              Post project
+            <Button type="submit" variant="accent" fullWidth disabled={saving} busyLabel={saving ? (editing ? 'Saving…' : 'Posting…') : null}>
+              {editing ? 'Save changes' : 'Post project'}
             </Button>
+            {editing && (
+              <Button href={`/listings/${editing.id}`} variant="quiet" fullWidth>Cancel</Button>
+            )}
           </form>
         </Card>
       </main>

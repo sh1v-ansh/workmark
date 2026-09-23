@@ -9,6 +9,7 @@ import { Icon } from '@/components/Icon'
 import { useToast } from '@/components/Toast'
 import Modal from '@/components/ui/Modal'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
+import { LAYOUT } from '@/lib/theme/layout'
 import type { WorkspaceSummary, PendingInvitation, WorkspaceStatus } from '@/lib/workspace/queries'
 
 const STATUS_LABEL: Record<WorkspaceStatus, string> = {
@@ -75,19 +76,13 @@ export default function WorkspacesClient({
   }
 
   return (
-    <main className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg, padding: '32px 24px 72px' }}>
-      <div style={{ maxWidth: 880, margin: '0 auto' }}>
-        <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 28 }}>
-          <div>
-            <h1 style={{ fontFamily: F.display, fontSize: T.display, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 6 }}>
-              Projects
-            </h1>
-            <p style={{ fontSize: T.body, color: C.textMuted, lineHeight: 1.6, maxWidth: '58ch' }}>
-              Work you are doing, on your own or with other students. Each one has a board,
-              a repository, and a record of what you planned against what happened.
-            </p>
-          </div>
-          <Button onClick={() => setCreating(true)}>New project</Button>
+    <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
+      <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text }}>
+            My projects
+          </h1>
+          <Button variant="accent" onClick={() => setCreating(true)}>New project</Button>
         </header>
 
         {/* Invitations first. Somebody who has been asked to join a project
@@ -98,10 +93,12 @@ export default function WorkspacesClient({
               {invitations.length === 1 ? 'You have an invitation' : `You have ${invitations.length} invitations`}
             </h2>
             {!githubConnected && (
-              <p style={{ fontSize: T.bodySm, color: C.textMuted, marginBottom: 12, lineHeight: 1.6 }}>
-                Connect GitHub before joining — without it your commits can&apos;t be counted as yours.{' '}
-                <Link href="/student/github" style={{ color: C.accent }}>Connect GitHub</Link>
-              </p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+                <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6 }}>
+                  Connect GitHub first so your commits count as yours.
+                </p>
+                <Button href="/student/github/consent" variant="accent" size="sm">Connect GitHub</Button>
+              </div>
             )}
             <div style={{ display: 'grid', gap: 10 }}>
               {invitations.map((invite) => (
@@ -174,13 +171,9 @@ export default function WorkspacesClient({
             ))}
           </div>
         )}
-      </div>
+      </main>
 
       <Modal open={creating} onClose={() => setCreating(false)} title="New project">
-        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 18 }}>
-          Name it and say what it is. You&apos;ll add the repository and anyone working with you next —
-          the project starts once a repository is attached.
-        </p>
         <label htmlFor="ws-title" style={{ display: 'block', fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
           Project name
         </label>
@@ -203,9 +196,7 @@ export default function WorkspacesClient({
             what it costs to skip is more honest than marking it required and
             letting somebody type one word to get past it. */}
         <p style={{ fontSize: T.meta, color: C.textFaint, lineHeight: 1.5, marginBottom: 8 }}>
-          Workmark writes your first plan from this, so the more specific you are the
-          less generic the tasks. What it does, who it is for, what you are building it
-          with, and what finished looks like.
+          The more specific, the better your first plan.
         </p>
         <textarea
           id="ws-summary"
@@ -233,6 +224,6 @@ export default function WorkspacesClient({
           </Button>
         </div>
       </Modal>
-    </main>
+    </div>
   )
 }

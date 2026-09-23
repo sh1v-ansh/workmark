@@ -148,7 +148,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
         <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
         <div style={{ margin: '13px 0 20px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
             Your file
           </h1>
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 630 }}>
@@ -211,7 +211,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                             {e.isCorrection && <Badge>corrected</Badge>}
                           </div>
                           {existing ? (
-                            <span style={{ fontSize: 12, color: C.textGhost }}>{STATUS_LABEL[existing.status]}</span>
+                            <span style={{ fontSize: 13, color: C.textGhost }}>{STATUS_LABEL[existing.status]}</span>
                           ) : (
                             <Button variant="quiet" size="sm" onClick={() => { setDisputingId(disputingId === e.id ? null : e.id); setDetail('') }}>
                               Dispute
@@ -219,7 +219,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                           )}
                         </div>
 
-                        <p style={{ fontSize: 12, color: C.textGhost, marginTop: 6.5 }}>
+                        <p style={{ fontSize: 13, color: C.textGhost, marginTop: 6.5 }}>
                           {[e.repoFullName, e.verificationMethod, e.source, new Date(e.createdAt).toLocaleDateString()].filter(Boolean).join(' · ')}
                         </p>
 
@@ -228,7 +228,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                             nothing to check it against — which is also what a
                             dispute needs in order to be about anything. */}
                         {e.foundIn && (
-                          <p style={{ fontSize: 12, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
+                          <p style={{ fontSize: 13, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
                             <span style={{ color: C.textGhost }}>Found in: </span>{e.foundIn}
                           </p>
                         )}
@@ -238,7 +238,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                             work, checked afterwards — is the difference
                             between a number and a claim you can argue with. */}
                         {e.projectBasis && (
-                          <p style={{ fontSize: 12, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
+                          <p style={{ fontSize: 13, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
                             <span style={{ color: C.textGhost }}>From a project: </span>{e.projectBasis}
                           </p>
                         )}
@@ -256,7 +256,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                                 <option key={cc.value} value={cc.value}>{cc.label}</option>
                               ))}
                             </select>
-                            <p style={{ fontSize: 12, color: C.textGhost, lineHeight: 1.5 }}>
+                            <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5 }}>
                               {DISPUTE_CATEGORIES.find((cc) => cc.value === category)?.help}
                             </p>
                             <textarea
@@ -286,7 +286,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                       <span style={{ fontSize: 13, color: C.textMuted, textDecoration: 'line-through' }}>
                         {e.skillName} · {LEVEL_NAMES[e.level] ?? e.level}
                       </span>
-                      <span style={{ fontSize: 12, color: C.textGhost }}>
+                      <span style={{ fontSize: 13, color: C.textGhost }}>
                         {e.retracted ? 'retracted' : 'superseded'} · {new Date(e.createdAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -315,7 +315,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                         </Button>
                       </div>
                       {expandedDisclosure === d.id && (
-                        <pre style={{ marginTop: 11, padding: 13, background: C.surfaceAlt, borderRadius: R.md, fontSize: 12, color: C.textMuted, overflowX: 'auto', lineHeight: 1.5, fontFamily: 'ui-monospace, Menlo, monospace' }}>
+                        <pre style={{ marginTop: 11, padding: 13, background: C.surfaceAlt, borderRadius: R.md, fontSize: 13, color: C.textMuted, overflowX: 'auto', lineHeight: 1.5, fontFamily: 'ui-monospace, Menlo, monospace' }}>
                           {JSON.stringify(d.payloadSnapshot, null, 2)}
                         </pre>
                       )}
@@ -370,12 +370,12 @@ export default function MyFileClient({ data }: { data: FileData }) {
                           <p style={{ fontSize: 14.5, fontWeight: 600, color: C.text }}>
                             {DISPUTE_CATEGORIES.find((cc) => cc.value === d.category)?.label ?? d.category}
                           </p>
-                          <span style={{ fontSize: 12, color: isResolved(d.status) ? C.textGhost : C.accent, fontWeight: 600 }}>
+                          <span style={{ fontSize: 13, color: isResolved(d.status) ? C.textGhost : C.accent, fontWeight: 600 }}>
                             {STATUS_LABEL[d.status]}
                           </span>
                         </div>
                         <p style={{ fontSize: 13.5, color: C.textMuted, marginTop: 5.5, lineHeight: 1.5 }}>{d.detail}</p>
-                        <p style={{ fontSize: 12, color: days < 0 && !isResolved(d.status) ? '#B91C1C' : C.textGhost, marginTop: 9 }}>
+                        <p style={{ fontSize: 13, color: days < 0 && !isResolved(d.status) ? '#B91C1C' : C.textGhost, marginTop: 9 }}>
                           Filed {new Date(d.filedAt).toLocaleDateString()}
                           {isResolved(d.status)
                             ? d.resolvedAt ? ` · resolved ${new Date(d.resolvedAt).toLocaleDateString()}` : ''
@@ -403,7 +403,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                       <option key={c.value} value={c.value}>{c.label}</option>
                     ))}
                   </select>
-                  <p style={{ fontSize: 12, color: C.textGhost, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5 }}>
                     {DISPUTE_CATEGORIES.find((c) => c.value === category)?.help}
                   </p>
                   <textarea

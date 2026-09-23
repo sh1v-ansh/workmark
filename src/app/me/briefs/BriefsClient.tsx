@@ -94,7 +94,7 @@ function GeneratingNote() {
         <span style={{ fontSize: 13, color: C.textMuted }}>{GENERATING_STAGES[stage]}</span>
       </div>
       <Bar height={3} radius={R.pill} />
-      <p style={{ fontSize: 12, color: C.textGhost }}>Usually 10–20 seconds. Don&apos;t refresh.</p>
+      <p style={{ fontSize: 13, color: C.textGhost }}>Usually 10–20 seconds. Don&apos;t refresh.</p>
     </div>
   )
 }
@@ -276,16 +276,16 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
           <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 5.5 }}>{b.title}</p>
           <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
             {b.targetSkillName && c && (
-              <span style={{ fontSize: 12, padding: '3px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+              <span style={{ fontSize: 13, padding: '3px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
                 {b.targetSkillName}
               </span>
             )}
             {b.skillLevel && (
-              <span style={{ fontSize: 12, padding: '3px 9.5px', borderRadius: R.pill, background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted }}>
+              <span style={{ fontSize: 13, padding: '3px 9.5px', borderRadius: R.pill, background: C.surfaceAlt, border: `1px solid ${C.border}`, color: C.textMuted }}>
                 {SKILL_LEVEL_META[b.skillLevel].label}
               </span>
             )}
-            <span style={{ fontSize: 12, color: C.textGhost }}>
+            <span style={{ fontSize: 13, color: C.textGhost }}>
               {[
                 b.careerTrack ? CAREER_TRACK_META[b.careerTrack].label : null,
                 b.difficulty ? DIFFICULTY_LABEL[b.difficulty] : null,
@@ -366,7 +366,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
         <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
         <div style={{ margin: '13px 0 21px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
             Project ideas
           </h1>
           <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.6 }}>
@@ -398,7 +398,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
                       style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '9.5px 14px', background: 'transparent', border: 'none', color: C.textSub, fontSize: 14, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
                     >
                       {s.canonicalName}
-                      {s.alreadyEvidenced && <span style={{ fontSize: 12, color: C.textGhost }}>already evidenced</span>}
+                      {s.alreadyEvidenced && <span style={{ fontSize: 13, color: C.textGhost }}>already evidenced</span>}
                     </button>
                   ))}
                 </div>
@@ -426,7 +426,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
                       <span style={{ display: 'block', fontSize: 13, fontWeight: 600, color: active ? C.accentInk : C.textSub }}>
                         {SKILL_LEVEL_META[lvl].label}
                       </span>
-                      <span style={{ display: 'block', fontSize: 11.5, color: C.textGhost, marginTop: 2, lineHeight: 1.4 }}>
+                      <span style={{ display: 'block', fontSize: 13, color: C.textGhost, marginTop: 2, lineHeight: 1.4 }}>
                         {SKILL_LEVEL_META[lvl].hint}
                       </span>
                     </button>
@@ -559,7 +559,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
             )}
           </div>
 
-          <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.6 }}>
+          <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.6 }}>
             Nothing here is posted or shown to anyone. The repo becomes evidence the same way any other linked repo does — through a scan of the commits you actually wrote.
           </p>
         </div>

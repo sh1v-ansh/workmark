@@ -52,7 +52,7 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
             Student directory
           </h1>
           <p style={{ fontSize: 15, color: C.textMuted }}>
@@ -105,7 +105,7 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
                   <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 3.5 }}>
                     {s.handle ? (
                       <Link href={`/p/${s.handle}`} style={{ color: C.text, textDecoration: 'none' }}>
-                        {s.full_name ?? 'Student'} <span style={{ fontFamily: F.sans, fontSize: 12, fontWeight: 600, color: C.accent }}>· verified record →</span>
+                        {s.full_name ?? 'Student'} <span style={{ fontFamily: F.sans, fontSize: 13, fontWeight: 600, color: C.accent }}>· verified record →</span>
                       </Link>
                     ) : (
                       s.full_name ?? 'Student'
@@ -128,7 +128,7 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
                     {s.skills.slice(0, 5).map((sk) => {
                       const c = tagColor(sk)
                       return (
-                        <span key={sk} style={{ fontSize: 12, fontWeight: 500, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                        <span key={sk} style={{ fontSize: 13, fontWeight: 500, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
                           {sk}
                         </span>
                       )

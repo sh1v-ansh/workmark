@@ -26,6 +26,14 @@ export const TARGET_OPEN = 3
  *  whoever was missed. */
 export const MAX_STUDENTS_PER_RUN = 120
 
+/**
+ * First projects for somebody with no evidence yet — a new account, or an
+ * empty GitHub. Beginner-friendly and broad, so at least one fits whatever
+ * they turn out to be into. Only used when there is nothing to personalise
+ * from; the moment a scan lands, recommendations come from their own work.
+ */
+export const STARTER_SKILLS = ['python', 'javascript', 'html-css']
+
 export interface RunSummary {
   considered: number
   skipped: number
@@ -65,10 +73,27 @@ export async function recommendForStudent(
       .eq('listings.status', 'open'),
   ])
 
-  // Nothing to personalise from. A brief built on no evidence at all is a
-  // generic project with this student's name on it, which is worse than no
-  // recommendation — it teaches them the feature is not worth reading.
-  if (!evidenceRows || evidenceRows.length === 0) return { generated: 0, failed: 0 }
+  // Nothing to personalise from yet. This used to return nothing, on the
+  // grounds that a generic brief teaches people the feature is not worth
+  // reading — but it left every new account with an empty Find work and no
+  // idea what to start. So they get first projects instead, labelled as
+  // beginner work rather than dressed up as personal.
+  if (!evidenceRows || evidenceRows.length === 0) {
+    const already = new Set((open ?? []).map((b) => b.target_skill_id))
+    const starters = STARTER_SKILLS.filter((id) => !already.has(id)).slice(0, TARGET_OPEN - openCount)
+    let generated = 0
+    let failed = 0
+    for (const skillId of starters) {
+      try {
+        if (await writeRecommendation(supabase, studentId, { skillId, reason: null }, 'beginner')) generated++
+        else failed++
+      } catch (err) {
+        console.error('[recommend] starter brief failed', { studentId, skillId, err })
+        failed++
+      }
+    }
+    return { generated, failed }
+  }
 
   const bySkill = new Map<string, { level: number; artifacts: Set<string> }>()
   for (const row of evidenceRows) {
@@ -154,7 +179,10 @@ export async function recommendForStudent(
 async function writeRecommendation(
   supabase: SupabaseClient,
   studentId: string,
-  target: Target,
+  target: { skillId: string; reason: Target['reason'] | null },
+  // Only for starter projects, where "beginner" is a fact about having no
+  // evidence rather than a guess about the person.
+  skillLevel: 'beginner' | null = null,
 ): Promise<boolean> {
   const brief = await generateBrief(supabase, studentId, target.skillId, {
     // Deliberately not passing skillLevel or careerTrack. Those are things
@@ -163,7 +191,7 @@ async function writeRecommendation(
     // different act from offering a project. The agent still reads their
     // whole evidence list, which is the part that makes it personal.
     targetRole: null,
-    skillLevel: null,
+    skillLevel,
     careerTrack: null,
   })
   if (!brief) return false

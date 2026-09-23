@@ -266,7 +266,7 @@ export default function RescanButton({
               transition: 'width 0.4s ease',
             }} />
           </div>
-          <span style={{ display: 'block', fontSize: 12, color: C.textFaint, marginTop: 5, lineHeight: 1.45 }}>
+          <span style={{ display: 'block', fontSize: 13, color: C.textFaint, marginTop: 5, lineHeight: 1.45 }}>
             {/* Named as repositories rather than steps, because that is the
                 unit the student chose on the GitHub page and the only one
                 that means anything to them. */}
@@ -288,7 +288,7 @@ export default function RescanButton({
       )}
 
       {showLastScan && !running && discovery === 'done' && (
-        <span style={{ fontSize: 12, color: C.textGhost }}>{lastScanLabel(lastScannedAt)}</span>
+        <span style={{ fontSize: 13, color: C.textGhost }}>{lastScanLabel(lastScannedAt)}</span>
       )}
     </div>
   )
