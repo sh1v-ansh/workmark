@@ -596,3 +596,66 @@ export async function pruneStalePriors(
   }
   return data?.length ?? 0
 }
+
+/**
+ * Take off evidence from repositories the latest full scan did not read.
+ *
+ * ── Why ───────────────────────────────────────────────────────────────────
+ * A scan only ever revisited the repositories it was given. Switch one off,
+ * or revoke GitHub's access to it, and its evidence stayed on the record for
+ * good — a skill citing a repository Workmark can no longer see and the
+ * student has said it may not read. A scan is meant to be the current
+ * answer, not an addition to every previous one.
+ *
+ * ── What it will not touch ────────────────────────────────────────────────
+ * Only the student's own scanned work: artifacts with no engagement and no
+ * workspace. Work done on a posted project or a guided project is evidence
+ * of a different kind — accepted by somebody else, or checked against
+ * criteria written in advance — and switching off a repository in the
+ * picker is not a statement about it.
+ *
+ * And only after a clean scan, for the same reason as pruneStalePriors: a
+ * job with a failed step is one where "not read" may just mean "could not".
+ * Retracted rather than deleted, so the history a dispute needs survives.
+ */
+export async function retractUnscannedRepos(
+  supabase: SupabaseClient,
+  studentId: string,
+  scannedRepos: Set<string>,
+): Promise<number> {
+  const { data: artifacts, error } = await supabase
+    .from('artifacts')
+    .select('id, repo_full_name')
+    .eq('student_id', studentId)
+    .is('engagement_id', null)
+    .is('workspace_id', null)
+  if (error) {
+    console.error('[evidence] could not list artifacts:', error.message)
+    return 0
+  }
+
+  const stale = (artifacts ?? [])
+    .filter((a) => !scannedRepos.has(a.repo_full_name as string))
+    .map((a) => a.id as string)
+  if (stale.length === 0) return 0
+
+  const { data: live, error: liveErr } = await supabase
+    .from('current_skill_evidence')
+    .select('id')
+    .eq('student_id', studentId)
+    .in('artifact_id', stale)
+  if (liveErr || !live || live.length === 0) {
+    if (liveErr) console.error('[evidence] could not read evidence to retract:', liveErr.message)
+    return 0
+  }
+
+  const { error: upErr } = await supabase
+    .from('skill_evidence')
+    .update({ retracted_at: new Date().toISOString() })
+    .in('id', live.map((r) => r.id as string))
+  if (upErr) {
+    console.error('[evidence] could not retract unscanned repositories:', upErr.message)
+    return 0
+  }
+  return live.length
+}

@@ -362,7 +362,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
             Your work
           </h1>
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 630 }}>
-            Everything on your record comes from code you wrote, or from work a person checked. You choose which repositories Workmark may read, and nothing already recorded is removed when you change your mind.
+            Everything on your record comes from code you wrote, or from work a person checked. You choose which repositories Workmark may read, and each scan is the current answer: switch a repository off and its skills come off your record at the next scan.
           </p>
         </div>
 

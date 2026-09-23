@@ -2,7 +2,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { claimJob, claimStep, completeStep, kickJob, releaseJob } from '@/lib/jobs/queue'
 import { runStep } from '@/lib/jobs/runners'
-import { pruneStalePriors } from '@/lib/skills/evidence'
+import { pruneStalePriors, retractUnscannedRepos } from '@/lib/skills/evidence'
 
 // One step, not one job. The whole point of the queue is that this number
 // bounds a single unit of work — one repo — rather than all of them, so it
@@ -94,6 +94,12 @@ export async function POST(request: Request) {
   // failed step leaves the list alone.
   if (done && job.kind === 'github_scan' && failed === 0 && job.started_at) {
     await pruneStalePriors(admin, job.student_id, job.started_at)
+    // A scan is the current answer, not an addition to every previous one:
+    // a repository switched off or no longer shared stops counting. Step
+    // labels are the repository names this job was built from — a skipped
+    // step still counts as read, so only repositories absent from the job
+    // entirely are affected.
+    await retractUnscannedRepos(admin, job.student_id, new Set(steps.map((st) => st.label)))
   }
 
   return NextResponse.json({ ok: true, claimed: true, done, step: step.label })
