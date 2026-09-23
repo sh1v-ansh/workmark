@@ -89,6 +89,17 @@ export async function POST(request: Request) {
     })
 
     if (error) {
+      // An empty message ('{}') is Supabase failing to send the
+      // verification email (almost always the SMTP settings), not anything
+      // the person did. Say so in words and log the detail for us.
+      const message = error.message?.trim()
+      if (!message || message === '{}') {
+        console.error('[auth/signup] Supabase could not send the verification email:', { status: error.status, name: error.name })
+        return NextResponse.json(
+          { error: 'We could not send your verification email just now. Please try again in a few minutes.' },
+          { status: 502 },
+        )
+      }
       // Supabase already declines to say whether an address is registered,
       // and nothing here should undo that. Its message is passed through
       // because it is written for the person reading it — weak password,
