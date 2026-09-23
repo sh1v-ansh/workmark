@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { EMPTY_ELIGIBILITY } from '@/lib/profile/eligibility'
 import { createClient } from '@/lib/supabase/server'
 import { EMAIL_KINDS, type EmailKind } from '@/lib/notify/prefs'
 import SettingsClient from './SettingsClient'
@@ -36,7 +37,7 @@ export default async function SettingsPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [{ data: student }, { data: account }, { data: connection }] = await Promise.all([
+  const [{ data: student }, { data: account }, { data: connection }, { data: eligibility }] = await Promise.all([
     supabase
       .from('students')
       .select('full_name, university, major, degree_type, graduation_year, github_username, is_international')
@@ -50,6 +51,12 @@ export default async function SettingsPage({
     supabase
       .from('github_connections')
       .select('github_login, connected_at')
+      .eq('student_id', user.id)
+      .maybeSingle(),
+    // Owner-only table; this is the student reading their own answers.
+    supabase
+      .from('student_eligibility')
+      .select('use_for_opportunities, first_gen, military, gender, gender_self, race_ethnicity, disability, lgbtq, low_income, us_state, transfer, citizenship')
       .eq('student_id', user.id)
       .maybeSingle(),
   ])
@@ -66,6 +73,7 @@ export default async function SettingsPage({
         isInternational: student?.is_international ?? false,
       }}
       hasStudentProfile={!!student}
+      eligibility={eligibility ? { ...EMPTY_ELIGIBILITY, ...eligibility, race_ethnicity: eligibility.race_ethnicity ?? [] } : EMPTY_ELIGIBILITY}
       github={connection ? { login: connection.github_login, connectedAt: connection.connected_at } : null}
       initialPrefs={(account?.notification_prefs ?? {}) as Record<string, boolean>}
       initialUnsubscribedAll={!!account?.email_unsubscribed_at}

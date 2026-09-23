@@ -1,5 +1,7 @@
 'use client'
 
+import EligibilitySection from './EligibilitySection'
+import type { Eligibility } from '@/lib/profile/eligibility'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -71,6 +73,7 @@ export default function SettingsClient({
   email,
   profile,
   hasStudentProfile,
+  eligibility,
   github,
   initialPrefs,
   initialUnsubscribedAll,
@@ -80,6 +83,7 @@ export default function SettingsClient({
   email: string | null
   profile: Profile
   hasStudentProfile: boolean
+  eligibility: Eligibility
   github: { login: string | null; connectedAt: string | null } | null
   initialPrefs: Record<string, boolean>
   initialUnsubscribedAll: boolean
@@ -300,6 +304,17 @@ export default function SettingsClient({
                   <Button href="/student/github" variant="ink" size="sm">Connect GitHub</Button>
                 </div>
               )}
+            </Section>
+          )}
+
+          {/* ── Opportunities just for you ─────────────────────────────── */}
+          {hasStudentProfile && (
+            <Section
+              id="opportunities"
+              title="Opportunities just for you"
+              lede="Some scholarships, programs and internships are only open to certain groups. Tell us if any apply and we'll show you the ones you qualify for. This is never shown to employers or anyone else, and never affects how your work is judged. Every question is optional."
+            >
+              <EligibilitySection initial={eligibility} />
             </Section>
           )}
 
