@@ -1124,6 +1124,69 @@
   .nb-filters { position: static; }
 }
 
+/* ══ GLASS (experimental) ═════════════════════════════════════════════════
+   Cards as panes of frosted glass lifted off a textured surface.
+
+   Three parts, and each needs the others:
+   1. The ground gets a faint cool tone and a fine grain. On pure white there
+      is nothing for glass to be seen against.
+   2. The card is part-transparent white with a blur behind it. The blur
+      smooths the grain it sits over, so the card reads as a clean surface
+      raised above a rough one — that contrast is the whole effect.
+   3. The edge is light, not a drawn line: a white rim, a highlight along
+      the top like light catching a pane, a half-pixel outline for
+      definition, and a soft shadow underneath for the lift.
+
+   Self-contained on purpose. Deleting this block restores the previous
+   cards exactly. Only app pages carry .wm-app-ground, so the marketing
+   pages and the landing hero are untouched. */
+.wm-app-ground::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.1  0 0 0 0 0.11  0 0 0 0 0.18  0 0 0 0.09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    radial-gradient(1100px 600px at 12% -8%, rgba(97, 66, 245, 0.05), transparent 70%),
+    linear-gradient(180deg, #F4F5F9 0%, #EFF1F6 100%);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .wm-app-ground .nb-card,
+  .wm-app-ground .nb-ai-card,
+  .wm-app-ground .nb-focal {
+    background: rgba(255, 255, 255, 0.72);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    backdrop-filter: blur(18px) saturate(160%);
+    border: 1px solid rgba(255, 255, 255, 0.9);
+    box-shadow:
+      0 0 0 0.5px rgba(22, 27, 45, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 1px 2px rgba(22, 27, 45, 0.04),
+      0 12px 30px -16px rgba(22, 27, 45, 0.22);
+  }
+  .wm-app-ground .nb-card-interactive:hover {
+    border-color: rgba(255, 255, 255, 1);
+    box-shadow:
+      0 0 0 0.5px rgba(97, 66, 245, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 2px 4px rgba(22, 27, 45, 0.05),
+      0 18px 36px -18px rgba(97, 66, 245, 0.35);
+  }
+  /* The focal card keeps its violet, as a tint in the glass and a violet
+     outline rather than a heavy border. */
+  .wm-app-ground .nb-card-focal,
+  .wm-app-ground .nb-focal {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 245, 255, 0.72) 100%);
+    box-shadow:
+      0 0 0 0.5px rgba(97, 66, 245, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 1px 2px rgba(97, 66, 245, 0.06),
+      0 16px 36px -18px rgba(97, 66, 245, 0.4);
+  }
+}
+
 /* ══ MARKETING ═════════════════════════════════════════════════════════════
    Landing-page-only styles. The app is .nb-*; these are .wm-*.
    ═══════════════════════════════════════════════════════════════════════ */

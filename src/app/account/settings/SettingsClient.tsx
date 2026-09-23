@@ -290,17 +290,11 @@ export default function SettingsClient({
           <Section
             id="data"
             title="Your data"
-            lede="Everything Workmark holds about you, in one file, with no waiting and nobody to ask."
+            lede="Everything we hold about you — profile, skills, evidence, applications and projects — in one file."
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-              <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, margin: 0 }}>
-                One JSON file: your profile, your skills, the evidence behind each one, your
-                applications and your engagement history.
-              </p>
-              <a href="/api/account/export" download className="nb-btn nb-btn-outline nb-btn-sm">
-                Download
-              </a>
-            </div>
+            <a href="/api/account/export" download className="nb-btn nb-btn-outline nb-btn-sm">
+              Download my data
+            </a>
           </Section>
 
           {/* ── Leaving ─────────────────────────────────────────────────── */}
@@ -312,9 +306,7 @@ export default function SettingsClient({
               Delete your account
             </h2>
             <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 15, maxWidth: '62ch' }}>
-              Your record, the evidence behind it and your history all go. You have {GRACE_DAYS} days
-              to change your mind, and after that it is permanently gone — not by you, not by us,
-              not by asking. The next page explains exactly what happens before anything does.
+              Everything goes. You have {GRACE_DAYS} days to change your mind, then it&apos;s permanent.
             </p>
             <Link href="/account/delete" className="nb-btn nb-btn-danger nb-btn-sm">
               Delete my account
