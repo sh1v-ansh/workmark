@@ -105,12 +105,13 @@ export default function PeopleTab({
       ) : (
         <div className="nb-g3">
           {shown.map((p) => (
-            <Card key={p.id} hoverable={false} padding={18} style={{ display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
+            // The whole card opens the profile (the name link is stretched
+            // over it); the links and the invite button sit above that layer
+            // so they still work on their own.
+            <Card key={p.id} hoverable padding={18} style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
               <div>
                 <p style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 3 }}>
-                  {p.handle
-                    ? <Link href={`/p/${p.handle}`} style={{ color: C.text, textDecoration: 'none' }}>{p.name}</Link>
-                    : p.name}
+                  <Link href={`/people/${p.id}`} className="wm-stretch" style={{ color: C.text, textDecoration: 'none' }}>{p.name}</Link>
                 </p>
                 {p.line && <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.45 }}>{p.line}</p>}
                 {p.availability && (
@@ -128,7 +129,7 @@ export default function PeopleTab({
                 <p style={{ fontSize: 13, color: C.textMuted }}>No verified skills yet.</p>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 'auto', flexWrap: 'wrap' }}>
+              <div className="wm-above" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 'auto', flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', gap: 12 }}>
                   {p.githubUrl && (
                     <a href={p.githubUrl} target="_blank" rel="noopener noreferrer" aria-label={`${p.name} on GitHub`} style={{ color: C.textMuted, display: 'inline-flex' }}>
@@ -160,8 +161,8 @@ export default function PeopleTab({
  * to it in the same step. Most people browsing here do not have the project
  * set up yet; making them leave, create it and come back would lose them.
  */
-function InviteModal({ person, projects, onClose }: {
-  person: PersonCard | null
+export function InviteModal({ person, projects, onClose }: {
+  person: Pick<PersonCard, 'id' | 'name'> | null
   projects: InvitableProject[]
   onClose: () => void
 }) {

@@ -19,6 +19,7 @@ interface Profile {
   major: string
   degreeType: string
   graduationYear: number | null
+  isInternational: boolean
 }
 
 /**
@@ -97,7 +98,8 @@ export default function SettingsClient({
     form.university !== saved.university ||
     form.major !== saved.major ||
     form.degreeType !== saved.degreeType ||
-    form.graduationYear !== saved.graduationYear
+    form.graduationYear !== saved.graduationYear ||
+    form.isInternational !== saved.isInternational
 
   const set = <K extends keyof Profile>(key: K, value: Profile[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
@@ -114,6 +116,7 @@ export default function SettingsClient({
           major: form.major,
           degree_type: form.degreeType,
           graduation_year: form.graduationYear,
+          is_international: form.isInternational,
         }),
       })
       const json = await res.json()
@@ -195,6 +198,24 @@ export default function SettingsClient({
                     />
                   </Field>
                 </div>
+
+                {/* Asked because paid roles carry work authorization rules
+                    (CPT) for students on a visa. Never shown to anybody. */}
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 9, cursor: 'pointer', fontSize: 14, color: C.textSub, lineHeight: 1.5 }}>
+                  <input
+                    type="checkbox"
+                    className="dk-checkbox"
+                    checked={form.isInternational}
+                    onChange={(e) => set('isInternational', e.target.checked)}
+                    style={{ marginTop: 3 }}
+                  />
+                  <span>
+                    I&apos;m an international student on a student visa (for example F-1 or J-1)
+                    <span style={{ display: 'block', fontSize: 13, color: C.textMuted }}>
+                      Paid roles are hidden while this is on, because of work authorization rules. Private to you.
+                    </span>
+                  </span>
+                </label>
 
                 {/* Beside the last field, not floating at the bottom of the
                     page, and disabled until there is something to save —

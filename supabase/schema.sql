@@ -1831,11 +1831,9 @@ create table workspaces (
   -- (v05_0039). Null means never. Carries a fortnight's cooldown, because a
   -- project can be legitimately quiet and a nightly nudge through exam week
   -- is how a sender gets filtered.
-  replan_nudged_at timestamptz,
-
-  -- The only combination that is never legitimate: a workspace cannot be
-  -- both somebody's private brief and a posted job.
-  constraint workspaces_single_parent check (not (brief_id is not null and listing_id is not null))
+  replan_nudged_at timestamptz
+  -- workspaces_single_parent was dropped in v05_0056: a guided project can
+  -- now go public to find collaborators. origin still records how it began.
 );
 
 create index workspaces_brief_idx      on workspaces (brief_id) where brief_id is not null;

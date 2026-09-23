@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { canSeeKind, PAID_HIDDEN_NOTE } from '@/lib/listings/eligibility'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { countWords, MIN_ANSWER_WORDS, MAX_ANSWER_WORDS } from '@/lib/applications/gate'
@@ -111,10 +112,16 @@ export async function POST(request: Request) {
 
   const { data: listing } = await supabase
     .from('listings')
-    .select('id, poster_id, status')
+    .select('id, poster_id, status, kind')
     .eq('id', listingId)
     .maybeSingle()
   if (!listing) return NextResponse.json({ error: 'Listing not found.' }, { status: 404 })
+  if (listing.kind === 'paid') {
+    const { data: me } = await supabase.from('students').select('is_international').eq('id', user.id).maybeSingle()
+    if (!canSeeKind(listing.kind, me?.is_international)) {
+      return NextResponse.json({ error: PAID_HIDDEN_NOTE }, { status: 403 })
+    }
+  }
   if (listing.status !== 'open') return NextResponse.json({ error: 'This listing is no longer open.' }, { status: 400 })
   if (listing.poster_id === user.id) {
     return NextResponse.json({ error: "You can't apply to your own listing." }, { status: 400 })

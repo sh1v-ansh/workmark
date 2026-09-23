@@ -129,6 +129,27 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   )
   if (engagementErr) console.error('[api/applications/status] engagement failed:', engagementErr)
 
+  // The engagement insert above fires attach_engagement_to_workspace, which
+  // puts the student in the project's workspace (creating it on the first
+  // hire). A posting made from an existing project ("Find collaborators")
+  // offered a fixed number of seats: once the team reaches team_size, it
+  // stops taking applications on its own.
+  try {
+    const { data: ws } = await admin.from('workspaces').select('id').eq('listing_id', application.listing_id).maybeSingle()
+    if (ws) {
+      const [{ count: seated }, { data: seats }] = await Promise.all([
+        admin.from('workspace_members').select('id', { count: 'exact', head: true })
+          .eq('workspace_id', ws.id).not('accepted_at', 'is', null).is('removed_at', null),
+        admin.from('listings').select('team_size').eq('id', application.listing_id).maybeSingle(),
+      ])
+      if (seats?.team_size && (seated ?? 0) >= seats.team_size) {
+        await admin.from('listings').update({ status: 'closed' }).eq('id', application.listing_id)
+      }
+    }
+  } catch (err) {
+    console.error('[api/applications/status] seat check failed:', err)
+  }
+
   try {
     const { data: poster } = await admin.from('students').select('full_name').eq('id', user.id).maybeSingle()
     const { data: engagement } = await admin

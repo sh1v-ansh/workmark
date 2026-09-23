@@ -51,6 +51,10 @@ export interface WorkspaceDetail extends WorkspaceSummary {
   yourRole: MemberRole | null
   /** Open votes to remove somebody. Empty on almost every project. */
   removals: RemovalRequest[]
+  /** The public posting for this project, if it has ever had one. */
+  listingId: string | null
+  /** Whether that posting is open for applications right now. */
+  listingOpen: boolean
 }
 
 /**
@@ -180,10 +184,15 @@ export async function loadWorkspace(
 ): Promise<WorkspaceDetail | null> {
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('id, title, summary, status, deadline, created_at, started_at, evidence_minted_at')
+    .select('id, title, summary, status, deadline, created_at, started_at, evidence_minted_at, listing_id')
     .eq('id', workspaceId)
     .maybeSingle()
   if (!workspace) return null
+
+  const listingId = (workspace.listing_id as string | null) ?? null
+  const { data: listing } = listingId
+    ? await supabase.from('listings').select('status').eq('id', listingId).maybeSingle()
+    : { data: null }
 
   const [{ data: memberRows }, { data: repos }] = await Promise.all([
     supabase
@@ -235,6 +244,8 @@ export async function loadWorkspace(
     invited,
     yourRole: members.find((m) => m.isYou)?.role ?? null,
     removals: await loadRemovals(supabase, workspaceId, userId, members, names),
+    listingId,
+    listingOpen: listing?.status === 'open',
   }
 }
 

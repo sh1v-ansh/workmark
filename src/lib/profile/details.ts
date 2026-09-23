@@ -25,6 +25,9 @@ export interface ProfileDetails {
   major: string | null
   degree_type: string | null
   graduation_year: number | null
+  /** On a student visa. Only present when the request sent it, so a save
+   *  that did not include the question never overwrites the answer. */
+  is_international?: boolean
 }
 
 export type ValidationResult =
@@ -84,6 +87,7 @@ export function validateProfileDetails(body: unknown): ValidationResult {
       major: text(input.major),
       degree_type: degree,
       graduation_year: year,
+      ...(typeof input.is_international === 'boolean' ? { is_international: input.is_international } : {}),
     },
   }
 }

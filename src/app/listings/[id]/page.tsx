@@ -1,4 +1,6 @@
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { canSeeKind, PAID_HIDDEN_NOTE } from '@/lib/listings/eligibility'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { getStudentDepth } from '@/lib/matching/depth'
@@ -31,9 +33,23 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   if (user) {
     const { data: student } = await supabase
       .from('students')
-      .select('full_name, active_application_count')
+      .select('full_name, active_application_count, is_international')
       .eq('id', user.id)
       .maybeSingle()
+
+    // Students on a visa never see paid roles (CPT); a direct link lands on
+    // the reason instead of the posting.
+    if (listing.poster_id !== user.id && !canSeeKind(listing.kind as string, student?.is_international)) {
+      return (
+        <main id="main-content" className="wm-app-ground" style={{ minHeight: '100vh', padding: '60px 28px' }}>
+          <div className="nb-card" style={{ maxWidth: 560, margin: '0 auto', padding: 26 }}>
+            <p style={{ fontSize: 17, fontWeight: 600, marginBottom: 8 }}>This paid role is not available to you</p>
+            <p style={{ fontSize: 14, lineHeight: 1.6, color: '#5A6172', marginBottom: 16 }}>{PAID_HIDDEN_NOTE}</p>
+            <Link href="/listings" className="nb-btn nb-btn-outline nb-btn-sm">Back to Find work</Link>
+          </div>
+        </main>
+      )
+    }
     studentName = student?.full_name ?? null
     activeApplicationCount = student?.active_application_count ?? 0
 

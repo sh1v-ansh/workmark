@@ -98,3 +98,23 @@ export async function loadInvitableProjects(
     .filter((w): w is { id: string; title: string; status: string } => !!w && w.status !== 'closed' && w.status !== 'abandoned')
     .map((w) => ({ id: w.id, title: w.title }))
 }
+
+/**
+ * Whether the viewer may invite this student from their profile, and into
+ * which projects. Only a student viewing somebody else who chose to be
+ * found; everyone else gets null and no invite button.
+ */
+export async function loadInviteContext(
+  supabase: SupabaseClient,
+  admin: SupabaseClient,
+  viewerId: string | null,
+  targetId: string,
+): Promise<{ projects: InvitableProject[] } | null> {
+  if (!viewerId || viewerId === targetId) return null
+  const [{ data: viewer }, { data: target }] = await Promise.all([
+    supabase.from('students').select('id').eq('id', viewerId).maybeSingle(),
+    admin.from('students').select('open_to_collab').eq('id', targetId).maybeSingle(),
+  ])
+  if (!viewer || !target?.open_to_collab) return null
+  return { projects: await loadInvitableProjects(supabase, viewerId) }
+}

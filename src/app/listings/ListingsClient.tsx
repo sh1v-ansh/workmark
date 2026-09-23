@@ -15,6 +15,7 @@ import AiProjectCard, { type AiProjectCardData } from '@/components/briefs/AiPro
 import { Icon } from '@/components/Icon'
 import MultiSelect from '@/components/ui/MultiSelect'
 import PeopleTab from './PeopleTab'
+import { PAID_HIDDEN_NOTE } from '@/lib/listings/eligibility'
 import type { PersonCard, InvitableProject } from '@/lib/listings/people'
 import { LISTING_KINDS, KIND_LABEL, type ListingKind } from '@/lib/listings/kinds'
 
@@ -93,7 +94,7 @@ function sentenceCase(v: string): string {
 
 export default function ListingsClient({
   listings, aiProjects = [], signedIn, studentName,
-  people = [], invitable = [], viewerIsStudent = false, viewerId = null, openToCollab = false,
+  people = [], invitable = [], viewerIsStudent = false, viewerId = null, openToCollab = false, paidHidden = 0,
 }: {
   listings: ListingCardData[]
   /** Projects Workmark wrote for this student and they have not started. */
@@ -106,6 +107,8 @@ export default function ListingsClient({
   viewerIsStudent?: boolean
   viewerId?: string | null
   openToCollab?: boolean
+  /** Paid roles hidden because the viewer is on a student visa. */
+  paidHidden?: number
 }) {
   const router = useRouter()
 
@@ -256,6 +259,11 @@ export default function ListingsClient({
             openToCollab={openToCollab}
           />
         ) : (<>
+        {paidHidden > 0 && (
+          <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.5, marginBottom: 14 }}>
+            {PAID_HIDDEN_NOTE} <a href="/account/settings" style={{ color: C.accent }}>Change this in Settings</a>.
+          </p>
+        )}
         {listings.length === 0 && signedIn && (aiProjects.length > 0 || writing) && (
           <div className="nb-g3" style={{ marginBottom: 18 }}>
             {aiProjects.map((project) => <AiProjectCard key={project.id} project={project} />)}

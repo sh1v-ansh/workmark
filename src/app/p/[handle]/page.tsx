@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { loadStudentRecord } from '@/lib/profile/record'
 import { publicEngagements } from '@/lib/profile/visibility'
 import PublicProfileClient from './PublicProfileClient'
+import { loadInviteContext } from '@/lib/listings/people'
 
 /**
  * /p/[handle] — the public, shareable verified record.
@@ -58,15 +59,18 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   // student sees here is exactly what everyone else sees.
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const invite = await loadInviteContext(supabase, admin, user?.id ?? null, studentId)
 
   return (
     <PublicProfileClient
+      studentId={studentId}
       student={record.student}
       skills={record.skills.map((s) => ({ skillId: s.skillId, name: s.name, bestLevel: s.bestLevel, artifactCount: s.artifactCount }))}
       engagements={publicEngagements(record.engagements)}
       trackRecord={record.trackRecord}
       isOwner={user?.id === studentId}
       signedIn={!!user}
+      invite={invite}
     />
   )
 }

@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { canSeeKind } from '@/lib/listings/eligibility'
 import { getFitForListings } from '@/lib/matching/listing'
 import type { FitTier } from '@/lib/matching/fit'
 import ListingsClient, { type ListingCardData } from './ListingsClient'
@@ -34,14 +35,15 @@ export default async function ListingsPage() {
       .order('created_at', { ascending: false }),
   ])
 
-  const rows = listings ?? []
-  const listingIds = rows.map((l) => l.id)
+  let rows = listings ?? []
+  let listingIds = rows.map((l) => l.id)
+  let paidHidden = 0
 
   // Which posters are faculty we've actually confirmed. Unconfirmed claims
   // aren't in this set and get no badge — see lib/listings/verified-faculty.
   const verifiedFaculty = await verifiedFacultyPosterIds(supabase, rows.map((l) => l.poster_id))
 
-  let student: { full_name: string | null; open_to_collab?: boolean } | null = null
+  let student: { full_name: string | null; open_to_collab?: boolean; is_international?: boolean } | null = null
   let people: PersonCard[] = []
   let invitable: InvitableProject[] = []
   let aiProjects: AiProjectCardData[] = []
@@ -55,7 +57,7 @@ export default async function ListingsPage() {
     // ever return their own — there is no signed-out version of this list
     // and no way to see anyone else's.
     const [{ data: s }, { data: briefs }] = await Promise.all([
-      supabase.from('students').select('full_name, open_to_collab').eq('id', user.id).maybeSingle(),
+      supabase.from('students').select('full_name, open_to_collab, is_international').eq('id', user.id).maybeSingle(),
       supabase
         .from('project_briefs')
         .select('id, brief_text, difficulty, target_skill_id, recommendation_reason, skills(canonical_name)')
@@ -66,6 +68,13 @@ export default async function ListingsPage() {
         .limit(3),
     ])
     student = s
+
+    // Paid roles are hidden from students on a visa (CPT). Counted, so the
+    // page can say why there are fewer rather than silently showing less.
+    const visible = rows.filter((l) => canSeeKind(l.kind as string, s?.is_international))
+    paidHidden = rows.length - visible.length
+    rows = visible
+    listingIds = rows.map((l) => l.id)
 
     // The People tab. Loaded with the page rather than on switching tabs,
     // so the switch is instant; it is one small query and one skills read.
@@ -137,6 +146,7 @@ export default async function ListingsPage() {
       viewerIsStudent={!!student}
       viewerId={user?.id ?? null}
       openToCollab={student?.open_to_collab ?? false}
+      paidHidden={paidHidden}
     />
   )
 }
