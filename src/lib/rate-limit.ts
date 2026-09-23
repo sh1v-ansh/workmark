@@ -53,6 +53,10 @@ export const LIMITS = {
    *  a project and getting three teammates in does a lot in five minutes. */
   workspace: { limit: 40, windowSeconds: 3600 },
 
+  /** Editing or taking down a posted project. An edit can rewrite the
+   *  application questions, which is a model call. */
+  listingEdit: { limit: 20, windowSeconds: 3600 },
+
   // ── Before anyone is signed in ──
   // These four are keyed on an IP or an email address rather than a user id,
   // because the whole point is that no user exists yet. Everything above

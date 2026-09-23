@@ -10,8 +10,10 @@ export default async function NewListingPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: student } = await supabase.from('students').select('full_name').eq('id', user.id).maybeSingle()
-  if (!student) redirect('/onboarding')
+  // Any finished account can post — faculty included, who have no students
+  // row by design. Checking for one sent every professor back to onboarding.
+  const { data: account } = await supabase.from('accounts').select('id').eq('id', user.id).maybeSingle()
+  if (!account) redirect('/onboarding')
 
   // The full taxonomy, loaded once — it's ~180 fixed rows, so filtering
   // client-side beats a round trip per keystroke.
@@ -21,5 +23,5 @@ export default async function NewListingPage() {
     .is('deprecated_at', null)
     .order('canonical_name')
 
-  return <NewListingClient studentName={student.full_name} taxonomy={taxonomy ?? []} agentsAvailable={agentsAvailable()} />
+  return <NewListingClient taxonomy={taxonomy ?? []} agentsAvailable={agentsAvailable()} />
 }

@@ -144,6 +144,31 @@ export default function ListingDetailClient({
     }
   }
 
+  const [removing, setRemoving] = useState(false)
+
+  // The server decides between deleting and closing, because only it can
+  // count applications the poster's page may not have loaded.
+  async function removeListing() {
+    if (!confirm('Delete this project? If anyone has applied, it will be closed instead so their applications stay on record.')) return
+    setRemoving(true)
+    try {
+      const res = await fetch(`/api/listings/${listing.id}`, { method: 'DELETE' })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Could not remove the project.')
+      if (json.outcome === 'deleted') {
+        toast('Project deleted.', 'success')
+        router.push('/listings')
+      } else {
+        toast('Project closed. It no longer shows in search or takes applications.', 'success')
+        router.refresh()
+      }
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not remove the project.', 'error')
+    } finally {
+      setRemoving(false)
+    }
+  }
+
   // Whether the apply action is reachable at all right now — governs both
   // the top verdict card's CTA and whether the bottom bar renders.
   const applyState: 'apply' | 'applied' | 'closed' | 'capped' | 'owner' | 'signedOut' =
@@ -182,7 +207,15 @@ export default function ListingDetailClient({
           <Card hoverable={false} padding="14.5px 20px" style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <p style={{ fontSize: 14, color: C.textMuted }}>This is your project.</p>
-              <Button href={`/listings/${listing.id}/applicants`} variant="ink" size="sm">View applicants</Button>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Button href={`/listings/${listing.id}/edit`} variant="outline" size="sm">Edit</Button>
+                {listing.status !== 'closed' && (
+                  <Button type="button" variant="danger" size="sm" onClick={removeListing} busyLabel={removing ? 'Removing…' : null}>
+                    Delete
+                  </Button>
+                )}
+                <Button href={`/listings/${listing.id}/applicants`} variant="ink" size="sm">View applicants</Button>
+              </div>
             </div>
           </Card>
         )}
