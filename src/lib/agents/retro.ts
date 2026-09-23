@@ -22,6 +22,7 @@
 // board exists to make safe. It describes and it suggests one thing. The
 // measurement lives in workspace_metrics, where it is not addressed to them.
 
+import { LEAD_VOICE } from '@/lib/agents/lead'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { callStructuredAgentLogged } from './client'
 import { untrusted } from './untrusted'
@@ -33,7 +34,9 @@ export interface Retro {
   suggestion: string
 }
 
-const SYSTEM = `You are an experienced engineering manager reviewing one week of work with a computer science student on a project they are doing to build up a verifiable record of their skills.
+const SYSTEM = `${LEAD_VOICE}
+
+You are an experienced engineering manager reviewing one week of work with a computer science student on a project they are doing to build up a verifiable record of their skills.
 
 You are given what they committed to, what they finished, what they set aside, and the reasons they gave when an estimate or deadline moved.
 

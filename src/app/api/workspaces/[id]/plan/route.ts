@@ -8,6 +8,7 @@ import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 import { planProject } from '@/lib/agents/planner'
 import { assigneeForRole, type MemberRow, type WorkRole } from '@/lib/workspace/membership'
 import { POSITION_STEP } from '@/lib/workspace/tasks'
+import { releaseTickets, RAMP_UP_TICKET } from '@/lib/workspace/queue'
 import { requireUuid, ValidationError } from '@/lib/http/validate'
 import { loadProjectState, canAskForMore, progressBrief } from '@/lib/workspace/project-state'
 
@@ -188,7 +189,38 @@ async function draftPlan(request: Request, params: Promise<{ id: string }>) {
 
   const dependencies = await recordDependencies(supabase, workspaceId, plan.tasks, inserted ?? [])
 
-  return NextResponse.json({ ok: true, count: rows.length, dependencies })
+  // A first plan on an empty board opens with the day-one ticket. Its own
+  // insert, so the planner's dependsOn indices above still line up, and
+  // position 0 so it sits above everything the plan proposed.
+  if ((existing ?? []).length === 0) {
+    const { error: rampErr } = await supabase.from('tasks').insert({
+      workspace_id: workspaceId,
+      title: RAMP_UP_TICKET.title,
+      detail: RAMP_UP_TICKET.detail,
+      acceptance_criteria: RAMP_UP_TICKET.acceptanceCriteria,
+      estimate_hours: RAMP_UP_TICKET.estimateHours,
+      difficulty: RAMP_UP_TICKET.difficulty,
+      verifiable: true,
+      ticket_kind: 'ramp_up',
+      origin: 'ai_proposed',
+      assignee_id: assigneeForRole(active, null),
+      position: 0,
+      created_by: user.id,
+    })
+    if (rampErr) console.error('[api/workspaces/:id/plan] ramp-up insert failed:', rampErr)
+  }
+
+  // Everything just landed in the backlog; the queue decides what arrives
+  // in Planned. Best-effort — a failure leaves the plan in the backlog,
+  // where it can still be dragged out by hand.
+  let released = 0
+  try {
+    released = (await releaseTickets(admin, workspaceId)).length
+  } catch (err) {
+    console.error('[api/workspaces/:id/plan] release failed:', err)
+  }
+
+  return NextResponse.json({ ok: true, count: rows.length, dependencies, released })
 }
 
 /**

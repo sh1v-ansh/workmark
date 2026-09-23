@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
-import { writeApplicationQuestions } from '@/lib/agents/application-questions'
+import { createListing } from '@/lib/listings/create'
 import { getAccount, hasRole } from '@/lib/auth/roles'
 import { parseBody } from '@/lib/http/validate'
 import { parseListingFields } from '@/lib/listings/fields'
@@ -40,73 +40,13 @@ export async function POST(request: Request) {
   if (!parsed.ok) return parsed.response
   const fields = parseListingFields(parsed.body)
   if (!fields.ok) return fields.response
-  const { title, brief, requirements, ...details } = fields.values
-
-  // Read from the account rather than hardcoded. A faculty account could
-  // previously log in and post nothing, because this said 'student' and the
-  // database rejected anything else — so the account type existed and meant
-  // nothing.
-  const isFaculty = hasRole(account, 'faculty')
-
-  const { data: listing, error: listingErr } = await supabase
-    .from('listings')
-    .insert({
-      poster_id: user.id,
-      poster_type: isFaculty ? 'faculty' : 'student',
-      // A course or research project is a different kind of work from one
-      // student hiring another, and is weighted differently once
-      // attestation exists.
-      tier: isFaculty ? 'faculty_project' : 'listing_driven',
-      poster_display_name: posterName,
-      title,
-      brief,
-      ...details,
-      status: 'draft',
-    })
-    .select('id')
-    .single()
-  if (listingErr) {
-    console.error('[api/listings] listing insert failed:', listingErr)
-    return NextResponse.json({ error: 'Could not create the listing.' }, { status: 500 })
-  }
-
-  const { error: reqErr } = await supabase.from('listing_requirements').insert(
-    requirements.map((r) => ({ listing_id: listing.id, skill_id: r.skillId, required_level: r.requiredLevel })),
+  // Read from the account rather than hardcoded, so faculty post as
+  // faculty (course and research projects) and students as students.
+  const result = await createListing(
+    supabase,
+    { id: user.id, name: posterName, isFaculty: hasRole(account, 'faculty') },
+    fields.values,
   )
-  if (reqErr) {
-    console.error('[api/listings] requirements insert failed:', reqErr)
-    // Leave the draft behind rather than deleting — the poster can see and
-    // retry it, and a failed cleanup would be worse than a stale draft.
-    return NextResponse.json({ error: 'Could not save the required skills. The listing was saved as a draft.' }, { status: 500 })
-  }
-
-  // The two questions applicants answer, written against this listing.
-  //
-  // Once per listing rather than once per applicant, which is the difference
-  // between a few hundred calls a year and one every time somebody clicks
-  // Apply. Best-effort and deliberately not awaited into the failure path: a
-  // listing must never be unpostable because a model call was slow or
-  // refused, and questionsFor() serves a good standard pair when this is
-  // null rather than a placeholder.
-  let applicationQuestions = null
-  try {
-    applicationQuestions = await writeApplicationQuestions(supabase, user.id, {
-      title,
-      description: brief,
-      requirements: requirements.map((r) => String(r.skillId)),
-    })
-  } catch (err) {
-    console.error('[api/listings] could not write application questions:', err)
-  }
-
-  const { error: openErr } = await supabase
-    .from('listings')
-    .update({ status: 'open', application_questions: applicationQuestions })
-    .eq('id', listing.id)
-  if (openErr) {
-    console.error('[api/listings] publish failed:', openErr)
-    return NextResponse.json({ error: 'The listing was saved as a draft but could not be published.' }, { status: 500 })
-  }
-
-  return NextResponse.json({ ok: true, id: listing.id })
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: 500 })
+  return NextResponse.json({ ok: true, id: result.id })
 }

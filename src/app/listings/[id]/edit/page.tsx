@@ -15,7 +15,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
 
   const { data: listing } = await supabase
     .from('listings')
-    .select('id, poster_id, title, brief, est_hours, hours_per_week, duration, work_mode, team_size, declared_difficulty')
+    .select('id, poster_id, kind, title, brief, est_hours, hours_per_week, duration, work_mode, team_size, declared_difficulty')
     .eq('id', id)
     .maybeSingle()
   if (!listing) notFound()
@@ -33,6 +33,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
       editing={{
         id,
         initial: {
+          kind: listing.kind ?? 'collaborative',
           title: listing.title ?? '',
           brief: listing.brief ?? '',
           requirements: requirements.map((r) => ({

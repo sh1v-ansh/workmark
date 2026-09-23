@@ -10,6 +10,7 @@
 // settle, and only then spend a model call on what is left. Most submissions
 // never reach the call.
 
+import { releaseTickets } from '@/lib/workspace/queue'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { verifyBatch, type VerifierTask } from '@/lib/agents/verifier'
 import {
@@ -281,6 +282,10 @@ async function execute(admin: SupabaseClient, runId: string): Promise<RunOutcome
       // The only place a task reaches Verified. The trigger stamps
       // verified_at and writes the transition.
       await admin.from('tasks').update({ status: 'verified' }).eq('id', decision.taskId)
+      // The next ticket arrives the moment this one lands. Best-effort: a
+      // failed release leaves the backlog where it is, nothing worse.
+      await releaseTickets(admin, workspaceId, decision.taskId).catch((err) =>
+        console.error('[verification] release failed:', err))
     } else if (decision.verdict === 'needs_work') {
       needsWork++
       // Back to Doing, so the board shows work outstanding rather than a

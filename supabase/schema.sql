@@ -210,6 +210,9 @@ create table listings (
   requires_prior_evidence boolean default false not null,
   is_paid                 boolean default false not null check (is_paid = false), -- MVP: no payments infra exists yet
   tier                    text not null default 'listing_driven' check (tier in ('listing_driven', 'faculty_project')),
+  -- What kind of posting this is (v05_0055). 'paid' is the poster's word;
+  -- payment itself is still off-platform.
+  kind                    text not null default 'collaborative' check (kind in ('collaborative', 'startup', 'paid', 'research')),
   status                  text not null default 'open' check (status in ('draft', 'open', 'filled', 'closed')),
   -- Two short judgement questions, generated from this listing at post time
   -- so the cost is per listing rather than per applicant (v05_0043). Null
@@ -1828,11 +1831,9 @@ create table workspaces (
   -- (v05_0039). Null means never. Carries a fortnight's cooldown, because a
   -- project can be legitimately quiet and a nightly nudge through exam week
   -- is how a sender gets filtered.
-  replan_nudged_at timestamptz,
-
-  -- The only combination that is never legitimate: a workspace cannot be
-  -- both somebody's private brief and a posted job.
-  constraint workspaces_single_parent check (not (brief_id is not null and listing_id is not null))
+  replan_nudged_at timestamptz
+  -- workspaces_single_parent was dropped in v05_0056: a guided project can
+  -- now go public to find collaborators. origin still records how it began.
 );
 
 create index workspaces_brief_idx      on workspaces (brief_id) where brief_id is not null;
@@ -2322,6 +2323,13 @@ create table tasks (
   blocked_at          timestamptz,
   blocked_reason      text,
 
+  -- ── The ticket queue (v05_0054) ──
+  -- Released into Planned by the queue rather than placed by hand, why, and
+  -- whether this is the day-one ramp-up ticket.
+  released_at         timestamptz,
+  release_note        text,
+  ticket_kind         text check (ticket_kind is null or ticket_kind in ('ramp_up')),
+
   -- ── Set aside ──
   -- A status rather than a flag, unlike blocked above, and the difference is
   -- whether the work is still live: a blocked task is still coming, an
@@ -2348,6 +2356,7 @@ create index tasks_board_idx    on tasks (workspace_id, status, position);
 create index tasks_assignee_idx on tasks (assignee_id) where assignee_id is not null;
 create index tasks_sprint_idx   on tasks (sprint_id) where sprint_id is not null;
 create index tasks_parent_idx   on tasks (parent_task_id) where parent_task_id is not null;
+create index tasks_backlog_by_workspace_idx on tasks (workspace_id, position) where status = 'backlog';
 create index tasks_blocked_idx  on tasks (workspace_id) where blocked_at is not null;
 create index tasks_plan_call_idx on tasks (plan_call_id) where plan_call_id is not null;
 

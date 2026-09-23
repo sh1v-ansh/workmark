@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { C, F } from './tokens'
 
 /**
@@ -31,6 +31,15 @@ function Portrait({ name, photo }: { name: string; photo: string }) {
   // error this component can catch rather than a build-time or server-side
   // failure. The photos are meant to be dropped in later.
   const [failed, setFailed] = useState(false)
+  const img = useRef<HTMLImageElement>(null)
+
+  // The page is rendered on the server, so a missing photo can fail to load
+  // before React is listening — onError never fires and the browser's broken
+  // image (the alt text in a circle) stays on screen. Checked once on mount.
+  useEffect(() => {
+    const el = img.current
+    if (el && el.complete && el.naturalWidth === 0) setFailed(true)
+  }, [])
 
   if (failed) {
     return (
@@ -42,6 +51,7 @@ function Portrait({ name, photo }: { name: string; photo: string }) {
 
   return (
     <img
+      ref={img}
       src={photo}
       alt={name}
       className="wm-portrait"
@@ -51,20 +61,23 @@ function Portrait({ name, photo }: { name: string; photo: string }) {
   )
 }
 
-export function TeamSection() {
+export function TeamSection({ compact = false }: { compact?: boolean }) {
   return (
-    <section className="wm-section" style={{ position: 'relative' }}>
+    <section className="wm-section" style={{ position: 'relative', ...(compact ? { paddingTop: 24 } : {}) }}>
       <div className="wm-section-inner" style={{ textAlign: 'center' }}>
-        <span className="wm-eyebrow-2">Who is building this</span>
-        <h2 className="wm-h2" style={{ marginBottom: 42 }}>Built by two people who needed it</h2>
+        <span className="wm-eyebrow-2">The founders</span>
+        <h2 className="wm-h2" style={{ marginBottom: 42 }}>Built by two students who needed it</h2>
 
         <div style={{ display: 'flex', gap: 44, justifyContent: 'center', flexWrap: 'wrap' }}>
           {TEAM.map((person) => (
             <div key={person.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 15 }}>
               <Portrait name={person.name} photo={person.photo} />
-              <p style={{ fontFamily: F.sans, fontSize: 16.5, fontWeight: 600, color: C.text, letterSpacing: '-0.012em' }}>
-                {person.name}
-              </p>
+              <div>
+                <p style={{ fontFamily: F.sans, fontSize: 16.5, fontWeight: 600, color: C.text, letterSpacing: '-0.012em' }}>
+                  {person.name}
+                </p>
+                <p style={{ fontFamily: F.sans, fontSize: 14, color: C.textMuted, marginTop: 2 }}>Co-founder</p>
+              </div>
             </div>
           ))}
         </div>

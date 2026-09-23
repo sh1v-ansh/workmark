@@ -72,7 +72,7 @@ export const metadata: Metadata = {
     template: '%s · Workmark',
   },
   description:
-    'Workmark reads the code you actually wrote and turns it into a skill record an employer can check. Free for students with a .edu address.',
+    'Guided projects, paid work and personalized opportunities for students, all on a verified profile. Verified candidates for employers, before OAs and interviews.',
   applicationName: 'Workmark',
   openGraph: {
     type: 'website',
@@ -80,14 +80,14 @@ export const metadata: Metadata = {
     url: SITE,
     title: 'Workmark — proof of what you can build',
     description:
-      'You need experience to get experience. Workmark hands you the projects instead, then turns what you build into proof an employer can check.',
+      'Guided projects, paid work and personalized opportunities for students. Verified candidates for employers, before OAs and interviews.',
     images: ['/opengraph-image.png'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Workmark — proof of what you can build',
     description:
-      'You need experience to get experience. Workmark hands you the projects instead, then turns what you build into proof an employer can check.',
+      'Guided projects, paid work and personalized opportunities for students. Verified candidates for employers, before OAs and interviews.',
     images: ['/opengraph-image.png'],
   },
 }

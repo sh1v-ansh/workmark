@@ -7,7 +7,8 @@ import Button from '@/components/ui/Button'
 import { Kicker } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
 import SkillPicker, { type TaxonomySkill, type PickedRequirement } from '@/components/SkillPicker'
-import { C, F, state } from '@/lib/theme/dark-tokens'
+import { C, F, R, state } from '@/lib/theme/dark-tokens'
+import { LISTING_KINDS } from '@/lib/listings/kinds'
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
   return (
@@ -19,6 +20,7 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.Re
 
 /** A listing as the form holds it — every number as the text in its box. */
 export interface ListingDraft {
+  kind: string
   title: string
   brief: string
   requirements: PickedRequirement[]
@@ -44,6 +46,7 @@ export default function NewListingClient({ taxonomy, agentsAvailable, editing }:
   const router = useRouter()
   const { toast } = useToast()
 
+  const [kind, setKind] = useState(init?.kind ?? '')
   const [title, setTitle] = useState(init?.title ?? '')
   const [brief, setBrief] = useState(init?.brief ?? '')
   const [requirements, setRequirements] = useState<PickedRequirement[]>(init?.requirements ?? [])
@@ -90,6 +93,10 @@ export default function NewListingClient({ taxonomy, agentsAvailable, editing }:
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!kind) {
+      toast('Choose what kind of posting this is.', 'error')
+      return
+    }
     if (requirements.length === 0) {
       toast('Add at least one required skill so applicants can be matched.', 'error')
       return
@@ -100,6 +107,7 @@ export default function NewListingClient({ taxonomy, agentsAvailable, editing }:
         method: editing ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          kind,
           title,
           brief,
           est_hours: estHours ? parseInt(estHours) : null,
@@ -163,6 +171,36 @@ export default function NewListingClient({ taxonomy, agentsAvailable, editing }:
 
         <Card hoverable={false} padding={25}>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* First, because it decides who should be reading the rest. */}
+            <fieldset style={{ border: 'none', margin: 0, padding: 0 }}>
+              <legend style={{ display: 'block', fontSize: 13, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>
+                What kind of posting is this? <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span>
+              </legend>
+              <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {LISTING_KINDS.map((k) => {
+                  const on = kind === k.key
+                  return (
+                    <button
+                      key={k.key}
+                      type="button"
+                      onClick={() => setKind(k.key)}
+                      aria-pressed={on}
+                      style={{
+                        textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit',
+                        padding: '11px 13px', borderRadius: R.md,
+                        border: `1px solid ${on ? C.accent : C.border}`,
+                        background: on ? '#F4F1FF' : C.surface,
+                        boxShadow: on ? '0 0 0 3px rgba(97,66,245,0.12)' : 'none',
+                      }}
+                    >
+                      <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: on ? C.accent : C.text }}>{k.label}</span>
+                      <span style={{ display: 'block', fontSize: 13, color: C.textMuted, marginTop: 2 }}>{k.hint}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </fieldset>
+
             <div style={gap}>
               <FieldLabel htmlFor="listing-title">Title <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
               <input id="listing-title" required value={title} onChange={(e) => setTitle(e.target.value)} className="dk-input" placeholder="Build a real-time collaboration backend" />

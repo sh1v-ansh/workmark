@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { canSeeKind } from '@/lib/listings/eligibility'
 import { createClient } from '@/lib/supabase/server'
 import { analyzeGoal, gapClosedByListing } from '@/lib/matching/goals'
 import { getStudentDepth } from '@/lib/matching/depth'
@@ -28,7 +29,7 @@ export default async function GoalsPage() {
 
   const { data: student } = await supabase
     .from('students')
-    .select('full_name, active_application_count')
+    .select('full_name, active_application_count, is_international')
     .eq('id', user.id)
     .maybeSingle()
   if (!student) redirect('/onboarding')
@@ -38,12 +39,12 @@ export default async function GoalsPage() {
   // platform can verify what listings ask for, not what a role is called.
   const { data: openListings } = await supabase
     .from('listings')
-    .select('id, title, brief, poster_display_name, poster_id')
+    .select('id, title, brief, poster_display_name, poster_id, kind')
     .eq('status', 'open')
     .neq('poster_id', user.id)
     .order('created_at', { ascending: false })
 
-  const listings = openListings ?? []
+  const listings = (openListings ?? []).filter((l) => canSeeKind(l.kind, student.is_international))
   const listingIds = listings.map((l) => l.id)
 
   const [analysis, depth, requirementsByListing, pools, { data: applied }] = await Promise.all([

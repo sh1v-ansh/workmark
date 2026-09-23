@@ -46,28 +46,28 @@ const LABEL = { advanced: 'Advanced', intermediate: 'Intermediate', beginner: 'B
  *  for, which is exactly the difference the page exists to draw. */
 const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: string; points: [string, string][] }> = {
   students: {
-    eyebrow: 'What you get',
+    eyebrow: 'Your verified profile',
     // The old headline sold a receipt, and nobody wants a receipt. This is
     // what the receipt is FOR. Everybody rounds up on a CV — not because
     // students are dishonest but because the format rewards whoever sounds
     // most certain, and there is no way to prove anything either way. The
     // relief is not having to play that game.
-    headline: 'Nothing left to oversell',
-    lede: 'Everyone inflates a CV, because sounding confident is the only lever it gives you. Here the work is already on the record. The project it came from, how good you got, how it was checked. So you can just say what happened.',
+    headline: 'A verified profile built from your code',
+    lede: 'We read the code you wrote and give each skill a level, with the project it came from. Companies and the students you build with see real work instead of a resume.',
     points: [
-      ['Nothing to write, nothing to inflate', 'Workmark reads your repos and works it out. You never fill in a skills box.'],
-      ['Advanced is worth having', 'It means months of real work that survived other people, tests and mistakes. Most skills never get there.'],
-      ['Wrong? Say so', 'It is your record. Challenge any line on it and a person reads the challenge.'],
+      ['No skills box to fill in', 'We read your repositories and work out your skills for you.'],
+      ['Levels that mean something', 'Advanced takes months of real work that held up to tests and review.'],
+      ['Something wrong? Tell us', 'Challenge any line on your profile and a person reads it.'],
     ],
   },
   businesses: {
     eyebrow: 'What you see',
-    headline: 'You stop having to take their word for it',
-    lede: 'Every skill carries the project it came from and how it was checked. The question is no longer whether somebody is overselling. It is whether the work is the work you need.',
+    headline: 'Verified work instead of a resume',
+    lede: 'Every skill shows the project it came from and how it was checked. You judge the work, not how well someone writes about it.',
     points: [
-      ['Read from repos, not from a form', 'Dependencies, commit authorship, test coverage. No self-assessment anywhere in it.'],
-      ['Comparable across candidates', 'Levels are set against the whole platform, so two records at Advanced really are equivalent.'],
-      ['Shows you what is missing', 'You see what a candidate cannot do yet. A CV never tells you that.'],
+      ['Read from code, not a form', 'Dependencies, commit authorship and tests. No self-assessment.'],
+      ['Levels you can compare', 'Levels are set across all candidates, so two Advanced profiles really are equal.'],
+      ['Gaps are visible too', 'You see what a candidate cannot do yet. A resume never shows you that.'],
     ],
   },
 }

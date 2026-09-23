@@ -19,7 +19,6 @@ import { AUDIENCE_ROUTES, ROUTE_AUDIENCES, useAudienceNav } from './audience-con
 const LINKS: [string, string][] = [
   [AUDIENCE_ROUTES.students, COPY.students.tab],
   [AUDIENCE_ROUTES.businesses, COPY.businesses.tab],
-  ['/how-it-works', 'How it works'],
   ['/about', 'About'],
 ]
 

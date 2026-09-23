@@ -4,6 +4,7 @@ import { C, F, T } from '@/lib/theme/dark-tokens'
 import { getWorkspace } from './load'
 import WorkspaceNav from './WorkspaceNav'
 import WorkspaceShell from './WorkspaceShell'
+import PublishProject from './PublishProject'
 
 /**
  * Everything the four project views have in common: which project this is,
@@ -41,6 +42,19 @@ export default async function WorkspaceLayout({
             week's controls are, and putting it in the header as well meant
             two queries on every page to repeat something. */}
         <header style={{ marginBottom: 18 }}>
+          {/* Owners can post the project on Find work from here: it is the
+              first thing somebody looking for teammates reaches for. */}
+          {workspace.yourRole === 'owner' && !isClosed && (
+            <div style={{ float: 'right', marginLeft: 16 }}>
+              <PublishProject
+                workspaceId={workspace.id}
+                summary={workspace.summary}
+                seated={workspace.members.length + workspace.invited.length}
+                listingId={workspace.listingId}
+                listingOpen={workspace.listingOpen}
+              />
+            </div>
+          )}
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
             <h1 style={{ fontFamily: F.display, fontSize: T.display, fontWeight: 600, letterSpacing: '-0.022em', color: C.text }}>
               {workspace.title}

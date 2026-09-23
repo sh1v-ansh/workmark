@@ -21,6 +21,7 @@
 //
 // One call per week per project, and only when asked.
 
+import { LEAD_VOICE } from '@/lib/agents/lead'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { callStructuredAgent } from './client'
 import { untrusted } from './untrusted'
@@ -40,7 +41,9 @@ export interface ScopeCheck {
   suggestion: string
 }
 
-const SYSTEM = `You are an experienced engineer sitting down with a computer science student at the start of a week, looking at what they have just committed to.
+const SYSTEM = `${LEAD_VOICE}
+
+You are an experienced engineer sitting down with a computer science student at the start of a week, looking at what they have just committed to.
 
 The question is NOT whether they can fit it in. Assume they can build fast — they have a language model open beside them and can produce a week of ordinary code in a couple of days. The question is whether this week is worth a week: whether anything in it is hard enough to be worth having done, whether it is aimed at one thing or scattered across eight, and whether they have noticed which part is actually difficult.
 

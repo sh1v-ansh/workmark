@@ -1124,6 +1124,12 @@
   .nb-filters { position: static; }
 }
 
+/* A whole card that opens one link. The link's ::after covers the card, and
+   anything that must stay separately clickable sits above it (.wm-above). */
+.wm-stretch::after { content: ''; position: absolute; inset: 0; border-radius: inherit; }
+.wm-above { position: relative; z-index: 1; }
+.nb-card:has(.wm-stretch) { cursor: pointer; }
+
 /* ══ GLASS ═══════════════════════════════════════════════════════════════
    Cards as panes of glass lifted off a white page. No drawn border: the
    edge is a white rim, a highlight along the top, a half-pixel outline for

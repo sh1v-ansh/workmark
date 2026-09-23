@@ -59,7 +59,7 @@ const STUDENT_TABS: Tab[] = [
 const FACULTY_TABS: Tab[] = [
   { href: '/faculty', label: 'Home', also: [] as string[] },
   { href: '/faculty/listings', label: 'My projects', also: ['/listings/new'] },
-  { href: '/students', label: 'Students', also: [] as string[] },
+  { href: '/listings?tab=people', label: 'Students', also: [] as string[] },
 ]
 
 // What's left in the account menu after the actions moved out.
@@ -71,13 +71,13 @@ const FACULTY_TABS: Tab[] = [
 // became a tab. What remains is what a menu is for: the low-traffic places
 // that belong to you rather than to the page you are on.
 const STUDENT_MENU: MenuItem[] = [
-  { href: '/students', label: 'Student directory', icon: 'users' },
+  { href: '/listings?tab=people', label: 'Find people', icon: 'users' },
   { href: '/me/file', label: 'Your file & disputes', icon: 'inbox' },
   { href: '/account/settings', label: 'Settings', icon: 'settings' },
 ]
 
 const FACULTY_MENU: MenuItem[] = [
-  { href: '/students', label: 'Student directory', icon: 'users' },
+  { href: '/listings?tab=people', label: 'Find people', icon: 'users' },
   { href: '/account/settings', label: 'Settings', icon: 'settings' },
 ]
 

@@ -128,6 +128,9 @@ function StudentForm({ onSubmit, loading, email, role }: {
   const [major, setMajor] = useState('')
   const [degreeType, setDegreeType] = useState('BS')
   const [graduationYear, setGraduationYear] = useState('')
+  // Required for students: paid roles have work authorization (CPT) rules
+  // for students on a visa, so this decides whether paid roles are shown.
+  const [international, setInternational] = useState<'yes' | 'no' | ''>('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -143,6 +146,7 @@ function StudentForm({ onSubmit, loading, email, role }: {
       heard_about_detail: heardAbout === 'other' ? heardAboutDetail : null,
       university, major, degree_type: degreeType,
       graduation_year: graduationYear ? parseInt(graduationYear) : null,
+      is_international: international === 'yes',
       // GPA is gone. It was the one number on this page nobody could check,
       // and a product whose whole claim is "this is verified" should not be
       // collecting a self-reported grade beside it.
@@ -192,6 +196,35 @@ function StudentForm({ onSubmit, loading, email, role }: {
           <FieldLabel htmlFor="student-grad-year">Graduation year</FieldLabel>
           <input id="student-grad-year" type="number" min={2024} max={2035} value={graduationYear} onChange={(e) => setGraduationYear(e.target.value)} className="dk-input" placeholder="2026" />
         </div>}
+        {isStudent && (
+          <fieldset style={{ ...gap, gridColumn: '1 / -1', border: 'none', margin: 0, padding: 0 }}>
+            <legend style={{ fontSize: 13, fontWeight: 600, color: C.textSub, marginBottom: 7 }}>
+              Are you an international student on a student visa (for example F-1 or J-1)? <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span>
+            </legend>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {(['no', 'yes'] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  aria-pressed={international === v}
+                  onClick={() => setInternational(v)}
+                  className="dk-input"
+                  style={{
+                    width: 'auto', padding: '8px 18px', cursor: 'pointer', fontWeight: 600,
+                    borderColor: international === v ? C.accent : undefined,
+                    color: international === v ? C.accent : C.text,
+                    background: international === v ? '#F4F1FF' : undefined,
+                  }}
+                >
+                  {v === 'yes' ? 'Yes' : 'No'}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginTop: 6 }}>
+              Paid roles have work authorization rules for student visas, so we use this to decide what to show you. It is never on your profile.
+            </p>
+          </fieldset>
+        )}
         {!isStudent && <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-major">Department</FieldLabel>
           <Combobox id="student-major" value={major} onChange={setMajor} options={MAJORS} placeholder="e.g. Computer Science" />
@@ -294,7 +327,7 @@ function StudentForm({ onSubmit, loading, email, role }: {
         </p>
       </div>
 
-      <Button type="submit" variant="accent" fullWidth disabled={loading || !agreed} busyLabel={loading ? 'Saving profile…' : null}>
+      <Button type="submit" variant="accent" fullWidth disabled={loading || !agreed || (isStudent && !international)} busyLabel={loading ? 'Saving profile…' : null}>
         Complete profile
       </Button>
     </form>

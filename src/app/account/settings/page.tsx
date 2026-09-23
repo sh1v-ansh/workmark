@@ -39,7 +39,7 @@ export default async function SettingsPage({
   const [{ data: student }, { data: account }, { data: connection }] = await Promise.all([
     supabase
       .from('students')
-      .select('full_name, university, major, degree_type, graduation_year, github_username')
+      .select('full_name, university, major, degree_type, graduation_year, github_username, is_international')
       .eq('id', user.id)
       .maybeSingle(),
     supabase
@@ -63,6 +63,7 @@ export default async function SettingsPage({
         major: student?.major ?? '',
         degreeType: student?.degree_type ?? '',
         graduationYear: student?.graduation_year ?? null,
+        isInternational: student?.is_international ?? false,
       }}
       hasStudentProfile={!!student}
       github={connection ? { login: connection.github_login, connectedAt: connection.connected_at } : null}

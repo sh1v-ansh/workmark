@@ -219,6 +219,10 @@ export async function POST(request: Request) {
     // The attestation is a fact about the account, not part of the profile
     // the scanner, matcher and public record read.
     const { age_attested: _attested, ...studentProfile } = profile
+    // Strictly boolean: this gates paid roles, so anything but a real true
+    // reads as "not on a visa" only when the form genuinely said no.
+    studentProfile.is_international = profile.is_international === true
+    delete studentProfile.visa_type
 
     const { error: profileErr } = await admin.from('students').insert({
       id: user.id,

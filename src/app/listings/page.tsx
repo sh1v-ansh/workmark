@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { canSeeKind } from '@/lib/listings/eligibility'
 import { getFitForListings } from '@/lib/matching/listing'
 import type { FitTier } from '@/lib/matching/fit'
 import ListingsClient, { type ListingCardData } from './ListingsClient'
@@ -6,6 +7,8 @@ import { verifiedFacultyPosterIds } from '@/lib/listings/verified-faculty'
 import type { AiProjectCardData } from '@/components/briefs/AiProjectCard'
 import type { RecommendationReason } from '@/lib/briefs/targets'
 import { splitBriefText } from '@/lib/briefs/format'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { loadPeople, loadInvitableProjects, type PersonCard, type InvitableProject } from '@/lib/listings/people'
 
 export const metadata = { title: 'Work' }
 
@@ -27,19 +30,22 @@ export default async function ListingsPage() {
     supabase.auth.getUser(),
     supabase
       .from('listings')
-      .select('id, poster_id, poster_display_name, title, brief, est_hours, hours_per_week, duration, work_mode, team_size, created_at')
+      .select('id, poster_id, poster_display_name, kind, title, brief, est_hours, hours_per_week, duration, work_mode, team_size, created_at')
       .eq('status', 'open')
       .order('created_at', { ascending: false }),
   ])
 
-  const rows = listings ?? []
-  const listingIds = rows.map((l) => l.id)
+  let rows = listings ?? []
+  let listingIds = rows.map((l) => l.id)
+  let paidHidden = 0
 
   // Which posters are faculty we've actually confirmed. Unconfirmed claims
   // aren't in this set and get no badge — see lib/listings/verified-faculty.
   const verifiedFaculty = await verifiedFacultyPosterIds(supabase, rows.map((l) => l.poster_id))
 
-  let student: { full_name: string | null } | null = null
+  let student: { full_name: string | null; open_to_collab?: boolean; is_international?: boolean } | null = null
+  let people: PersonCard[] = []
+  let invitable: InvitableProject[] = []
   let aiProjects: AiProjectCardData[] = []
   let fitByListing = new Map<string, { missingSkillIds: string[] }>()
   let tierByListing = new Map<string, FitTier>()
@@ -51,7 +57,7 @@ export default async function ListingsPage() {
     // ever return their own — there is no signed-out version of this list
     // and no way to see anyone else's.
     const [{ data: s }, { data: briefs }] = await Promise.all([
-      supabase.from('students').select('full_name').eq('id', user.id).maybeSingle(),
+      supabase.from('students').select('full_name, open_to_collab, is_international').eq('id', user.id).maybeSingle(),
       supabase
         .from('project_briefs')
         .select('id, brief_text, difficulty, target_skill_id, recommendation_reason, skills(canonical_name)')
@@ -62,6 +68,24 @@ export default async function ListingsPage() {
         .limit(3),
     ])
     student = s
+
+    // Paid roles are hidden from students on a visa (CPT). Counted, so the
+    // page can say why there are fewer rather than silently showing less.
+    const visible = rows.filter((l) => canSeeKind(l.kind as string, s?.is_international))
+    paidHidden = rows.length - visible.length
+    rows = visible
+    listingIds = rows.map((l) => l.id)
+
+    // The People tab. Loaded with the page rather than on switching tabs,
+    // so the switch is instant; it is one small query and one skills read.
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    ;[people, invitable] = await Promise.all([
+      loadPeople(supabase, admin, user.id),
+      loadInvitableProjects(supabase, user.id),
+    ])
     aiProjects = (briefs ?? []).map((b) => {
       const skill = b.skills as unknown as { canonical_name: string } | null
       const { title, body } = splitBriefText(b.brief_text)
@@ -93,6 +117,7 @@ export default async function ListingsPage() {
     const reqs = requirementsByListing.get(l.id) ?? []
     return {
       id: l.id,
+      kind: (l.kind as string) ?? 'collaborative',
       title: l.title,
       brief: l.brief,
       posterDisplayName: l.poster_display_name,
@@ -116,6 +141,12 @@ export default async function ListingsPage() {
       aiProjects={aiProjects}
       signedIn={!!user}
       studentName={student?.full_name ?? null}
+      people={people}
+      invitable={invitable}
+      viewerIsStudent={!!student}
+      viewerId={user?.id ?? null}
+      openToCollab={student?.open_to_collab ?? false}
+      paidHidden={paidHidden}
     />
   )
 }

@@ -14,9 +14,9 @@ describe('estimateCost', () => {
   // The call shape the cost estimate for this product was argued from:
   // roughly 6k in, 1k out on Sonnet. If this number moves, the budget
   // arithmetic in the handoff moves with it.
-  it('prices a typical structured call at about three cents', () => {
+  it('prices a typical structured call at about two cents', () => {
     const cost = estimateCost('claude-sonnet-5', usage({ inputTokens: 6000, outputTokens: 1000 }))
-    expect(cost).toBeCloseTo(0.033, 4)
+    expect(cost).toBeCloseTo(0.022, 4)
   })
 
   it('prices cache reads far below fresh input', () => {
@@ -50,7 +50,7 @@ describe('estimateCost', () => {
   // The API omits cache fields entirely when caching was not used, so absent
   // means zero here rather than unknown.
   it('treats absent cache fields as zero once anything was recorded', () => {
-    expect(estimateCost('claude-sonnet-5', usage({ inputTokens: 1000, outputTokens: 0 }))).toBeCloseTo(0.003, 6)
+    expect(estimateCost('claude-sonnet-5', usage({ inputTokens: 1000, outputTokens: 0 }))).toBeCloseTo(0.002, 6)
   })
 
   it('has a rate for whichever model the agents actually run', () => {
@@ -65,7 +65,7 @@ describe('totalCost', () => {
       { modelVersion: 'claude-sonnet-5', ...usage({ inputTokens: 6000, outputTokens: 1000 }) },
       { modelVersion: 'claude-sonnet-5', ...usage() },
     ])
-    expect(result.dollars).toBeCloseTo(0.066, 4)
+    expect(result.dollars).toBeCloseTo(0.044, 4)
     expect(result.priced).toBe(2)
     // The number that stops a total reading as good news when a third of the
     // rows were skipped.
