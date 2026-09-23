@@ -2322,6 +2322,13 @@ create table tasks (
   blocked_at          timestamptz,
   blocked_reason      text,
 
+  -- ── The ticket queue (v05_0054) ──
+  -- Released into Planned by the queue rather than placed by hand, why, and
+  -- whether this is the day-one ramp-up ticket.
+  released_at         timestamptz,
+  release_note        text,
+  ticket_kind         text check (ticket_kind is null or ticket_kind in ('ramp_up')),
+
   -- ── Set aside ──
   -- A status rather than a flag, unlike blocked above, and the difference is
   -- whether the work is still live: a blocked task is still coming, an
@@ -2348,6 +2355,7 @@ create index tasks_board_idx    on tasks (workspace_id, status, position);
 create index tasks_assignee_idx on tasks (assignee_id) where assignee_id is not null;
 create index tasks_sprint_idx   on tasks (sprint_id) where sprint_id is not null;
 create index tasks_parent_idx   on tasks (parent_task_id) where parent_task_id is not null;
+create index tasks_backlog_by_workspace_idx on tasks (workspace_id, position) where status = 'backlog';
 create index tasks_blocked_idx  on tasks (workspace_id) where blocked_at is not null;
 create index tasks_plan_call_idx on tasks (plan_call_id) where plan_call_id is not null;
 

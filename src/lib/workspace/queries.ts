@@ -353,6 +353,10 @@ export interface BoardTask {
   /** Why this was set aside, when it was. Null on every live card. */
   abandonedReason: string | null
   blockedReason: string | null
+  /** Why the ticket queue put this in Planned. Null if it got there by hand. */
+  releaseNote: string | null
+  /** 'ramp_up' for the day-one ticket. */
+  ticketKind: string | null
   origin: string
   createdAt: string | null
   startedAt: string | null
@@ -375,7 +379,7 @@ export async function loadBoard(
     // One literal, not a concatenation: supabase-js infers the row type from
     // the select string, and joining two pieces at runtime leaves it with
     // nothing to read.
-    .select('id, title, detail, acceptance_criteria, status, priority, assignee_id, suggested_role, estimate_hours, difficulty, due_on, verifiable, position, blocked_at, blocked_reason, abandoned_reason, sprint_id, parent_task_id, origin, created_at, started_at')
+    .select('id, title, detail, acceptance_criteria, status, priority, assignee_id, suggested_role, estimate_hours, difficulty, due_on, verifiable, position, blocked_at, blocked_reason, abandoned_reason, sprint_id, parent_task_id, origin, created_at, started_at, release_note, ticket_kind')
     .eq('workspace_id', workspaceId)
     .order('position')
 
@@ -398,6 +402,8 @@ export async function loadBoard(
     parentTaskId: (t.parent_task_id as string | null) ?? null,
     abandonedReason: t.abandoned_reason as string | null,
     blockedReason: t.blocked_reason as string | null,
+    releaseNote: (t.release_note as string | null) ?? null,
+    ticketKind: (t.ticket_kind as string | null) ?? null,
     origin: t.origin as string,
     createdAt: t.created_at as string | null,
     startedAt: t.started_at as string | null,

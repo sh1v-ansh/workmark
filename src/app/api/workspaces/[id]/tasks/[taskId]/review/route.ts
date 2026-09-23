@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { releaseTickets } from '@/lib/workspace/queue'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { enforce } from '@/lib/rate-limit'
@@ -153,6 +154,11 @@ export async function POST(request: Request, { params }: Params) {
         { status: 500 },
       )
     }
+  }
+
+  if (outcome.taskStatus === 'verified') {
+    await releaseTickets(admin, workspaceId, taskId).catch((err) =>
+      console.error('[api/tasks/:id/review] release failed:', err))
   }
 
   return NextResponse.json({ ok: true, verdict, message: outcome.message })

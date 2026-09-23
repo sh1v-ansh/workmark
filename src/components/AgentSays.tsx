@@ -50,16 +50,20 @@ export default function AgentSays({
       paddingLeft: 14,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+        {/* The lead's mark, labelled as AI for screen readers and on hover:
+            one consistent role, never a pretend person. */}
         <span
-          aria-hidden="true"
+          role="img"
+          aria-label="AI tech lead"
+          title="AI tech lead"
           style={{
-            width: 18, height: 18, borderRadius: 5, flexShrink: 0,
+            minWidth: 18, height: 18, padding: '0 4px', borderRadius: 5, flexShrink: 0,
             background: accent, color: '#fff',
             fontSize: 10, fontWeight: 700, letterSpacing: '-0.02em',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
-          W
+          TL
         </span>
         <span style={{
           fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em',

@@ -12,6 +12,7 @@
 // real and the student's — not which skills it demonstrates at what level.
 // Skill attribution stays with the scanner.
 
+import { releaseTickets } from '@/lib/workspace/queue'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { outcomeFor, type HumanVerdict } from '@/lib/workspace/review'
 import { embedText } from '@/lib/embeddings/voyage'
@@ -137,6 +138,10 @@ export async function resolveTaskVerification(
       .eq('id', submission.task_id as string)
     if (taskError) {
       return { ok: false, message: 'Answer saved, but the card did not move. Check the board.' }
+    }
+    if (outcome.taskStatus === 'verified') {
+      await releaseTickets(admin, submission.workspace_id as string, submission.task_id as string).catch((err) =>
+        console.error('[admin] release failed:', err))
     }
   }
 

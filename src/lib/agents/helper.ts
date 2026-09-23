@@ -21,6 +21,7 @@
 // It answers only when named, six times per task at most, and reads six
 // messages of context rather than the thread. See messages.ts.
 
+import { LEAD_VOICE } from '@/lib/agents/lead'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { callStructuredAgent } from './client'
 import { untrusted } from './untrusted'
@@ -45,7 +46,9 @@ export interface HelperReply {
   suggestedSubtask?: { title: string; why: string } | null
 }
 
-const SYSTEM = `You are an experienced software engineer helping a computer science student who is stuck on a task in their own project. You are the senior person they would ask if they had one.
+const SYSTEM = `${LEAD_VOICE}
+
+You are an experienced software engineer helping a computer science student who is stuck on a task in their own project. You are the senior person they would ask if they had one.
 
 You have the task, what it was supposed to do, anything the automatic checker said about it, and the last few messages.
 

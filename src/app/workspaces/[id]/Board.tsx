@@ -1,5 +1,6 @@
 'use client'
 
+import { LEAD_LABEL } from '@/lib/agents/lead'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -315,7 +316,7 @@ export default function Board({
       status: 'backlog', priority: 'normal', assigneeId: null, suggestedRole: null,
       estimateHours: null, difficulty: null, dueOn: null, verifiable: true,
       position: Number.MAX_SAFE_INTEGER, blockedAt: null, sprintId: null,
-      parentTaskId: null, abandonedReason: null, blockedReason: null,
+      parentTaskId: null, abandonedReason: null, blockedReason: null, releaseNote: null, ticketKind: null,
       origin: 'student_created', createdAt: new Date().toISOString(), startedAt: null,
       ...over,
     }
@@ -743,7 +744,7 @@ export default function Board({
               : `${needsYou.length} tasks need you to look at them`}
           </p>
           <p style={{ fontSize: T.meta, color: C.textMuted, lineHeight: 1.5, marginBottom: 11, maxWidth: '64ch' }}>
-            Workmark could not check these on its own. A teammate has to say whether the work
+            Your tech lead could not check these alone. A teammate has to say whether the work
             does what the task asked — until somebody does, they are stuck.
           </p>
           <div style={{ display: 'grid', gap: 7 }}>
@@ -775,8 +776,8 @@ export default function Board({
           reshape and throw out is the thing worth measuring. */}
       {tasks.length === 0 && (
         <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 14, maxWidth: '62ch' }}>
-          Workmark can draft a first plan from what this project is. It will get some of it wrong —
-          edit it, reorder it, throw tasks out and add your own. The plan is yours once it lands.
+          Your tech lead can draft a plan and hand you tickets one or two at a time. Edit anything —
+          the plan is yours once it lands.
         </p>
       )}
 
@@ -809,7 +810,7 @@ export default function Board({
                     Unblock
                   </button>
                   <button className="wm-mini" onClick={() => { setTalking(t); setDraftMessage('') }}>
-                    Ask Workmark
+                    Ask your lead
                   </button>
                 </div>
               ))}
@@ -1081,6 +1082,14 @@ export default function Board({
                         {task.title}
                       </p>
                     </button>
+                    {/* Why this ticket, now — from the queue. Only while it is
+                        waiting to be started; once somebody is on it, the
+                        reason has done its job. */}
+                    {task.status === 'planned' && task.releaseNote && (
+                      <p style={{ fontSize: T.meta, color: C.accentInk, lineHeight: 1.45, marginTop: 5 }}>
+                        {task.releaseNote}
+                      </p>
+                    )}
                     {/* One line, not a row of pills.
                         Five coloured chips is five things asking to be looked
                         at on a card whose job is to show a title. The same
@@ -1280,7 +1289,7 @@ export default function Board({
           <>
             {(threadsByTask.get(talking.id) ?? []).length === 0 ? (
               <p style={{ fontSize: T.bodySm, color: C.textFaint, lineHeight: 1.6, marginBottom: 16 }}>
-                Nothing here yet. Talk to your team, or type {MENTION} to ask Workmark about this task.
+                Nothing here yet. Talk to your team, or type {MENTION} to ask your tech lead about this task.
               </p>
             ) : (
               <div style={{ display: 'grid', gap: 10, marginBottom: 16, maxHeight: 320, overflowY: 'auto' }}>
@@ -1289,7 +1298,7 @@ export default function Board({
                     have to read to know who said what. */}
                 {(threadsByTask.get(talking.id) ?? []).map((m) => (
                   m.senderKind === 'agent' ? (
-                    <AgentSays key={m.id} heading="Workmark" body={m.body} />
+                    <AgentSays key={m.id} heading={LEAD_LABEL} body={m.body} />
                   ) : (
                     <div key={m.id} style={{ paddingLeft: 16 }}>
                       <p style={{ fontSize: T.meta, fontWeight: 600, color: C.textFaint, marginBottom: 3 }}>
@@ -1331,7 +1340,7 @@ export default function Board({
                   className="dk-input"
                   value={draftMessage}
                   onChange={(e) => setDraftMessage(e.target.value)}
-                  placeholder={`Ask your team, or ${MENTION} to ask Workmark`}
+                  placeholder={`Ask your team, or ${MENTION} to ask your tech lead`}
                   rows={3}
                   maxLength={4000}
                   style={{ marginBottom: 6, resize: 'vertical' }}
@@ -1339,7 +1348,7 @@ export default function Board({
                 {/* Said up front, because the limit is the point rather than a
                     disappointment: it explains, it does not write the code. */}
                 <p style={{ fontSize: T.meta, color: C.textGhost, marginBottom: 14, lineHeight: 1.5 }}>
-                  Workmark answers when you name it. It will explain and point you at things — it will not
+                  Your tech lead answers when you name it. It will explain and point you at things — it will not
                   write the task for you, because then the record would be about the wrong person.
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
@@ -1798,7 +1807,7 @@ function TaskDialog({
                   {' · '}
                   {d.decidedBy === 'person'
                     ? `${nameOf?.(d.actorId) ?? 'A person'} answered`
-                    : 'Workmark checked it'}
+                    : 'Your tech lead checked it'}
                   {d.confidence !== null && ` · ${Math.round(d.confidence * 100)}% sure`}
                   {' · '}
                   {new Date(d.decidedAt).toLocaleDateString()}

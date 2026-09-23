@@ -15,6 +15,7 @@
 // repo, and the repo produces evidence through the normal scan — the same
 // path as any other project. Nothing here writes to skill_evidence.
 
+import { LEVEL_NAMES } from '@/lib/skills/level-names'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { callStructuredAgent } from './client'
 import { untrusted } from './untrusted'
@@ -90,13 +91,21 @@ export async function generateBrief(
   // proposing something they've demonstrably already done.
   const { data: evidence } = await supabase
     .from('current_skill_evidence')
-    .select('skill_id')
+    .select('skill_id, difficulty_cleared')
     .eq('student_id', studentId)
-  const existingIds = Array.from(new Set((evidence ?? []).map((e) => e.skill_id)))
+  const levelBySkill = new Map<string, number>()
+  for (const e of evidence ?? []) {
+    levelBySkill.set(e.skill_id, Math.max(levelBySkill.get(e.skill_id) ?? 0, e.difficulty_cleared ?? 0))
+  }
+  const existingIds = Array.from(levelBySkill.keys())
   const { data: existingSkills } = existingIds.length
-    ? await supabase.from('skills').select('canonical_name').in('id', existingIds)
-    : { data: [] as { canonical_name: string }[] }
-  const existingNames = (existingSkills ?? []).map((s) => s.canonical_name)
+    ? await supabase.from('skills').select('id, canonical_name').in('id', existingIds)
+    : { data: [] as { id: string; canonical_name: string }[] }
+  // With the level each one is at, so the model can see how far along they
+  // are rather than only what they have touched. "Python" alone reads the
+  // same for somebody on their first script and somebody shipping services.
+  const existingNames = (existingSkills ?? []).map((s) =>
+    `${s.canonical_name} (${LEVEL_NAMES[levelBySkill.get(s.id) ?? 1] ?? 'Beginner'})`)
 
   const context = [
     `Target skill: ${skill.canonical_name}`,

@@ -34,6 +34,31 @@ export const MAX_STUDENTS_PER_RUN = 120
  */
 export const STARTER_SKILLS = ['python', 'javascript', 'html-css']
 
+/**
+ * How advanced a recommended project should be, from the evidence alone.
+ *
+ * Recommendations used to pass no level at all, so the model guessed — and
+ * a first-year could be handed a distributed-systems project. This reads it
+ * off the record instead:
+ *   - deepening a skill they have: one step above where they are in it;
+ *   - a skill they do not have: beginner, unless their strongest skill is
+ *     already advanced, in which case intermediate — someone strong
+ *     elsewhere does not need a hello-world, but a new skill is still new.
+ */
+export function levelForTarget(
+  levels: Map<string, number>,
+  targetSkillId: string,
+): 'beginner' | 'intermediate' | 'advanced' | 'research' {
+  const inTarget = levels.get(targetSkillId)
+  if (inTarget !== undefined) {
+    if (inTarget >= 5) return 'research'
+    if (inTarget >= 3) return 'advanced'
+    return 'intermediate'
+  }
+  const strongest = Math.max(0, ...Array.from(levels.values()))
+  return strongest >= 4 ? 'intermediate' : 'beginner'
+}
+
 export interface RunSummary {
   considered: number
   skipped: number
@@ -162,9 +187,10 @@ export async function recommendForStudent(
   // One at a time on purpose. These are Anthropic calls; firing three in
   // parallel per student across a hundred students is a thundering herd
   // against a rate limit, and nothing here is waiting on the result.
+  const levels = new Map(evidence.map((e) => [e.skillId, e.level]))
   for (const target of targets) {
     try {
-      const ok = await writeRecommendation(supabase, studentId, target)
+      const ok = await writeRecommendation(supabase, studentId, target, levelForTarget(levels, target.skillId))
       if (ok) generated++
       else failed++
     } catch (err) {
@@ -180,16 +206,15 @@ async function writeRecommendation(
   supabase: SupabaseClient,
   studentId: string,
   target: { skillId: string; reason: Target['reason'] | null },
-  // Only for starter projects, where "beginner" is a fact about having no
-  // evidence rather than a guess about the person.
-  skillLevel: 'beginner' | null = null,
+  // Read off their evidence (levelForTarget), never guessed — a project
+  // pitched above somebody is one they open and close.
+  skillLevel: 'beginner' | 'intermediate' | 'advanced' | 'research' | null = null,
 ): Promise<boolean> {
   const brief = await generateBrief(supabase, studentId, target.skillId, {
-    // Deliberately not passing skillLevel or careerTrack. Those are things
-    // the student chose when they asked for a brief themselves; guessing
-    // them on their behalf and writing the result into their record is a
-    // different act from offering a project. The agent still reads their
-    // whole evidence list, which is the part that makes it personal.
+    // careerTrack is still left out: that is a preference the student states
+    // when they ask for a brief themselves, not something to infer. The level
+    // is different — it comes from their evidence, and without it the model
+    // guessed, which is how beginners were handed advanced projects.
     targetRole: null,
     skillLevel,
     careerTrack: null,

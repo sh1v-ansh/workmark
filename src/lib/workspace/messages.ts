@@ -22,8 +22,12 @@
 // Pure, so the route and the board agree about who is being addressed and
 // when the agent should stop.
 
-/** What the agent answers to. Matched case-insensitively, at a word boundary. */
-export const MENTION = '@workmark'
+/** What the agent answers to. Matched case-insensitively, at a word boundary.
+ *  '@lead' is what the board shows, since the agent speaks as the project's
+ *  tech lead; '@workmark' still works so older habits and threads do not
+ *  silently stop getting answers. */
+export const MENTION = '@lead'
+const MENTION_PATTERN = '(?:@lead|@workmark)'
 
 /**
  * How many times the agent will answer in one thread.
@@ -53,7 +57,7 @@ export interface Message {
  * that case turns on.
  */
 export function mentionsAgent(body: string): boolean {
-  return new RegExp(`(^|\\s)${MENTION}\\b`, 'i').test(body)
+  return new RegExp(`(^|\\s)${MENTION_PATTERN}\\b`, 'i').test(body)
 }
 
 /**
@@ -66,7 +70,7 @@ export function mentionsAgent(body: string): boolean {
  */
 export function stripMention(body: string): string {
   return body
-    .replace(new RegExp(`(^|\\s)${MENTION}\\b`, 'gi'), ' ')
+    .replace(new RegExp(`(^|\\s)${MENTION_PATTERN}\\b`, 'gi'), ' ')
     .replace(/\s+/g, ' ')
     .trim()
 }
