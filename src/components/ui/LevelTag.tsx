@@ -35,18 +35,18 @@ export default function LevelTag({
         {name}
       </span>
       <span className="nb-leveltag-card" role="tooltip">
-        <span style={{ display: 'block', fontSize: 12.5, fontWeight: 700, color: C.text, marginBottom: 4 }}>
+        <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>
           {name}
           {!isReachable(level) && (
             <span style={{ fontWeight: 500, color: C.textFaint }}> · not reachable yet</span>
           )}
         </span>
-        <span style={{ display: 'block', fontSize: 12.5, color: C.textMuted, lineHeight: 1.5, marginBottom: 7 }}>
+        <span style={{ display: 'block', fontSize: 13, color: C.textMuted, lineHeight: 1.5, marginBottom: 7 }}>
           {description}
         </span>
         <Link
           href="/levels"
-          style={{ fontSize: 12.5, color: C.accent, fontWeight: 600, textDecoration: 'none', borderRadius: R.sm }}
+          style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', borderRadius: R.sm }}
         >
           Learn more →
         </Link>

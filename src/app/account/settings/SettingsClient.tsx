@@ -219,7 +219,7 @@ export default function SettingsClient({
                     </button>
                   )}
                   {!dirty && !saving && (
-                    <span style={{ fontSize: 12.5, color: C.textGhost }}>No unsaved changes</span>
+                    <span style={{ fontSize: 13, color: C.textGhost }}>No unsaved changes</span>
                   )}
                 </div>
               </div>
@@ -264,7 +264,7 @@ export default function SettingsClient({
                       <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text }}>
                         {github.login ? `@${github.login}` : 'Connected'}
                       </span>
-                      <span style={{ display: 'block', fontSize: 12.5, color: C.textGhost }}>
+                      <span style={{ display: 'block', fontSize: 13, color: C.textGhost }}>
                         {github.connectedAt
                           ? `Connected ${new Date(github.connectedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}`
                           : 'Connected'}

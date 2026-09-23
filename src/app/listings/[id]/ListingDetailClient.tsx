@@ -277,7 +277,7 @@ export default function ListingDetailClient({
                 return (
                   <div key={r.skillId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '11px 0', borderBottom: i < requirements.length - 1 ? `1px solid ${C.borderFaint}` : 'none', flexWrap: 'wrap' }}>
                     <SkillTag name={r.name} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 9.5, fontSize: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 9.5, fontSize: 13 }}>
                       {mine && (
                         <span style={{ color: mine.present ? state.positive : state.caution, fontWeight: 500 }}>
                           {mine.present ? 'evidenced' : 'no evidence yet'}
@@ -354,7 +354,7 @@ export default function ListingDetailClient({
                           />
                           <span style={{ fontSize: 14, color: C.textSub, fontWeight: 500 }}>{r.name}</span>
                         </span>
-                        <span style={{ fontSize: 12, color: mine?.present ? state.positive : C.textGhost, fontWeight: 600 }}>
+                        <span style={{ fontSize: 13, color: mine?.present ? state.positive : C.textGhost, fontWeight: 600 }}>
                           {mine?.present ? 'evidenced' : 'no evidence'}
                         </span>
                       </label>

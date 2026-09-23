@@ -173,7 +173,7 @@ function StudentForm({ onSubmit, loading, email, role }: {
               country is an obligation nobody signed up for. */}
           <Combobox id="student-university" value={university} onChange={setUniversity} options={UNIVERSITIES} placeholder="Search universities…" required />
           {derivedUniversity && university === derivedUniversity && (
-            <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.5, marginTop: 5 }}>
+            <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginTop: 5 }}>
               From your {emailDomain} address — change it if that is not right.
             </p>
           )}
@@ -256,7 +256,7 @@ function StudentForm({ onSubmit, loading, email, role }: {
             <Link href="/legal/cookies" target="_blank" rel="noopener" style={{ color: C.text, textDecoration: 'underline' }}>Cookie Policy</Link>.
           </span>
         </label>
-        <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 10, paddingLeft: 25 }}>
+        <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.55, marginTop: 10, paddingLeft: 25 }}>
           Workmark accounts are for people aged 18 and over. Each link opens in a new tab, so
           you won&apos;t lose what you&apos;ve filled in.
         </p>
@@ -286,7 +286,7 @@ function StudentForm({ onSubmit, loading, email, role }: {
             {CONSENT_TEXT}
           </span>
         </label>
-        <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 10, paddingLeft: 25 }}>
+        <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.55, marginTop: 10, paddingLeft: 25 }}>
           Most students leave this on — it is the part that finds things for you. Optional
           and separate from everything above, though: your account works exactly the same
           either way, and you will still get the emails about your own applications and
@@ -562,7 +562,7 @@ export default function OnboardingPage() {
                 body="Post course and research projects, and confirm the work students did with you. We'll confirm your faculty status afterwards."
                 onClick={() => setRole('faculty')}
               />
-              <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, marginTop: 4 }}>
+              <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.55, marginTop: 4 }}>
                 Faculty accounts work right away. We confirm them separately — until then your
                 confirmations carry the same weight as a student&apos;s.
               </p>

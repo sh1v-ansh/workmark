@@ -79,11 +79,8 @@ export default function SearchableBox({
         </div>
       )}
 
-      {/* The fade at the bottom edge is doing real work, not decoration. A
-          hard cut through the middle of a row reads as a rendering fault;
-          the same cut under a fade reads as "there is more below", which is
-          what is true. It sits above the list and ignores the pointer so it
-          never eats a click on the row underneath. */}
+      {/* No fade over the last rows: it made them hard to read. The
+          scrollbar says there is more below. */}
       <div style={{ position: 'relative' }}>
         <div
           style={{ maxHeight, overflowY: 'auto', overscrollBehavior: 'contain' }}
@@ -97,22 +94,12 @@ export default function SearchableBox({
             children
           )}
         </div>
-        {count > 0 && (
-          <div
-            aria-hidden="true"
-            style={{
-              position: 'absolute', left: 0, right: 10, bottom: 0, height: 26,
-              pointerEvents: 'none',
-              background: `linear-gradient(180deg, rgba(255,255,255,0) 0%, ${C.surface} 92%)`,
-            }}
-          />
-        )}
       </div>
 
       {/* Says what is off-screen. A box that scrolls without saying how far
           is the reason people think a filtered list is the whole list. */}
       {filtering && (
-        <p role="status" style={{ fontSize: 12.5, color: C.textGhost, marginTop: 10 }}>
+        <p role="status" style={{ fontSize: 13, color: C.textGhost, marginTop: 10 }}>
           {count} of {total} shown
         </p>
       )}

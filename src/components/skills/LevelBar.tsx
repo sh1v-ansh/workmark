@@ -68,7 +68,7 @@ export default function LevelBar({
       {showLegend && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px 16px', marginTop: 9 }} aria-hidden="true">
           {segments.map((s) => (
-            <span key={s.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: C.textFaint }}>
+            <span key={s.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: C.textFaint }}>
               <span style={{ width: 8, height: 8, borderRadius: R.pill, background: s.fill, flexShrink: 0 }} />
               {s.n} {s.label.toLowerCase()}
             </span>

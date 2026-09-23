@@ -26,7 +26,7 @@ export default function Badge({ tone = 'neutral', children }: { tone?: BadgeTone
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: 600,
         color: t.color,
         background: t.bg,

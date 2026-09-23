@@ -14,7 +14,7 @@ export default function SkillTag({ name, muted = false }: { name: string; muted?
   return (
     <span
       style={{
-        display: 'inline-block', fontSize: 12.5, fontWeight: 600, padding: '3.5px 9.5px',
+        display: 'inline-block', fontSize: 13, fontWeight: 600, padding: '3.5px 9.5px',
         borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text,
         opacity: muted ? 0.7 : 1, whiteSpace: 'nowrap',
       }}

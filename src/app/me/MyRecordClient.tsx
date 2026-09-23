@@ -236,7 +236,7 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
                     onClick={() => { navigator.clipboard.writeText(profileUrl); toast('Link copied.', 'success') }}
                     aria-label="Copy profile link"
                     title="Copy link"
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 12, color: C.textMuted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5.5, fontSize: 13, color: C.textMuted, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
                   >
                     <Icon name="link" size={11.5} />
                   </button>
@@ -283,7 +283,7 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
                     )}
                   </div>
                   {student.handle && (
-                    <p style={{ fontSize: 12, color: state.caution, marginTop: 9.5, lineHeight: 1.5 }}>
+                    <p style={{ fontSize: 13, color: state.caution, marginTop: 9.5, lineHeight: 1.5 }}>
                       Changing your handle breaks every link you&apos;ve already shared.
                     </p>
                   )}
@@ -338,7 +338,7 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
                 >
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 2 }}>{item.title}</span>
-                    <span style={{ display: 'block', fontSize: 12.5, color: C.textGhost, lineHeight: 1.45 }}>{item.sub}</span>
+                    <span style={{ display: 'block', fontSize: 13, color: C.textGhost, lineHeight: 1.45 }}>{item.sub}</span>
                   </span>
                   <svg width="15" height="15" viewBox="0 0 16 16" fill="none" style={{ flexShrink: 0 }} aria-hidden="true">
                     <path d="M6 3.5L10.5 8L6 12.5" stroke={C.textGhost} strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
@@ -407,7 +407,7 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
                         if (inGroup.length === 0) return null
                         return (
                           <div key={group.key}>
-                            <p style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.075em', textTransform: 'uppercase', color: C.textGhost, marginBottom: 8 }}>
+                            <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.075em', textTransform: 'uppercase', color: C.textGhost, marginBottom: 8 }}>
                               {group.label} · {inGroup.length}
                             </p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -461,7 +461,7 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
                         >
                           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
                             <span style={{ fontSize: 14, fontWeight: 600, color: C.text, wordBreak: 'break-word' }}>{repo}</span>
-                            <span style={{ fontSize: 12, color: C.textGhost, whiteSpace: 'nowrap' }}>
+                            <span style={{ fontSize: 13, color: C.textGhost, whiteSpace: 'nowrap' }}>
                               {TIER_LABEL[entries[0]?.tier ?? ''] ?? entries[0]?.tier}
                             </span>
                           </div>

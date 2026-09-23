@@ -74,7 +74,7 @@ export default function SkillEvidenceModal({
       }
       footer={
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12.5, color: C.textGhost }}>Think this is wrong?</span>
+          <span style={{ fontSize: 13, color: C.textGhost }}>Think this is wrong?</span>
           <Link href="/me/file" style={{ fontSize: 13, fontWeight: 600, color: C.accent, textDecoration: 'none' }}>
             Challenge it →
           </Link>
@@ -89,7 +89,7 @@ export default function SkillEvidenceModal({
             </p>
           )}
 
-          <p style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: '0.075em', textTransform: 'uppercase', color: C.textGhost, marginBottom: 10 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.075em', textTransform: 'uppercase', color: C.textGhost, marginBottom: 10 }}>
             Where it came from
           </p>
 
@@ -114,11 +114,11 @@ export default function SkillEvidenceModal({
                       {e.repoFullName ?? 'Non-code work'}
                     </span>
                   )}
-                  <span style={{ fontSize: 12, color: C.textGhost, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 13, color: C.textGhost, whiteSpace: 'nowrap' }}>
                     {LEVEL_NAMES[e.level] ?? `Level ${e.level}`}
                   </span>
                 </div>
-                <p style={{ fontSize: 12.5, color: C.textFaint, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5 }}>
                   {[TIER_LABEL[e.tier ?? ''] ?? e.tier, VERIFICATION_LABEL[e.verificationMethod] ?? e.verificationMethod]
                     .filter(Boolean)
                     .join(' · ')}

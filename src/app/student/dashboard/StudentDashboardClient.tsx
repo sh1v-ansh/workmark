@@ -485,7 +485,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
                   {skills.length > topSkills.length && (
                     <Link
                       href="/me"
-                      style={{ fontSize: 12.5, fontWeight: 600, color: C.textMuted, textDecoration: 'none', padding: '6px 4px' }}
+                      style={{ fontSize: 13, fontWeight: 600, color: C.textMuted, textDecoration: 'none', padding: '6px 4px' }}
                     >
                       +{skills.length - topSkills.length} more
                     </Link>

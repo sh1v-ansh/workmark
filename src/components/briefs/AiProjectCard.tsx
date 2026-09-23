@@ -45,12 +45,12 @@ export default function AiProjectCard({ project }: { project: AiProjectCardData 
     <Link href={`/me/briefs#brief-${project.id}`} className="nb-ai-card">
       <div style={{ position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 11, flexWrap: 'wrap' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6.5, fontSize: 11.5, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.accentInk }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6.5, fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.accentInk }}>
             <Icon name="spark" size={13} />
             Workmark AI
           </span>
           {reason && (
-            <span style={{ fontSize: 11.5, fontWeight: 600, color: C.accentInk, background: 'rgba(97,66,245,0.09)', borderRadius: R.pill, padding: '3px 9px' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: C.accentInk, background: 'rgba(97,66,245,0.09)', borderRadius: R.pill, padding: '3px 9px' }}>
               {reason.label}
             </span>
           )}
@@ -70,13 +70,13 @@ export default function AiProjectCard({ project }: { project: AiProjectCardData 
         {/* Why this one, in the student's terms. A recommendation that
             cannot say why it is here is an advert. */}
         {reason && project.skillName && (
-          <p style={{ fontSize: 12.5, color: C.textFaint, lineHeight: 1.5, marginBottom: 13 }}>
+          <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5, marginBottom: 13 }}>
             {reason.explain(project.skillName)}
           </p>
         )}
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 11, fontSize: 12.5, color: C.textGhost }}>
+          <span style={{ display: 'flex', flexWrap: 'wrap', gap: 11, fontSize: 13, color: C.textGhost }}>
             {project.skillName && <span>Builds {project.skillName}</span>}
             {project.difficulty != null && <span>{DIFFICULTY_LABEL[project.difficulty] ?? ''}</span>}
           </span>

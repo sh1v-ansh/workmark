@@ -67,14 +67,14 @@ export default function MessageThread({ applicationId, currentUserId, otherParty
   return (
     <div style={{ borderTop: `1px solid ${C.border}`, paddingTop: 10, marginTop: 10 }}>
       <button onClick={() => setOpen((v) => !v)}
-        style={{ fontSize: 11, fontFamily: F.mono, color: C.accent, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.04em' }}>
+        style={{ fontSize: 13, fontFamily: F.mono, color: C.accent, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.04em' }}>
         {open ? '▲ Hide messages' : `▼ Message ${otherPartyLabel}`}
       </button>
 
       {open && (
         <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
           {loading ? (
-            <p style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>Loading…</p>
+            <p style={{ fontSize: 13, color: C.textFaint, fontFamily: F.mono }}>Loading…</p>
           ) : messages && messages.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
               {messages.map((m) => {
@@ -84,7 +84,7 @@ export default function MessageThread({ applicationId, currentUserId, otherParty
                     <div style={{ background: mine ? C.accentHover : C.bg, border: `1px solid ${mine ? C.accentBorder : C.border}`, borderRadius: 8, padding: '8px 12px' }}>
                       <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{m.body}</p>
                     </div>
-                    <p style={{ fontSize: 10, color: C.textGhost, fontFamily: F.mono, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
+                    <p style={{ fontSize: 13, color: C.textGhost, fontFamily: F.mono, marginTop: 2, textAlign: mine ? 'right' : 'left' }}>
                       {mine ? 'You' : otherPartyLabel} · {fmtTime(m.created_at)}
                     </p>
                   </div>
@@ -92,7 +92,7 @@ export default function MessageThread({ applicationId, currentUserId, otherParty
               })}
             </div>
           ) : (
-            <p style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>No messages yet — ask a question before deciding.</p>
+            <p style={{ fontSize: 13, color: C.textFaint, fontFamily: F.mono }}>No messages yet — ask a question before deciding.</p>
           )}
 
           <div style={{ display: 'flex', gap: 8 }}>
@@ -105,7 +105,7 @@ export default function MessageThread({ applicationId, currentUserId, otherParty
               style={{ flex: 1, fontSize: 13 }}
             />
             <button onClick={handleSend} disabled={sending || !draft.trim()}
-              style={{ padding: '0 16px', background: draft.trim() ? C.accent : C.surfaceAlt, color: draft.trim() ? '#FFFFFF' : C.textFaint, border: 'none', fontFamily: F.mono, fontSize: 12, cursor: draft.trim() ? 'pointer' : 'not-allowed' }}>
+              style={{ padding: '0 16px', background: draft.trim() ? C.accent : C.surfaceAlt, color: draft.trim() ? '#FFFFFF' : C.textFaint, border: 'none', fontFamily: F.mono, fontSize: 13, cursor: draft.trim() ? 'pointer' : 'not-allowed' }}>
               Send
             </button>
           </div>

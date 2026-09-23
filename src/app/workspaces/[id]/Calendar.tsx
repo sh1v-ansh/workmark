@@ -107,7 +107,7 @@ export default function Calendar({
                   {Number(cell.date.slice(8, 10))}
                 </span>
                 {isDeadline && (
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#B91C1C' }}>DUE</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: '#B91C1C' }}>DUE</span>
                 )}
               </div>
 
@@ -119,7 +119,7 @@ export default function Calendar({
                   style={{
                     display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer',
                     marginTop: 3, padding: '2px 4px', borderRadius: 4, border: 'none',
-                    fontSize: 11, lineHeight: 1.35,
+                    fontSize: 13, lineHeight: 1.35,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     background: isOverdue(task, today) ? '#FDECEC' : C.surfaceAlt,
                     color: isOverdue(task, today) ? '#94170F' : C.textMuted,
@@ -131,7 +131,7 @@ export default function Calendar({
                 </button>
               ))}
               {due.length > 3 && (
-                <p style={{ fontSize: 10, color: C.textGhost, marginTop: 2 }}>+{due.length - 3} more</p>
+                <p style={{ fontSize: 13, color: C.textGhost, marginTop: 2 }}>+{due.length - 3} more</p>
               )}
             </div>
           )

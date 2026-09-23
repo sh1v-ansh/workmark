@@ -219,7 +219,7 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {name ?? 'Your account'}
                     </span>
-                    <span style={{ display: 'block', fontSize: 12.5, color: C.textGhost, textTransform: 'capitalize' }}>
+                    <span style={{ display: 'block', fontSize: 13, color: C.textGhost, textTransform: 'capitalize' }}>
                       {showAdmin ? 'Staff' : effectiveRole}
                     </span>
                   </span>

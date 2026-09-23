@@ -12,7 +12,7 @@ export function Kicker({ children, style }: { children: React.ReactNode; style?:
   return (
     <div
       style={{
-        fontFamily: F.display, fontSize: 11, fontWeight: 700,
+        fontFamily: F.display, fontSize: 12, fontWeight: 700,
         letterSpacing: '0.13em', textTransform: 'uppercase', color: C.textGhost,
         ...style,
       }}

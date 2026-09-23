@@ -85,7 +85,7 @@ export const app = {
   textSub:       '#2B3244',      // 12.2:1
   textMuted:     '#5A6172',      // 6.0:1
   textFaint:     '#666D80',      // 5.0:1 — still passes at body sizes
-  textGhost:     '#8D94A5',      // 3.6:1 — large text only
+  textGhost:     '#737A8B',      // 4.5:1 — was 3.6:1, yet used on small text everywhere
   accent:        '#6142F5',      // 5.6:1 on white
   accentHover:   'rgba(97,66,245,0.08)',
   accentBorder:  'rgba(97,66,245,0.30)',
@@ -175,9 +175,9 @@ export const T = {
   h2: 19.5,       // section heading inside a card
   h3: 16.5,       // row title
   body: 15,
-  bodySm: 13.5, // secondary line under a row title
-  meta: 12.5,   // timestamps, counts, attribution
-  label: 11.5,    // uppercase tab/eyebrow labels
+  bodySm: 14,   // secondary line under a row title
+  meta: 13,     // timestamps, counts, attribution — the floor for running text
+  label: 12,      // uppercase tab/eyebrow labels
 } as const
 
 /** Elevation.

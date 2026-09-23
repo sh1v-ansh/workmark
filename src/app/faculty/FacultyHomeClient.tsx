@@ -173,7 +173,7 @@ export default function FacultyHomeClient({ data }: { data: FacultyData }) {
                   {active.slice(0, 5).map((e) => (
                     <Link key={e.id} href={`/engagements/${e.id}`} style={{ textDecoration: 'none' }}>
                       <p style={{ fontSize: 13.5, fontWeight: 600, color: C.text }}>{e.studentName}</p>
-                      <p style={{ fontSize: 12.5, color: C.textGhost }}>{STAGE_LABEL[e.stage] ?? e.stage}</p>
+                      <p style={{ fontSize: 13, color: C.textGhost }}>{STAGE_LABEL[e.stage] ?? e.stage}</p>
                     </Link>
                   ))}
                 </div>
@@ -227,7 +227,7 @@ export default function FacultyHomeClient({ data }: { data: FacultyData }) {
                   </div>
                   {l.newApplicants > 0 && (
                     <span style={{
-                      flexShrink: 0, fontSize: 12, fontWeight: 700, padding: '4px 9px',
+                      flexShrink: 0, fontSize: 13, fontWeight: 700, padding: '4px 9px',
                       borderRadius: R.pill, background: C.accent, color: '#fff',
                     }}>
                       {l.newApplicants} new

@@ -224,7 +224,7 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
                       <span style={{
                         display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                         minWidth: 19, height: 19, padding: '0 5px', borderRadius: R.pill,
-                        fontSize: 11.5, fontWeight: 700, color: '#FFFFFF', background: C.accent,
+                        fontSize: 12, fontWeight: 700, color: '#FFFFFF', background: C.accent,
                       }}>
                         {activeCount}
                       </span>
@@ -233,7 +233,7 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
                   {activeCount > 0 && (
                     <button
                       type="button" onClick={clearAll}
-                      style={{ fontSize: 12.5, color: C.accent, fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
+                      style={{ fontSize: 13, color: C.accent, fontWeight: 600, background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}
                     >
                       Clear all
                     </button>

@@ -483,13 +483,13 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8.5, marginBottom: 3, flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 14.5, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.repo_full_name}</span>
                             <Badge tone={g.is_private ? 'caution' : 'neutral'}>{g.is_private ? 'Private' : 'Public'}</Badge>
-                            {g.primary_language && <span style={{ fontSize: 12, color: C.textGhost }}>{g.primary_language}</span>}
+                            {g.primary_language && <span style={{ fontSize: 13, color: C.textGhost }}>{g.primary_language}</span>}
                           </div>
                           {/* Why this repo is on or off. The override is what
                               makes a default cut fair, so the reason has to
                               be visible rather than tucked away. */}
                           {g.rank_reason && (
-                            <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.45 }}>{g.rank_reason}</p>
+                            <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.45 }}>{g.rank_reason}</p>
                           )}
                         </div>
                         <button
@@ -667,19 +667,19 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                           }}
                         />
                       </div>
-                      <p style={{ fontSize: 12.5, color: C.textFaint, marginTop: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <p style={{ fontSize: 13, color: C.textFaint, marginTop: 7, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {job
                           ? `${job.completed_steps} of ${job.total_steps}${currentStepLabel ? ` · ${currentStepLabel}` : ''}`
                           : 'Queueing…'}
                       </p>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 3 }}>
-                        <p style={{ fontSize: 12.5, color: C.textFaint }}>
+                        <p style={{ fontSize: 13, color: C.textFaint }}>
                           Runs in the background — you can leave this page.
                         </p>
                         <button
                           type="button"
                           onClick={stopScan}
-                          style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 12.5, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
+                          style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 13, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
                         >
                           Stop
                         </button>
@@ -699,11 +699,11 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                       <div style={{ display: 'grid', gap: 7, maxHeight: 260, overflowY: 'auto' }}>
                         {job.steps.filter((st) => st.detail).map((st) => (
                           <div key={st.id}>
-                            <p style={{ fontSize: 12.5, fontWeight: 600, color: C.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: C.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {st.label}
                             </p>
                             <p style={{
-                              fontSize: 12.5, lineHeight: 1.45,
+                              fontSize: 13, lineHeight: 1.45,
                               color: st.status === 'failed' ? '#B91C1C' : C.textGhost,
                             }}>
                               {st.detail}

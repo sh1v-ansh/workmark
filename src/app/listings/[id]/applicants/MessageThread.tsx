@@ -78,13 +78,13 @@ export default function MessageThread({ applicationId, currentUserId, preAccept 
   }
 
   if (loading) {
-    return <p style={{ fontSize: 12, color: C.textFaint, fontFamily: F.mono }}>Loading messages…</p>
+    return <p style={{ fontSize: 13, color: C.textFaint, fontFamily: F.mono }}>Loading messages…</p>
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {messages.length === 0 ? (
-        <p style={{ fontSize: 12, color: C.textFaint }}>No messages yet.</p>
+        <p style={{ fontSize: 13, color: C.textFaint }}>No messages yet.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
           {messages.map((m) => {
@@ -102,7 +102,7 @@ export default function MessageThread({ applicationId, currentUserId, preAccept 
                 }}
               >
                 <p style={{ fontSize: 13, color: C.textSub, lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{m.body}</p>
-                <p style={{ fontSize: 10, color: C.textFaint, fontFamily: F.mono, marginTop: 4 }}>
+                <p style={{ fontSize: 13, color: C.textFaint, fontFamily: F.mono, marginTop: 4 }}>
                   {new Date(m.created_at).toLocaleString()}
                 </p>
               </div>
@@ -112,7 +112,7 @@ export default function MessageThread({ applicationId, currentUserId, preAccept 
       )}
 
       {capped ? (
-        <p style={{ fontSize: 12, color: C.textFaint, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.5 }}>
           You&apos;ve used all {PRE_ACCEPT_LIMIT} pre-acceptance messages. Messaging opens up fully once the application is accepted.
         </p>
       ) : (
@@ -127,7 +127,7 @@ export default function MessageThread({ applicationId, currentUserId, preAccept 
             aria-label="Message"
           />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 10, color: C.textFaint, fontFamily: F.mono }}>
+            <span style={{ fontSize: 13, color: C.textFaint, fontFamily: F.mono }}>
               {body.length}/{MAX_CHARS}
               {preAccept && ` · ${remaining} message${remaining === 1 ? '' : 's'} left before acceptance`}
             </span>

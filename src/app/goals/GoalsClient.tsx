@@ -212,7 +212,7 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7.5, flexWrap: 'wrap' }}>
                     <Badge tone={FIT_TIER_TONE[r.tier]}>{FIT_TIER_LABEL[r.tier]}</Badge>
                     {r.missingNames.length > 0 && (
-                      <span style={{ fontSize: 12, color: C.textGhost }}>
+                      <span style={{ fontSize: 13, color: C.textGhost }}>
                         missing {r.missingNames.slice(0, 2).join(', ')}
                       </span>
                     )}

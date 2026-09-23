@@ -1160,7 +1160,7 @@
      violet outline rather than a heavy border. */
   .wm-app-ground .nb-card-focal,
   .wm-app-ground .nb-focal {
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.78) 0%, rgba(248, 245, 255, 0.7) 100%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(251, 250, 255, 0.8) 100%);
     box-shadow:
       0 0 0 0.5px rgba(97, 66, 245, 0.35),
       inset 0 1px 0 rgba(255, 255, 255, 1),
@@ -1172,10 +1172,10 @@
      thing — the violet the product uses whenever it is the one speaking. */
   .wm-app-ground .nb-ai-card {
     background:
-      linear-gradient(160deg, rgba(246, 242, 255, 0.82) 0%, rgba(236, 229, 255, 0.7) 100%);
+      linear-gradient(160deg, rgba(251, 249, 255, 0.9) 0%, rgba(245, 241, 255, 0.82) 100%);
     border: 1px solid rgba(255, 255, 255, 0.85);
     box-shadow:
-      0 0 0 0.5px rgba(97, 66, 245, 0.28),
+      0 0 0 0.5px rgba(97, 66, 245, 0.22),
       inset 0 1px 0 rgba(255, 255, 255, 0.95),
       0 1px 2px rgba(97, 66, 245, 0.06),
       0 12px 30px -16px rgba(97, 66, 245, 0.32);

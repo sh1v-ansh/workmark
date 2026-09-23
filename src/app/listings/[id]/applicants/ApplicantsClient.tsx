@@ -185,7 +185,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                     <span style={{
                       width: 32, height: 32, borderRadius: R.md, flexShrink: 0,
                       background: on ? C.surface : C.surfaceAlt, color: C.textSub,
-                      fontFamily: F.display, fontSize: 11.5, fontWeight: 700,
+                      fontFamily: F.display, fontSize: 13, fontWeight: 700,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                     }}>
                       {initials(a.fullName)}
@@ -313,7 +313,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                               </span>
                             </span>
                           </span>
-                          <span style={{ fontSize: 12, fontWeight: 600, color: C.textGhost, whiteSpace: 'nowrap' }}>
+                          <span style={{ fontSize: 13, fontWeight: 600, color: C.textGhost, whiteSpace: 'nowrap' }}>
                             {s.requiredLevel >= 4 ? 'Essential' : s.requiredLevel >= 2 ? 'Useful' : 'Bonus'}
                           </span>
                         </div>

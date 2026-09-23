@@ -1109,7 +1109,7 @@ export default function Board({
 
                       return (
                         <p style={{
-                          fontSize: 11.5, lineHeight: 1.5, marginTop: 6,
+                          fontSize: 13, lineHeight: 1.5, marginTop: 6,
                           color: late ? '#B91C1C' : C.textFaint,
                         }}>
                           {task.blockedAt && (

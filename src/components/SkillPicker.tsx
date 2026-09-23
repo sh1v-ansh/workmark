@@ -92,7 +92,7 @@ export default function SkillPicker({ taxonomy, value, onChange, max = 8 }: {
       </div>
 
       {query.trim() && matches.length === 0 && value.length < max && (
-        <p style={{ fontSize: 11, color: C.textFaint, marginTop: 6, lineHeight: 1.5 }}>
+        <p style={{ fontSize: 13, color: C.textFaint, marginTop: 6, lineHeight: 1.5 }}>
           Nothing in the taxonomy matches that. Only recognised skills can be required — an unrecognised one would match nobody.
         </p>
       )}
@@ -103,7 +103,7 @@ export default function SkillPicker({ taxonomy, value, onChange, max = 8 }: {
             const c = tagColor(req.canonicalName)
             return (
               <div key={req.skillId} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '8px 12px', background: C.surfaceAlt, border: `1px solid ${C.border}`, borderRadius: 8, flexWrap: 'wrap' }}>
-                <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}>
+                <span style={{ fontSize: 13, fontWeight: 600, padding: '3px 10px', borderRadius: 999, background: c.bg, border: `1px solid ${c.border}`, color: c.text, fontFamily: F.mono }}>
                   {req.canonicalName}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -111,7 +111,7 @@ export default function SkillPicker({ taxonomy, value, onChange, max = 8 }: {
                     value={req.requiredLevel}
                     onChange={(e) => setLevel(req.skillId, Number(e.target.value))}
                     className="dk-select"
-                    style={{ fontSize: 12, padding: '4px 8px' }}
+                    style={{ fontSize: 13, padding: '4px 8px' }}
                     aria-label={`Importance of ${req.canonicalName}`}
                   >
                     {[1, 2, 3, 4, 5].map((n) => (
@@ -128,7 +128,7 @@ export default function SkillPicker({ taxonomy, value, onChange, max = 8 }: {
         </div>
       )}
 
-      <p style={{ fontSize: 11, color: C.textFaint, marginTop: 10, lineHeight: 1.5 }}>
+      <p style={{ fontSize: 13, color: C.textFaint, marginTop: 10, lineHeight: 1.5 }}>
         Importance tells applicants what matters most — it is not a minimum bar. Anyone with evidence in a skill can apply; importance only affects how applicants are ranked.
       </p>
     </div>

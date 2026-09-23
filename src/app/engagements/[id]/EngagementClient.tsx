@@ -68,7 +68,7 @@ function Stepper({ current }: { current: Stage }) {
                 width: 24, height: 24, borderRadius: 999, flexShrink: 0,
                 background: bg, border: `2px solid ${color}`,
                 color: done || now ? color : C.textGhost,
-                fontFamily: F.display, fontSize: 11, fontWeight: 700,
+                fontFamily: F.display, fontSize: 13, fontWeight: 700,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
@@ -290,7 +290,7 @@ export default function EngagementClient({ data }: { data: EngagementData }) {
                           style={{ fontFamily: 'inherit', fontSize: 14.5, lineHeight: 1.6 }}
                           placeholder="Bullet points are fine. e.g. built the search page, wrote the ranking query, fixed the slow load"
                         />
-                        <p style={{ fontSize: 12.5, color: C.textGhost, lineHeight: 1.55, margin: '9px 0 12px' }}>
+                        <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.55, margin: '9px 0 12px' }}>
                           We only use what you write here. Nothing gets invented — if the notes don&apos;t
                           say it, the draft won&apos;t claim it.
                         </p>
