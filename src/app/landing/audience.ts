@@ -168,16 +168,16 @@ export const COPY: Record<Audience, AudienceCopy> = {
   businesses: {
     tab: 'For businesses',
     eyebrow: 'For startups, SMBs, nonprofits and labs',
-    headline: 'Screen candidates by verified work,',
-    headlineAccent: 'before OAs and interviews.',
+    headline: 'Only qualified candidates can apply.',
+    headlineAccent: 'Your best hire stands out.',
     lede:
-      'Workmark filters candidates before your online assessments and interviews. You see deployed projects, a proficiency level for every skill, and work confirmed by the people who supervised it.',
+      'Workmark checks every candidate’s verified work against your role before they can apply, so unqualified applications never bury the good ones.',
     primaryCta: { label: 'Start with a paid project', href: '/listings/new' },
     secondaryCta: { label: 'See how profiles work', href: '/how-it-works' },
     reassurance: 'Every candidate has opted in as open to work.',
     proof: [
-      ['Verified work histories', 'Real projects, not claims on a resume.'],
-      ['A level for every skill', 'With the deployed project behind it.'],
+      ['Only qualified applicants', 'Candidates who do not fit the role cannot apply.'],
+      ['Verified work histories', 'Real projects and a level for every skill.'],
       ['Try before you hire', 'Start with a paid project and see real output.'],
     ],
     modesEyebrow: 'What you get',
