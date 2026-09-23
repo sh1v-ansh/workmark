@@ -12,7 +12,7 @@ import { enforce } from '@/lib/rate-limit'
 // Versioned so a consent record says which wording was actually agreed to.
 // Changing the text below REQUIRES bumping this — an FCRA consent that
 // can't be tied to specific wording is not much of a consent record.
-const CONSENT_VERSION = 'application_disclosure_v1'
+const CONSENT_VERSION = 'application_disclosure_v2'  // v2: shorter wording, same three things disclosed
 
 // §8. The floor is the real mechanism: it makes applying cost something,
 // asymmetrically — a student who has done the work writes 50 words about

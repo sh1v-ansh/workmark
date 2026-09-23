@@ -136,7 +136,7 @@ export default function SettingsClient({
         id="main-content"
         style={{ maxWidth: 660, margin: '0 auto', padding: '34px 24px 96px' }}
       >
-        <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 6 }}>
+        <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 6 }}>
           Settings
         </h1>
         <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 32 }}>

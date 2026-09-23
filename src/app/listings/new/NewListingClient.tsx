@@ -129,7 +129,7 @@ export default function NewListingClient({ taxonomy, agentsAvailable, editing }:
     <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
       <main id="main-content" style={{ maxWidth: 680, margin: '0 auto', padding: '30px 28px 72px' }}>
-        <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
+        <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
           {editing ? 'Edit project' : 'Post a project'}
         </h1>
         <p style={{ fontSize: 15, color: C.textMuted, marginBottom: 23 }}>

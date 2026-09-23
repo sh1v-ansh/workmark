@@ -148,7 +148,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
         <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
         <div style={{ margin: '13px 0 20px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
             Your file
           </h1>
           <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 630 }}>

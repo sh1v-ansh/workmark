@@ -52,7 +52,7 @@ export default function StudentsDirectoryClient({ student, directory }: { studen
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
             Student directory
           </h1>
           <p style={{ fontSize: 15, color: C.textMuted }}>

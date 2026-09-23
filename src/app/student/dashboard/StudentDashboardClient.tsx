@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import { type BadgeTone } from '@/components/ui/Badge'
+import { APPLICATION_STATUS } from '@/lib/applications/status-label'
 import { Kicker, Stat } from '@/components/ui/Section'
 import RescanButton from '@/components/RescanButton'
 import SkillChip from '@/components/skills/SkillChip'
@@ -18,6 +19,7 @@ import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
 import type { Intent } from '@/lib/profile/intents'
 import NextStepCard from './NextStep'
+import { nextStepFor } from '@/lib/profile/intents'
 import GithubConnectNotice from '@/components/GithubConnectNotice'
 import FinishProfile from './FinishProfile'
 
@@ -58,13 +60,6 @@ export interface DashboardData {
 
 const MAX_ACTIVE_APPLICATIONS = 5
 
-const APPLICATION_STATUS: Record<string, { label: string; tone: BadgeTone }> = {
-  submitted:   { label: 'Not read yet',       tone: 'neutral' },
-  shortlisted: { label: "They're interested", tone: 'info' },
-  accepted:    { label: "You're in",          tone: 'positive' },
-  rejected:    { label: 'Not this time',      tone: 'neutral' },
-  withdrawn:   { label: 'Withdrawn',          tone: 'neutral' },
-}
 
 const STAGE_LABEL: Record<string, string> = {
   accepted: 'Getting started',
@@ -184,7 +179,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         kind: 'message',
         headline: `${a.posterName ?? 'A poster'} is deciding`,
         body: a.title,
-        detail: `They shortlisted you ${relativeDays(a.createdAt)} and can send two more messages before choosing. Not replying reads as not interested.`,
+        detail: `They shortlisted you ${relativeDays(a.createdAt)}. Reply before they decide.`,
         href: `/listings/${a.listingId}`,
         cta: 'Reply',
         eyebrow: 'Do this first',
@@ -198,7 +193,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         kind: 'signoff',
         headline: 'Agree on what was built',
         body: e.title,
-        detail: 'Nothing lands on your record until you both sign off, and neither of you can write the other’s version of what happened.',
+        detail: 'Nothing lands on your record until you both sign off.',
         href: `/engagements/${e.id}`,
         cta: 'Review it',
         eyebrow: 'Waiting on you',
@@ -293,6 +288,13 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
   const firstName = student.fullName?.trim().split(/\s+/)[0]
 
+  // One main card at a time. The next-step card only appears when nothing
+  // else needs the student, and it replaces the project nudge rather than
+  // sitting beside it — both used to show, each with its own button.
+  const showNextStep = todos.length === 0 &&
+    nextStepFor({ intents, githubConnected, repoCount, evidenceCount: skills.length }) !== 'nothing'
+  const showNudge = !showNextStep
+
   // "Not sure what to build next?" asked the reader a question and described
   // nothing. It is a project recommender, so it says so — and when we know
   // which skill open projects keep asking for that they cannot show, it
@@ -305,11 +307,6 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           {topGap
             ? `${topGap.listingCount} open project${topGap.listingCount === 1 ? '' : 's'} want ${topGap.skillName}. Your record doesn't have it.`
             : 'We can tell you what to build next'}
-        </p>
-        <p style={{ fontSize: 13.5, color: '#C6C2E4', lineHeight: 1.55 }}>
-          {topGap
-            ? 'We compare what open projects ask for against what your code proves, then write you something specific to build that closes the biggest gap.'
-            : 'We compare what open projects ask for against what your code proves, and write you a project worth building to close the biggest gap.'}
         </p>
       </div>
       <div style={{ position: 'relative', marginTop: 17 }}>
@@ -329,16 +326,6 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
         <GithubConnectNotice />
-
-        <NextStepCard
-          intents={intents}
-          githubConnected={githubConnected}
-          repoCount={repoCount}
-          evidenceCount={skills.length}
-        />
-
-        {/* After the first record lands, not before — see FinishProfile. */}
-        {skills.length > 0 && !student.major && <FinishProfile />}
 
         {/* Header — the answer, not a greeting, except on the first visit
             when there is no answer yet and "you're all caught up" reads as
@@ -363,6 +350,15 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
             {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
           </span>
         </div>
+
+        {showNextStep && (
+          <NextStepCard
+            intents={intents}
+            githubConnected={githubConnected}
+            repoCount={repoCount}
+            evidenceCount={skills.length}
+          />
+        )}
 
         {/* Focal band. The lead item is roughly four times the area of a
             supporting tile, so the eye lands rather than searches. When the
@@ -414,7 +410,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
             {/* With no rail items the third column would sit empty, so the
                 page's one accent panel moves up to fill it. */}
-            {rail.length === 0 && nudge}
+            {rail.length === 0 && showNudge && nudge}
           </div>
         )}
 
@@ -433,7 +429,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         )}
 
         {/* Second band — the record at two thirds against the accent panel */}
-        <div className={lead && rail.length === 0 ? undefined : 'nb-g2'} style={{ marginBottom: 18 }}>
+        <div className={(lead && rail.length === 0) || !showNudge ? undefined : 'nb-g2'} style={{ marginBottom: 18 }}>
           <Card ruled hoverable={false} padding={23}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 19, marginBottom: 18, flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 35, flexWrap: 'wrap' }}>
@@ -463,9 +459,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
                     showLastScan={false}
                   />
                 )}
-                <Link href="/me" style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-                  See it all →
-                </Link>
+                <Button href="/me" variant="outline" size="sm">View record</Button>
               </div>
             </div>
 
@@ -503,13 +497,17 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
             )}
           </Card>
 
-          {!(lead && rail.length === 0) && nudge}
+          {!(lead && rail.length === 0) && showNudge && nudge}
         </div>
+
+        {/* After the first record lands, not before — see FinishProfile.
+            Below the record, so it never competes with the day's to-dos. */}
+        {skills.length > 0 && !student.major && <FinishProfile />}
 
         {/* Closing strip — everything that isn't the reader's move */}
         {waiting.length > 0 && (
           <Card hoverable={false} padding="14.5px 22px 16.5px">
-            <Kicker style={{ marginBottom: 5.5 }}>Your postings</Kicker>
+            <Kicker style={{ marginBottom: 5.5 }}>Waiting on others</Kicker>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {waiting.map((w) => (
                 <div key={w.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 13, padding: '10px 0' }}>

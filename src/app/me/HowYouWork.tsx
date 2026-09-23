@@ -69,8 +69,7 @@ export default function HowYouWork({ data }: { data: AcrossProjects }) {
       <div style={{ marginBottom: 16 }}>
         <p style={{ fontSize: T.h3, fontWeight: 600, color: C.text, marginBottom: 3 }}>How you work</p>
         <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6 }}>
-          Measured from {data.projectCount} project{data.projectCount === 1 ? '' : 's'}, out of what
-          your board recorded while you were working. Nothing here was self-reported.
+          Measured from {data.projectCount} project{data.projectCount === 1 ? '' : 's'}.
         </p>
       </div>
 

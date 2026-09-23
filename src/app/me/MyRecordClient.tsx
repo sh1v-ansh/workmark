@@ -172,17 +172,30 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
 
         {/* Left third: the anchor — who, how much, and the controls you set
             once. Right two thirds: the content those numbers summarize. */}
+        {/* Sharing is the thing people come here to do, so it sits beside
+            the title rather than in the third card of the side column. */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', marginBottom: 22 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text }}>
+            Your record
+          </h1>
+          {student.handle && profileUrl && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Button href={`/p/${student.handle}`} variant="outline" size="sm">View public page</Button>
+              <Button
+                type="button"
+                variant="accent"
+                size="sm"
+                onClick={() => { navigator.clipboard.writeText(profileUrl); toast('Link copied.', 'success') }}
+              >
+                Copy profile link
+              </Button>
+            </div>
+          )}
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '330px minmax(0, 1fr)', gap: 29, alignItems: 'start' }} className="mob-1col">
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14.5 }}>
-            <div>
-              <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
-                Your record
-              </h1>
-              <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.55 }}>
-                Everything Workmark knows you can do, and where each piece came from. Only you see this full view.
-              </p>
-            </div>
+          <div className="mob-after" style={{ display: 'flex', flexDirection: 'column', gap: 14.5 }}>
 
             {trackRecord.closeOutRate !== null && (
               <Card hoverable={false} padding={19.5}>
@@ -193,9 +206,6 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
                     {trackRecord.abandoned > 0 && <Stat value={trackRecord.abandoned} label="abandoned" />}
                   </div>
                 </div>
-                <p style={{ fontSize: 12, color: C.textGhost, lineHeight: 1.5, marginTop: 12.5 }}>
-                  Counts hidden engagements too — a percentage over a total nobody sees reveals nothing about which projects exist.
-                </p>
               </Card>
             )}
 
@@ -371,9 +381,6 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
                         {skills.length === 1 ? 'skill on your record' : 'skills on your record'}
                       </span>
                     </div>
-                    <span style={{ fontSize: 12.5, color: C.textGhost, paddingTop: 6 }}>
-                      Click any skill to see where it came from
-                    </span>
                   </div>
 
                   <div style={{ marginBottom: 17 }}>

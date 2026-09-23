@@ -46,6 +46,19 @@ function BigStat({ value, suffix, caption, tone }: { value: string | number; suf
   )
 }
 
+/**
+ * Somewhere to start when there is no gap to point at — an empty
+ * marketplace, or a first-year with nothing on GitHub yet. Without these the
+ * page had no button at all for exactly the person the dashboard sends here
+ * with "Get a project to build".
+ */
+const STARTERS = [
+  { id: 'python', name: 'Python' },
+  { id: 'javascript', name: 'JavaScript' },
+  { id: 'react', name: 'React' },
+  { id: 'sql', name: 'SQL' },
+]
+
 export default function GoalsClient({ data }: { data: GoalsData }) {
   const router = useRouter()
   const { toast } = useToast()
@@ -114,7 +127,7 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
                 </div>
               ) : (
                 <p style={{ fontSize: 14, color: C.textGhost }}>
-                  Project briefs need an Anthropic API key configured. The gap itself stands either way.
+                  Project ideas are unavailable right now. Try again later.
                 </p>
               )}
             </div>
@@ -131,23 +144,37 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
         ) : (
           <Card hoverable={false} padding={26} style={{ marginBottom: 23 }}>
             <p style={{ fontFamily: F.display, fontSize: 22, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
-              Nothing open is asking for something you don&apos;t have.
+              {data.derivedFromListings === 0 ? 'Pick something to build' : 'No gaps to close right now'}
             </p>
-            <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 540 }}>
+            <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 540, marginBottom: data.agentsAvailable ? 18 : 0 }}>
               {data.derivedFromListings === 0
-                ? 'There are no open projects to compare against yet. This page fills in as projects get posted.'
-                : 'Every skill the open projects ask for is already evidenced somewhere in your record. Apply to something, or build for its own sake.'}
+                ? 'Choose a skill and we’ll write you a project to build with it.'
+                : 'Your record covers what open projects ask for. Apply to one, or build something new.'}
             </p>
+            {data.agentsAvailable && (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {STARTERS.map((st, i) => (
+                  <Button
+                    key={st.id}
+                    variant={i === 0 ? 'accent' : 'outline'}
+                    size="sm"
+                    onClick={() => buildFor(st.id, st.name)}
+                    disabled={buildingSkill !== null}
+                    busyLabel={buildingSkill === st.id ? 'Writing…' : null}
+                  >
+                    {st.name}
+                  </Button>
+                ))}
+              </div>
+            )}
           </Card>
         )}
 
         {/* Honesty about the sample size — §8 says say so when it's thin,
             rather than presenting a distribution that isn't one. */}
-        {data.thinData && (
+        {data.thinData && data.derivedFromListings > 0 && (
           <div style={{ background: state.cautionBg, borderRadius: R.md, padding: '12px 16.5px', fontSize: 14, color: '#6B3A0A', lineHeight: 1.55, marginBottom: 30 }}>
-            {data.derivedFromListings === 0
-              ? 'There are no open projects yet, so there is nothing to derive demand from. This fills in as projects get posted.'
-              : `This is derived from only ${data.derivedFromListings} project${data.derivedFromListings === 1 ? '' : 's'}, so treat it as a sample rather than the market. It sharpens as more get posted.`}
+            Based on only {data.derivedFromListings} open project{data.derivedFromListings === 1 ? '' : 's'} so far.
           </div>
         )}
 
@@ -162,8 +189,8 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
             <Card hoverable={false} padding={23}>
               <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 600 }}>
                 {data.openListingCount === 0
-                  ? 'Nothing is open right now. Rather than invent a plan for an empty marketplace: build, and the evidence is on your record whenever projects do appear.'
-                  : "You've applied to everything currently open. The most useful thing you can do now is build — evidence you add today is what you'll be matched on tomorrow."}
+                  ? 'Nothing is open yet. What you build now is on your record when projects appear.'
+                  : "You've applied to everything open. Build something while you wait."}
               </p>
             </Card>
           ) : (

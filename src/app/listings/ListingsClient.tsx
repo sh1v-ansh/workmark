@@ -1,14 +1,13 @@
 'use client'
 
+import SkillTag from '@/components/skills/SkillTag'
 import { useMemo, useState } from 'react'
-import Link from 'next/link'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import { Kicker } from '@/components/ui/Section'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
-import { tagColor } from '@/lib/theme/tagColors'
 import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
 import AiProjectCard, { type AiProjectCardData } from '@/components/briefs/AiProjectCard'
@@ -155,31 +154,30 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
 
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
           <div>
-            <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
-              Find Work
+            <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text }}>
+              Find work
             </h1>
           </div>
-          {/* A link, not a button. Posting is a secondary action here and an
-              outlined button gave it the same weight as the page itself. */}
-          {signedIn && (
-            <Link
-              href="/listings/new"
-              style={{ fontSize: 13, color: C.accent, fontWeight: 600, textDecoration: 'none', whiteSpace: 'nowrap' }}
-            >
-              Post a project →
-            </Link>
-          )}
+          {/* Outline, not accent: posting is the second thing this page does,
+              so it is findable at a glance without outranking the listings. */}
+          {signedIn && <Button href="/listings/new" variant="outline" size="sm">Post a project</Button>}
         </div>
 
         {listings.length === 0 ? (
           <Card hoverable={false} padding={36}>
-            <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center', lineHeight: 1.6 }}>
-              {aiProjects.length > 0
-                ? 'Nobody has posted a project yet. The ones above are yours to start in the meantime.'
-                : signedIn
-                  ? 'No open projects right now. Post the first one.'
-                  : 'No open projects right now. Sign in to post one.'}
+            <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center', lineHeight: 1.6, marginBottom: 16 }}>
+              No open projects right now.
             </p>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
+              {signedIn ? (
+                <>
+                  <Button href="/listings/new" variant="accent">Post the first one</Button>
+                  <Button href="/goals" variant="outline">Get a project to build</Button>
+                </>
+              ) : (
+                <Button href="/login" variant="accent">Sign in to post one</Button>
+              )}
+            </div>
           </Card>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: hasAnyFacet ? '230px minmax(0, 1fr)' : '1fr', gap: 22, alignItems: 'start' }} className="mob-1col">
@@ -300,12 +298,7 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
                       {l.skills.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5.5, marginBottom: 12 }}>
                           {l.skills.map((s) => {
-                            const c = tagColor(s)
-                            return (
-                              <span key={s} style={{ fontSize: 12, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, color: c.text }}>
-                                {s}
-                              </span>
-                            )
+                            return <SkillTag key={s} name={s} />
                           })}
                         </div>
                       )}

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import Card from '@/components/Card'
@@ -83,6 +83,11 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
   const [busyId, setBusyId] = useState<string | null>(null)
   const [closing, setClosing] = useState(false)
   const [showMessages, setShowMessages] = useState(false)
+  // Stable, so it scrolls once when the thread opens rather than on every
+  // re-render while it is open.
+  const revealThread = useCallback((el: HTMLDivElement | null) => {
+    el?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }, [])
   const [selectedId, setSelectedId] = useState<string | null>(applicants[0]?.id ?? null)
 
   const selected = applicants.find((a) => a.id === selectedId) ?? applicants[0] ?? null
@@ -215,6 +220,12 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap' }}>
+                  {/* Next to the decisions, because a question is often what
+                      stands between a poster and one. It used to be under
+                      every skill and answer, a full scroll away. */}
+                  <Button variant="outline" size="sm" onClick={() => setShowMessages((v) => !v)}>
+                    {showMessages ? 'Hide messages' : 'Messages'}
+                  </Button>
                   {selected.status !== 'accepted' && selected.status !== 'withdrawn' && (
                     <>
                       {selected.status !== 'rejected' && (
@@ -357,9 +368,6 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
               )}
 
               <div style={{ display: 'flex', gap: 9, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Button variant="outline" size="sm" onClick={() => setShowMessages((v) => !v)}>
-                  {showMessages ? 'Hide messages' : 'Messages'}
-                </Button>
                 {selected.githubUsername && (
                   <a
                     href={`https://github.com/${selected.githubUsername}`}
@@ -372,7 +380,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
               </div>
 
               {showMessages && (
-                <div style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${C.borderFaint}` }}>
+                <div ref={revealThread} style={{ marginTop: 18, paddingTop: 18, borderTop: `1px solid ${C.borderFaint}` }}>
                   <MessageThread
                     applicationId={selected.id}
                     currentUserId={currentUserId}

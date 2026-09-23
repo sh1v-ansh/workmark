@@ -63,7 +63,7 @@ export function DeleteClient({ liveEngagements }: { liveEngagements: number }) {
         ← Back to settings
       </Link>
 
-      <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, margin: '20px 0 10px' }}>
+      <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, margin: '20px 0 10px' }}>
         Delete your account
       </h1>
       <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.65, marginBottom: 26 }}>

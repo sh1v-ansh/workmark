@@ -366,7 +366,7 @@ export default function BriefsClient({ studentName, briefs, taxonomy, agentsAvai
         <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
         <div style={{ margin: '13px 0 21px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 25, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 7 }}>
             Project ideas
           </h1>
           <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.6 }}>
