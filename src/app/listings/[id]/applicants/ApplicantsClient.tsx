@@ -31,7 +31,7 @@ export interface ApplicantRow {
   responses: unknown
   fitTier: FitTier | null
   rankScore: number | null
-  perSkill: { skillId: string; requiredLevel: number; depth: number; present: boolean }[]
+  perSkill: { skillId: string; name: string; requiredLevel: number; depth: number; present: boolean }[]
   claimedSkills: string[]
   confidence: number | null
   missingCount: number
@@ -292,7 +292,7 @@ export default function ApplicantsClient({ listing, applicants, currentUserId, p
                               )}
                             </svg>
                             <span style={{ minWidth: 0 }}>
-                              <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: C.text }}>{s.skillId}</span>
+                              <span style={{ display: 'block', fontSize: 14.5, fontWeight: 600, color: C.text }}>{s.name}</span>
                               <span style={{ display: 'block', fontSize: 13, color: s.present ? state.positive : state.caution }}>
                                 {s.present
                                   ? `evidenced · depth ${s.depth.toFixed(1)}`
