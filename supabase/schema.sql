@@ -1532,7 +1532,7 @@ create table accounts (
   onboarding_step     text,
   faculty_requested_at timestamptz,
   faculty_verified_at timestamptz,
-  faculty_verified_by uuid references auth.users(id),
+  faculty_verified_by uuid references auth.users(id) on delete set null,
   -- Name and institution live here rather than in `students`, because this
   -- is the one row every login has regardless of what kind of person it is.
   -- Faculty have no student profile to hold them.
@@ -1601,7 +1601,8 @@ grant execute on function verified_faculty_ids(uuid[]) to anon, authenticated;
 -- cannot be answered retroactively.
 create table admin_actions (
   id            uuid default gen_random_uuid() primary key,
-  admin_id      uuid references auth.users(id) not null,
+  -- Null once that admin's account is deleted; the action stays. v05_0053.
+  admin_id      uuid references auth.users(id) on delete set null,
   action        text not null,
   subject_type  text not null,
   subject_id    text not null,
@@ -1628,7 +1629,7 @@ create table unresolved_skills (
   example_source  text,
   status          text not null default 'pending'
                   check (status in ('pending', 'mapped', 'not_a_skill')),
-  resolved_by     uuid references auth.users(id),
+  resolved_by     uuid references auth.users(id) on delete set null,
   resolved_at     timestamptz,
   mapped_skill_id text references skills(id),
   -- Who this cost. Without it the queue says a name didn't match and not
@@ -1656,7 +1657,7 @@ create table feedback (
   status       text not null default 'new'
                check (status in ('new', 'triaged', 'done', 'declined')),
   admin_note   text,
-  resolved_by  uuid references auth.users(id),
+  resolved_by  uuid references auth.users(id) on delete set null,
   resolved_at  timestamptz,
   created_at   timestamptz default now() not null
 );
