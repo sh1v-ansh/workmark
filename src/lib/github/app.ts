@@ -39,8 +39,6 @@ import { retry } from '@octokit/plugin-retry'
  * invisible and gets re-run from scratch, the second is recorded and makes
  * the scan refuse to retract. Twice is enough to ride out a blip.
  */
-const Octokit = RestOctokit.plugin(throttling, retry)
-
 const THROTTLE = {
   onRateLimit(retryAfter: number, options: { method: string; url: string }, _o: unknown, retryCount: number) {
     console.warn(`[github] rate limited on ${options.method} ${options.url}; waiting ${retryAfter}s`)
@@ -54,6 +52,29 @@ const THROTTLE = {
     return retryCount < 1
   },
 }
+
+/**
+ * The handlers have to be baked into the class, not passed to the App.
+ *
+ * ── The bug this is a fix for ─────────────────────────────────────────────
+ * They were passed as `throttle` to `new App({...})`. @octokit/app does not
+ * forward that to the Octokit instances it builds, so every installation
+ * client was constructed without them — and plugin-throttling refuses to be
+ * constructed without them, by design: it throws "You must pass the
+ * onSecondaryRateLimit and onRateLimit error handlers".
+ *
+ * That threw inside getInstallationOctokit, which is the first line of
+ * scanRepo. So every scan of every repository failed at the first step from
+ * the moment rate limiting was added, and a rescan that appeared to complete
+ * had in fact done nothing at all — which is exactly the symptom I spent
+ * three rounds attributing to the retraction rules.
+ *
+ * .defaults() is the fix because it sets them on the class, so every
+ * instance carries them however it was constructed and by whom.
+ */
+const Octokit = RestOctokit.plugin(throttling, retry).defaults({
+  throttle: THROTTLE,
+})
 
 function readPrivateKey(): string {
   const raw = process.env.GITHUB_APP_PRIVATE_KEY
@@ -86,10 +107,6 @@ export function getGithubApp(): WorkmarkApp {
     privateKey: readPrivateKey(),
     webhooks: { secret: webhookSecret },
     Octokit,
-    // Applied to every client the App hands out, including the
-    // installation-scoped ones the scanner uses — which is the point, since
-    // those are the clients making hundreds of calls per student.
-    throttle: THROTTLE,
   })
   return cachedApp
 }

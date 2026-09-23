@@ -138,7 +138,7 @@ export async function completeStep(
   job: Job,
   stepId: string,
   outcome: { ok: boolean; detail: string },
-): Promise<{ done: boolean }> {
+): Promise<{ done: boolean; failed: number }> {
   const steps = job.steps.map((s): JobStep =>
     s.id === stepId ? { ...s, status: outcome.ok ? 'done' : 'failed', detail: outcome.detail } : s,
   )
@@ -178,7 +178,7 @@ export async function completeStep(
 
   const { error } = await admin.from('jobs').update(patch).eq('id', job.id)
   if (error) throw error
-  return { done }
+  return { done, failed: failedCount }
 }
 
 export async function failJob(admin: SupabaseClient, jobId: string, message: string): Promise<void> {

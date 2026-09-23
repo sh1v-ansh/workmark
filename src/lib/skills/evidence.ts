@@ -558,3 +558,47 @@ async function writeOrCorrectEvidence(
 
   return true
 }
+
+/**
+ * Drop priors the latest full scan did not see again.
+ *
+ * ── Why this exists ───────────────────────────────────────────────────────
+ * writePriors only ever upserts, and priors are keyed per student rather than
+ * per repository — so a skill detected once in August stayed in "Detected but
+ * unverified" forever, whatever happened afterwards. Deleting the alias that
+ * produced R, and fixing the rules that produced cryptography, changed
+ * nothing on that list, because nothing ever took anything off it.
+ *
+ * ── Why at the end of the job, and only a clean one ───────────────────────
+ * One repository cannot say a prior is stale: the same skill may come from
+ * another. Only after every repository has been read does "not seen this
+ * time" mean anything, so this runs once per job, and only when no step
+ * failed — a repository that could not be read is one whose priors we would
+ * be deleting on no evidence at all.
+ *
+ * Every prior seen this scan had extracted_at bumped by writePriors, so the
+ * stale ones are exactly those older than the moment the job started.
+ */
+export async function pruneStalePriors(
+  supabase: SupabaseClient,
+  studentId: string,
+  scanStartedAt: string,
+): Promise<number> {
+  // A minute of slack. extracted_at is stamped by the app server's clock and
+  // started_at by Postgres', and a prior written in the job's first seconds
+  // on a server running slightly behind would otherwise look older than the
+  // scan that wrote it. Anything genuinely stale is days old, not seconds.
+  const cutoff = new Date(new Date(scanStartedAt).getTime() - 60_000).toISOString()
+
+  const { data, error } = await supabase
+    .from('skill_priors')
+    .delete()
+    .eq('student_id', studentId)
+    .lt('extracted_at', cutoff)
+    .select('id')
+  if (error) {
+    console.error('[evidence] could not prune stale priors:', error.message)
+    return 0
+  }
+  return data?.length ?? 0
+}

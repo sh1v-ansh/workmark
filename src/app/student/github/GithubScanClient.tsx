@@ -100,7 +100,7 @@ interface JobView {
   error: string | null
 }
 
-export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests, unclaimedEmails, activeJobId }: {
+export default function GithubScanClient({ studentName, connection, grants, priors, evidence, reviewRequests, unclaimedEmails, activeJobId, lastJob }: {
   studentName: string | null
   connection: GithubConnection | null
   grants: RepoGrant[]
@@ -109,6 +109,8 @@ export default function GithubScanClient({ studentName, connection, grants, prio
   reviewRequests: ReviewRequest[]
   unclaimedEmails: UnclaimedEmailRow[]
   activeJobId: string | null
+  /** The last scan that finished, so its per-repo results survive a reload. */
+  lastJob: JobView | null
 }) {
   const { toast } = useToast()
   const router = useRouter()
@@ -145,7 +147,9 @@ export default function GithubScanClient({ studentName, connection, grants, prio
 
   const [scanning, setScanning] = useState(false)
   const [jobId, setJobId] = useState<string | null>(activeJobId)
-  const [job, setJob] = useState<JobView | null>(null)
+  // Seeded with the last finished scan, so its per-repo results are on
+  // screen after a reload rather than only in the visit that ran it.
+  const [job, setJob] = useState<JobView | null>(lastJob)
   const [syncing, setSyncing] = useState(false)
   // Only holds repos the student has toggled in this session — the stored
   // value is read from `grants` otherwise, so a router.refresh() after a
@@ -673,6 +677,33 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                         >
                           Stop
                         </button>
+                      </div>
+                    </div>
+                  )}
+                  {/* What each repository actually produced.
+                      The step results were written and never rendered, so
+                      "the rescan changed nothing" was a sentence nobody
+                      could check — including me, for three rounds. A repo
+                      that recorded nine skills, one that had no commits we
+                      could attribute, and one GitHub cut us off partway
+                      through all looked identical from out here. */}
+                  {job && job.steps.some((st) => st.detail) && (
+                    <div style={{ marginTop: 14, borderTop: `1px solid ${C.borderFaint}`, paddingTop: 12 }}>
+                      <Kicker style={{ marginBottom: 8 }}>Last scan</Kicker>
+                      <div style={{ display: 'grid', gap: 7, maxHeight: 260, overflowY: 'auto' }}>
+                        {job.steps.filter((st) => st.detail).map((st) => (
+                          <div key={st.id}>
+                            <p style={{ fontSize: 12.5, fontWeight: 600, color: C.textSub, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {st.label}
+                            </p>
+                            <p style={{
+                              fontSize: 12.5, lineHeight: 1.45,
+                              color: st.status === 'failed' ? '#B91C1C' : C.textGhost,
+                            }}>
+                              {st.detail}
+                            </p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

@@ -2,6 +2,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { claimJob, claimStep, completeStep, kickJob, releaseJob } from '@/lib/jobs/queue'
 import { runStep } from '@/lib/jobs/runners'
+import { pruneStalePriors } from '@/lib/skills/evidence'
 
 // One step, not one job. The whole point of the queue is that this number
 // bounds a single unit of work — one repo — rather than all of them, so it
@@ -72,8 +73,9 @@ export async function POST(request: Request) {
   }
 
   let done: boolean
+  let failed = 0
   try {
-    ;({ done } = await completeStep(admin, job, step.id, outcome))
+    ;({ done, failed } = await completeStep(admin, { ...job, steps }, step.id, outcome))
   } catch (err) {
     // Couldn't even record the result — release the lease so the sweeper
     // retries rather than leaving the job wedged behind a live lease.
@@ -83,6 +85,16 @@ export async function POST(request: Request) {
   }
 
   if (!done) kickJob(job.id)
+
+  // Once every repository has been read, and only if none of them failed,
+  // take off the "detected but unverified" skills this scan did not see
+  // again. Priors only ever accumulated, so a skill detected once stayed on
+  // that list forever — see pruneStalePriors. A repository that could not
+  // be read is one whose priors we would be deleting on no evidence, so any
+  // failed step leaves the list alone.
+  if (done && job.kind === 'github_scan' && failed === 0 && job.started_at) {
+    await pruneStalePriors(admin, job.student_id, job.started_at)
+  }
 
   return NextResponse.json({ ok: true, claimed: true, done, step: step.label })
 }
