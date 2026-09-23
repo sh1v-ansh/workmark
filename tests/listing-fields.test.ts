@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseListingFields } from '@/lib/listings/fields'
 
-const base = { title: 'Build a thing', brief: 'What it is', requirements: [{ skillId: 'react', requiredLevel: 3 }] }
+const base = { kind: 'collaborative', title: 'Build a thing', brief: 'What it is', requirements: [{ skillId: 'react', requiredLevel: 3 }] }
 
 describe('parseListingFields', () => {
   it('accepts a normal listing', () => {
@@ -16,6 +16,11 @@ describe('parseListingFields', () => {
   it('refuses numbers that are not whole numbers in range', () => {
     expect(parseListingFields({ ...base, team_size: '3' }).ok).toBe(false)
     expect(parseListingFields({ ...base, declared_difficulty: 11 }).ok).toBe(false)
+  })
+
+  it('requires a known kind', () => {
+    expect(parseListingFields({ ...base, kind: undefined }).ok).toBe(false)
+    expect(parseListingFields({ ...base, kind: 'gig' }).ok).toBe(false)
   })
 
   it('drops an unknown work mode rather than storing it', () => {

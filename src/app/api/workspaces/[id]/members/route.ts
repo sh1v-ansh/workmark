@@ -40,8 +40,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const parsed = await parseBody(request)
   if (!parsed.ok) return parsed.response
 
+  // From the People tab on Find work, a student is picked rather than typed,
+  // so the invite names them by id. Read through the caller's session: the
+  // directory policy only returns students who opted in to being found, so
+  // this cannot reach anybody who did not.
+  const pickedId = typeof parsed.body.studentId === 'string' ? parsed.body.studentId : null
+  if (pickedId) {
+    try {
+      requireUuid(pickedId, 'Student')
+    } catch (err) {
+      if (err instanceof ValidationError) return NextResponse.json({ error: err.message }, { status: 400 })
+      throw err
+    }
+  }
+
   const fields = readFields(() => ({
-    identifier: requireString(parsed.body.identifier, 'A handle or email address', { max: 254 }),
+    identifier: pickedId ? '' : requireString(parsed.body.identifier, 'A handle or email address', { max: 254 }),
   }))
   if (!fields.ok) return fields.response
   const identifier = fields.values.identifier.replace(/^@/, '')
@@ -63,7 +77,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   let targetId: string | null = null
 
-  if (identifier.includes('@')) {
+  if (pickedId) {
+    const { data: picked } = await supabase
+      .from('students')
+      .select('id')
+      .eq('id', pickedId)
+      .eq('open_to_collab', true)
+      .maybeSingle()
+    targetId = (picked?.id as string) ?? null
+  } else if (identifier.includes('@')) {
     const email = identifier.toLowerCase()
     if (!isEduAddress(email)) {
       return NextResponse.json(

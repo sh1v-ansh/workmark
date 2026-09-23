@@ -18,6 +18,7 @@ import { FIT_TIER_TONE } from '@/lib/theme/fitTier'
 import { FIT_TIER_LABEL, FIT_TIER_BLURB, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
 import { APPLICATION_STATUS } from '@/lib/applications/status-label'
+import { KIND_LABEL as LISTING_KIND_LABEL, type ListingKind } from '@/lib/listings/kinds'
 
 const MAX_ACTIVE_APPLICATIONS = 5
 // Must match MIN/MAX_RESPONSE_WORDS in the apply route — the server is
@@ -34,6 +35,7 @@ interface Listing {
   /** Generated at post time. Null falls back to the standard pair. */
   applicationQuestions: unknown
   status: string
+  kind: string
   estHours: number | null
   hoursPerWeek: number | null
   duration: string | null
@@ -185,6 +187,9 @@ export default function ListingDetailClient({
         <Link href="/listings" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Find work</Link>
 
         <div style={{ maxWidth: 750, margin: '14.5px 0 20px' }}>
+          <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.accent, marginBottom: 8 }}>
+            {LISTING_KIND_LABEL[listing.kind as ListingKind] ?? 'Project'}
+          </p>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 9 }}>
             <h1 style={{ fontFamily: F.display, fontSize: 28, fontWeight: 600, letterSpacing: '-0.022em', lineHeight: 1.15, color: C.text }}>
               {listing.title ?? 'Untitled project'}

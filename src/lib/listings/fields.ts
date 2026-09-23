@@ -1,4 +1,5 @@
 import { readFields, requireString, requireArray, ValidationError } from '@/lib/http/validate'
+import { isListingKind, type ListingKind } from '@/lib/listings/kinds'
 
 /**
  * What a listing form sends, checked once for both posting and editing.
@@ -7,6 +8,7 @@ import { readFields, requireString, requireArray, ValidationError } from '@/lib/
  * the two used to be able to drift, and an edit is the easier one to forget.
  */
 export interface ListingFields {
+  kind: ListingKind
   title: string
   brief: string
   requirements: { skillId: string; requiredLevel: number }[]
@@ -32,6 +34,10 @@ function wholeNumber(value: unknown, field: string, min: number, max: number): n
 
 export function parseListingFields(body: Record<string, unknown>) {
   return readFields((): ListingFields => {
+    if (!isListingKind(body.kind)) {
+      throw new ValidationError('Choose what kind of posting this is.')
+    }
+    const kind = body.kind
     const title = requireString(body.title, 'A title', { max: 200 })
     const brief = requireString(body.brief, 'A brief', { max: 8000 })
     const raw = requireArray(body.requirements ?? [], 'Requirements', { max: 20 }) as { skillId?: unknown; requiredLevel?: unknown }[]
@@ -50,6 +56,7 @@ export function parseListingFields(body: Record<string, unknown>) {
     const workMode = typeof body.work_mode === 'string' && WORK_MODES.includes(body.work_mode) ? body.work_mode : null
 
     return {
+      kind,
       title,
       brief,
       requirements,

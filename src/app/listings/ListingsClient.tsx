@@ -14,9 +14,13 @@ import { LAYOUT } from '@/lib/theme/layout'
 import AiProjectCard, { type AiProjectCardData } from '@/components/briefs/AiProjectCard'
 import { Icon } from '@/components/Icon'
 import MultiSelect from '@/components/ui/MultiSelect'
+import PeopleTab from './PeopleTab'
+import type { PersonCard, InvitableProject } from '@/lib/listings/people'
+import { LISTING_KINDS, KIND_LABEL, type ListingKind } from '@/lib/listings/kinds'
 
 export interface ListingCardData {
   id: string
+  kind: string
   title: string | null
   brief: string | null
   posterDisplayName: string | null
@@ -87,14 +91,38 @@ function sentenceCase(v: string): string {
   return v.charAt(0).toUpperCase() + v.slice(1)
 }
 
-export default function ListingsClient({ listings, aiProjects = [], signedIn, studentName }: {
+export default function ListingsClient({
+  listings, aiProjects = [], signedIn, studentName,
+  people = [], invitable = [], viewerIsStudent = false, viewerId = null, openToCollab = false,
+}: {
   listings: ListingCardData[]
   /** Projects Workmark wrote for this student and they have not started. */
   aiProjects?: AiProjectCardData[]
   signedIn: boolean
   studentName: string | null
+  /** Students who chose to be found, for the People tab. */
+  people?: PersonCard[]
+  invitable?: InvitableProject[]
+  viewerIsStudent?: boolean
+  viewerId?: string | null
+  openToCollab?: boolean
 }) {
   const router = useRouter()
+
+  // Projects or People. Read from the URL after mount so a link can open
+  // straight onto People (the dashboard's "Let other students find you"
+  // step does) without the page needing a Suspense boundary.
+  const [tab, setTab] = useState<'projects' | 'people'>('projects')
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('tab') === 'people') setTab('people')
+  }, [])
+  function switchTab(next: 'projects' | 'people') {
+    setTab(next)
+    const url = new URL(window.location.href)
+    if (next === 'people') url.searchParams.set('tab', 'people')
+    else url.searchParams.delete('tab')
+    window.history.replaceState(null, '', url.toString())
+  }
 
   // Nobody gets an empty page on their first visit. With no ideas waiting,
   // ask for them now instead of leaving it to tonight's run; once per
@@ -124,6 +152,7 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
   }, [])
   listings = removedId ? listings.filter((l) => l.id !== removedId) : listings
 
+  const [kinds, setKinds] = useState<Set<string>>(new Set())
   const [skills, setSkills] = useState<Set<string>>(new Set())
   const [workModes, setWorkModes] = useState<Set<string>>(new Set())
   const [hourBands, setHourBands] = useState<Set<string>>(new Set())
@@ -146,8 +175,15 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
   const showTierFilter = signedIn
   const showHoursFilter = useMemo(() => listings.some((l) => l.estHours != null), [listings])
 
+  // Only the kinds actually on the page, in the form's order.
+  const kindOptions = useMemo(
+    () => LISTING_KINDS.filter((k) => listings.some((l) => l.kind === k.key)),
+    [listings],
+  )
+
   const filtered = useMemo(() => listings.filter((l) => {
     // AND across groups, OR within a group.
+    if (kinds.size > 0 && !kinds.has(l.kind)) return false
     if (skills.size > 0 && !l.skills.some((s) => skills.has(s))) return false
     if (workModes.size > 0 && !(l.workMode && workModes.has(l.workMode))) return false
     if (hourBands.size > 0) {
@@ -156,9 +192,9 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
     }
     if (tiers.size > 0 && !(l.fitTier && tiers.has(l.fitTier))) return false
     return true
-  }), [listings, skills, workModes, hourBands, tiers])
+  }), [listings, kinds, skills, workModes, hourBands, tiers])
 
-  const activeCount = skills.size + workModes.size + hourBands.size + tiers.size
+  const activeCount = kinds.size + skills.size + workModes.size + hourBands.size + tiers.size
 
   function toggle<T>(setter: React.Dispatch<React.SetStateAction<Set<T>>>, value: T) {
     setter((prev) => {
@@ -170,13 +206,14 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
   }
 
   function clearAll() {
+    setKinds(new Set())
     setSkills(new Set())
     setWorkModes(new Set())
     setHourBands(new Set())
     setTiers(new Set())
   }
 
-  const hasAnyFacet = skillOptions.length > 0 || workModeOptions.length > 0 || showHoursFilter || showTierFilter
+  const hasAnyFacet = kindOptions.length > 0 || skillOptions.length > 0 || workModeOptions.length > 0 || showHoursFilter || showTierFilter
 
   return (
     <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
@@ -194,6 +231,31 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
           {signedIn && <Button href="/listings/new" variant="outline" size="sm">Post a project</Button>}
         </div>
 
+        {signedIn && (
+          <div className="wm-tabs" role="tablist" style={{ marginBottom: 18 }}>
+            {([['projects', 'Projects'], ['people', `People${people.length > 0 ? ` · ${people.length}` : ''}`]] as const).map(([key, label]) => (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={tab === key}
+                onClick={() => switchTab(key)}
+                className={`wm-tab${tab === key ? ' wm-tab-on' : ''}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === 'people' ? (
+          <PeopleTab
+            people={people}
+            invitable={invitable}
+            viewerIsStudent={viewerIsStudent}
+            viewerId={viewerId}
+            openToCollab={openToCollab}
+          />
+        ) : (<>
         {listings.length === 0 && signedIn && (aiProjects.length > 0 || writing) && (
           <div className="nb-g3" style={{ marginBottom: 18 }}>
             {aiProjects.map((project) => <AiProjectCard key={project.id} project={project} />)}
@@ -248,6 +310,14 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
                     </button>
                   )}
                 </div>
+
+                {kindOptions.length > 0 && (
+                  <FilterGroup label="Type">
+                    {kindOptions.map((k) => (
+                      <FilterChip key={k.key} label={k.label} active={kinds.has(k.key)} onClick={() => toggle<string>(setKinds, k.key)} />
+                    ))}
+                  </FilterGroup>
+                )}
 
                 {skillOptions.length > 0 && (
                   <MultiSelect
@@ -315,6 +385,9 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
                   ))}
                   {filtered.map((l) => (
                     <Card key={l.id} href={`/listings/${l.id}`} padding={18}>
+                      <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: C.accent, marginBottom: 6 }}>
+                        {KIND_LABEL[l.kind as ListingKind] ?? 'Project'}
+                      </p>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10, marginBottom: 9, flexWrap: 'wrap' }}>
                         <h2 style={{ fontFamily: F.display, fontSize: 16, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, lineHeight: 1.3 }}>
                           {l.title ?? 'Untitled project'}
@@ -360,6 +433,7 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
             </div>
           </div>
         )}
+        </>)}
       </main>
     </div>
   )

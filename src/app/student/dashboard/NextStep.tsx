@@ -62,7 +62,7 @@ const COPY: Record<Exclude<NextStep, 'nothing'>, {
     headline: 'Let other students find you',
     body: 'Show up in the student directory for people starting projects.',
     cta: 'Make me findable',
-    href: '/students',
+    href: '/listings?tab=people',
   },
   post_project: {
     eyebrow: 'Next step',

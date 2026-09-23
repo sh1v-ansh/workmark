@@ -210,6 +210,9 @@ create table listings (
   requires_prior_evidence boolean default false not null,
   is_paid                 boolean default false not null check (is_paid = false), -- MVP: no payments infra exists yet
   tier                    text not null default 'listing_driven' check (tier in ('listing_driven', 'faculty_project')),
+  -- What kind of posting this is (v05_0055). 'paid' is the poster's word;
+  -- payment itself is still off-platform.
+  kind                    text not null default 'collaborative' check (kind in ('collaborative', 'startup', 'paid', 'research')),
   status                  text not null default 'open' check (status in ('draft', 'open', 'filled', 'closed')),
   -- Two short judgement questions, generated from this listing at post time
   -- so the cost is per listing rather than per applicant (v05_0043). Null

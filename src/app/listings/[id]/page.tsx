@@ -113,6 +113,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           await verifiedFacultyPosterIds(supabase, [listing.poster_id])
         ).has(listing.poster_id),
         status: listing.status,
+        kind: (listing.kind as string) ?? 'collaborative',
         estHours: listing.est_hours,
         hoursPerWeek: listing.hours_per_week,
         duration: listing.duration,
