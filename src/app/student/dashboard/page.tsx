@@ -67,7 +67,7 @@ export default async function StudentDashboardPage() {
     // The second is what tells a first-year with an empty GitHub apart from
     // somebody whose scan simply has not run — two situations that look
     // identical from an empty record and need opposite answers.
-    supabase.from('students').select('intents').eq('id', user.id).maybeSingle(),
+    supabase.from('students').select('intents, open_to_collab').eq('id', user.id).maybeSingle(),
     supabase
       .from('github_repo_grants')
       .select('id', { count: 'exact', head: true })
@@ -155,6 +155,8 @@ export default async function StudentDashboardPage() {
     // identical from an empty record and want opposite answers.
     intents: cleanIntents(intentRow?.intents),
     repoCount: repoCount ?? 0,
+    openToCollab: intentRow?.open_to_collab ?? false,
+    studentId: user.id,
     lastScannedAt,
     topGap,
     trackRecord,

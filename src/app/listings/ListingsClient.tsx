@@ -115,6 +115,15 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
       .finally(() => setWriting(false))
   }, [signedIn, aiProjects.length, router])
 
+  // Just removed from its own page. The delete may still be in flight when
+  // this renders, so it is hidden here rather than trusted to be gone.
+  const [removedId, setRemovedId] = useState<string | null>(null)
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get('removed')
+    if (id) setRemovedId(id)
+  }, [])
+  listings = removedId ? listings.filter((l) => l.id !== removedId) : listings
+
   const [skills, setSkills] = useState<Set<string>>(new Set())
   const [workModes, setWorkModes] = useState<Set<string>>(new Set())
   const [hourBands, setHourBands] = useState<Set<string>>(new Set())

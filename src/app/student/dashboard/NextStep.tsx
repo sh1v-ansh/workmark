@@ -1,4 +1,10 @@
+'use client'
+
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Card from '@/components/Card'
+import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/Toast'
 import Button from '@/components/ui/Button'
 import { C, F, T } from '@/lib/theme/dark-tokens'
 import { nextStepFor, type Intent, type NextStep } from '@/lib/profile/intents'
@@ -51,6 +57,13 @@ const COPY: Record<Exclude<NextStep, 'nothing'>, {
     cta: 'Choose what to scan',
     href: '/student/github',
   },
+  be_discoverable: {
+    eyebrow: 'Next step',
+    headline: 'Let other students find you',
+    body: 'Show up in the student directory for people starting projects.',
+    cta: 'Make me findable',
+    href: '/students',
+  },
   post_project: {
     eyebrow: 'Next step',
     headline: 'Find people to build your project with',
@@ -72,14 +85,37 @@ export default function NextStepCard({
   githubConnected,
   repoCount,
   evidenceCount,
+  openToCollab,
+  postedCount,
+  studentId,
 }: {
   intents: Intent[]
   githubConnected: boolean
   repoCount: number
   evidenceCount: number
+  openToCollab: boolean
+  postedCount: number
+  studentId: string
 }) {
-  const step = nextStepFor({ intents, githubConnected, repoCount, evidenceCount })
+  const router = useRouter()
+  const { toast } = useToast()
+  const [busy, setBusy] = useState(false)
+
+  const step = nextStepFor({ intents, githubConnected, repoCount, evidenceCount, openToCollab, postedCount })
   if (step === 'nothing') return null
+
+  // Done in place, not by sending them to the directory to find a switch.
+  async function makeFindable() {
+    setBusy(true)
+    const { error } = await createClient().from('students').update({ open_to_collab: true }).eq('id', studentId)
+    setBusy(false)
+    if (error) {
+      toast('Could not update that. Try again from the Students page.', 'error')
+      return
+    }
+    toast('You now show up in the student directory.', 'success')
+    router.refresh()
+  }
 
   const copy = COPY[step]
 
@@ -95,7 +131,11 @@ export default function NextStepCard({
           <strong style={{ fontWeight: 600, color: C.text }}>{copy.headline}</strong>
           <span style={{ color: C.textMuted }}> · {copy.body}</span>
         </p>
-        <Button href={copy.href} variant="accent" size="sm">{copy.cta}</Button>
+        {step === 'be_discoverable' ? (
+          <Button variant="accent" size="sm" onClick={makeFindable} busyLabel={busy ? 'Saving…' : null}>{copy.cta}</Button>
+        ) : (
+          <Button href={copy.href} variant="accent" size="sm">{copy.cta}</Button>
+        )}
       </div>
     </Card>
   )

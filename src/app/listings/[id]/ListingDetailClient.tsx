@@ -147,27 +147,24 @@ export default function ListingDetailClient({
 
   const [removing, setRemoving] = useState(false)
 
-  // The server decides between deleting and closing, because only it can
-  // count applications the poster's page may not have loaded.
-  async function removeListing() {
+  // Leaves at once rather than waiting on the database. The request is sent
+  // with keepalive so it survives the navigation, and Find work is told
+  // which listing to hide so it is gone even if the server render beats the
+  // delete. Whether it ends up deleted or closed (people applied) is the
+  // server's call; either way it is off the page.
+  function removeListing() {
     if (!confirm('Delete this project? If anyone has applied, it will be closed instead so their applications stay on record.')) return
     setRemoving(true)
-    try {
-      const res = await fetch(`/api/listings/${listing.id}`, { method: 'DELETE' })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Could not remove the project.')
-      if (json.outcome === 'deleted') {
-        toast('Project deleted.', 'success')
-        router.push('/listings')
-      } else {
-        toast('Project closed. It no longer shows in search or takes applications.', 'success')
-        router.refresh()
-      }
-    } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Could not remove the project.', 'error')
-    } finally {
-      setRemoving(false)
-    }
+    fetch(`/api/listings/${listing.id}`, { method: 'DELETE', keepalive: true })
+      .then(async (res) => {
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({}))
+          toast(json.error ?? 'Could not remove the project. It is still posted.', 'error')
+        }
+      })
+      .catch(() => toast('Could not remove the project. It is still posted.', 'error'))
+    toast('Project removed.', 'success')
+    router.push(`/listings?removed=${listing.id}`)
   }
 
   // Whether the apply action is reachable at all right now — governs both

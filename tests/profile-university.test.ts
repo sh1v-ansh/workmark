@@ -120,6 +120,17 @@ describe('nextStepFor', () => {
     expect(nextStepFor({ ...base, intents: ['join_project'] })).toBe('find_work')
   })
 
+  it('asks people after collaborators to be findable first', () => {
+    expect(nextStepFor({ ...base, intents: ['post_project'], openToCollab: false })).toBe('be_discoverable')
+    expect(nextStepFor({ ...base, intents: ['join_project'], openToCollab: false })).toBe('be_discoverable')
+    expect(nextStepFor({ ...base, intents: ['guided_project'], openToCollab: false })).toBe('start_guided_project')
+  })
+
+  it('stops asking for a project once one is posted', () => {
+    expect(nextStepFor({ ...base, intents: ['post_project'], openToCollab: true, postedCount: 1 })).toBe('nothing')
+    expect(nextStepFor({ ...base, intents: ['post_project', 'join_project'], openToCollab: true, postedCount: 1 })).toBe('find_work')
+  })
+
   // Posting first when both are picked: it is the one that needs somebody
   // else to have acted, so it is the one worth starting earliest.
   it('leads with posting when they want both', () => {

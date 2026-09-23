@@ -37,6 +37,9 @@ export interface DashboardData {
   intents: Intent[]
   /** Repositories Workmark may read — zero is the first-year case. */
   repoCount: number
+  /** Listed in the student directory. */
+  openToCollab: boolean
+  studentId: string
   /** When the last scan finished, so the record can say whether it is stale. */
   lastScannedAt: string | null
   /** The skill open listings ask for most that this student cannot show.
@@ -126,7 +129,7 @@ const ICON_BG: Record<Todo['kind'], string> = {
 }
 
 export default function StudentDashboardClient({ data }: { data: DashboardData }) {
-  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, topGap, trackRecord, intents, repoCount } = data
+  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, topGap, trackRecord, intents, repoCount, openToCollab, studentId } = data
   const router = useRouter()
   const { toast } = useToast()
   const [withdrawing, setWithdrawing] = useState<string | null>(null)
@@ -354,6 +357,9 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           githubConnected={githubConnected}
           repoCount={repoCount}
           evidenceCount={skills.length}
+          openToCollab={openToCollab}
+          postedCount={listings.length}
+          studentId={studentId}
         />
         {/* After the first record lands, not before — see FinishProfile. */}
         {skills.length > 0 && !student.major && <FinishProfile />}

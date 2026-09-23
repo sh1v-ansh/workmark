@@ -48,16 +48,23 @@ export async function POST(request: Request) {
     if (!brief) return NextResponse.json({ error: 'That project idea was not found.' }, { status: 404 })
   }
 
-  const { data: workspace, error } = await supabase
+  // The id is made here, and the row is not asked back.
+  //
+  // `.insert().select()` is INSERT ... RETURNING, and Postgres checks the
+  // returned row against the SELECT policy — is_workspace_member(id) — at
+  // insert time. The trigger that makes the creator a member is an AFTER
+  // trigger, which runs later, so at that moment the creator is not a member
+  // of their own project and the whole insert failed with "new row violates
+  // row-level security policy". Every project creation failed this way.
+  const id = crypto.randomUUID()
+  const { error } = await supabase
     .from('workspaces')
-    .insert({ title, summary, brief_id: briefId, created_by: user.id })
-    .select('id')
-    .single()
+    .insert({ id, title, summary, brief_id: briefId, created_by: user.id })
 
-  if (error || !workspace) {
+  if (error) {
     console.error('[api/workspaces] create failed:', error)
     return NextResponse.json({ error: 'Could not create that project.' }, { status: 500 })
   }
 
-  return NextResponse.json({ ok: true, id: workspace.id })
+  return NextResponse.json({ ok: true, id })
 }
