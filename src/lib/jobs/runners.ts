@@ -75,11 +75,18 @@ async function runGithubScanStep(
   const d = result.diagnostics
 
   if (count === 0 && result.priorsWritten.length > 0) {
+    // Three different situations, which the old message collapsed into one.
+    // It said "no commits of yours" whenever nothing became evidence, which
+    // was false for a repository with plenty of their commits whose skills
+    // simply did not clear the bar — and told them to go and fix an email
+    // address that was never the problem.
     return {
       ok: true,
       detail: d?.partial
         ? 'Read, but GitHub cut us off partway — nothing was changed.'
-        : 'Read, but no commits of yours found here. If you commit from another email, tell us on this page.',
+        : d && d.commits > 0
+          ? `Read ${d.commits} of your commits — nothing here is on your record yet.${gone > 0 ? ` ${gone} no longer supported.` : ''}`
+          : 'Read, but no commits of yours found here. If you commit from another email, tell us on this page.',
     }
   }
 

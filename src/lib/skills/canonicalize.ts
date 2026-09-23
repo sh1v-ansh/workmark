@@ -126,8 +126,13 @@ export async function canonicalizeSkill(
  * Alias writes are one bulk insert at the end rather than one per hit.
  */
 export interface ScanContext {
-  studentId: string
-  repoFullName: string
+  /**
+   * Whose scan this is. Optional: the dispute path passes a context only to
+   * carry `trusted`, and must not record sightings — so sightings are
+   * recorded only when these are present.
+   */
+  studentId?: string
+  repoFullName?: string
   /**
    * Raw names, already normalized, that came from a source we trust to be
    * naming a real technology — currently GitHub's language statistics.
@@ -356,7 +361,7 @@ async function recordUnresolved(
       })),
       { onConflict: 'raw_string', ignoreDuplicates: true },
     )
-    if (context) {
+    if (context?.studentId && context.repoFullName) {
       // Per-row rather than bulk: each call also folds this student and repo
       // into the row's affected list, deduped in SQL so two students'
       // concurrent scans can't overwrite each other.

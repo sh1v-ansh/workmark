@@ -34,6 +34,7 @@ import { retractionsFor, mayRetract } from '@/lib/skills/retraction'
 import { corroborationCeiling, capSkillsPerRepo } from '@/lib/skills/corroboration'
 import { knownCommitEmails, recordUnclaimedEmails } from '@/lib/github/emails'
 import { recordOnce } from '@/lib/analytics/record'
+import { groupDetections, resolutionKey } from '@/lib/skills/group-detections'
 
 export interface ProcessRepoResult {
   repoFullName: string
@@ -120,24 +121,17 @@ export async function processRepo(
   const trusted = new Set(
     scanResult.detections
       .filter((d) => d.source === 'language')
-      .map((d) => d.raw.trim().toLowerCase()),
+      .map((d) => resolutionKey(d.raw)),
   )
   const canonicalized = await canonicalizeSkills(supabase, rawSkillStrings, {
     studentId, repoFullName, trusted,
   })
 
-  const provenance = new Map<string, string[]>()
-  // Kept alongside provenance because relevance needs the detection's source
-  // and path, not just the human-readable place string.
-  const detectionsBySkill = new Map<string, Detection[]>()
-  for (const d of scanResult.detections) {
-    const resolved = canonicalized.get(d.raw)
-    if (!resolved?.resolved || !resolved.skillId) continue
-    const places = provenance.get(resolved.skillId) ?? []
-    if (!places.includes(d.where)) places.push(d.where)
-    provenance.set(resolved.skillId, places)
-    detectionsBySkill.set(resolved.skillId, [...(detectionsBySkill.get(resolved.skillId) ?? []), d])
-  }
+  // Joined through the same normaliser canonicalizeSkills keys its results
+  // by. This loop used to look detections up by their raw string, so every
+  // capitalised one — every language, Claude Code, Cursor — was resolved and
+  // then dropped. See group-detections.ts.
+  const { provenance, detectionsBySkill } = groupDetections(scanResult.detections, canonicalized)
 
   // "Using X means you used Y" — Supabase is Postgres, Postgres is SQL.
   // Applied after canonicalization so it works off taxonomy ids rather than

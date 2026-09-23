@@ -16,6 +16,7 @@
 // and disputes, none of which accept user writes.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { resolutionKey } from '@/lib/skills/group-detections'
 import { scanRepo } from '@/lib/github/scan'
 import { extractComplexity } from '@/lib/github/complexity'
 import { checkBasis, scanMayRetract, needsAPerson, type BasisFinding, type LiveTask, type RecordedTask } from './task-basis'
@@ -167,7 +168,9 @@ export async function reinvestigate(
         // the scan produced — and on a dispute that reads as the record
         // having been wrong, when nothing changed but the arithmetic.
         const detectionsForSkill = scan.detections.filter((d) => {
-          const r = canonical.get(d.raw)
+          // By the normalised key, which is what canonicalizeSkills stores
+          // results under. Looking up the raw string missed every language.
+          const r = canonical.get(resolutionKey(d.raw))
           return r?.resolved && r.skillId === evidence.skill_id
         })
         const impliedSource = causedBy.get(evidence.skill_id)
