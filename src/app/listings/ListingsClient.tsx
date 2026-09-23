@@ -1,7 +1,8 @@
 'use client'
 
 import SkillTag from '@/components/skills/SkillTag'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -93,6 +94,27 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
   signedIn: boolean
   studentName: string | null
 }) {
+  const router = useRouter()
+
+  // Nobody gets an empty page on their first visit. With no ideas waiting,
+  // ask for them now instead of leaving it to tonight's run; once per
+  // browser session, so a page that stays empty (faculty, agents off) does
+  // not ask again on every visit.
+  const [writing, setWriting] = useState(false)
+  useEffect(() => {
+    if (!signedIn || aiProjects.length > 0) return
+    try {
+      if (sessionStorage.getItem('wm-ideas-asked')) return
+      sessionStorage.setItem('wm-ideas-asked', '1')
+    } catch { /* storage blocked: asking once more is harmless */ }
+    setWriting(true)
+    fetch('/api/briefs/recommend', { method: 'POST' })
+      .then((res) => res.json())
+      .then((json) => { if (json?.generated > 0) router.refresh() })
+      .catch(() => {})
+      .finally(() => setWriting(false))
+  }, [signedIn, aiProjects.length, router])
+
   const [skills, setSkills] = useState<Set<string>>(new Set())
   const [workModes, setWorkModes] = useState<Set<string>>(new Set())
   const [hourBands, setHourBands] = useState<Set<string>>(new Set())
@@ -163,10 +185,21 @@ export default function ListingsClient({ listings, aiProjects = [], signedIn, st
           {signedIn && <Button href="/listings/new" variant="outline" size="sm">Post a project</Button>}
         </div>
 
+        {listings.length === 0 && signedIn && (aiProjects.length > 0 || writing) && (
+          <div className="nb-g3" style={{ marginBottom: 18 }}>
+            {aiProjects.map((project) => <AiProjectCard key={project.id} project={project} />)}
+            {writing && aiProjects.length === 0 && [0, 1, 2].map((i) => (
+              <div key={i} className="nb-ai-card" aria-hidden={i > 0} style={{ minHeight: 150 }}>
+                {i === 0 && <p style={{ fontSize: 14, color: C.textMuted }}>Writing project ideas for you…</p>}
+              </div>
+            ))}
+          </div>
+        )}
+
         {listings.length === 0 ? (
           <Card hoverable={false} padding={36}>
             <p style={{ fontSize: 15, color: C.textMuted, textAlign: 'center', lineHeight: 1.6, marginBottom: 16 }}>
-              No open projects right now.
+              Nobody has posted a project yet.
             </p>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap' }}>
               {signedIn ? (

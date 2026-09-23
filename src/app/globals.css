@@ -1144,8 +1144,8 @@
    Self-contained. Deleting this block restores the previous cards exactly.
    Only app pages carry .wm-app-ground, so the landing page is untouched. */
 .wm-app-ground {
-  --wm-grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0 0 0.04 0.08 0.13 0.18 0.24'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --wm-grain-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0 0 0.25 0.45 0.65 0.8 0.9'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --wm-grain-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0.04 0.07 0.1 0.14 0.18 0.23 0.3'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --wm-grain-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.3' numOctaves='2' seed='11' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  1 0 0 0 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0.2 0.35 0.5 0.65 0.75 0.85 0.9'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --wm-grain-card: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.08  0 0 0 0 0.08  0 0 0 0 0.08  1 0 0 0 0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='discrete' tableValues='0 0 0 0 0.03 0.06 0.09 0.12'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 .wm-app-ground::before {
@@ -1157,7 +1157,7 @@
   background:
     var(--wm-grain-light),
     var(--wm-grain-dark),
-    linear-gradient(180deg, #FBFBFC 0%, #F8F8F9 100%);
+    linear-gradient(180deg, #FFFFFF 0%, #FCFCFD 100%);
 }
 
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -1192,6 +1192,27 @@
       inset 0 1px 0 rgba(255, 255, 255, 1),
       0 1px 2px rgba(97, 66, 245, 0.06),
       0 16px 36px -18px rgba(97, 66, 245, 0.4);
+  }
+  /* Project ideas Workmark wrote. Same glass, tinted violet, so they sit in
+     the same grid as posted projects but are plainly a different kind of
+     thing — the violet the product uses whenever it is the one speaking. */
+  .wm-app-ground .nb-ai-card {
+    background:
+      var(--wm-grain-card),
+      linear-gradient(160deg, rgba(246, 242, 255, 0.82) 0%, rgba(236, 229, 255, 0.7) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow:
+      0 0 0 0.5px rgba(97, 66, 245, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.95),
+      0 1px 2px rgba(97, 66, 245, 0.06),
+      0 12px 30px -16px rgba(97, 66, 245, 0.32);
+  }
+  .wm-app-ground .nb-ai-card:hover {
+    box-shadow:
+      0 0 0 0.5px rgba(97, 66, 245, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 1),
+      0 2px 4px rgba(97, 66, 245, 0.08),
+      0 18px 36px -18px rgba(97, 66, 245, 0.45);
   }
 }
 
