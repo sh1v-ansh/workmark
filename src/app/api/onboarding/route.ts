@@ -397,6 +397,9 @@ function cleanDetails(raw: unknown): Record<string, string | number | null> | st
  */
 function dbRef(err: { code?: string; message?: string }): string {
   const code = err.code ?? 'unknown'
-  const named = err.message?.match(/(?:constraint|column) "([^"]+)"/)?.[1]
-  return named ? `${code}:${named}` : code
+  // Postgres quotes names with "…"; PostgREST's PGRST204 ("Could not find
+  // the 'x' column of 'y'") uses '…'.
+  const named = err.message?.match(/(?:constraint|column) "([^"]+)"|the '([^']+)' column/)
+  const name = named?.[1] ?? named?.[2]
+  return name ? `${code}:${name}` : code
 }
