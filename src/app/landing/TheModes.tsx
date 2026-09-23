@@ -1,6 +1,6 @@
 'use client'
 
-import type { ModesSection } from './audience'
+import { COPY, type Audience } from './audience'
 import { C, F } from './tokens'
 
 /**
@@ -34,17 +34,16 @@ import { C, F } from './tokens'
  * numbered grid with no rules at all. Two sections built the same way is
  * what made this page feel generated in the first place.
  */
-export function TheModes({ section }: { section: ModesSection }) {
-  const copy = section
+export function TheModes({ audience }: { audience: Audience }) {
+  const copy = COPY[audience]
 
   return (
-    // An anchor, so the nav and the hero can jump straight to either side.
-    <section id={copy.id} className="wm-section" style={{ scrollMarginTop: 90 }}>
+    <section className="wm-section">
       <div className="wm-section-inner">
         <div style={{ maxWidth: 720, marginBottom: 40 }}>
-          <span className="wm-eyebrow-2">{copy.eyebrow}</span>
-          <h2 className="wm-h2">{copy.headline}</h2>
-          <p className="wm-lede">{copy.lede}</p>
+          <span className="wm-eyebrow-2">{copy.modesEyebrow}</span>
+          <h2 className="wm-h2">{copy.modesHeadline}</h2>
+          <p className="wm-lede">{copy.modesLede}</p>
         </div>
 
         <div className="wm-rows">

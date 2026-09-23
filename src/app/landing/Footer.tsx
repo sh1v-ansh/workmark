@@ -20,7 +20,7 @@ const COLUMNS: { title: string; links: [string, string][] }[] = [
   {
     title: 'Product',
     links: [
-      ['/', 'Home'],
+      ['/', 'Mission'],
       ['/how-it-works', 'How it works'],
       ['/listings', 'Open projects'],
       ['/levels', 'How levels work'],
@@ -29,9 +29,9 @@ const COLUMNS: { title: string; links: [string, string][] }[] = [
   {
     title: 'Get started',
     links: [
-      ['/login', 'Join as a student'],
+      ['/login', 'Create a record'],
       ['/listings/new', 'Post a project'],
-      ['/marketplace', 'For employers'],
+      ['/marketplace', 'For organisations'],
       ['/about', 'About us'],
     ],
   },
@@ -61,8 +61,8 @@ export function Footer() {
               <Wordmark height={22} />
             </Link>
             <p style={{ fontFamily: F.sans, fontSize: 14, color: C.textMuted, lineHeight: 1.6, maxWidth: '34ch', marginBottom: 18 }}>
-              Opportunities and verified profiles for students. Verified candidates for
-              employers, before the interview.
+              Your code, turned into proof. So the first thing an employer sees is what you
+              built, not what you wrote about yourself.
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               {CONTACT.map(([address, label]) => (

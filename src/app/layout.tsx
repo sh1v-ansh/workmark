@@ -68,26 +68,26 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? 'https://ww
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: 'Workmark: verified work for students and employers',
+    default: 'Workmark — proof of what you can build',
     template: '%s · Workmark',
   },
   description:
-    'Students find paid work, team projects and guided projects, and build a verified profile. Employers see that verified work before they interview. Free for students with a .edu email.',
+    'Workmark reads the code you actually wrote and turns it into a skill record an employer can check. Free for students with a .edu address.',
   applicationName: 'Workmark',
   openGraph: {
     type: 'website',
     siteName: 'Workmark',
     url: SITE,
-    title: 'Workmark: verified work for students and employers',
+    title: 'Workmark — proof of what you can build',
     description:
-      'Students find paid work, team projects and guided projects, and build a verified profile. Employers see that verified work before they interview.',
+      'You need experience to get experience. Workmark hands you the projects instead, then turns what you build into proof an employer can check.',
     images: ['/opengraph-image.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Workmark: verified work for students and employers',
+    title: 'Workmark — proof of what you can build',
     description:
-      'Students find paid work, team projects and guided projects, and build a verified profile. Employers see that verified work before they interview.',
+      'You need experience to get experience. Workmark hands you the projects instead, then turns what you build into proof an employer can check.',
     images: ['/opengraph-image.png'],
   },
 }

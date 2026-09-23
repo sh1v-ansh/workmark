@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import MarketplaceClient from './MarketplaceClient'
 
 export const metadata: Metadata = {
-  title: 'For employers',
+  title: 'For businesses',
   description:
-    'Screen candidates by verified work before OAs and interviews. See deployed projects, per-skill levels and supervised work records from students who are open to work.',
+    'Post real work and see applicants arrive with a record built from code they actually shipped — every skill with the project behind it.',
 }
 
 export default function MarketplacePage() {
