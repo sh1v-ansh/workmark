@@ -19,6 +19,19 @@ export default async function StudentDashboardPage() {
     .maybeSingle()
   if (!student) redirect('/onboarding')
 
+  // Part-way through signup. The account is created after the first screen,
+  // so somebody who closed the tab there has an account and a student row —
+  // and sign-in sends everyone here. Without this they would never see the
+  // screen asking what they came for, and the dashboard it orders would
+  // have nothing to go on. The GitHub screen is not forced the same way:
+  // NextStepCard already leads with it, and it has to stay skippable.
+  const { data: acct } = await supabase
+    .from('accounts')
+    .select('onboarding_step')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (acct?.onboarding_step === 'intents') redirect('/onboarding')
+
   const [
     { data: myApplications },
     { data: myListings },

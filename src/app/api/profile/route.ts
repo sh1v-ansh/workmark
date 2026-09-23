@@ -1,3 +1,4 @@
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { validateProfileDetails } from '@/lib/profile/details'
@@ -41,6 +42,16 @@ export async function PATCH(request: Request) {
   const check = validateProfileDetails(body)
   if (!check.ok) return NextResponse.json({ error: check.reason }, { status: 400 })
 
+  // What they had before, for the two fields an employer ranks on. Read
+  // first so a change can be recorded — v05_0051 promised that corrections
+  // to graduation year and university leave a trail rather than being
+  // forbidden, and until now nothing wrote one.
+  const { data: before } = await supabase
+    .from('students')
+    .select('graduation_year, university')
+    .eq('id', user.id)
+    .maybeSingle()
+
   const { error } = await supabase
     .from('students')
     .update(check.values)
@@ -49,6 +60,27 @@ export async function PATCH(request: Request) {
   if (error) {
     console.error('[api/profile] update failed:', error)
     return NextResponse.json({ error: 'Could not save your details.' }, { status: 500 })
+  }
+
+  // Service role: profile_corrections has no insert policy for users, on
+  // purpose — a trail somebody can write to themselves is not a trail.
+  // Best effort, like the display-name sync below: the profile is already
+  // saved, and failing the request over the log would be worse than a gap.
+  const changes = (['graduation_year', 'university'] as const)
+    .filter((f) => before && String(before[f] ?? '') !== String(check.values[f] ?? ''))
+    .map((f) => ({
+      student_id: user.id,
+      field: f,
+      old_value: before?.[f] == null ? null : String(before[f]),
+      new_value: check.values[f] == null ? null : String(check.values[f]),
+    }))
+  if (changes.length > 0) {
+    const admin = createServiceClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    )
+    const { error: logErr } = await admin.from('profile_corrections').insert(changes)
+    if (logErr) console.error('[api/profile] correction log failed:', logErr)
   }
 
   // Best effort, and deliberately not awaited into a failure. If this write

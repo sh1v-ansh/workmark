@@ -184,6 +184,10 @@ export async function POST(request: Request) {
     // agree" — this is the one field where being generous about the input
     // means sending marketing to somebody who never said yes.
     ...consentFieldsForSignup(body.marketingOptIn === true),
+    // Students have two more screens; faculty have none. Recorded so a
+    // student who closes the tab now comes back to the screen they stopped
+    // at rather than being sent to a dashboard mid-setup.
+    onboarding_step: role === 'student' ? 'intents' : null,
   })
 
   if (!accountErr) {
@@ -260,7 +264,7 @@ export async function PATCH(request: Request) {
   const limited = await enforce('profile', user.id)
   if (limited) return limited
 
-  let body: { intents?: unknown; step?: unknown }
+  let body: { intents?: unknown; step?: unknown; details?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -304,5 +308,73 @@ export async function PATCH(request: Request) {
     void record(admin, 'onboarding_intents_chosen', user.id, { count: intents.length })
   }
 
+  // The fields taken out of signup: asked after the first scan instead, when
+  // somebody has seen what the record is for. Every one is optional and
+  // editable, because nothing is ranked on them — unlike graduation year and
+  // university, which stay out of reach here on purpose.
+  if (body.details !== undefined) {
+    const details = cleanDetails(body.details)
+    if (typeof details === 'string') {
+      return NextResponse.json({ error: details }, { status: 400 })
+    }
+    if (Object.keys(details).length > 0) {
+      const { error } = await admin.from('students').update(details).eq('id', user.id)
+      if (error) {
+        console.error('[api/onboarding] details write failed:', error)
+        return NextResponse.json({ error: 'Could not save that.' }, { status: 500 })
+      }
+    }
+  }
+
   return NextResponse.json({ ok: true })
+}
+
+/**
+ * The deferred profile fields, narrowed. A string return is the reason to
+ * refuse; an object is what to write. Unknown keys are dropped rather than
+ * refused, and there is deliberately no way to reach graduation_year or
+ * university through here.
+ */
+function cleanDetails(raw: unknown): Record<string, string | number | null> | string {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return 'Invalid details.'
+  const input = raw as Record<string, unknown>
+  const out: Record<string, string | number | null> = {}
+
+  const text = (v: unknown, max: number) => {
+    if (v === null || v === '') return null
+    if (typeof v !== 'string') return undefined
+    const t = v.trim()
+    return t ? t.slice(0, max) : null
+  }
+
+  if ('major' in input) {
+    const v = text(input.major, 120)
+    if (v !== undefined) out.major = v
+  }
+  if ('availability' in input) {
+    if (input.availability === null || input.availability === '') out.availability = null
+    else if (input.availability === 'full-time' || input.availability === 'part-time') out.availability = input.availability
+    else return 'Availability should be full-time or part-time.'
+  }
+  if ('hours_per_week' in input) {
+    const v = input.hours_per_week
+    if (v === null || v === '') out.hours_per_week = null
+    else {
+      const n = typeof v === 'number' ? v : Number(v)
+      if (!Number.isInteger(n) || n < 1 || n > 60) return 'Hours per week should be between 1 and 60.'
+      out.hours_per_week = n
+    }
+  }
+  if ('linkedin_url' in input) {
+    const v = text(input.linkedin_url, 300)
+    if (v !== undefined) {
+      // Only a LinkedIn address, because this is rendered as a link on a
+      // public profile and anything else is a link we would be vouching for.
+      if (v !== null && !/^https:\/\/(www\.)?linkedin\.com\//i.test(v)) {
+        return 'That should be a linkedin.com address, starting with https://.'
+      }
+      out.linkedin_url = v
+    }
+  }
+  return out
 }

@@ -908,6 +908,20 @@ where se.retracted_at is null
 -- for views in some Postgres/Supabase setups — see migration v05_0003.
 grant select on current_skill_evidence to anon, authenticated;
 
+-- ─── Corrections to the fields people are ranked on ─────────────────────────
+-- Graduation year and university are not locked, because a real correction
+-- has to be possible — but a change leaves a row here, so a correction is a
+-- trail and a pattern of them is visible. Written by /api/profile under the
+-- service role; readable by the student it concerns. See v05_0051.
+create table profile_corrections (
+  id          uuid primary key default gen_random_uuid(),
+  student_id  uuid not null references students(id) on delete cascade,
+  field       text not null,
+  old_value   text,
+  new_value   text,
+  changed_at  timestamptz not null default now()
+);
+
 -- ─── What people actually did ───────────────────────────────────────────────
 -- First-party rather than a third party, because every other fact about a
 -- student already lives here and behaviour would otherwise be the one table

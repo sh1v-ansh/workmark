@@ -15,6 +15,7 @@ import { CONSENT_TEXT } from '@/lib/notify/marketing'
 import { universityFromEmail } from '@/lib/profile/university-from-email'
 import { track } from '@/lib/analytics/track'
 import IntentStep from './IntentStep'
+import GithubStep from './GithubStep'
 import type { Intent } from '@/lib/profile/intents'
 
 // Asked before anything else, because a .edu address doesn't distinguish
@@ -315,7 +316,7 @@ export default function OnboardingPage() {
    * eighteen fields, so somebody who closed the tab halfway had no account,
    * no row and nothing to come back to.
    */
-  const [step, setStep] = useState<'profile' | 'intents'>('profile')
+  const [step, setStep] = useState<'profile' | 'intents' | 'github'>('profile')
 
   // Fired once, on arrival. Without it the funnel can see that somebody
   // submitted the signup form and that somebody finished a profile, and
@@ -346,9 +347,23 @@ export default function OnboardingPage() {
       // professor the signup form again every time they came back.
       const { data: account } = await supabase
         .from('accounts')
-        .select('roles')
+        .select('roles, onboarding_step')
         .eq('id', user.id)
         .maybeSingle()
+
+      // Part-way through: the account exists but they closed the tab before
+      // the last screen. Pick up where they stopped. This is the whole point
+      // of creating the account after the first screen — before, anyone who
+      // left halfway started again from the first field.
+      const resumeAt = account?.onboarding_step
+      if (account && (resumeAt === 'intents' || resumeAt === 'github')) {
+        setUserId(user.id)
+        setUserEmail(user.email ?? '')
+        setRole('student')
+        setStep(resumeAt)
+        setChecking(false)
+        return
+      }
 
       if (account) {
         const roles = (account.roles ?? []) as string[]
@@ -436,11 +451,33 @@ export default function OnboardingPage() {
       const res = await fetch('/api/onboarding', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intents, step: 'done' }),
+        body: JSON.stringify({ intents, step: 'github' }),
       })
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Could not save that.')
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Could not save that.', 'error')
+    } finally {
+      setLoading(false)
+      setStep('github')
+    }
+  }
+
+  /**
+   * Leave onboarding without connecting GitHub.
+   *
+   * A real option, not a trap door: somebody signing up on a phone between
+   * lectures cannot install a GitHub App there, and making them choose
+   * between that and not having an account loses them. The dashboard picks
+   * the thread back up — its first card is the GitHub step.
+   */
+  async function skipGithub() {
+    setLoading(true)
+    try {
+      await fetch('/api/onboarding', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ step: 'done' }),
+      })
     } finally {
       setLoading(false)
       router.push('/student/dashboard')
@@ -474,19 +511,19 @@ export default function OnboardingPage() {
 
       <div style={{ width: '100%', maxWidth: 550 }}>
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: 30 }}>
-          {/* Where they are, and how much is left. Two screens is short
+          {/* Where they are, and how much is left. Three screens is short
               enough that a bar would be more chrome than information, so it
-              says it in words. */}
-          {role !== null && (
+              says it in words. Faculty see one screen and no count. */}
+          {role === 'student' && (
             <p style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: C.textGhost, marginBottom: 9 }}>
-              Step {step === 'profile' ? 1 : 2} of 2
+              Step {step === 'profile' ? 1 : step === 'intents' ? 2 : 3} of 3
             </p>
           )}
 
           <h1 style={{ fontFamily: F.display, fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 7.5 }}>
-            {step === 'intents' ? 'What do you want to do here?' : 'Welcome to Workmark'}
+            {step === 'intents' ? 'What do you want to do here?' : step === 'github' ? 'Connect GitHub' : 'Welcome to Workmark'}
           </h1>
-          {step !== 'intents' && (
+          {step === 'profile' && (
             <p style={{ fontSize: 14, color: C.textMuted, marginBottom: 23, lineHeight: 1.6 }}>
               {role === null
                 ? 'First, which are you? This changes what we ask for next.'
@@ -496,7 +533,9 @@ export default function OnboardingPage() {
             </p>
           )}
 
-          {step === 'intents' ? (
+          {step === 'github' ? (
+            <GithubStep onSkip={skipGithub} busy={loading} />
+          ) : step === 'intents' ? (
             <IntentStep
               chosen={intents}
               onChange={setIntents}

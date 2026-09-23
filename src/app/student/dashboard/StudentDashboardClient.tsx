@@ -18,6 +18,8 @@ import { FIT_TIER_LABEL, type FitTier } from '@/lib/matching/fit'
 import { LAYOUT } from '@/lib/theme/layout'
 import type { Intent } from '@/lib/profile/intents'
 import NextStepCard from './NextStep'
+import GithubConnectNotice from '@/components/GithubConnectNotice'
+import FinishProfile from './FinishProfile'
 
 export interface DashboardData {
   student: {
@@ -326,12 +328,17 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
 
       <main id="main-content" style={{ maxWidth: LAYOUT.maxWidth, margin: '0 auto', padding: '30px 28px 72px' }}>
 
+        <GithubConnectNotice />
+
         <NextStepCard
           intents={intents}
           githubConnected={githubConnected}
           repoCount={repoCount}
           evidenceCount={skills.length}
         />
+
+        {/* After the first record lands, not before — see FinishProfile. */}
+        {skills.length > 0 && !student.major && <FinishProfile />}
 
         {/* Header — the answer, not a greeting, except on the first visit
             when there is no answer yet and "you're all caught up" reads as

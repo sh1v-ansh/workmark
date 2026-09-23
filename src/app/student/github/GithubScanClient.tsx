@@ -14,6 +14,7 @@ import { tagColor } from '@/lib/theme/tagColors'
 import { levelName as levelLabel } from '@/lib/skills/level-names'
 import { LAYOUT } from '@/lib/theme/layout'
 import UnclaimedEmails, { type UnclaimedEmailRow } from './UnclaimedEmails'
+import GithubConnectNotice from '@/components/GithubConnectNotice'
 
 // Local types — deliberately not sourced from src/lib/types.ts, which is
 // still the pre-rebuild shape (Phase 1 task #16 rewrites it). This page
@@ -140,6 +141,13 @@ export default function GithubScanClient({ studentName, connection, grants, prio
   const [tab, setTab] = useState<'repos' | 'evidence' | 'other'>(
     evidence.length > 0 ? 'evidence' : 'repos',
   )
+
+  // Just back from connecting: the repositories are the next thing, whatever
+  // the default would otherwise be. Read after mount, like the notice, so
+  // the page does not need a Suspense boundary for one flag.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('gh_connected')) setTab('repos')
+  }, [])
 
   /** Narrows a long repository list. Thirty-three rows needs it; three hundred demands it. */
   const [repoQuery, setRepoQuery] = useState('')
@@ -361,6 +369,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
         {/* Above the tabs, because it is the answer to the question
             somebody arrives with — "why is my work not showing up" — and
             that thought does not belong to one tab. */}
+        <GithubConnectNotice />
         <UnclaimedEmails rows={unclaimedEmails} />
 
         <div className="wm-tabs" role="tablist" style={{ marginBottom: 20 }}>
