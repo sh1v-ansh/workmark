@@ -205,7 +205,10 @@ export async function POST(request: Request) {
       )
     }
     console.error('[api/onboarding] account write failed:', accountErr)
-    return NextResponse.json({ error: 'Could not create your account.' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Could not create your account.', ref: dbRef(accountErr) },
+      { status: 500 },
+    )
   }
 
   // Students get the profile the scanner, the matcher and the public record
@@ -228,7 +231,10 @@ export async function POST(request: Request) {
     // or a retry. Not a failure: the account row is what this route is for.
     if (profileErr && profileErr.code !== '23505') {
       console.error('[api/onboarding] profile write failed:', profileErr)
-      return NextResponse.json({ error: 'Could not save your profile.' }, { status: 500 })
+      return NextResponse.json(
+        { error: 'Could not save your profile.', ref: dbRef(profileErr) },
+        { status: 500 },
+      )
     }
   }
 
@@ -377,4 +383,20 @@ function cleanDetails(raw: unknown): Record<string, string | number | null> | st
     }
   }
   return out
+}
+
+/**
+ * Which database rule refused the write, in a form that can be sent back.
+ *
+ * Signup is the one route where a failure means somebody cannot get in at
+ * all, and it failed with a bare "could not create your account" that said
+ * nothing about why — while the logged detail was only in a server log that
+ * was hard to find at the moment it mattered. The Postgres code and the name
+ * of the constraint or column are enough to fix it, and neither is anything
+ * a user could use against us: they describe the rule, not anybody's data.
+ */
+function dbRef(err: { code?: string; message?: string }): string {
+  const code = err.code ?? 'unknown'
+  const named = err.message?.match(/(?:constraint|column) "([^"]+)"/)?.[1]
+  return named ? `${code}:${named}` : code
 }

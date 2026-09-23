@@ -412,7 +412,9 @@ export default function OnboardingPage() {
         return
       }
 
-      if (!res.ok) throw new Error(json.error ?? 'Failed to save profile.')
+      // The reference is shown with the message: it names the database rule
+      // that refused the write, which is the only useful thing to report.
+      if (!res.ok) throw new Error(`${json.error ?? 'Failed to save profile.'}${json.ref ? ` (${json.ref})` : ''}`)
 
       // Faculty go to their own home. Sending them to the student dashboard
       // would ask about their skills, their record and their GitHub — none
