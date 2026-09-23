@@ -16,9 +16,11 @@ import { AUDIENCE_ROUTES, ROUTE_AUDIENCES, useAudienceNav } from './audience-con
  * "Marketplace" was the worst of them — it promised a board of open projects
  * and delivered a pitch page. The board is /listings.
  */
+// Both sides are on the home page now, so these jump to their sections
+// rather than switching the page between two pitches.
 const LINKS: [string, string][] = [
-  [AUDIENCE_ROUTES.students, COPY.students.tab],
-  [AUDIENCE_ROUTES.businesses, COPY.businesses.tab],
+  ['/#students', COPY.students.tab],
+  ['/#employers', COPY.businesses.tab],
   ['/how-it-works', 'How it works'],
   ['/about', 'About'],
 ]

@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Aurora } from './Aurora'
-import { COPY, type Audience } from './audience'
+import { COPY, HOME, type Audience } from './audience'
 import { F } from './tokens'
 
 /**
@@ -18,20 +18,26 @@ import { F } from './tokens'
  */
 const CLOSING: Record<Audience, { headline: string; body: string; note: string }> = {
   students: {
-    headline: 'You already did the hard part',
-    body: 'The work is sitting in repos nobody is going to read. Connect them and see what they say about you.',
-    note: 'Free with a .edu address. You pick the repos and can disconnect any time.',
+    headline: 'Connect GitHub and get your verified profile',
+    body: 'Pick the repositories you want us to read. Your profile shows a level for each skill, with the work behind it.',
+    note: 'Free with a .edu email. You pick the repositories and can disconnect any time.',
   },
   businesses: {
-    headline: 'Post it and see who turns up',
-    body: 'Describe the work in a few lines. Everyone who applies comes with proof of what they have built.',
-    note: 'Free to post. No contract, nothing to install, nothing to pay.',
+    headline: 'Tell us what you are hiring for',
+    body: 'Describe the role in a few lines and we will show you candidates with verified work who are open to work.',
+    note: 'Every candidate has opted in as open to work.',
   },
 }
 
-export function JoinSection({ audience }: { audience: Audience }) {
-  const copy = CLOSING[audience]
-  const cta = COPY[audience].primaryCta
+/**
+ * The closing call to action.
+ *
+ * With an audience (the /how-it-works page, which has a toggle) it speaks to
+ * that reader. Without one (the home page, which speaks to both) it gives
+ * each side its own button.
+ */
+export function JoinSection({ audience }: { audience?: Audience }) {
+  const copy = audience ? CLOSING[audience] : { ...HOME.closing, note: HOME.hero.reassurance }
   return (
     <section style={{ position: 'relative', overflow: 'hidden', padding: 'var(--wm-section-y) 24px', textAlign: 'center' }}>
       <Aurora height={620} />
@@ -48,7 +54,16 @@ export function JoinSection({ audience }: { audience: Audience }) {
         <p style={{ fontFamily: F.sans, fontSize: 17.5, lineHeight: 1.62, color: '#4B4B57', margin: '0 auto 30px', textWrap: 'pretty' }}>
           {copy.body}
         </p>
-        <Link href={cta.href} className="wm-cta-primary">{cta.label}</Link>
+        <div style={{ display: 'flex', gap: 11, justifyContent: 'center', flexWrap: 'wrap' }}>
+          {audience ? (
+            <a href={COPY[audience].primaryCta.href} className="wm-cta-primary">{COPY[audience].primaryCta.label}</a>
+          ) : (
+            <>
+              <Link href={HOME.hero.studentCta.href} className="wm-cta-primary">{HOME.hero.studentCta.label}</Link>
+              <a href={HOME.hero.employerCta.href} className="wm-cta-ghost">{HOME.hero.employerCta.label}</a>
+            </>
+          )}
+        </div>
         <p style={{ fontFamily: F.sans, fontSize: 13, color: '#6C6C78', marginTop: 18 }}>
           {copy.note}
         </p>

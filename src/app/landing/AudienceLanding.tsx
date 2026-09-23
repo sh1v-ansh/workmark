@@ -1,16 +1,13 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { MarketingLayout } from './MarketingLayout'
 import { MissionHero } from './MissionHero'
 import { TheModes } from './TheModes'
-import { TheRecord } from './TheRecord'
-import { TheGrowth } from './TheGrowth'
 import { TheLoop } from './TheLoop'
-import { TheGuidedProject } from './TheGuidedProject'
-import { CrossLink } from './CrossLink'
 import { JoinSection } from './WaitlistSection'
 import { AudienceProvider, AUDIENCE_ROUTES } from './audience-context'
+import { HOME } from './audience'
 import type { Audience } from './audience'
 
 /**
@@ -47,17 +44,22 @@ export function AudienceLanding({ initial }: { initial: Audience }) {
     }
   }, [])
 
+  // /marketplace is the employer address. It shows the same page, opened at
+  // the employer section, so an old link still lands on the right part.
+  useEffect(() => {
+    if (initial === 'businesses') document.getElementById('employers')?.scrollIntoView()
+  }, [initial])
+
   return (
     <AudienceProvider value={{ audience, setAudience: changeAudience }}>
       <MarketingLayout>
-        <MissionHero audience={audience} onAudienceChange={changeAudience} />
-        <TheModes audience={audience} />
-        <TheGuidedProject audience={audience} />
-        <TheLoop audience={audience} />
-        <TheRecord audience={audience} />
-        <TheGrowth audience={audience} />
-        <CrossLink audience={audience} onAudienceChange={changeAudience} />
-        <JoinSection audience={audience} />
+        {/* One page for both readers: the hero, what each side gets, how it
+            works for each, and a closing with a button for each. */}
+        <MissionHero />
+        <TheModes section={HOME.students} />
+        <TheModes section={HOME.employers} />
+        <TheLoop />
+        <JoinSection />
       </MarketingLayout>
     </AudienceProvider>
   )
