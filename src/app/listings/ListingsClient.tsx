@@ -15,7 +15,6 @@ import AiProjectCard, { type AiProjectCardData } from '@/components/briefs/AiPro
 import { Icon } from '@/components/Icon'
 import MultiSelect from '@/components/ui/MultiSelect'
 import PeopleTab from './PeopleTab'
-import { PAID_HIDDEN_NOTE } from '@/lib/listings/eligibility'
 import type { PersonCard, InvitableProject } from '@/lib/listings/people'
 import { LISTING_KINDS, KIND_LABEL, type ListingKind } from '@/lib/listings/kinds'
 
@@ -259,11 +258,6 @@ export default function ListingsClient({
             openToCollab={openToCollab}
           />
         ) : (<>
-        {paidHidden > 0 && (
-          <p style={{ fontSize: 13, color: C.textMuted, lineHeight: 1.5, marginBottom: 14 }}>
-            {PAID_HIDDEN_NOTE} <a href="/account/settings" style={{ color: C.accent }}>Change this in Settings</a>.
-          </p>
-        )}
         {listings.length === 0 && signedIn && (aiProjects.length > 0 || writing) && (
           <div className="nb-g3" style={{ marginBottom: 18 }}>
             {aiProjects.map((project) => <AiProjectCard key={project.id} project={project} />)}

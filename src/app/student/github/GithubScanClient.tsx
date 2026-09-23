@@ -315,7 +315,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
       toast(
         json.alreadyRunning
           ? 'A scan is already running — showing its progress.'
-          : `Scanning ${json.totalSteps} repo(s) in the background. You can leave this page.`,
+          : `Scanning ${json.totalSteps} repo(s). A scan can take up to an hour, depending on how many repositories you have. You can leave this page; it keeps running.`,
         'info',
       )
     } catch (err: unknown) {
@@ -674,15 +674,11 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                       </p>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 3 }}>
                         <p style={{ fontSize: 13, color: C.textFaint }}>
-                          Runs in the background — you can leave this page.
+                          Can take up to an hour with many repositories. You can leave this page.
                         </p>
-                        <button
-                          type="button"
-                          onClick={stopScan}
-                          style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 13, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer', flexShrink: 0 }}
-                        >
-                          Stop
-                        </button>
+                        <Button type="button" variant="danger" size="sm" onClick={stopScan}>
+                          Stop scan
+                        </Button>
                       </div>
                     </div>
                   )}

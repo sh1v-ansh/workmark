@@ -12,4 +12,4 @@ export function canSeeKind(kind: string | null | undefined, isInternational: boo
 }
 
 export const PAID_HIDDEN_NOTE =
-  'Paid roles are hidden because you told us you are on a student visa. Paid work needs work authorization (CPT), which we cannot arrange yet.'
+  'Paid roles need work authorization (CPT) that we cannot arrange for student visas yet.'

@@ -282,7 +282,7 @@ export default function RescanButton({
             {' '}
             {/* Said once, plainly. Otherwise somebody sits on the page
                 waiting, which is exactly what we do not need them to do. */}
-            This keeps running if you leave.
+            Scans can take up to an hour with many repositories. It keeps running if you leave.
           </span>
         </div>
       )}

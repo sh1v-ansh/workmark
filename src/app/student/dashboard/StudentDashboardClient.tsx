@@ -301,7 +301,9 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         <span className="nb-nudge-eyebrow">Your next project</span>
         <p style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.28, margin: '9px 0 8px' }}>
           {topGap
-            ? `${topGap.listingCount} open project${topGap.listingCount === 1 ? '' : 's'} want ${topGap.skillName}. Your record doesn't have it.`
+            ? (topGap.listingCount === 1
+              ? `1 open project wants ${topGap.skillName}, and your profile doesn't have it yet.`
+              : `${topGap.listingCount} open projects want ${topGap.skillName}, and your profile doesn't have it yet.`)
             : 'We can tell you what to build next'}
         </p>
         <p style={{ fontSize: 13.5, color: '#C6C2E4', lineHeight: 1.55 }}>

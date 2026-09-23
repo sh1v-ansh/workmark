@@ -6,9 +6,9 @@ import { useToast } from '@/components/Toast'
 import Button from '@/components/ui/Button'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+function Row({ label, children, first = false }: { label: string; children: React.ReactNode; first?: boolean }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '148px 1fr', gap: 16, padding: '13px 0', borderTop: `1px solid ${C.borderFaint}` }} className="mob-1col">
+    <div style={{ display: 'grid', gridTemplateColumns: '148px 1fr', gap: 16, padding: '13px 0', borderTop: first ? 'none' : `1px solid ${C.borderFaint}` }} className="mob-1col">
       <div style={{ fontSize: 13, fontWeight: 600, color: C.textSub }}>{label}</div>
       <div style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6 }}>{children}</div>
     </div>
@@ -53,61 +53,58 @@ export function ConsentClient({ alreadyConsented }: { alreadyConsented: boolean 
       <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.02em', color: C.text, marginBottom: 10 }}>
         Before you connect GitHub
       </h1>
-      <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.65, marginBottom: 26 }}>
-        GitHub&apos;s next screen will ask for &ldquo;read access to code and metadata&rdquo;.
-        That&apos;s true but it doesn&apos;t say what we do with it, so here it is in plain terms.
-        You pick which repositories — it does not have to be all of them.
+      <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.65, marginBottom: 22 }}>
+        Here is what we do with access, in plain terms.
       </p>
 
-      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: '6px 22px 18px' }}>
-        <Row label="What we read">
-          Dependency and config files (<code style={{ fontFamily: F.mono, fontSize: 13 }}>package.json</code>,{' '}
-          <code style={{ fontFamily: F.mono, fontSize: 13 }}>requirements.txt</code>, Dockerfiles and
-          the like), the import lines at the top of your files, file names and sizes, and commit
-          dates and messages on commits you authored.
+      <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: R.lg, padding: '4px 22px' }}>
+        <Row label="What we read" first>
+          Dependency files, imports, file names and your own commits.
         </Row>
-        <Row label="What we don&rsquo;t keep">
-          Your source code. We read files to work out what you used and how the project is built;
-          we store the conclusions, not the code. Nothing you write is copied into Workmark and
-          nothing is used to train a model.
+        <Row label="What we keep">
+          Only the skills we find. We never copy your code or use it to train AI.
         </Row>
-        <Row label="What it produces">
-          A skill record — which technologies you&rsquo;ve genuinely used, at roughly what depth,
-          with the repository and commits that show it. This is what people see when you apply,
-          and it&rsquo;s the whole reason the account is worth having.
+        <Row label="Private repos">
+          Only the ones you pick. They are never named to anyone else.
         </Row>
-        <Row label="Private repositories">
-          Only the ones you choose on the next screen. Their names appear in your own scan history;
-          a private repo is never named to anyone else, and its evidence is only shown as the
-          skill, never the repository.
+        <Row label="Leaving out a repo">
+          Switch any repo off in your Repositories list on Workmark and we will not read it. Switch it back on any time.
         </Row>
-        <Row label="Turning it off">
-          Disconnect any time from your GitHub settings page or from GitHub itself, and we stop
-          reading immediately. Ask us and we&rsquo;ll delete the record it built —{' '}
-          <a href="mailto:support@workmark.org" style={{ color: C.text }}>support@workmark.org</a>.
+        <Row label="Stopping">
+          Disconnect any time and we stop reading straight away.
         </Row>
+      </div>
+
+      {/* GitHub's screen is unfamiliar to most first-years, and choosing
+          "Only select repositories" by mistake is the usual reason a scan
+          finds nothing. */}
+      <div style={{ marginTop: 22, padding: '16px 20px', borderRadius: R.lg, background: '#F4F1FF', border: '1px solid rgba(97,66,245,0.18)' }}>
+        <p style={{ fontSize: 14, fontWeight: 600, color: C.text, marginBottom: 8 }}>On GitHub&apos;s next screen</p>
+        <ol style={{ margin: 0, paddingLeft: 20, fontSize: 14, color: C.textSub, lineHeight: 1.75 }}>
+          <li>Under <strong>Repository access</strong>, choose <strong>All repositories</strong>.</li>
+          <li>Click <strong>Install</strong> (or <strong>Save</strong> if you have connected before).</li>
+          <li>You come back here and pick anything you want left out.</li>
+        </ol>
       </div>
 
       {alreadyConsented && (
         <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.6, marginTop: 16 }}>
-          You&apos;ve agreed to this before. Continuing just takes you back to GitHub to pick
-          repositories.
+          You&apos;ve agreed to this before. Continuing takes you straight to GitHub.
         </p>
       )}
 
-      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 11, cursor: 'pointer', marginTop: 24 }}>
+      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 11, cursor: 'pointer', marginTop: 22 }}>
         <input
           type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)}
           className="dk-checkbox" style={{ marginTop: 2 }}
         />
         <span style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6 }}>
-          I&apos;ve read this and I agree to Workmark analysing the repositories I select, as
-          described in the{' '}
+          I agree to Workmark reading the repositories I select, as described in the{' '}
           <Link href="/legal/privacy" style={{ color: C.text }}>Privacy Policy</Link>.
         </span>
       </label>
 
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 24 }}>
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 22 }}>
         <Button
           variant="accent" onClick={continueToGithub} disabled={!agreed || busy}
           busyLabel={busy ? 'One moment…' : null}
@@ -116,11 +113,6 @@ export function ConsentClient({ alreadyConsented }: { alreadyConsented: boolean 
         </Button>
         <Link href="/student/dashboard" className="nb-btn nb-btn-quiet">Not now</Link>
       </div>
-
-      <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.6, marginTop: 20 }}>
-        Saying no is fine. Your account works without it — you just won&apos;t have a verified
-        record, which is most of what Workmark does.
-      </p>
     </div>
   )
 }

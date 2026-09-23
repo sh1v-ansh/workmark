@@ -220,9 +220,6 @@ function StudentForm({ onSubmit, loading, email, role }: {
                 </button>
               ))}
             </div>
-            <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginTop: 6 }}>
-              Paid roles have work authorization rules for student visas, so we use this to decide what to show you. It is never on your profile.
-            </p>
           </fieldset>
         )}
         {!isStudent && <div style={{ ...gap, gridColumn: '1 / -1' }}>
@@ -320,10 +317,7 @@ function StudentForm({ onSubmit, loading, email, role }: {
           </span>
         </label>
         <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.55, marginTop: 10, paddingLeft: 25 }}>
-          Most students leave this on — it is the part that finds things for you. Optional
-          and separate from everything above, though: your account works exactly the same
-          either way, and you will still get the emails about your own applications and
-          projects.
+          Optional. You will still get emails about your own applications and projects.
         </p>
       </div>
 

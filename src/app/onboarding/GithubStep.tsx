@@ -20,18 +20,21 @@ import { track } from '@/lib/analytics/track'
  * The consent page this links to explains exactly what is read. Saying it
  * here as well meant reading the same thing twice in a row.
  *
- * ── The empty-GitHub case ─────────────────────────────────────────────────
+ * ── The empty-GitHub case (no skip) ──────────────────────────────────────
  * Most of the waitlist is first-years. An empty account is not a failure
  * here and the copy says so — the dashboard offers them a project to build.
  */
-export default function GithubStep({ onSkip, busy }: { onSkip: () => void; busy: boolean }) {
+export default function GithubStep({ onSkip: _onSkip, busy: _busy }: { onSkip: () => void; busy: boolean }) {
+  // No skip. Every path needs GitHub: the scan reads it, and a guided project
+  // is built in a repository we read too. An empty account is fine; we help
+  // fill it.
   return (
     <div>
       <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.6, marginBottom: 8 }}>
-        Your record comes from code you wrote. You choose which repositories we read.
+        Your profile is built from the code you write. You choose which repositories we read.
       </p>
       <p style={{ fontSize: 13, color: C.textFaint, lineHeight: 1.55, marginBottom: 22 }}>
-        Nothing on GitHub yet? That&rsquo;s fine — skip this and we&rsquo;ll suggest a project.
+        Nothing on GitHub yet? Connect it anyway. We&rsquo;ll give you a project to build and fill it up together.
       </p>
 
       {/* The consent page first, then GitHub. The install route refuses
@@ -47,17 +50,13 @@ export default function GithubStep({ onSkip, busy }: { onSkip: () => void; busy:
         </span>
       </Button>
 
-      <button
-        type="button"
-        onClick={onSkip}
-        disabled={busy}
-        style={{
-          display: 'block', margin: '12px auto 0', background: 'none', border: 'none', padding: 0,
-          fontFamily: 'inherit', fontSize: 13, color: C.textFaint, textDecoration: 'underline', cursor: 'pointer',
-        }}
-      >
-        {busy ? 'One moment…' : 'I’ll do this later'}
-      </button>
+      <p style={{ fontSize: 13, color: C.textFaint, textAlign: 'center', marginTop: 12 }}>
+        No GitHub account?{' '}
+        <a href="https://github.com/signup" target="_blank" rel="noopener noreferrer" style={{ color: C.accent }}>
+          Create one free
+        </a>
+        , then come back.
+      </p>
     </div>
   )
 }
