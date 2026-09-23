@@ -35,7 +35,7 @@ import type {
 } from '@/lib/workspace/queries'
 
 const ROLE_LABEL: Record<WorkRole, string> = {
-  backend: 'Backend', frontend: 'Frontend', fullstack: 'Full-stack', mobile: 'Mobile',
+  backend: 'Backend', frontend: 'Frontend', fullstack: 'Everything', mobile: 'Mobile',
   data: 'Data', ml: 'ML / AI', infra: 'Infra', design: 'Design', other: 'Other',
 }
 

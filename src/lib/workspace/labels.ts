@@ -9,7 +9,9 @@ import type { WorkRole } from './membership'
 export const ROLE_LABEL: Record<WorkRole, string> = {
   backend: 'Backend',
   frontend: 'Frontend',
-  fullstack: 'Full-stack',
+  // 'fullstack' already matched any task in the planner, so it is the
+  // honest name for somebody doing all of it — usually a project done alone.
+  fullstack: 'Everything',
   mobile: 'Mobile',
   data: 'Data',
   ml: 'ML / AI',

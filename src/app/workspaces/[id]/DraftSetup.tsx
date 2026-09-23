@@ -59,9 +59,16 @@ export default function DraftSetup({ workspace }: { workspace: WorkspaceDetail }
         <li style={{ color: workspace.repoFullName ? C.textFaint : C.textSub }}>
           {workspace.repoFullName ? `Repository linked — ${workspace.repoFullName}` : 'Link the GitHub repository'}
         </li>
-        <li style={{ color: you?.workRole ? C.textFaint : C.textSub }}>
-          {you?.workRole ? `Your role — ${ROLE_LABEL[you.workRole]}` : 'Say what you work on'}
-        </li>
+        {/* Solo, the role is Everything whether or not it was picked, so
+            this step is already done rather than a chore to click through. */}
+        {(() => {
+          const role = you?.workRole ?? (workspace.members.length === 1 ? 'fullstack' : null)
+          return (
+            <li style={{ color: role ? C.textFaint : C.textSub }}>
+              {role ? `Your role — ${ROLE_LABEL[role]}` : 'Say what you work on'}
+            </li>
+          )
+        })()}
         <li style={{ color: C.textFaint }}>Invite anyone working with you (optional)</li>
       </ol>
 

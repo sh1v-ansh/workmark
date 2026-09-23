@@ -164,13 +164,15 @@ export default function SettingsClient({
         </p>
         <select
           className="dk-input"
-          value={you?.workRole ?? ''}
+          // Working alone with nothing chosen reads as Everything, because
+          // that is what it means: every task comes to you.
+          value={you?.workRole ?? (workspace.members.length === 1 ? 'fullstack' : '')}
           onChange={(e) => setWorkRole(e.target.value)}
           disabled={busy === 'role'}
           aria-label="What you work on"
           style={{ maxWidth: 260 }}
         >
-          <option value="">Not set</option>
+          {workspace.members.length > 1 && <option value="">Not set</option>}
           {WORK_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
         </select>
       </Card>
