@@ -39,6 +39,18 @@ export default function SettingsClient({
 }) {
   const router = useRouter()
   const { toast } = useToast()
+  const [refreshing, setRefreshing] = useState(false)
+  // Asks GitHub again which repositories Workmark can see, so a repository
+  // created a minute ago shows up without reconnecting.
+  async function refreshRepos() {
+    setRefreshing(true)
+    try {
+      await fetch('/api/github/repos/sync', { method: 'POST' })
+      router.refresh()
+    } finally {
+      setRefreshing(false)
+    }
+  }
   const [busy, setBusy] = useState<string | null>(null)
   const [invitee, setInvitee] = useState('')
   const [repo, setRepo] = useState(workspace.repoFullName ?? '')
@@ -117,10 +129,20 @@ export default function SettingsClient({
         </p>
 
         {repoOptions.length === 0 ? (
-          <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6 }}>
-            Workmark can&apos;t see any of your repositories yet.{' '}
-            <Link href="/student/github" style={{ color: C.accent }}>Connect GitHub</Link> first.
-          </p>
+          // The empty-GitHub case: most first-years have nothing to pick
+          // yet, so the way forward is to make the repository, not to be
+          // told none exist.
+          <div>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 12 }}>
+              No repositories yet. Create an empty one on GitHub for this project, then refresh.
+              If GitHub asks, give Workmark access to it.
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Button href="https://github.com/new" variant="accent" size="sm">Create a repository on GitHub</Button>
+              <Button variant="outline" size="sm" onClick={refreshRepos} busyLabel={refreshing ? 'Refreshing…' : null}>Refresh</Button>
+              <Link href="/student/github" style={{ fontSize: 13, color: C.accent, alignSelf: 'center' }}>GitHub settings</Link>
+            </div>
+          </div>
         ) : isOwner ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <select

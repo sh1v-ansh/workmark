@@ -456,7 +456,8 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
                     where the focal to-do above is already that button. Two of
                     the same call to action on one screen and neither is the
                     obvious one. */}
-                {githubConnected && (
+                {/* Hidden with nothing to scan: pressing it would only error. */}
+                {githubConnected && repoCount > 0 && (
                   <RescanButton
                     githubConnected
                     lastScannedAt={lastScannedAt}
