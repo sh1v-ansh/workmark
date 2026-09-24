@@ -67,23 +67,11 @@ export default function GoalsClient({ data }: { data: GoalsData }) {
   // The hand-off §8 describes: when nothing open closes a gap, name the
   // skill and offer a project brief targeting it, rather than fabricating
   // a plan for an empty marketplace.
-  async function buildFor(skillId: string, name: string) {
+  // The idea is written on the Project ideas page, where it streams in as
+  // it is written, rather than behind a spinner here.
+  function buildFor(skillId: string, name: string) {
     setBuildingSkill(skillId)
-    try {
-      const res = await fetch('/api/agents/brief', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ skillId }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Could not generate.')
-      toast(`Project idea ready for ${name}.`, 'success')
-      router.push('/me/briefs')
-    } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : 'Could not generate.', 'error')
-    } finally {
-      setBuildingSkill(null)
-    }
+    router.push(`/me/briefs?generate=${encodeURIComponent(skillId)}&name=${encodeURIComponent(name)}`)
   }
 
   const [topGap, ...otherGaps] = data.gaps

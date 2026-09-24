@@ -17,7 +17,8 @@
 
 import { LEVEL_NAMES } from '@/lib/skills/level-names'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { callStructuredAgent } from './client'
+import { streamTextAgent } from './client'
+import { parseBriefMarkdown } from '@/lib/briefs/parse'
 import { untrusted } from './untrusted'
 import {
   CAREER_TRACK_META, SKILL_LEVEL_META,
@@ -40,44 +41,44 @@ export interface BriefOptions {
 
 const SYSTEM = `You write a short, concrete project brief for a computer science student who wants to demonstrate a specific skill.
 
-Workmark verifies skills by scanning the code a student actually writes — commit-attributed, in repositories they link. So the brief's job is to produce a real repository worth scanning, not a tutorial exercise.
+Workmark verifies skills by scanning the code a student actually writes, in repositories they link. So the brief's job is to produce a real repository worth scanning, not a tutorial exercise.
 
-Requirements for a good brief:
-- Buildable in the stated time by one person, alone, with no team and no external stakeholder.
-- Scoped to a specific working artifact. Not "learn React" but a named thing that runs and does something.
-- Genuinely exercises the target skill in a way a scan could see — real usage in real code, not an import and one function call.
-- Includes what "done" means, concretely enough that the student can tell when they're finished.
-- Not a clone of a well-known tutorial project. Something with at least one non-obvious design decision in it.
+A good brief:
+- Can be built in the stated time by one person.
+- Names a specific working thing that runs and does something, not "learn React".
+- Genuinely exercises the target skill in a way a scan could see.
+- Says exactly what "done" means.
+- Is not a clone of a well-known tutorial, and has at least one non-obvious design decision.
 
-Write in second person, plainly, as if briefing a capable peer. No preamble, no encouragement, no restating the task back. Keep it to a few short paragraphs — this is a brief, not a specification.
+The student states their level. Calibrate the project to it: the same skill should produce a visibly different project for a beginner than for someone working at research level.
 
-The student states their level. Calibrate the project to it: the same skill should produce a visibly different project for a beginner than for someone working at research level. Match the level you are given rather than hedging toward the middle.
+Write in markdown, in exactly this layout and nothing else: no preamble, no closing remarks.
 
-difficulty is your estimate of TIME, from 1 (a weekend) to 5 (several weeks of sustained work). It is not a measure of how advanced the project is — a research-level brief can be a weekend, and a beginner project can take a month. Judge it independently of the student's stated level.`
+# <Project name, under 8 words>
 
-const SCHEMA = {
-  type: 'object',
-  properties: {
-    title: { type: 'string', description: 'Short name for the project.' },
-    brief: { type: 'string', description: 'The brief itself, a few short paragraphs.' },
-    difficulty: { type: 'integer', enum: [1, 2, 3, 4, 5] },
-  },
-  required: ['title', 'brief', 'difficulty'],
-  additionalProperties: false,
-} as const
+**Time:** <one of: A weekend | A few days | A week or two | Several weeks | A month or more>
 
-interface AgentResponse {
-  title: string
-  brief: string
-  difficulty: number
-}
+## What you'll build
+<2 or 3 short sentences: what it is and who would use it.>
 
-export async function generateBrief(
+## Why it proves <skill>
+<1 or 2 sentences.>
+
+## Done when
+- <3 to 5 short, checkable bullets>
+
+## Stretch
+- <1 or 2 optional extras>
+
+Second person, plain words, short sentences. Keep the whole brief under 220 words.`
+
+/** What the model is told about this student and this skill. */
+async function buildContext(
   supabase: SupabaseClient,
   studentId: string,
   targetSkillId: string,
   options: BriefOptions,
-): Promise<GeneratedBrief | null> {
+) {
   const { targetRole, skillLevel, careerTrack } = options
   const { data: skill } = await supabase
     .from('skills')
@@ -102,32 +103,24 @@ export async function generateBrief(
     ? await supabase.from('skills').select('id, canonical_name').in('id', existingIds)
     : { data: [] as { id: string; canonical_name: string }[] }
   // With the level each one is at, so the model can see how far along they
-  // are rather than only what they have touched. "Python" alone reads the
-  // same for somebody on their first script and somebody shipping services.
+  // are rather than only what they have touched.
   const existingNames = (existingSkills ?? []).map((s) =>
     `${s.canonical_name} (${LEVEL_NAMES[levelBySkill.get(s.id) ?? 1] ?? 'Beginner'})`)
 
-  const context = [
+  const userContent = [
     `Target skill: ${skill.canonical_name}`,
-    // Level first: it changes the shape of a good answer more than anything
-    // else here, including the skill itself.
     skillLevel ? `Level: ${SKILL_LEVEL_META[skillLevel].label}. ${SKILL_LEVEL_META[skillLevel].prompt}` : null,
     careerTrack ? CAREER_TRACK_META[careerTrack].prompt : null,
     // Typed by the student, so it is data rather than instruction.
     targetRole ? `Additional context on what they're aiming for:\n${untrusted('target_role', targetRole)}` : null,
     existingNames.length
       ? `They already have verified evidence in: ${existingNames.join(', ')}. Build on these where it makes the project better, but the target skill is what this brief must demonstrate.`
-      : 'They have no verified evidence yet — this would be their first project on the platform, so keep the scope achievable.',
-  ]
-    .filter(Boolean)
-    .join('\n')
+      : 'They have no verified evidence yet. This would be their first project on the platform, so keep the scope achievable.',
+  ].filter(Boolean).join('\n')
 
-  const result = await callStructuredAgent<AgentResponse>(supabase, {
-    agentType: 'brief',
-    studentId,
-    system: SYSTEM,
-    userContent: context,
-    schema: SCHEMA as unknown as Record<string, unknown>,
+  return {
+    skill,
+    userContent,
     inputForAudit: {
       target_skill_id: targetSkillId,
       target_role: targetRole,
@@ -135,15 +128,39 @@ export async function generateBrief(
       career_track: careerTrack,
       existing_skills: existingNames,
     },
-  })
+  }
+}
 
+/**
+ * Write a brief, streaming it as it is written. onText receives each piece
+ * of markdown; the parsed brief is returned once it is complete. Background
+ * callers (the nightly recommendations) simply pass no onText.
+ */
+export async function generateBrief(
+  supabase: SupabaseClient,
+  studentId: string,
+  targetSkillId: string,
+  options: BriefOptions,
+  onText?: (delta: string) => void,
+): Promise<GeneratedBrief | null> {
+  const ctx = await buildContext(supabase, studentId, targetSkillId, options)
+  const result = await streamTextAgent(supabase, {
+    agentType: 'brief',
+    studentId,
+    system: SYSTEM,
+    userContent: ctx.userContent,
+    inputForAudit: ctx.inputForAudit,
+    onText,
+    maxTokens: 1500,
+  })
   if (!result) return null
 
+  const parsed = parseBriefMarkdown(result.text)
   return {
-    targetSkillId: skill.id,
-    targetSkillName: skill.canonical_name,
-    title: result.title ?? '',
-    briefText: result.brief ?? '',
-    difficulty: Math.min(5, Math.max(1, Math.round(result.difficulty ?? 3))),
+    targetSkillId: ctx.skill.id,
+    targetSkillName: ctx.skill.canonical_name,
+    title: parsed.title,
+    briefText: parsed.body,
+    difficulty: parsed.difficulty,
   }
 }

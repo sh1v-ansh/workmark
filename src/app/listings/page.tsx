@@ -7,6 +7,7 @@ import { verifiedFacultyPosterIds } from '@/lib/listings/verified-faculty'
 import type { AiProjectCardData } from '@/components/briefs/AiProjectCard'
 import type { RecommendationReason } from '@/lib/briefs/targets'
 import { splitBriefText } from '@/lib/briefs/format'
+import { briefSummary } from '@/components/Markdown'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { loadPeople, loadInvitableProjects, type PersonCard, type InvitableProject } from '@/lib/listings/people'
 
@@ -92,7 +93,8 @@ export default async function ListingsPage() {
       return {
         id: b.id,
         title,
-        summary: body,
+        // One plain paragraph for the card, not the whole markdown brief.
+        summary: briefSummary(body),
         skillName: skill?.canonical_name ?? null,
         reason: (b.recommendation_reason as RecommendationReason | null) ?? null,
         difficulty: b.difficulty,

@@ -91,36 +91,51 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: limit.message }, { status: 429 })
   }
 
-  try {
-    const brief = await generateBrief(admin, user.id, body.skillId, {
-      targetRole: body.targetRole?.trim() || null,
-      skillLevel,
-      careerTrack,
-    })
-    if (!brief) {
-      return NextResponse.json({ error: 'Could not generate a project idea. Try again.' }, { status: 502 })
-    }
+  // Streamed. The brief is written straight to the response as the model
+  // produces it, so the student reads it arriving instead of watching a
+  // spinner for fifteen seconds. Once it ends it is saved, and one final
+  // record, after a \u001e separator, carries the saved id (or an error)
+  // as JSON. See lib/briefs/stream.ts for the reader.
+  const skillId = body.skillId
+  const targetRole = body.targetRole?.trim() || null
+  const encoder = new TextEncoder()
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const finish = (payload: Record<string, unknown>) => {
+        controller.enqueue(encoder.encode(`\u001e${JSON.stringify(payload)}`))
+        controller.close()
+      }
+      try {
+        const brief = await generateBrief(
+          admin, user.id, skillId,
+          { targetRole, skillLevel, careerTrack },
+          (delta) => controller.enqueue(encoder.encode(delta)),
+        )
+        if (!brief) return finish({ error: 'Could not generate a project idea. Try again.' })
 
-    // Written under the student's own session — project_briefs has a
-    // manage-own policy, and the brief genuinely is theirs.
-    const { data: saved, error } = await supabase
-      .from('project_briefs')
-      .insert({
-        student_id: user.id,
-        target_skill_id: brief.targetSkillId,
-        target_role: body.targetRole?.trim() || null,
-        brief_text: `${brief.title}\n\n${brief.briefText}`,
-        difficulty: brief.difficulty,
-        skill_level: skillLevel,
-        career_track: careerTrack,
-      })
-      .select('id')
-      .single()
-    if (error) throw error
+        const { data: saved, error } = await supabase
+          .from('project_briefs')
+          .insert({
+            student_id: user.id,
+            target_skill_id: brief.targetSkillId,
+            target_role: targetRole,
+            brief_text: `${brief.title}\n\n${brief.briefText}`,
+            difficulty: brief.difficulty,
+            skill_level: skillLevel,
+            career_track: careerTrack,
+          })
+          .select('id')
+          .single()
+        if (error) throw error
+        finish({ ok: true, id: saved.id })
+      } catch (err) {
+        console.error('[api/agents/brief] failed:', err)
+        finish({ error: 'Could not save the project idea.' })
+      }
+    },
+  })
 
-    return NextResponse.json({ ok: true, id: saved.id, brief })
-  } catch (err) {
-    console.error('[api/agents/brief] failed:', err)
-    return NextResponse.json({ error: 'Could not generate a project idea.' }, { status: 500 })
-  }
+  return new Response(stream, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+  })
 }
