@@ -82,6 +82,16 @@ export const EMAIL_KINDS = {
     detail: 'Says what reached your record.',
     essential: false,
   },
+
+  // Marketing. Only ever sent to people who opted in (accounts.marketing_*),
+  // always with the postal address and a one-click unsubscribe. Its on/off
+  // switch is the marketing consent itself, so Settings does not list it as
+  // a separate toggle. See lib/notify/opportunities.ts.
+  opportunities: {
+    label: 'Opportunities picked for you',
+    detail: 'Roles, internships, hackathons and fellowships that fit you.',
+    essential: false,
+  },
 } as const
 
 export type EmailKind = keyof typeof EMAIL_KINDS

@@ -6,7 +6,8 @@ import { C, R } from '@/lib/theme/dark-tokens'
 import { EMAIL_KINDS, type EmailKind } from '@/lib/notify/prefs'
 import { CONSENT_TEXT } from '@/lib/notify/marketing'
 
-const KINDS = Object.keys(EMAIL_KINDS) as EmailKind[]
+// 'opportunities' is controlled by the marketing consent switch, not here.
+const KINDS = (Object.keys(EMAIL_KINDS) as EmailKind[]).filter((k) => k !== 'opportunities')
 
 /**
  * Which emails Workmark is allowed to send.

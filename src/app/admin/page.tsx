@@ -6,6 +6,7 @@ import AdminShell from './AdminShell'
 import { StatGrid, Panel, HealthRow } from './widgets'
 import { emailStatus } from '@/lib/notify/email'
 import TestEmailButton from './TestEmailButton'
+import OpportunityEmail from './OpportunityEmail'
 
 export const metadata = { title: 'Admin' }
 
@@ -19,10 +20,13 @@ export const metadata = { title: 'Admin' }
 export default async function AdminOverviewPage() {
   const { admin } = await requireAdmin()
 
-  const [overview, { items, failedSources }, calibration] = await Promise.all([
+  const [overview, { items, failedSources }, calibration, { count: optedIn }] = await Promise.all([
     loadOverview(admin),
     loadQueue(admin),
     loadCalibration(admin),
+    // A count only; the sender re-checks consent per person before sending.
+    admin.from('accounts').select('id', { count: 'exact', head: true })
+      .not('marketing_opted_in_at', 'is', null).is('marketing_opted_out_at', null).is('email_unsubscribed_at', null),
   ])
 
   const mail = emailStatus()
@@ -89,6 +93,10 @@ export default async function AdminOverviewPage() {
           <div style={{ marginTop: 12 }}>
             <TestEmailButton />
           </div>
+        </Panel>
+
+        <Panel title="Opportunity email">
+          <OpportunityEmail optedIn={optedIn ?? 0} />
         </Panel>
 
         <Panel title="System">
