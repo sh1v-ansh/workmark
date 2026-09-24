@@ -7,10 +7,14 @@ import {
 } from '@/lib/http/validate'
 import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 import { answerOnTask } from '@/lib/agents/helper'
+import { textStreamResponse } from '@/lib/http/text-stream'
 import { classify, SCOPE_REPLY } from '@/lib/agents/scope'
 import {
   shouldAnswer, stripMention, threadForAgent, type Message,
 } from '@/lib/workspace/messages'
+
+// A streamed reply can take a while to finish writing.
+export const maxDuration = 60
 
 /**
  * POST /api/workspaces/[id]/tasks/[taskId]/messages — say something.
@@ -151,43 +155,46 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .maybeSingle(),
   ])
 
-  const reply = await answerOnTask(admin, user.id, {
-    projectTitle: (workspace?.title as string | null) ?? 'this project',
-    taskTitle: task.title as string,
-    acceptanceCriteria: (task.acceptance_criteria as string | null) ?? null,
-    checkerNote: (submission?.notes as string | null) ?? null,
-    thread: threadForAgent(before),
-    question: stripMention(fields.values.body),
-  })
+  // Streamed: the reply appears in the thread as it is written, and is
+  // saved once it is complete. See lib/http/text-stream.
+  return textStreamResponse(async (emit) => {
+    const reply = await answerOnTask(admin, user.id, {
+      projectTitle: (workspace?.title as string | null) ?? 'this project',
+      taskTitle: task.title as string,
+      acceptanceCriteria: (task.acceptance_criteria as string | null) ?? null,
+      checkerNote: (submission?.notes as string | null) ?? null,
+      thread: threadForAgent(before),
+      question: stripMention(fields.values.body),
+    }, emit)
 
-  if (!reply) {
-    return NextResponse.json({
-      ok: true, message: written, reply: null,
-      note: 'Workmark could not answer just now. Your message was posted.',
-    })
-  }
+    if (!reply) {
+      return {
+        ok: true, message: written, reply: null,
+        note: 'Your tech lead could not answer just now. Your message was posted.',
+      }
+    }
 
-  // Service role: workspace_messages has no insert policy for an agent, and
-  // the check constraint requires sender_id to be null when sender_kind is
-  // 'agent' — an agent has no account and must not claim one.
-  const { data: agentMessage } = await admin
-    .from('workspace_messages')
-    .insert({
-      workspace_id: workspaceId,
-      task_id: taskId,
-      sender_id: null,
-      sender_kind: 'agent',
-      body: reply.body,
-    })
-    .select('id, task_id, sender_id, sender_kind, body, created_at')
-    .single()
+    // Service role: workspace_messages has no insert policy for an agent, and
+    // the check constraint requires sender_id to be null when sender_kind is
+    // 'agent'.
+    const { data: agentMessage } = await admin
+      .from('workspace_messages')
+      .insert({
+        workspace_id: workspaceId,
+        task_id: taskId,
+        sender_id: null,
+        sender_kind: 'agent',
+        body: reply.body,
+      })
+      .select('id, task_id, sender_id, sender_kind, body, created_at')
+      .single()
 
-  // Offered, never applied. The student presses the button — the same
-  // decision they would make for themselves on a real job.
-  return NextResponse.json({
-    ok: true,
-    message: written,
-    reply: agentMessage ?? null,
-    suggestedSubtask: reply.suggestedSubtask ?? null,
+    // Offered, never applied. The student presses the button.
+    return {
+      ok: true,
+      message: written,
+      reply: agentMessage ?? null,
+      suggestedSubtask: reply.suggestedSubtask ?? null,
+    }
   })
 }

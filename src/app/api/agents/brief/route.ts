@@ -3,6 +3,7 @@ import { enforce } from '@/lib/rate-limit'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { generateBrief } from '@/lib/agents/brief'
+import { textStreamResponse } from '@/lib/http/text-stream'
 import { agentsAvailable } from '@/lib/agents/client'
 import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 import { isCareerTrack, isSkillLevel } from '@/lib/agents/tracks'
@@ -98,44 +99,27 @@ export async function POST(request: Request) {
   // as JSON. See lib/briefs/stream.ts for the reader.
   const skillId = body.skillId
   const targetRole = body.targetRole?.trim() || null
-  const encoder = new TextEncoder()
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const finish = (payload: Record<string, unknown>) => {
-        controller.enqueue(encoder.encode(`\u001e${JSON.stringify(payload)}`))
-        controller.close()
-      }
-      try {
-        const brief = await generateBrief(
-          admin, user.id, skillId,
-          { targetRole, skillLevel, careerTrack },
-          (delta) => controller.enqueue(encoder.encode(delta)),
-        )
-        if (!brief) return finish({ error: 'Could not generate a project idea. Try again.' })
+  return textStreamResponse(async (emit) => {
+    const brief = await generateBrief(admin, user.id, skillId, { targetRole, skillLevel, careerTrack }, emit)
+    if (!brief) return { error: 'Could not generate a project idea. Try again.' }
 
-        const { data: saved, error } = await supabase
-          .from('project_briefs')
-          .insert({
-            student_id: user.id,
-            target_skill_id: brief.targetSkillId,
-            target_role: targetRole,
-            brief_text: `${brief.title}\n\n${brief.briefText}`,
-            difficulty: brief.difficulty,
-            skill_level: skillLevel,
-            career_track: careerTrack,
-          })
-          .select('id')
-          .single()
-        if (error) throw error
-        finish({ ok: true, id: saved.id })
-      } catch (err) {
-        console.error('[api/agents/brief] failed:', err)
-        finish({ error: 'Could not save the project idea.' })
-      }
-    },
-  })
-
-  return new Response(stream, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' },
+    const { data: saved, error } = await supabase
+      .from('project_briefs')
+      .insert({
+        student_id: user.id,
+        target_skill_id: brief.targetSkillId,
+        target_role: targetRole,
+        brief_text: `${brief.title}\n\n${brief.briefText}`,
+        difficulty: brief.difficulty,
+        skill_level: skillLevel,
+        career_track: careerTrack,
+      })
+      .select('id')
+      .single()
+    if (error) {
+      console.error('[api/agents/brief] save failed:', error)
+      return { error: 'Could not save the project idea.' }
+    }
+    return { ok: true, id: saved.id }
   })
 }

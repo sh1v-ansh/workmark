@@ -1,5 +1,6 @@
 import { readFields, requireString, requireArray, ValidationError } from '@/lib/http/validate'
 import { isListingKind, type ListingKind } from '@/lib/listings/kinds'
+import { QUESTION_COUNT, type ApplicationQuestion } from '@/lib/applications/questions'
 
 /**
  * What a listing form sends, checked once for both posting and editing.
@@ -17,6 +18,8 @@ export interface ListingFields {
   duration: string | null
   work_mode: string | null
   team_size: number | null
+  /** The poster's own questions, or null for the standard pair. */
+  application_questions: ApplicationQuestion[] | null
   declared_difficulty: number | null
 }
 
@@ -65,7 +68,33 @@ export function parseListingFields(body: Record<string, unknown>) {
       duration,
       work_mode: workMode,
       team_size: wholeNumber(body.team_size, 'Team size', 1, 20),
+      application_questions: parseQuestions(body.application_questions),
       declared_difficulty: wholeNumber(body.declared_difficulty, 'Difficulty', 1, 10),
     }
   })
+}
+
+/**
+ * The poster's questions. Blank ones are dropped; none at all means the
+ * standard pair. A question keeps its kind when it came from the suggest
+ * button, and is 'custom' when the poster wrote or reworded it.
+ */
+function parseQuestions(value: unknown): ApplicationQuestion[] | null {
+  if (!Array.isArray(value)) return null
+  const KINDS = ['cut', 'tradeoff', 'risk', 'assumption', 'critique', 'custom']
+  const out = value
+    .filter((q): q is Record<string, unknown> => !!q && typeof q === 'object')
+    .map((q, i) => ({
+      id: `q${i}`,
+      kind: (typeof q.kind === 'string' && KINDS.includes(q.kind) ? q.kind : 'custom') as ApplicationQuestion['kind'],
+      prompt: typeof q.prompt === 'string' ? q.prompt.trim().slice(0, 300) : '',
+      hint: typeof q.hint === 'string' ? q.hint.trim().slice(0, 160) : '',
+    }))
+    .filter((q) => q.prompt.length >= 10)
+    .slice(0, QUESTION_COUNT)
+  if (value.some((q) => q && typeof q === 'object' && typeof (q as Record<string, unknown>).prompt === 'string'
+    && ((q as Record<string, unknown>).prompt as string).trim().length > 0 && ((q as Record<string, unknown>).prompt as string).trim().length < 10)) {
+    throw new ValidationError('Each application question needs at least 10 characters.')
+  }
+  return out.length > 0 ? out : null
 }

@@ -20,7 +20,7 @@
 // seconds. The verified record is the part that cannot be prompted; this is
 // the part that says whether somebody thought about the work.
 
-export type QuestionKind = 'cut' | 'tradeoff' | 'risk' | 'assumption' | 'critique'
+export type QuestionKind = 'cut' | 'tradeoff' | 'risk' | 'assumption' | 'critique' | 'custom'
 
 export interface ApplicationQuestion {
   id: string
@@ -77,6 +77,8 @@ export const KIND_LABEL: Record<QuestionKind, string> = {
   risk: 'What breaks first',
   assumption: 'What is missing',
   critique: 'What is wrong with it',
+  // Written by the poster in their own words.
+  custom: 'From the poster',
 }
 
 /**

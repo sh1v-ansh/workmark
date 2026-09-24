@@ -3,7 +3,6 @@ import { createClient } from '@/lib/supabase/server'
 import { enforce } from '@/lib/rate-limit'
 import { parseBody, requireUuid, ValidationError } from '@/lib/http/validate'
 import { parseListingFields } from '@/lib/listings/fields'
-import { writeApplicationQuestions } from '@/lib/agents/application-questions'
 
 /**
  * PATCH  /api/listings/[id] — edit a posted project.
@@ -82,27 +81,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (error) console.error('[api/listings/id] stale requirement delete failed:', error)
   }
 
-  // The two application questions were written from the title, brief and
-  // skills. If those moved, the questions may now ask about the wrong
-  // project — so they are rewritten, best-effort, and the old pair is kept
-  // if that fails. Applications already in keep the questions as asked.
-  const skillsChanged =
-    stale.length > 0 ||
-    requirements.some((r) => !(before ?? []).some((b) => b.skill_id === r.skillId))
-  const textChanged = columns.title !== listing.title || columns.brief !== listing.brief
+  // Questions are the poster's own (or null for the standard pair) and
+  // come in with the other columns; nothing is rewritten behind their back.
   const update: Record<string, unknown> = { ...columns }
-  if (skillsChanged || textChanged) {
-    try {
-      const questions = await writeApplicationQuestions(supabase, user.id, {
-        title: columns.title,
-        description: columns.brief,
-        requirements: requirements.map((r) => r.skillId),
-      })
-      if (questions) update.application_questions = questions
-    } catch (err) {
-      console.error('[api/listings/id] could not rewrite application questions:', err)
-    }
-  }
 
   const { error } = await supabase.from('listings').update(update).eq('id', id)
   if (error) {

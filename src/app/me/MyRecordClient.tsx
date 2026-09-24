@@ -67,7 +67,8 @@ const VERIFICATION_LABEL: Record<string, string> = {
   attested: 'Confirmed by a collaborator',
 }
 
-export default function MyRecordClient({ record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt }: {
+export default function MyRecordClient({ studentId, record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt }: {
+  studentId: string
   record: StudentRecord
   /** Pooled across every project. Null for somebody who has not been on one. */
   howYouWork: AcrossProjects | null
@@ -178,9 +179,12 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
           <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text }}>
             Your record
           </h1>
+          {/* Always there: seeing yourself the way other students and posters
+              do should not depend on having claimed a public link. */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Button href={student.handle ? `/p/${student.handle}` : `/people/${studentId}`} variant="outline" size="sm">View my profile</Button>
           {student.handle && profileUrl && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <Button href={`/p/${student.handle}`} variant="outline" size="sm">View public page</Button>
+            <>
               <Button
                 type="button"
                 variant="accent"
@@ -189,8 +193,9 @@ export default function MyRecordClient({ record, howYouWork, sources, suggestedH
               >
                 Copy profile link
               </Button>
-            </div>
+            </>
           )}
+          </div>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '330px minmax(0, 1fr)', gap: 29, alignItems: 'start' }} className="mob-1col">

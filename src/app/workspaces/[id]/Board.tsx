@@ -1,6 +1,7 @@
 'use client'
 
 import { LEAD_LABEL } from '@/lib/agents/lead'
+import { readTextStream } from '@/lib/http/text-stream'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -141,6 +142,10 @@ export default function Board({
   const [talking, setTalking] = useState<BoardTask | null>(null)
   const [draftMessage, setDraftMessage] = useState('')
   const [sending, setSending] = useState(false)
+  // While a message is out: what the student sent, and the tech lead's reply
+  // as it streams in. Cleared once the saved thread is back from the server.
+  const [pendingMine, setPendingMine] = useState<string | null>(null)
+  const [liveReply, setLiveReply] = useState<string | null>(null)
   const [offered, setOffered] = useState<{ title: string; why: string } | null>(null)
   const [splitting, setSplitting] = useState<BoardTask | null>(null)
   const [subtaskTitle, setSubtaskTitle] = useState('')
@@ -425,14 +430,20 @@ export default function Board({
     if (!talking || !draftMessage.trim()) return
     setSending(true)
     try {
+      const sentText = draftMessage
+      setPendingMine(sentText)
+      setDraftMessage('')
       const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${talking.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: draftMessage }),
+        body: JSON.stringify({ body: sentText }),
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Could not send that.')
-      setDraftMessage('')
+      // The reply streams when the tech lead was asked; the subtask line is
+      // part of the text but only ever shown as the offer below.
+      const data = await readTextStream<{ note?: string; suggestedSubtask?: { title: string; why: string } | null }>(
+        res, (soFar) => setLiveReply(soFar.split(/\n?\s*SUBTASK:/)[0]),
+      )
+      if (data.error) { setDraftMessage(sentText); throw new Error(data.error) }
       // Said out loud rather than swallowed: somebody who typed a mention and
       // saw nothing happen concludes the feature is broken.
       if (data.note) toast(data.note, 'info')
@@ -444,6 +455,8 @@ export default function Board({
       toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
     } finally {
       setSending(false)
+      setPendingMine(null)
+      setLiveReply(null)
     }
   }
 
@@ -499,9 +512,15 @@ export default function Board({
       const res = await fetch(`/api/workspaces/${workspaceId}/sprints/${sprint.id}/check`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Could not check this week.')
-      setScopeCheck(data)
+      // Opened as soon as text arrives, and filled in as it is written.
+      const data = await readTextStream<{ verdict?: string; reasoning?: string; suggestion?: string }>(res, (soFar) => {
+        const verdict = soFar.match(/VERDICT:\s*(worth_it|light|scattered)/i)?.[1]?.toLowerCase() ?? 'pending'
+        const rest = soFar.replace(/^[\s\S]*?VERDICT:[^\n]*\n?/i, '').trim()
+        const [reasoning = '', ...more] = rest.split(/\n\s*\n/)
+        setScopeCheck({ verdict, reasoning, suggestion: more.join('\n\n') })
+      })
+      if (data.error) { setScopeCheck(null); throw new Error(data.error) }
+      setScopeCheck({ verdict: data.verdict ?? 'light', reasoning: data.reasoning ?? '', suggestion: data.suggestion ?? '' })
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
     } finally {
@@ -516,11 +535,10 @@ export default function Board({
       const res = await fetch(`/api/workspaces/${workspaceId}/sprints/${sprint.id}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Could not end the week.')
-      // Shown straight away rather than only after the refresh: the review is
-      // the thing they pressed the button for, and making them find it on a
-      // reloaded page is how it goes unread.
+      // The week closes first; the review then streams into its modal as it
+      // is written, so it is read the moment it exists.
+      const data = await readTextStream<{ retro?: string | null }>(res, (soFar) => setLastRetro(soFar))
+      if (data.error) throw new Error(data.error)
       setLastRetro(data.retro ?? null)
       router.refresh()
     } catch (err) {
@@ -1287,7 +1305,7 @@ export default function Board({
       >
         {talking && (
           <>
-            {(threadsByTask.get(talking.id) ?? []).length === 0 ? (
+            {(threadsByTask.get(talking.id) ?? []).length === 0 && !pendingMine ? (
               <p style={{ fontSize: T.bodySm, color: C.textFaint, lineHeight: 1.6, marginBottom: 16 }}>
                 Nothing here yet. Talk to your team, or type {MENTION} to ask your tech lead about this task.
               </p>
@@ -1310,6 +1328,15 @@ export default function Board({
                     </div>
                   )
                 ))}
+                {pendingMine && (
+                  <div style={{ paddingLeft: 16, opacity: 0.8 }}>
+                    <p style={{ fontSize: T.meta, fontWeight: 600, color: C.textFaint, marginBottom: 3 }}>You</p>
+                    <p style={{ fontSize: T.bodySm, color: C.textSub, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{pendingMine}</p>
+                  </div>
+                )}
+                {liveReply !== null && liveReply.trim() && (
+                  <AgentSays heading={LEAD_LABEL} body={liveReply} />
+                )}
               </div>
             )}
 
@@ -1375,11 +1402,12 @@ export default function Board({
           <>
             <AgentSays
               heading={
-                scopeCheck.verdict === 'light' ? 'Light for a week'
-                  : scopeCheck.verdict === 'scattered' ? 'Pulling in several directions'
-                    : 'Worth the week'
+                scopeCheck.verdict === 'pending' ? 'Looking at your week…'
+                  : scopeCheck.verdict === 'light' ? 'Light for a week'
+                    : scopeCheck.verdict === 'scattered' ? 'Pulling in several directions'
+                      : 'Worth the week'
               }
-              tone={scopeCheck.verdict === 'worth_it' ? 'good' : 'warn'}
+              tone={scopeCheck.verdict === 'pending' ? 'neutral' : scopeCheck.verdict === 'worth_it' ? 'good' : 'warn'}
               body={scopeCheck.reasoning}
               action={scopeCheck.suggestion}
             />

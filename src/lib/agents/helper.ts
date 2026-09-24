@@ -23,7 +23,7 @@
 
 import { LEAD_VOICE } from '@/lib/agents/lead'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { callStructuredAgent } from './client'
+import { streamTextAgent } from './client'
 import { untrusted } from './untrusted'
 import { SCOPE_RULE } from './scope'
 
@@ -67,7 +67,9 @@ WHAT YOU MUST NOT DO — this is the important part
 - Do not comment on their ability, their pace, or how long this is taking.
 
 WHEN YOUR ANSWER IMPLIES WORK
-Sometimes the honest answer is that something else has to happen first — a setting to configure, a dependency to install, a piece nobody wrote down. When that is true, fill in suggestedSubtask with a short title and one line on why. Leave it null otherwise.
+Sometimes the honest answer is that something else has to happen first — a setting to configure, a dependency to install, a piece nobody wrote down. When that is true, end your reply with one final line, exactly in this form and nothing after it:
+SUBTASK: <short title> | <one line on why>
+Leave that line out otherwise.
 
 Only for real, separable work. Not "read the docs", not "try again", and never a restatement of the task they are already on. If you are not sure it deserves its own card, it does not.
 
@@ -75,23 +77,17 @@ You cannot see their code. You have the task and the conversation. If answering 
 
 ${SCOPE_RULE}`
 
-const SCHEMA = {
-  type: 'object',
-  properties: {
-    body: { type: 'string', maxLength: 900 },
-    suggestedSubtask: {
-      type: ['object', 'null'],
-      properties: {
-        title: { type: 'string', maxLength: 200 },
-        why: { type: 'string', maxLength: 200 },
-      },
-      required: ['title', 'why'],
-      additionalProperties: false,
-    },
-  },
-  required: ['body', 'suggestedSubtask'],
-  additionalProperties: false,
-} as const
+/** Split the streamed reply into what is said and the optional subtask line. */
+export function splitHelperReply(text: string): HelperReply {
+  const at = text.search(/\n?\s*SUBTASK:/)
+  if (at < 0) return { body: text.trim().slice(0, 1200), suggestedSubtask: null }
+  const line = text.slice(at).replace(/^\s*SUBTASK:\s*/, '').trim()
+  const [title, why] = line.split('|').map((p) => p.trim())
+  return {
+    body: text.slice(0, at).trim().slice(0, 1200),
+    suggestedSubtask: title ? { title: title.slice(0, 200), why: (why ?? '').slice(0, 200) } : null,
+  }
+}
 
 /**
  * Answer one question on one task.
@@ -111,8 +107,9 @@ export async function answerOnTask(
     thread: string
     question: string
   },
+  onText?: (delta: string) => void,
 ): Promise<HelperReply | null> {
-  return callStructuredAgent<HelperReply>(supabase, {
+  const result = await streamTextAgent(supabase, {
     agentType: 'helper',
     system: SYSTEM,
     userContent: [
@@ -127,8 +124,10 @@ export async function answerOnTask(
       context.thread ? untrusted('The conversation so far', context.thread) : 'Nothing has been said yet.',
       untrusted('What they are asking', context.question),
     ].join('\n\n'),
-    schema: SCHEMA,
     studentId,
     inputForAudit: { kind: 'task_help' },
+    onText,
+    maxTokens: 800,
   })
+  return result ? splitHelperReply(result.text) : null
 }
