@@ -27,7 +27,7 @@ const ACADEMIC_SUFFIXES = ['.edu']
  * v1 has not accepted v2, and a re-acceptance prompt needs to be able to
  * tell the difference.
  */
-const TERMS_VERSION = 'terms_v1'
+const TERMS_VERSION = 'terms_2026-09-24'
 
 function isAcademicEmail(email: string | undefined): boolean {
   if (!email) return false
