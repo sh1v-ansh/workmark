@@ -110,9 +110,9 @@ export default function FinishProfile() {
         <Button onClick={save} busyLabel={busy ? 'Saving…' : null} disabled={!major && !availability && !hours && !linkedin}>
           Save
         </Button>
-        {/* Kept in Settings, away from the profile others see: these answers
-            are private and only decide which programs are shown. */}
-        <a href="/account/settings#opportunities" style={{ fontSize: 13, color: C.accent }}>
+        {/* On your own profile page, in a private section nobody else sees:
+            these answers only decide which programs are shown. */}
+        <a href="/me#opportunities" style={{ fontSize: 13, color: C.accent }}>
           Some programs are only for certain groups. Check if you qualify
         </a>
       </div>

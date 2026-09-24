@@ -7,10 +7,11 @@ export type IconName =
   | 'mail' | 'github' | 'linkedin' | 'clock' | 'users' | 'star' | 'map-pin'
   | 'search' | 'x' | 'plus' | 'message' | 'eye' | 'briefcase' | 'award'
   | 'refresh' | 'edit' | 'calendar' | 'link' | 'inbox'
-  | 'settings' | 'sign-out' | 'bug' | 'spark' | 'home' | 'folder'
+  | 'settings' | 'sign-out' | 'bug' | 'spark' | 'home' | 'folder' | 'trash'
 
 const PATHS: Record<IconName, React.ReactNode> = {
   check: <path d="M3 9.5l4 4 8-9" />,
+  trash: <path d="M3 5h12M7 5V3.5h4V5M4.5 5l.8 10h7.4l.8-10M7.5 8v4.5M10.5 8v4.5" />,
   'arrow-right': <path d="M3 9h12M10 4l5 5-5 5" />,
   'chevron-down': <path d="M4 6.5l5 5 5-5" />,
   'chevron-up': <path d="M4 11.5l5-5 5 5" />,

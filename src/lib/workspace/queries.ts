@@ -24,6 +24,8 @@ export interface WorkspaceSummary {
   createdAt: string | null
   startedAt: string | null
   memberCount: number
+  /** You own it (set by listWorkspaces; the detail view has yourRole). */
+  isOwner?: boolean
   repoFullName: string | null
   /**
    * When the closing scan finished writing people's records. Null on a closed
@@ -128,7 +130,7 @@ export async function listWorkspaces(
 ): Promise<WorkspaceSummary[]> {
   const { data: memberships } = await supabase
     .from('workspace_members')
-    .select('workspace_id')
+    .select('workspace_id, role')
     .eq('account_id', userId)
     .not('accepted_at', 'is', null)
     .is('removed_at', null)
@@ -171,6 +173,7 @@ export async function listWorkspaces(
     createdAt: w.created_at as string | null,
     startedAt: w.started_at as string | null,
     memberCount: counts.get(w.id as string) ?? 0,
+    isOwner: (memberships ?? []).some((m) => m.workspace_id === w.id && m.role === 'owner'),
     repoFullName: repoByWorkspace.get(w.id as string) ?? null,
     evidenceMintedAt: w.evidence_minted_at as string | null,
   }))

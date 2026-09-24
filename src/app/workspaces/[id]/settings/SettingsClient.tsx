@@ -63,6 +63,7 @@ export default function SettingsClient({
   const isClosed = workspace.status === 'closed'
   const you = workspace.members.find((m) => m.isYou)
   const teamSize = workspace.members.length + workspace.invited.length
+  const solo = teamSize <= 1
 
   async function call(key: string, url: string, init: RequestInit, okMessage?: string) {
     setBusy(key)
@@ -112,6 +113,14 @@ export default function SettingsClient({
   const withdrawRemoval = (id: string) =>
     call(`withdraw-${id}`, `/api/workspaces/${workspace.id}/removals/${id}`,
       { method: 'DELETE' }, 'Request withdrawn.')
+
+  async function deleteProject() {
+    const res = await fetch(`/api/workspaces/${workspace.id}`, { method: 'DELETE' }).catch(() => null)
+    const data = await res?.json().catch(() => ({}))
+    if (!res?.ok) { toast(data?.error ?? 'Could not delete the project.', 'error'); return }
+    toast('Project deleted.', 'success')
+    router.push('/workspaces')
+  }
 
   async function closeProject() {
     const ok = await call('close', `/api/workspaces/${workspace.id}/close`, { method: 'POST' })
@@ -380,23 +389,32 @@ export default function SettingsClient({
           "6 tasks" is the fact that tells an owner whether they are closing
           too early. */}
       <Modal open={closing} onClose={() => setClosing(false)} title="Close this project?">
-        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 14 }}>
-          {finishedCount === 0
-            ? 'Nothing here has been verified yet, so there is nothing to put on anybody’s record. Submit your finished work and run a check first.'
-            : `${finishedCount} ${finishedCount === 1 ? 'task has' : 'tasks have'} been verified. Closing reads the repository once for each person and writes what they demonstrated to their record.`}
-        </p>
-        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 18 }}>
-          This cannot be undone from here, and the board stops accepting new work.
-        </p>
+        {finishedCount === 0 ? (
+          <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 18 }}>
+            {solo
+              ? 'Nothing here has been checked yet, so there is nothing to add to your record. You can finish a task and run a check first, or delete the project.'
+              : 'Nothing here has been checked yet, so there is nothing to add to anyone’s record. Finish a task and run a check first.'}
+          </p>
+        ) : (
+          <>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 14 }}>
+              {`${finishedCount} ${finishedCount === 1 ? 'task has' : 'tasks have'} been verified. Closing reads the repository once for each person and writes what they demonstrated to their record.`}
+            </p>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 18 }}>
+              This cannot be undone from here, and the board stops accepting new work.
+            </p>
+          </>
+        )}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <Button variant="quiet" onClick={() => setClosing(false)}>Not yet</Button>
-          <Button
-            onClick={closeProject}
-            disabled={finishedCount === 0}
-            busyLabel={busy === 'close' ? 'Closing…' : null}
-          >
-            Close the project
-          </Button>
+          <Button variant="quiet" onClick={() => setClosing(false)}>{finishedCount === 0 ? 'Keep working' : 'Not yet'}</Button>
+          {finishedCount === 0 && solo && (
+            <Button variant="danger" onClick={deleteProject}>Delete the project</Button>
+          )}
+          {finishedCount > 0 && (
+            <Button onClick={closeProject} busyLabel={busy === 'close' ? 'Closing…' : null}>
+              Close the project
+            </Button>
+          )}
         </div>
       </Modal>
     </>

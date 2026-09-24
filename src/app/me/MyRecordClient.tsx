@@ -1,5 +1,8 @@
 'use client'
 
+import EligibilitySection from '@/app/account/settings/EligibilitySection'
+import type { Eligibility } from '@/lib/profile/eligibility'
+
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -67,7 +70,8 @@ const VERIFICATION_LABEL: Record<string, string> = {
   attested: 'Confirmed by a collaborator',
 }
 
-export default function MyRecordClient({ studentId, record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt }: {
+export default function MyRecordClient({ studentId, record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt, eligibility }: {
+  eligibility: Eligibility
   studentId: string
   record: StudentRecord
   /** Pooled across every project. Null for somebody who has not been on one. */
@@ -512,6 +516,20 @@ export default function MyRecordClient({ studentId, record, howYouWork, sources,
                 </Card>
               </div>
             )}
+
+            {/* Private: only ever shown here, to the student. */}
+            <section id="opportunities" style={{ scrollMarginTop: 90 }}>
+              <Kicker style={{ marginBottom: 5.5, paddingLeft: 20.5 }}>Opportunities just for you</Kicker>
+              <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 12, maxWidth: '64ch' }}>
+                Some scholarships, programs and internships are only open to certain groups. Tell us if
+                any apply and we&apos;ll show you the ones you qualify for. Only you can see this, it is
+                never shown to employers, and it never affects how your work is judged. Every question
+                is optional.
+              </p>
+              <Card hoverable={false} padding="19px 21px">
+                <EligibilitySection initial={eligibility} />
+              </Card>
+            </section>
           </div>
         </div>
       </main>

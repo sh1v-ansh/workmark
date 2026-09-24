@@ -38,6 +38,23 @@ export default function WorkspacesClient({
   const [summary, setSummary] = useState('')
   const [busy, setBusy] = useState(false)
   const [answering, setAnswering] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<WorkspaceSummary | null>(null)
+  // Gone from the list the moment it is confirmed; put back if the delete fails.
+  const [hidden, setHidden] = useState<Set<string>>(new Set())
+
+  async function deleteProject(w: WorkspaceSummary) {
+    setDeleting(null)
+    setHidden((prev) => new Set(prev).add(w.id))
+    const res = await fetch(`/api/workspaces/${w.id}`, { method: 'DELETE' }).catch(() => null)
+    const data = await res?.json().catch(() => ({}))
+    if (!res?.ok) {
+      setHidden((prev) => { const next = new Set(prev); next.delete(w.id); return next })
+      toast(data?.error ?? 'Could not delete the project.', 'error')
+      return
+    }
+    toast('Project deleted.', 'success')
+    router.refresh()
+  }
 
   async function create() {
     setBusy(true)
@@ -140,12 +157,28 @@ export default function WorkspacesClient({
           </Card>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
-            {workspaces.map((w) => (
+            {workspaces.filter((w) => !hidden.has(w.id)).map((w) => (
               <Card key={w.id} href={`/workspaces/${w.id}`} hoverable>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 5 }}>
                   <p style={{ fontSize: T.h3, fontWeight: 600, color: C.text }}>{w.title}</p>
-                  <span style={{ fontSize: T.meta, color: w.status === 'draft' ? C.textFaint : C.textMuted, whiteSpace: 'nowrap' }}>
-                    {STATUS_LABEL[w.status]}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: T.meta, color: w.status === 'draft' ? C.textFaint : C.textMuted, whiteSpace: 'nowrap' }}>
+                      {STATUS_LABEL[w.status]}
+                    </span>
+                    {w.isOwner && w.memberCount <= 1 && w.status !== 'closed' && (
+                      <button
+                        type="button"
+                        aria-label={`Delete ${w.title}`}
+                        title="Delete project"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleting(w) }}
+                        style={{
+                          display: 'inline-flex', background: 'none', border: 'none', padding: 2,
+                          cursor: 'pointer', color: C.textFaint, position: 'relative', zIndex: 2,
+                        }}
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    )}
                   </span>
                 </div>
                 {w.summary && (
@@ -172,6 +205,17 @@ export default function WorkspacesClient({
           </div>
         )}
       </main>
+
+      <Modal open={!!deleting} onClose={() => setDeleting(null)} title="Delete this project?">
+        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 18 }}>
+          {deleting?.title} and its board, tasks and messages are deleted for good.
+          Your repository on GitHub is not touched.
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="quiet" onClick={() => setDeleting(null)}>Cancel</Button>
+          <Button variant="danger" onClick={() => deleting && deleteProject(deleting)}>Delete project</Button>
+        </div>
+      </Modal>
 
       <Modal open={creating} onClose={() => setCreating(false)} title="New project">
         <label htmlFor="ws-title" style={{ display: 'block', fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
