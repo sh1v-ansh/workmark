@@ -91,14 +91,16 @@ export default function LegalPage({ params }: { params: { doc: string } }) {
             reflects whatever the document says today; pasted HTML reflects
             whatever it said when somebody pasted it; the placeholder is
             honest about there being nothing. */}
-        {doc.termlyId ? (
-          <TermlyEmbed dataId={doc.termlyId} />
-        ) : pasted ? (
+        {/* Pasted HTML first: it is the reviewed text and renders with the
+            page, no script. The Termly embed is only the fallback. */}
+        {pasted ? (
           // The content is a file in this repo, written by us — not user
           // input — so there is nothing here to sanitize against. Note that
           // any <script> in it will not run: that's how innerHTML works, and
           // it's why the embed is the better path for the cookie table.
           <div className="legal-prose" dangerouslySetInnerHTML={{ __html: pasted }} />
+        ) : doc.termlyId ? (
+          <TermlyEmbed dataId={doc.termlyId} />
         ) : (
           // Shown when the embed id isn't configured — in local development,
           // or in a deploy where the env var was missed. Saying so plainly

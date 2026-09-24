@@ -11,6 +11,9 @@ import { POSITION_STEP } from '@/lib/workspace/tasks'
 import { releaseTickets, RAMP_UP_TICKET } from '@/lib/workspace/queue'
 import { requireUuid, ValidationError } from '@/lib/http/validate'
 import { loadProjectState, canAskForMore, progressBrief } from '@/lib/workspace/project-state'
+import { textStreamResponse } from '@/lib/http/text-stream'
+
+export const maxDuration = 60
 
 /**
  * POST /api/workspaces/[id]/plan — draft a plan.
@@ -23,6 +26,10 @@ import { loadProjectState, canAskForMore, progressBrief } from '@/lib/workspace/
  * Nothing is auto-started. Tasks land in Backlog, unassigned unless a
  * teammate holds the matching work role, and the board looks exactly as it
  * would if a person had typed them.
+ *
+ * Streamed: each task is sent as one JSON line the moment the model
+ * finishes writing it, so the cards appear one by one. Nothing is saved
+ * until the whole plan is in; the closing record says how it went.
  *
  * Rate limited three ways, which is not belt and braces. The workspace limit
  * catches a loop; the generic agent limit is the app-wide ceiling on paid
@@ -129,98 +136,97 @@ async function draftPlan(request: Request, params: Promise<{ id: string }>) {
     if (refusal) return NextResponse.json({ error: refusal }, { status: 409 })
   }
 
-  const plan = await planProject(admin, user.id, {
-    title: workspace.title as string,
-    summary: workspace.summary as string | null,
-    teamRoles,
-    teamSize: active.length,
-    deadline: workspace.deadline as string | null,
-    // Sent so a second run tops the board up instead of proposing the same
-    // eight tasks again.
-    existingTitles: (existing ?? []).map((t) => t.title as string).slice(0, 60),
-    // Omitted on a board with no history, where it would be a paragraph
-    // saying nothing had happened yet.
-    progress: state && state.tasks.length > 0 ? progressBrief(state) : null,
-  })
+  return textStreamResponse(async (emit) => {
+    const plan = await planProject(admin, user.id, {
+      title: workspace.title as string,
+      summary: workspace.summary as string | null,
+      teamRoles,
+      teamSize: active.length,
+      deadline: workspace.deadline as string | null,
+      // Sent so a second run tops the board up instead of proposing the same
+      // eight tasks again.
+      existingTitles: (existing ?? []).map((t) => t.title as string).slice(0, 60),
+      // Omitted on a board with no history, where it would be a paragraph
+      // saying nothing had happened yet.
+      progress: state && state.tasks.length > 0 ? progressBrief(state) : null,
+    }, (task) => emit(JSON.stringify({ title: task.title, estimateHours: task.estimateHours }) + '\n'))
 
-  if (!plan) {
-    return NextResponse.json(
-      { error: 'Could not draft a plan just now. Try again, or add tasks yourself.' },
-      { status: 502 },
+    if (!plan) {
+      return { error: 'Could not draft a plan just now. Try again, or add tasks yourself.' }
+    }
+
+    // Appended below whatever is already there, in the order proposed. The
+    // order is the plan's argument about sequence — schema before the
+    // endpoints that read it — so it must survive into the board.
+    const highest = (existing ?? []).reduce(
+      (max, t) => Math.max(max, Number(t.position) || 0),
+      0,
     )
-  }
 
-  // Appended below whatever is already there, in the order proposed. The
-  // order is the plan's argument about sequence — schema before the
-  // endpoints that read it — so it must survive into the board.
-  const highest = (existing ?? []).reduce(
-    (max, t) => Math.max(max, Number(t.position) || 0),
-    0,
-  )
-
-  const rows = plan.tasks.map((task, index) => ({
-    workspace_id: workspaceId,
-    title: task.title,
-    detail: task.detail || null,
-    acceptance_criteria: task.acceptanceCriteria || null,
-    before_question: task.beforeQuestion,
-    suggested_role: task.suggestedRole,
-    // Unassigned when nobody holds the role. Better than landing on
-    // whoever happens to be listed first, which is how a teammate ends up
-    // owning work they never agreed to.
-    assignee_id: assigneeForRole(active, task.suggestedRole),
-    estimate_hours: task.estimateHours,
-    difficulty: task.difficulty,
-    verifiable: task.verifiable,
-    origin: 'ai_proposed',
-    plan_call_id: plan.callId,
-    position: highest + POSITION_STEP * (index + 1),
-    created_by: user.id,
-  }))
-
-  // Ids come back in insert order, which is what makes the planner's
-  // dependsOn indices resolvable. Without the select this is a fire-and-forget
-  // insert and the dependency graph the model just worked out is thrown away.
-  const { data: inserted, error } = await supabase.from('tasks').insert(rows).select('id')
-  if (error) {
-    console.error('[api/workspaces/:id/plan] insert failed:', error)
-    return NextResponse.json({ error: 'Drafted the plan but could not save it.' }, { status: 500 })
-  }
-
-  const dependencies = await recordDependencies(supabase, workspaceId, plan.tasks, inserted ?? [])
-
-  // A first plan on an empty board opens with the day-one ticket. Its own
-  // insert, so the planner's dependsOn indices above still line up, and
-  // position 0 so it sits above everything the plan proposed.
-  if ((existing ?? []).length === 0) {
-    const { error: rampErr } = await supabase.from('tasks').insert({
+    const rows = plan.tasks.map((task, index) => ({
       workspace_id: workspaceId,
-      title: RAMP_UP_TICKET.title,
-      detail: RAMP_UP_TICKET.detail,
-      acceptance_criteria: RAMP_UP_TICKET.acceptanceCriteria,
-      estimate_hours: RAMP_UP_TICKET.estimateHours,
-      difficulty: RAMP_UP_TICKET.difficulty,
-      verifiable: true,
-      ticket_kind: 'ramp_up',
+      title: task.title,
+      detail: task.detail || null,
+      acceptance_criteria: task.acceptanceCriteria || null,
+      before_question: task.beforeQuestion,
+      suggested_role: task.suggestedRole,
+      // Unassigned when nobody holds the role. Better than landing on
+      // whoever happens to be listed first, which is how a teammate ends up
+      // owning work they never agreed to.
+      assignee_id: assigneeForRole(active, task.suggestedRole),
+      estimate_hours: task.estimateHours,
+      difficulty: task.difficulty,
+      verifiable: task.verifiable,
       origin: 'ai_proposed',
-      assignee_id: assigneeForRole(active, null),
-      position: 0,
+      plan_call_id: plan.callId,
+      position: highest + POSITION_STEP * (index + 1),
       created_by: user.id,
-    })
-    if (rampErr) console.error('[api/workspaces/:id/plan] ramp-up insert failed:', rampErr)
-  }
+    }))
 
-  // Everything just landed in the backlog; the queue decides what arrives
-  // in Planned. Best-effort — a failure leaves the plan in the backlog,
-  // where it can still be dragged out by hand.
-  let released = 0
-  try {
-    released = (await releaseTickets(admin, workspaceId)).length
-  } catch (err) {
-    console.error('[api/workspaces/:id/plan] release failed:', err)
-  }
+    // Ids come back in insert order, which is what makes the planner's
+    // dependsOn indices resolvable. Without the select this is a fire-and-forget
+    // insert and the dependency graph the model just worked out is thrown away.
+    const { data: inserted, error } = await supabase.from('tasks').insert(rows).select('id')
+    if (error) {
+      console.error('[api/workspaces/:id/plan] insert failed:', error)
+      return { error: 'Drafted the plan but could not save it.' }
+    }
 
-  return NextResponse.json({ ok: true, count: rows.length, dependencies, released })
+    const dependencies = await recordDependencies(supabase, workspaceId, plan.tasks, inserted ?? [])
+
+    // A first plan on an empty board opens with the day-one ticket. Its own
+    // insert, so the planner's dependsOn indices above still line up, and
+    // position 0 so it sits above everything the plan proposed.
+    if ((existing ?? []).length === 0) {
+      const { error: rampErr } = await supabase.from('tasks').insert({
+        workspace_id: workspaceId,
+        title: RAMP_UP_TICKET.title,
+        detail: RAMP_UP_TICKET.detail,
+        acceptance_criteria: RAMP_UP_TICKET.acceptanceCriteria,
+        estimate_hours: RAMP_UP_TICKET.estimateHours,
+        difficulty: RAMP_UP_TICKET.difficulty,
+        verifiable: true,
+        ticket_kind: 'ramp_up',
+        origin: 'ai_proposed',
+        assignee_id: assigneeForRole(active, null),
+        position: 0,
+        created_by: user.id,
+      })
+      if (rampErr) console.error('[api/workspaces/:id/plan] ramp-up insert failed:', rampErr)
+    }
+
+    // Everything just landed in the backlog; the queue decides what arrives
+    // in Planned. Best-effort — a failure leaves the plan in the backlog,
+    // where it can still be dragged out by hand.
+    let released = 0
+    try {
+      released = (await releaseTickets(admin, workspaceId)).length
+    } catch (err) {
+      console.error('[api/workspaces/:id/plan] release failed:', err)
+    }
+
+    return { ok: true, count: rows.length, dependencies, released }
+  })
 }
 
 /**

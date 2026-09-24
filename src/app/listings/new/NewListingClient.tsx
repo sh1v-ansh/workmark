@@ -21,6 +21,8 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.Re
 /** A listing as the form holds it — every number as the text in its box. */
 export interface ListingDraft {
   kind: string
+  /** The poster's two application questions; blank means the standard pair. */
+  questions?: { prompt: string; kind: string; hint: string }[]
   title: string
   brief: string
   requirements: PickedRequirement[]
@@ -47,6 +49,29 @@ export default function NewListingClient({ taxonomy, agentsAvailable, editing }:
   const { toast } = useToast()
 
   const [kind, setKind] = useState(init?.kind ?? '')
+  const [questions, setQuestions] = useState<{ prompt: string; kind: string; hint: string }[]>(
+    init?.questions?.length ? init.questions : [{ prompt: '', kind: 'custom', hint: '' }, { prompt: '', kind: 'custom', hint: '' }],
+  )
+  const [suggesting, setSuggesting] = useState(false)
+
+  // Only when asked. The suggestions land in the boxes to keep or rewrite.
+  async function suggestQuestions() {
+    setSuggesting(true)
+    try {
+      const res = await fetch('/api/agents/application-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, brief, skills: requirements.map((r) => r.canonicalName) }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Could not suggest questions.')
+      setQuestions((json.questions as { prompt: string; kind: string; hint: string }[]).map((q) => ({ prompt: q.prompt, kind: q.kind, hint: q.hint })))
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : 'Could not suggest questions.', 'error')
+    } finally {
+      setSuggesting(false)
+    }
+  }
   const [title, setTitle] = useState(init?.title ?? '')
   const [brief, setBrief] = useState(init?.brief ?? '')
   const [requirements, setRequirements] = useState<PickedRequirement[]>(init?.requirements ?? [])
@@ -117,6 +142,7 @@ export default function NewListingClient({ taxonomy, agentsAvailable, editing }:
           team_size: teamSize ? parseInt(teamSize) : null,
           declared_difficulty: difficulty ? parseInt(difficulty) : null,
           requirements: requirements.map((r) => ({ skillId: r.skillId, requiredLevel: r.requiredLevel })),
+          application_questions: questions.filter((q) => q.prompt.trim()),
         }),
       })
       const json = await res.json()
@@ -249,6 +275,41 @@ export default function NewListingClient({ taxonomy, agentsAvailable, editing }:
                 <FieldLabel htmlFor="listing-difficulty">Difficulty (1–10)</FieldLabel>
                 <input id="listing-difficulty" type="number" min={1} max={10} value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className="dk-input" placeholder="6" />
               </div>
+            </div>
+
+            {/* The poster's own questions. Blank uses the standard pair. */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: C.textSub }}>
+                  Application questions <span style={{ fontWeight: 400, color: C.textMuted }}>(optional, up to 2)</span>
+                </span>
+                {agentsAvailable && (
+                  <Button type="button" variant="outline" size="sm" onClick={suggestQuestions}
+                    disabled={!title.trim() || brief.trim().length < 20} busyLabel={suggesting ? 'Writing…' : null}>
+                    Suggest questions
+                  </Button>
+                )}
+              </div>
+              <div style={{ display: 'grid', gap: 8 }}>
+                {questions.map((q, i) => (
+                  <textarea
+                    key={i}
+                    className="dk-textarea"
+                    rows={2}
+                    maxLength={300}
+                    value={q.prompt}
+                    onChange={(e) => setQuestions((qs) => qs.map((x, j) => (j === i ? { prompt: e.target.value, kind: 'custom', hint: '' } : x)))}
+                    placeholder={i === 0
+                      ? 'e.g. If this had to ship in half the time, what would you cut first?'
+                      : 'e.g. What does this brief not tell you that you would need to know?'}
+                    aria-label={`Application question ${i + 1}`}
+                    style={{ fontFamily: 'inherit', fontSize: 14 }}
+                  />
+                ))}
+              </div>
+              <p style={{ fontSize: 13, color: C.textMuted, marginTop: 6 }}>
+                Leave these blank to use our two standard questions.
+              </p>
             </div>
 
             <Button type="submit" variant="accent" fullWidth disabled={saving} busyLabel={saving ? (editing ? 'Saving…' : 'Posting…') : null}>

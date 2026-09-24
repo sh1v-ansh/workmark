@@ -38,7 +38,7 @@ describe('buildFunnel', () => {
     const rows = [
       ...['a', 'b', 'c', 'd'].map((w) => seen(`sess-${w}`, 'signup_started')),
       ...['a', 'b'].map((w) => seen(`sess-${w}`, 'signup_submitted')),
-      seen('s-a', 'onboarding_completed'),
+      seen('s-a', 'signin_succeeded'),
     ]
     const steps = buildFunnel(rows)
     expect(steps[1].ofStart).toBeCloseTo(0.5)
@@ -52,7 +52,7 @@ describe('buildFunnel', () => {
 
   it('copes with nobody having done anything', () => {
     const steps = buildFunnel([])
-    expect(steps).toHaveLength(7)
+    expect(steps).toHaveLength(10)
     expect(steps.every((s) => s.reached === 0)).toBe(true)
     expect(steps[0].ofStart).toBeNull()
   })
@@ -66,7 +66,10 @@ describe('worstDrop', () => {
     const counts: [EventName, number][] = [
       ['signup_started', 100],
       ['signup_submitted', 90],
+      ['signin_succeeded', 88],
       ['onboarding_completed', 20], // the cliff
+      ['onboarding_intents_chosen', 19],
+      ['github_connect_started', 19],
       ['github_connected', 19],
       ['scan_started', 18],
       ['first_evidence', 17],

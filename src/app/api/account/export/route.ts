@@ -41,7 +41,7 @@ export async function GET() {
   const [
     account, profile, connection, grants, priors, evidence, audit,
     applications, engagements, briefs, consents, disclosures, disputes,
-    messages, artifacts, listings, reviewRequests,
+    messages, artifacts, listings, reviewRequests, eligibility,
   ] = await Promise.all([
     supabase.from('accounts').select('roles, status, display_name, institution, terms_accepted_at, terms_version, age_attested_at, notification_prefs, email_unsubscribed_at, marketing_opted_in_at, marketing_opted_out_at, marketing_consent_text, marketing_consent_version, marketing_consent_source, created_at').eq('id', user.id).maybeSingle(),
     supabase.from('students').select('*').eq('id', user.id).maybeSingle(),
@@ -63,6 +63,8 @@ export async function GET() {
     mine('artifacts', '*'),
     supabase.from('listings').select('*').eq('poster_id', user.id),
     mine('review_requests', '*'),
+    // Their own eligibility answers: private to them, so in their export.
+    supabase.from('student_eligibility').select('*').eq('student_id', user.id).maybeSingle(),
   ])
 
   // The login address. Not readable under RLS because it lives in
@@ -84,6 +86,7 @@ export async function GET() {
     about: 'Everything Workmark holds about you. Other people\'s data is deliberately excluded — an application shows the project you applied to, not the poster\'s details.',
     account: { id: user.id, email, ...(account.data ?? {}) },
     profile: profile.data ?? null,
+    opportunity_eligibility: eligibility.data ?? null,
     github: {
       connection: connection.data?.[0] ?? null,
       repositories_granted: grants.data ?? [],

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { enforce } from '@/lib/rate-limit'
 import {
   parseBody, readFields, requireString, optionalString, requireUuid, requireOneOf, ValidationError,
@@ -82,4 +83,53 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   return NextResponse.json({ ok: true, status: updated[0].status })
+}
+
+/**
+ * DELETE /api/workspaces/[id] — delete a solo project.
+ *
+ * Only when you own it, nobody else is on it (or invited), and it has not
+ * been closed — a closed project's result is on your record, and a team
+ * project is other people's work too. Everything under it cascades.
+ */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+
+  const limited = await enforce('workspace', user.id)
+  if (limited) return limited
+
+  let id: string
+  try {
+    id = requireUuid((await params).id, 'Project')
+  } catch (err) {
+    if (err instanceof ValidationError) return NextResponse.json({ error: err.message }, { status: 400 })
+    throw err
+  }
+
+  const [{ data: workspace }, { data: members }] = await Promise.all([
+    supabase.from('workspaces').select('id, status').eq('id', id).maybeSingle(),
+    supabase.from('workspace_members').select('account_id, role').eq('workspace_id', id).is('removed_at', null),
+  ])
+  const mine = (members ?? []).find((m) => m.account_id === user.id)
+  if (!workspace || mine?.role !== 'owner') {
+    return NextResponse.json({ error: 'Only the owner can delete this project.' }, { status: 404 })
+  }
+  if ((members ?? []).length > 1) {
+    return NextResponse.json({ error: 'Other people are on this project, so it can be closed but not deleted.' }, { status: 409 })
+  }
+  if (workspace.status === 'closed') {
+    return NextResponse.json({ error: 'A finished project is part of your record and cannot be deleted.' }, { status: 409 })
+  }
+
+  // Checked above as the caller; deleted with the service role because
+  // workspaces has no delete policy.
+  const admin = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const { error } = await admin.from('workspaces').delete().eq('id', id)
+  if (error) {
+    console.error('[api/workspaces/id] delete failed:', error)
+    return NextResponse.json({ error: 'Could not delete the project.' }, { status: 500 })
+  }
+  return NextResponse.json({ ok: true })
 }

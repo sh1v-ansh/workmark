@@ -3,6 +3,7 @@ import { enforce } from '@/lib/rate-limit'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { generateBrief } from '@/lib/agents/brief'
+import { textStreamResponse } from '@/lib/http/text-stream'
 import { agentsAvailable } from '@/lib/agents/client'
 import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 import { isCareerTrack, isSkillLevel } from '@/lib/agents/tracks'
@@ -91,24 +92,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: limit.message }, { status: 429 })
   }
 
-  try {
-    const brief = await generateBrief(admin, user.id, body.skillId, {
-      targetRole: body.targetRole?.trim() || null,
-      skillLevel,
-      careerTrack,
-    })
-    if (!brief) {
-      return NextResponse.json({ error: 'Could not generate a project idea. Try again.' }, { status: 502 })
-    }
+  // Streamed. The brief is written straight to the response as the model
+  // produces it, so the student reads it arriving instead of watching a
+  // spinner for fifteen seconds. Once it ends it is saved, and one final
+  // record, after a \u001e separator, carries the saved id (or an error)
+  // as JSON. See lib/briefs/stream.ts for the reader.
+  const skillId = body.skillId
+  const targetRole = body.targetRole?.trim() || null
+  return textStreamResponse(async (emit) => {
+    const brief = await generateBrief(admin, user.id, skillId, { targetRole, skillLevel, careerTrack }, emit)
+    if (!brief) return { error: 'Could not generate a project idea. Try again.' }
 
-    // Written under the student's own session — project_briefs has a
-    // manage-own policy, and the brief genuinely is theirs.
     const { data: saved, error } = await supabase
       .from('project_briefs')
       .insert({
         student_id: user.id,
         target_skill_id: brief.targetSkillId,
-        target_role: body.targetRole?.trim() || null,
+        target_role: targetRole,
         brief_text: `${brief.title}\n\n${brief.briefText}`,
         difficulty: brief.difficulty,
         skill_level: skillLevel,
@@ -116,11 +116,10 @@ export async function POST(request: Request) {
       })
       .select('id')
       .single()
-    if (error) throw error
-
-    return NextResponse.json({ ok: true, id: saved.id, brief })
-  } catch (err) {
-    console.error('[api/agents/brief] failed:', err)
-    return NextResponse.json({ error: 'Could not generate a project idea.' }, { status: 500 })
-  }
+    if (error) {
+      console.error('[api/agents/brief] save failed:', error)
+      return { error: 'Could not save the project idea.' }
+    }
+    return { ok: true, id: saved.id }
+  })
 }

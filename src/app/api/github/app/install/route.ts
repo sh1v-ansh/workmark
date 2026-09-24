@@ -1,4 +1,14 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { record } from '@/lib/analytics/record'
+
+function serviceClient() {
+  return createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+}
+async function hasStudentProfile(id: string): Promise<boolean> {
+  const { data } = await serviceClient().from('students').select('id').eq('id', id).maybeSingle()
+  return !!data
+}
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import { hasGithubConsent } from '@/lib/github/consent'
@@ -37,6 +47,12 @@ export async function GET(request: Request) {
   const appSlug = process.env.GITHUB_APP_SLUG
   if (!appSlug) {
     return NextResponse.redirect(new URL('/student/dashboard?gh_error=not_configured', request.url))
+  }
+
+  // Every Connect GitHub button lands here, so this is the one place that
+  // counts them all (onboarding step 3, the GitHub page, the dashboard).
+  if (await hasStudentProfile(user.id)) {
+    await record(serviceClient(), 'github_connect_started', user.id)
   }
 
   const state = randomUUID()

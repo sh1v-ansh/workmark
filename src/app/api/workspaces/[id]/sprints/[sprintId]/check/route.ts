@@ -5,8 +5,11 @@ import { enforce } from '@/lib/rate-limit'
 import { requireUuid, ValidationError } from '@/lib/http/validate'
 import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 import { checkScope } from '@/lib/agents/kickoff'
+import { textStreamResponse } from '@/lib/http/text-stream'
 import { kickoffBrief, toSprint, type SprintTask } from '@/lib/workspace/sprint'
 import { loadMetrics } from '@/lib/workspace/queries'
+
+export const maxDuration = 60
 
 /**
  * POST /api/workspaces/[id]/sprints/[sprintId]/check — is this week doable?
@@ -94,13 +97,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     sample: estimation?.bias.sample ?? 0,
   })
 
-  const result = await checkScope(admin, user.id, facts)
-  if (!result) {
-    return NextResponse.json(
-      { error: 'Could not check this week just now. Nothing has changed.' },
-      { status: 502 },
-    )
-  }
-
-  return NextResponse.json({ ok: true, ...result })
+  // Streamed: the advice appears as it is written.
+  return textStreamResponse(async (emit) => {
+    const result = await checkScope(admin, user.id, facts, emit)
+    if (!result) return { error: 'Could not check this week just now. Nothing has changed.' }
+    return { ok: true, ...result }
+  })
 }

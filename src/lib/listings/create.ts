@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { writeApplicationQuestions } from '@/lib/agents/application-questions'
 import type { ListingFields } from '@/lib/listings/fields'
 
 /**
@@ -51,24 +50,9 @@ export async function createListing(
     return { ok: false, error: 'Could not save the required skills. The listing was saved as a draft.' }
   }
 
-  // The two questions applicants answer, written once per listing rather
-  // than once per applicant. Best-effort: a listing must never be
-  // unpostable because a model call was slow or refused, and the standard
-  // pair is served when this is null.
-  let applicationQuestions = null
-  try {
-    applicationQuestions = await writeApplicationQuestions(supabase, poster.id, {
-      title,
-      description: brief,
-      requirements: requirements.map((r) => String(r.skillId)),
-    })
-  } catch (err) {
-    console.error('[listings/create] could not write application questions:', err)
-  }
-
   const { error: openErr } = await supabase
     .from('listings')
-    .update({ status: 'open', application_questions: applicationQuestions })
+    .update({ status: 'open' })
     .eq('id', listing.id)
   if (openErr) {
     console.error('[listings/create] publish failed:', openErr)

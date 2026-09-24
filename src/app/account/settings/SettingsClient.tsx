@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
@@ -44,7 +44,7 @@ function Section({ id, title, lede, children }: {
   children: React.ReactNode
 }) {
   return (
-    <section id={id} style={{ scrollMarginTop: 90 }}>
+    <section id={id}>
       <h2 style={{ fontFamily: F.display, fontSize: 17, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: lede ? 5 : 13 }}>
         {title}
       </h2>
@@ -88,6 +88,26 @@ export default function SettingsClient({
 }) {
   const router = useRouter()
   const { toast } = useToast()
+
+  const tabs = [
+    { id: 'profile', label: 'Your details' },
+    { id: 'email', label: 'Email' },
+    ...(hasStudentProfile ? [{ id: 'github', label: 'GitHub' }] : []),
+    { id: 'data', label: 'Your data' },
+    { id: 'delete', label: 'Delete account', danger: true },
+  ]
+  const [tab, setTab] = useState('profile')
+  // Old links (#email from unsubscribe mail) open the matching pane.
+  useEffect(() => {
+    const hash = window.location.hash.slice(1)
+    if (hash === 'opportunities') { router.replace('/me#opportunities'); return }
+    if (tabs.some((t) => t.id === hash)) setTab(hash)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  function open(id: string) {
+    setTab(id)
+    window.history.replaceState(null, '', `#${id}`)
+  }
 
   const [form, setForm] = useState<Profile>(profile)
   const [saved, setSaved] = useState<Profile>(profile)
@@ -137,7 +157,7 @@ export default function SettingsClient({
     <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
       <main
         id="main-content"
-        style={{ maxWidth: 660, margin: '0 auto', padding: '34px 24px 96px' }}
+        style={{ maxWidth: 980, margin: '0 auto', padding: '34px 24px 96px' }}
       >
         <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 6 }}>
           Settings
@@ -146,10 +166,33 @@ export default function SettingsClient({
           {email ? <>Signed in as <span style={{ color: C.textSub }}>{email}</span>.</> : 'Your account.'}
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 34 }}>
+        <div className="wm-settings" style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 36, alignItems: 'start' }}>
+          <nav aria-label="Settings sections" className="wm-settings-nav" style={{ display: 'flex', flexDirection: 'column', gap: 2, position: 'sticky', top: 90 }}>
+            {tabs.map((t) => {
+              const on = t.id === tab
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => open(t.id)}
+                  aria-current={on ? 'page' : undefined}
+                  style={{
+                    textAlign: 'left', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                    padding: '9px 12px', borderRadius: R.md, fontSize: 14.5,
+                    fontWeight: on ? 600 : 500,
+                    color: t.danger ? '#A32218' : on ? C.text : C.textMuted,
+                    background: on ? C.surfaceAlt : 'transparent',
+                  }}
+                >
+                  {t.label}
+                </button>
+              )
+            })}
+          </nav>
+          <div style={{ minWidth: 0 }}>
 
           {/* ── Profile ─────────────────────────────────────────────────── */}
-          {hasStudentProfile ? (
+          {tab === 'profile' && (hasStudentProfile ? (
             <Section
               id="profile"
               title="Your details"
@@ -248,10 +291,10 @@ export default function SettingsClient({
                 profile to edit here.
               </p>
             </Section>
-          )}
+          ))}
 
           {/* ── Email ───────────────────────────────────────────────────── */}
-          <Section
+          {tab === 'email' && <Section
             id="email"
             title="Email"
             lede="Workmark only emails you when something happened that you can act on. Turn off whatever you don't want."
@@ -262,10 +305,10 @@ export default function SettingsClient({
               initialMarketing={initialMarketing}
               notice={notice}
             />
-          </Section>
+          </Section>}
 
           {/* ── GitHub ──────────────────────────────────────────────────── */}
-          {hasStudentProfile && (
+          {tab === 'github' && hasStudentProfile && (
             <Section
               id="github"
               title="GitHub"
@@ -304,7 +347,7 @@ export default function SettingsClient({
           )}
 
           {/* ── Your data ───────────────────────────────────────────────── */}
-          <Section
+          {tab === 'data' && <Section
             id="data"
             title="Your data"
             lede="Everything we hold about you — profile, skills, evidence, applications and projects — in one file."
@@ -312,13 +355,13 @@ export default function SettingsClient({
             <a href="/api/account/export" download className="nb-btn nb-btn-outline nb-btn-sm">
               Download my data
             </a>
-          </Section>
+          </Section>}
 
           {/* ── Leaving ─────────────────────────────────────────────────── */}
           {/* Below a rule, at the end, on its own. The rule is the point:
               it says this is not the fifth item in a list, it is a
               different kind of thing. */}
-          <section id="delete" style={{ scrollMarginTop: 90, borderTop: `1px solid ${C.border}`, paddingTop: 30 }}>
+          {tab === 'delete' && <section id="delete">
             <h2 style={{ fontFamily: F.display, fontSize: 17, fontWeight: 700, letterSpacing: '-0.015em', color: '#A32218', marginBottom: 5 }}>
               Delete your account
             </h2>
@@ -328,8 +371,9 @@ export default function SettingsClient({
             <Link href="/account/delete" className="nb-btn nb-btn-danger nb-btn-sm">
               Delete my account
             </Link>
-          </section>
+          </section>}
 
+          </div>
         </div>
       </main>
     </div>

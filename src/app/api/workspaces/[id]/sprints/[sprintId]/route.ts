@@ -5,8 +5,11 @@ import { enforce } from '@/lib/rate-limit'
 import { requireUuid, ValidationError } from '@/lib/http/validate'
 import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
 import { reviewSprint } from '@/lib/agents/retro'
+import { textStreamResponse } from '@/lib/http/text-stream'
 import { canClose, retroBrief, toSprint, type SprintTask } from '@/lib/workspace/sprint'
 import { loadProjectState } from '@/lib/workspace/project-state'
+
+export const maxDuration = 60
 
 /**
  * POST /api/workspaces/[id]/sprints/[sprintId] — end the week and review it.
@@ -114,22 +117,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const facts = retroBrief(sprint, tasks, { slipped, setbacks: trouble })
 
-  const reviewed = await reviewSprint(admin, user.id, facts)
-  if (!reviewed) {
-    return NextResponse.json({ ok: true, closed: true, retro: null })
-  }
+  // The week is already closed above. The review streams in as it is
+  // written, and is stored once complete.
+  return textStreamResponse(async (emit) => {
+    const reviewed = await reviewSprint(admin, user.id, facts, emit)
+    if (!reviewed) return { ok: true, closed: true, retro: null }
 
-  const text = `${reviewed.value.summary}\n\n${reviewed.value.suggestion}`
-  const { error: retroError } = await admin
-    .from('sprints')
-    .update({ retro: text, retro_call_id: reviewed.callId })
-    .eq('id', sprintId)
-
-  if (retroError) {
-    // The week is closed and the review is written; only storing it failed.
-    // Returned anyway so the student reads it once rather than not at all.
-    console.error('[api/workspaces/:id/sprints/:sprintId] could not store the retro:', retroError)
-  }
-
-  return NextResponse.json({ ok: true, closed: true, retro: text })
+    const text = `${reviewed.value.summary}\n\n${reviewed.value.suggestion}`
+    const { error: retroError } = await admin
+      .from('sprints')
+      .update({ retro: text, retro_call_id: reviewed.callId })
+      .eq('id', sprintId)
+    if (retroError) {
+      // Closed and written; only storing it failed. Returned anyway so the
+      // student reads it once rather than not at all.
+      console.error('[api/workspaces/:id/sprints/:sprintId] could not store the retro:', retroError)
+    }
+    return { ok: true, closed: true, retro: text }
+  })
 }

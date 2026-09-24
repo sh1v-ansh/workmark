@@ -2007,3 +2007,11 @@
   font-weight: 600;
   border-bottom-color: #191E2E;
 }
+
+/* Settings: section list on the left, the open section on the right.
+   On a phone the list becomes a scrolling row above the content. */
+@media (max-width: 760px) {
+  .wm-settings { grid-template-columns: 1fr !important; gap: 18px !important; }
+  .wm-settings-nav { position: static !important; flex-direction: row !important; overflow-x: auto; gap: 4px !important; }
+  .wm-settings-nav button { white-space: nowrap; }
+}

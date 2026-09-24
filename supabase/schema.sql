@@ -3101,3 +3101,34 @@ create policy "Admins: read all metrics"
 -- No insert or update policy for anybody. These are written by the nightly
 -- rollup under the service role, and a student who could write their own
 -- capability frontier could write anything.
+
+
+-- ─── Eligibility (v05_0057) ─────────────────────────────────────────────────
+-- Self-described identity for group-specific opportunities. Its own table so
+-- no existing read of students can reach it. Owner-only RLS. See the
+-- migration for the full rule: shown-opportunities only, never to anyone
+-- else, never in fit/ranking, never to a model.
+create table student_eligibility (
+  student_id             uuid primary key references students(id) on delete cascade,
+  use_for_opportunities  boolean not null default false,
+  first_gen      text check (first_gen      in ('yes', 'no', 'prefer_not')),
+  military       text check (military       in ('veteran', 'active_or_reserve', 'military_family', 'none', 'prefer_not')),
+  gender         text check (gender         in ('woman', 'man', 'non_binary', 'self_describe', 'prefer_not')),
+  gender_self    text check (gender_self is null or char_length(gender_self) <= 60),
+  race_ethnicity text[] check (race_ethnicity <@ array[
+                   'american_indian_alaska_native', 'asian', 'black', 'hispanic_latino',
+                   'middle_eastern_north_african', 'native_hawaiian_pacific_islander',
+                   'white', 'prefer_not']::text[]),
+  disability     text check (disability     in ('yes', 'no', 'prefer_not')),
+  lgbtq          text check (lgbtq          in ('yes', 'no', 'prefer_not')),
+  low_income     text check (low_income     in ('yes', 'no', 'prefer_not')),
+  us_state       text check (us_state is null or us_state ~ '^[A-Z]{2}$'),
+  transfer       text check (transfer       in ('yes', 'no', 'prefer_not')),
+  citizenship    text check (citizenship    in ('citizen', 'permanent_resident', 'other', 'prefer_not')),
+  updated_at     timestamptz not null default now()
+);
+alter table student_eligibility enable row level security;
+create policy "Students: own eligibility"
+  on student_eligibility for all
+  using (auth.uid() = student_id)
+  with check (auth.uid() = student_id);

@@ -23,7 +23,7 @@
 
 import { LEAD_VOICE } from '@/lib/agents/lead'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { callStructuredAgent } from './client'
+import { streamTextAgent } from './client'
 import { untrusted } from './untrusted'
 
 export interface ScopeCheck {
@@ -69,16 +69,23 @@ Never do these:
 - Do not suggest dropping the hardest task. Difficulty is where the record is earned, and a week of easy work is worth less to them than a hard week that slips.
 - Do not pad. Two sentences and one change.`
 
-const SCHEMA = {
-  type: 'object',
-  properties: {
-    verdict: { type: 'string', enum: ['worth_it', 'light', 'scattered'] },
-    reasoning: { type: 'string', maxLength: 340 },
-    suggestion: { type: 'string', maxLength: 300 },
-  },
-  required: ['verdict', 'reasoning', 'suggestion'],
-  additionalProperties: false,
-} as const
+const FORMAT = `
+
+Reply in exactly this form and nothing else:
+VERDICT: worth_it | light | scattered   (pick one)
+<blank line>
+<why, at most 2 sentences>
+<blank line>
+<the one change to make, at most 2 sentences>`
+
+/** Read the streamed reply: the verdict line, then two paragraphs. */
+export function parseScopeReply(text: string): ScopeCheck {
+  const match = text.match(/VERDICT:\s*(worth_it|light|scattered)/i)
+  const verdict = (match?.[1]?.toLowerCase() ?? 'light') as ScopeCheck['verdict']
+  const rest = text.replace(/^[\s\S]*?VERDICT:[^\n]*\n?/i, '').trim()
+  const [reasoning = '', ...suggestion] = rest.split(/\n\s*\n/)
+  return { verdict, reasoning: reasoning.trim(), suggestion: suggestion.join('\n\n').trim() }
+}
 
 /**
  * Check one week's scope.
@@ -91,29 +98,19 @@ export async function checkScope(
   supabase: SupabaseClient,
   studentId: string,
   facts: string,
+  onText?: (delta: string) => void,
 ): Promise<ScopeCheck | null> {
-  const reply = await callStructuredAgent<ScopeCheck>(supabase, {
+  // Streamed. A verdict that cannot be read falls to 'light', never to
+  // 'worth_it': telling somebody an empty week is fine is the direction this
+  // must not fail in.
+  const reply = await streamTextAgent(supabase, {
     agentType: 'kickoff',
-    system: SYSTEM,
+    system: SYSTEM + FORMAT,
     userContent: untrusted('What they have committed to this week', facts),
-    schema: SCHEMA,
     studentId,
     inputForAudit: { kind: 'sprint_kickoff' },
+    onText,
+    maxTokens: 600,
   })
-
-  if (!reply) return null
-
-  // The enum in the schema is a hint rather than a guarantee: structured
-  // outputs does not enforce enum, so client.ts folds it into the description
-  // where the model reads it as an instruction.
-  const known: ScopeCheck['verdict'][] = ['worth_it', 'light', 'scattered']
-  if (!known.includes(reply.verdict)) {
-    console.error(`[agents] kickoff returned an unknown verdict: ${String(reply.verdict)}`)
-    // Falls to `light` rather than `worth_it`, for the same reason as before:
-    // telling somebody an empty week is fine is the direction this must not
-    // fail in.
-    return { ...reply, verdict: 'light' }
-  }
-
-  return reply
+  return reply ? parseScopeReply(reply.text) : null
 }

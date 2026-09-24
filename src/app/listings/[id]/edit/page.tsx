@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import NewListingClient from '../../new/NewListingClient'
 import { getListingRequirements } from '@/lib/matching/listing'
+import { agentsAvailable } from '@/lib/agents/client'
 
 export const metadata = { title: 'Edit' }
 
@@ -15,7 +16,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
 
   const { data: listing } = await supabase
     .from('listings')
-    .select('id, poster_id, kind, title, brief, est_hours, hours_per_week, duration, work_mode, team_size, declared_difficulty')
+    .select('id, poster_id, kind, application_questions, title, brief, est_hours, hours_per_week, duration, work_mode, team_size, declared_difficulty')
     .eq('id', id)
     .maybeSingle()
   if (!listing) notFound()
@@ -29,11 +30,15 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
   return (
     <NewListingClient
       taxonomy={taxonomy ?? []}
-      agentsAvailable={false}
+      agentsAvailable={agentsAvailable()}
       editing={{
         id,
         initial: {
           kind: listing.kind ?? 'collaborative',
+          questions: Array.isArray(listing.application_questions)
+            ? (listing.application_questions as { prompt?: string; kind?: string; hint?: string }[])
+                .map((q) => ({ prompt: q.prompt ?? '', kind: q.kind ?? 'custom', hint: q.hint ?? '' }))
+            : undefined,
           title: listing.title ?? '',
           brief: listing.brief ?? '',
           requirements: requirements.map((r) => ({

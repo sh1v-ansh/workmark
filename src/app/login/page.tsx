@@ -212,7 +212,7 @@ export default function LoginPage() {
               {resending ? 'Resending…' : resendCooldown > 0 ? `Resend confirmation email (${resendCooldown}s)` : 'Resend confirmation email'}
             </Button>
           </div>
-          <p style={{ fontSize: 13, color: C.textGhost, marginTop: 16.5 }}>Can&apos;t find it? Check your spam folder.</p>
+          <p style={{ fontSize: 13, color: C.textGhost, marginTop: 16.5 }}>It can take a few minutes to arrive. Can&apos;t find it? Check your spam folder.</p>
         </div>
       </main>
     )

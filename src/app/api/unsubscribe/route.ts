@@ -48,6 +48,13 @@ export async function GET(request: Request) {
 
   const now = new Date().toISOString()
 
+  // Unsubscribing from an opportunities email is withdrawing marketing
+  // consent, recorded the same way the Settings switch records it.
+  if (kind === 'opportunities') {
+    await admin.from('accounts').update({ marketing_opted_out_at: now, updated_at: now }).eq('id', account.id)
+    return NextResponse.redirect(new URL('/account/settings?off=opportunities#email', request.url))
+  }
+
   if (kind && kind in EMAIL_KINDS && !EMAIL_KINDS[kind as EmailKind].essential) {
     const prefs = { ...((account.notification_prefs ?? {}) as Record<string, boolean>), [kind]: false }
     await admin.from('accounts').update({ notification_prefs: prefs, updated_at: now }).eq('id', account.id)

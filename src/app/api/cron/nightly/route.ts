@@ -5,7 +5,6 @@ import { rollupAll } from '@/lib/workspace/rollup'
 import { sweepWorkspaceEvidence } from '@/lib/workspace/evidence'
 import { recomputeCalibration } from '@/lib/skills/calibration'
 import { sweepAttention } from '@/lib/workspace/notify'
-import { backfillListingQuestions } from '@/lib/agents/application-questions'
 
 export const dynamic = 'force-dynamic'
 
@@ -114,17 +113,12 @@ export async function POST(request: Request) {
     console.error('[cron/nightly] attention sweep failed:', err)
   }
 
-  // Catching up rather than rescuing: a listing with no questions of its own
-  // already shows the fallback pair. Last, and bounded, because it is the one
-  // step here whose only cost is money and whose absence nobody notices.
-  let questions: unknown = null
-  let questionsError: string | null = null
-  try {
-    questions = await backfillListingQuestions(admin)
-  } catch (err) {
-    questionsError = err instanceof Error ? err.message : 'Unknown error'
-    console.error('[cron/nightly] question backfill failed:', err)
-  }
+  // Application questions are the poster's to write. The nightly pass that
+  // filled in AI questions for listings without any is gone: a listing with
+  // none uses the standard pair, which is what the poster chose by leaving
+  // them blank.
+  const questions: unknown = 'poster-written only'
+  const questionsError: string | null = null
 
   let rollups: unknown = null
   let rollupError: string | null = null

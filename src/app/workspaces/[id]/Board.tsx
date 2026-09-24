@@ -1,6 +1,7 @@
 'use client'
 
 import { LEAD_LABEL } from '@/lib/agents/lead'
+import { readTextStream } from '@/lib/http/text-stream'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -66,6 +67,9 @@ const VERDICT_TONE: Record<string, { colour: string; label: string }> = {
   pending: { colour: '#5A6172', label: 'Waiting to be checked' },
 }
 
+/** How many of the queued tasks the backlog shows before "show the rest". */
+const BACKLOG_PREVIEW = 3
+
 export default function Board({
   workspaceId,
   tasks: serverTasks,
@@ -112,6 +116,9 @@ export default function Board({
   const [blocking, setBlocking] = useState<BoardTask | null>(null)
   const [blockReason, setBlockReason] = useState('')
   const [planning, setPlanning] = useState(false)
+  // Tasks the planner has finished writing, shown as they arrive and
+  // replaced by the real cards once the plan is saved.
+  const [drafted, setDrafted] = useState<{ title: string; estimateHours: number }[]>([])
   const [checking, setChecking] = useState(false)
   const [reviewing, setReviewing] = useState<BoardTask | null>(null)
   const [abandoning, setAbandoning] = useState<BoardTask | null>(null)
@@ -141,6 +148,10 @@ export default function Board({
   const [talking, setTalking] = useState<BoardTask | null>(null)
   const [draftMessage, setDraftMessage] = useState('')
   const [sending, setSending] = useState(false)
+  // While a message is out: what the student sent, and the tech lead's reply
+  // as it streams in. Cleared once the saved thread is back from the server.
+  const [pendingMine, setPendingMine] = useState<string | null>(null)
+  const [liveReply, setLiveReply] = useState<string | null>(null)
   const [offered, setOffered] = useState<{ title: string; why: string } | null>(null)
   const [splitting, setSplitting] = useState<BoardTask | null>(null)
   const [subtaskTitle, setSubtaskTitle] = useState('')
@@ -210,6 +221,12 @@ export default function Board({
     })),
   })
   const boardTasks = tasks.filter((t) => t.status !== 'abandoned')
+  // Each top-level task's place in the plan, by board order across every
+  // column, so a card can say "Step 3 of 12".
+  const stepOf = new Map(
+    boardTasks.filter((t) => t.parentTaskId === null).sort(byBoardOrder).map((t, i) => [t.id, i + 1] as const),
+  )
+  const [showWholePlan, setShowWholePlan] = useState(false)
 
   // workspace.members is already only the people actually on the team, so
   // every row here is active by construction. Shaped into MemberRow so the
@@ -425,14 +442,20 @@ export default function Board({
     if (!talking || !draftMessage.trim()) return
     setSending(true)
     try {
+      const sentText = draftMessage
+      setPendingMine(sentText)
+      setDraftMessage('')
       const res = await fetch(`/api/workspaces/${workspaceId}/tasks/${talking.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: draftMessage }),
+        body: JSON.stringify({ body: sentText }),
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Could not send that.')
-      setDraftMessage('')
+      // The reply streams when the tech lead was asked; the subtask line is
+      // part of the text but only ever shown as the offer below.
+      const data = await readTextStream<{ note?: string; suggestedSubtask?: { title: string; why: string } | null }>(
+        res, (soFar) => setLiveReply(soFar.split(/\n?\s*SUBTASK:/)[0]),
+      )
+      if (data.error) { setDraftMessage(sentText); throw new Error(data.error) }
       // Said out loud rather than swallowed: somebody who typed a mention and
       // saw nothing happen concludes the feature is broken.
       if (data.note) toast(data.note, 'info')
@@ -444,6 +467,8 @@ export default function Board({
       toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
     } finally {
       setSending(false)
+      setPendingMine(null)
+      setLiveReply(null)
     }
   }
 
@@ -499,9 +524,15 @@ export default function Board({
       const res = await fetch(`/api/workspaces/${workspaceId}/sprints/${sprint.id}/check`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Could not check this week.')
-      setScopeCheck(data)
+      // Opened as soon as text arrives, and filled in as it is written.
+      const data = await readTextStream<{ verdict?: string; reasoning?: string; suggestion?: string }>(res, (soFar) => {
+        const verdict = soFar.match(/VERDICT:\s*(worth_it|light|scattered)/i)?.[1]?.toLowerCase() ?? 'pending'
+        const rest = soFar.replace(/^[\s\S]*?VERDICT:[^\n]*\n?/i, '').trim()
+        const [reasoning = '', ...more] = rest.split(/\n\s*\n/)
+        setScopeCheck({ verdict, reasoning, suggestion: more.join('\n\n') })
+      })
+      if (data.error) { setScopeCheck(null); throw new Error(data.error) }
+      setScopeCheck({ verdict: data.verdict ?? 'light', reasoning: data.reasoning ?? '', suggestion: data.suggestion ?? '' })
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
     } finally {
@@ -516,11 +547,10 @@ export default function Board({
       const res = await fetch(`/api/workspaces/${workspaceId}/sprints/${sprint.id}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
       })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Could not end the week.')
-      // Shown straight away rather than only after the refresh: the review is
-      // the thing they pressed the button for, and making them find it on a
-      // reloaded page is how it goes unread.
+      // The week closes first; the review then streams into its modal as it
+      // is written, so it is read the moment it exists.
+      const data = await readTextStream<{ retro?: string | null }>(res, (soFar) => setLastRetro(soFar))
+      if (data.error) throw new Error(data.error)
       setLastRetro(data.retro ?? null)
       router.refresh()
     } catch (err) {
@@ -563,16 +593,27 @@ export default function Board({
 
   async function draftPlan() {
     setPlanning(true)
+    setDrafted([])
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/plan`, { method: 'POST' })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Could not draft a plan.')
+      // One JSON line per task; only complete lines are read, the one still
+      // being written waits for its newline.
+      const data = await readTextStream<{ count?: number }>(res, (soFar) => {
+        const lines = soFar.split('\n').slice(0, -1)
+        const next: { title: string; estimateHours: number }[] = []
+        for (const line of lines) {
+          try { next.push(JSON.parse(line)) } catch { /* not a task line */ }
+        }
+        setDrafted((prev) => (prev.length === next.length ? prev : next))
+      })
+      if (data.error) throw new Error(data.error)
       toast(`${data.count} tasks drafted — edit or delete whatever does not fit.`, 'success')
       router.refresh()
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
     } finally {
       setPlanning(false)
+      setDrafted([])
     }
   }
 
@@ -710,7 +751,7 @@ export default function Board({
               {`Check my work (${submittedCount})`}
             </Button>
           )}
-          {!readOnly && (
+          {!readOnly && tasks.length > 0 && (
             <Button
               variant="outline"
               size="sm"
@@ -721,7 +762,7 @@ export default function Board({
               // explanation is the most annoying thing an interface can do.
               title={askRefusal ?? undefined}
             >
-              {tasks.length === 0 ? 'Draft a plan' : 'Give me more work'}
+              Give me more work
             </Button>
           )}
           {!readOnly && (
@@ -774,11 +815,42 @@ export default function Board({
       {/* Said once, above the board, rather than on every card. The point is
           that the plan is theirs from the moment it lands — what they keep,
           reshape and throw out is the thing worth measuring. */}
-      {tasks.length === 0 && (
-        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 14, maxWidth: '62ch' }}>
-          Your tech lead can draft a plan and hand you tickets one or two at a time. Edit anything —
-          the plan is yours once it lands.
-        </p>
+      {tasks.length === 0 && !readOnly && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap',
+          padding: '20px 22px', marginBottom: 16, borderRadius: R.lg,
+          border: '1px solid #E4DCFF',
+          background: 'linear-gradient(145deg, #F4F0FF 0%, #FBFAFF 60%, #FFFFFF 100%)',
+        }}>
+          <div style={{ maxWidth: '52ch' }}>
+            <p style={{ fontSize: T.body, fontWeight: 650, color: C.text, marginBottom: 4 }}>
+              {planning ? 'Your tech lead is writing the plan…' : 'Start with a plan'}
+            </p>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.55 }}>
+              {planning
+                ? 'Tasks show up in Up next as they are written, in the order to do them.'
+                : 'Your tech lead breaks the project into tasks and hands you one or two at a time. Edit anything — the plan is yours once it lands.'}
+            </p>
+          </div>
+          <motion.button
+            onClick={draftPlan}
+            disabled={planning || askRefusal !== null}
+            title={askRefusal ?? undefined}
+            whileHover={planning || still ? undefined : { y: -2 }}
+            whileTap={planning || still ? undefined : { scale: 0.97 }}
+            style={{
+              border: 'none', cursor: planning ? 'default' : 'pointer',
+              padding: '12px 22px', borderRadius: 999,
+              fontSize: T.body, fontWeight: 650, color: '#fff',
+              background: 'linear-gradient(103deg, #3E1FFF 0%, #7F5CFF 55%, #EC4899 100%)',
+              boxShadow: '0 8px 22px -8px rgba(94, 60, 255, 0.55)',
+              opacity: askRefusal !== null ? 0.5 : 1,
+              flexShrink: 0,
+            }}
+          >
+            {planning ? `Drafting… ${drafted.length > 0 ? `${drafted.length} so far` : ''}` : 'Draft a plan'}
+          </motion.button>
+        </div>
       )}
 
       {/* Everything that is stuck, in one place. This is the list somebody
@@ -994,12 +1066,17 @@ export default function Board({
         }}
       >
         {BOARD_COLUMNS.map((column) => {
+          // The backlog is the plan's queue, not a pile: the next few, in
+          // order, and the rest one click away. Seeing all twelve at once is
+          // the mountain the ticket queue exists to avoid.
           // Children are drawn under their parent rather than as cards of
           // their own, so a task broken into three does not take four slots
           // in a column and read as four separate pieces of work.
           const inColumn = boardTasks
             .filter((t) => t.status === column && t.parentTaskId === null)
             .sort(byBoardOrder)
+          const hiddenCount = column === 'backlog' && !showWholePlan ? Math.max(0, inColumn.length - BACKLOG_PREVIEW) : 0
+          const shown = hiddenCount > 0 ? inColumn.slice(0, BACKLOG_PREVIEW) : inColumn
           const refusal = dragging
             ? canMoveTo(tasks.find((t) => t.id === dragging)!.status, column)
             : null
@@ -1040,7 +1117,7 @@ export default function Board({
               </p>
 
               <div style={{ display: 'grid', gap: 8 }}>
-                {inColumn.map((task) => (
+                {shown.map((task) => (
                   <motion.article
                     key={task.id}
                     // Same layoutId across columns is what lets Motion see the
@@ -1063,8 +1140,10 @@ export default function Board({
                       borderRadius: R.md,
                       padding: '10px 12px',
                       cursor: readOnly ? 'default' : 'grab',
-                      opacity: optimistic.isPending(task.id) ? 0.55 : 1,
-                      transition: 'opacity .18s ease, box-shadow .12s ease, transform .12s ease',
+                      // No fade while the save is in flight: the card is where
+                      // it was dropped, and dimming it read as lag. A failed
+                      // save puts it back and says so.
+                      transition: 'box-shadow .12s ease, transform .12s ease',
                     }}
                   >
                     <button
@@ -1075,6 +1154,13 @@ export default function Board({
                       }}
                       style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%' }}
                     >
+                      {/* Its place in the plan, so the order is visible on
+                          every card, not only in the backlog. */}
+                      {stepOf.get(task.id) && (
+                        <p style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, letterSpacing: '0.03em', marginBottom: 2 }}>
+                          STEP {stepOf.get(task.id)} OF {stepOf.size}
+                        </p>
+                      )}
                       <p style={{
                         fontSize: 14, fontWeight: 500, color: C.text,
                         lineHeight: 1.4, textWrap: 'pretty',
@@ -1162,6 +1248,17 @@ export default function Board({
                   </motion.article>
                 ))}
 
+                {(hiddenCount > 0 || (column === 'backlog' && showWholePlan && inColumn.length > BACKLOG_PREVIEW)) && (
+                  <button
+                    type="button"
+                    className="wm-mini"
+                    onClick={() => setShowWholePlan((v) => !v)}
+                    style={{ justifySelf: 'start' }}
+                  >
+                    {hiddenCount > 0 ? `Show the rest of the plan (${hiddenCount})` : 'Show less'}
+                  </button>
+                )}
+
                 {/* Where the plan is about to land.
                     A model call takes the better part of ten seconds, and for
                     all of it the board used to look exactly as it had before
@@ -1170,9 +1267,23 @@ export default function Board({
                     progress, and it costs nothing. */}
                 {planning && column === 'backlog' && (
                   <div style={{ display: 'grid', gap: 8 }}>
-                    {[0, 1, 2].map((i) => (
-                      <Bar key={i} height={78} radius={10} style={{ opacity: 1 - i * 0.22 }} />
+                    {drafted.map((d, i) => (
+                      <motion.div
+                        key={i}
+                        initial={still ? false : { opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{
+                          padding: '10px 12px', borderRadius: 10, background: C.surface,
+                          border: `1px dashed ${C.accentBorder}`,
+                        }}
+                      >
+                        <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', color: C.textGhost, marginBottom: 3 }}>
+                          STEP {i + 1} · ~{d.estimateHours}h
+                        </p>
+                        <p style={{ fontSize: T.bodySm, fontWeight: 500, color: C.text, lineHeight: 1.4 }}>{d.title}</p>
+                      </motion.div>
                     ))}
+                    <Bar height={60} radius={10} />
                   </div>
                 )}
                 {inColumn.length === 0 && !(planning && column === 'backlog') && (
@@ -1287,7 +1398,7 @@ export default function Board({
       >
         {talking && (
           <>
-            {(threadsByTask.get(talking.id) ?? []).length === 0 ? (
+            {(threadsByTask.get(talking.id) ?? []).length === 0 && !pendingMine ? (
               <p style={{ fontSize: T.bodySm, color: C.textFaint, lineHeight: 1.6, marginBottom: 16 }}>
                 Nothing here yet. Talk to your team, or type {MENTION} to ask your tech lead about this task.
               </p>
@@ -1310,6 +1421,15 @@ export default function Board({
                     </div>
                   )
                 ))}
+                {pendingMine && (
+                  <div style={{ paddingLeft: 16, opacity: 0.8 }}>
+                    <p style={{ fontSize: T.meta, fontWeight: 600, color: C.textFaint, marginBottom: 3 }}>You</p>
+                    <p style={{ fontSize: T.bodySm, color: C.textSub, lineHeight: 1.65, whiteSpace: 'pre-wrap' }}>{pendingMine}</p>
+                  </div>
+                )}
+                {liveReply !== null && liveReply.trim() && (
+                  <AgentSays heading={LEAD_LABEL} body={liveReply} />
+                )}
               </div>
             )}
 
@@ -1375,11 +1495,12 @@ export default function Board({
           <>
             <AgentSays
               heading={
-                scopeCheck.verdict === 'light' ? 'Light for a week'
-                  : scopeCheck.verdict === 'scattered' ? 'Pulling in several directions'
-                    : 'Worth the week'
+                scopeCheck.verdict === 'pending' ? 'Looking at your week…'
+                  : scopeCheck.verdict === 'light' ? 'Light for a week'
+                    : scopeCheck.verdict === 'scattered' ? 'Pulling in several directions'
+                      : 'Worth the week'
               }
-              tone={scopeCheck.verdict === 'worth_it' ? 'good' : 'warn'}
+              tone={scopeCheck.verdict === 'pending' ? 'neutral' : scopeCheck.verdict === 'worth_it' ? 'good' : 'warn'}
               body={scopeCheck.reasoning}
               action={scopeCheck.suggestion}
             />

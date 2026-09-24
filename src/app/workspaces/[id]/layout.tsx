@@ -5,6 +5,7 @@ import { getWorkspace } from './load'
 import WorkspaceNav from './WorkspaceNav'
 import WorkspaceShell from './WorkspaceShell'
 import PublishProject from './PublishProject'
+import { briefSummary } from '@/components/Markdown'
 
 /**
  * Everything the four project views have in common: which project this is,
@@ -85,7 +86,9 @@ export default async function WorkspaceLayout({
 
           {workspace.summary && (
             <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, maxWidth: '62ch', marginTop: 10 }}>
-              {workspace.summary}
+              {/* A project started from an idea carries the markdown brief;
+                  the header shows its one-paragraph summary. */}
+              {briefSummary(workspace.summary)}
             </p>
           )}
         </header>

@@ -369,7 +369,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
           </div>
           {/* Up here rather than in the side panel, which stacks below
               every repository on a phone. */}
-          {connection && (
+          {connection && grants.length > 0 && (
             <Button variant="accent" onClick={runScan} busyLabel={scanning ? 'Scanning…' : null}>
               Scan now
             </Button>
@@ -418,12 +418,17 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                 </p>
                 <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 15, maxWidth: '58ch' }}>
                   {connection
-                    ? 'GitHub is connected but has not shared any repositories with Workmark. Open the GitHub app settings and pick which ones it may see.'
+                    ? 'Nothing on GitHub yet? That is where most people start. Get a guided project and build it here, or give Workmark access to repositories you already have.'
                     : 'Connect GitHub and choose which repositories Workmark may read. Nothing is read until you say so.'}
                 </p>
-                <Button href={connection ? 'https://github.com/settings/installations' : '/student/github/consent'} variant="ink" size="sm">
-                  {connection ? 'Choose repositories on GitHub' : 'Connect GitHub'}
-                </Button>
+                {connection ? (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <Button href="/goals" variant="accent" size="sm">Get a guided project</Button>
+                    <Button href="https://github.com/settings/installations" variant="outline" size="sm">Choose repositories on GitHub</Button>
+                  </div>
+                ) : (
+                  <Button href="/student/github/consent" variant="ink" size="sm">Connect GitHub</Button>
+                )}
               </Card>
             )}
 

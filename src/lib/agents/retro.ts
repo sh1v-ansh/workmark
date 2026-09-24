@@ -24,7 +24,7 @@
 
 import { LEAD_VOICE } from '@/lib/agents/lead'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { callStructuredAgentLogged } from './client'
+import { streamTextAgent } from './client'
 import { untrusted } from './untrusted'
 
 export interface Retro {
@@ -58,15 +58,9 @@ Never do these:
 - Do not comment on anything not in the facts you were given. You cannot see the code, the repository or the student's calendar.
 - Do not tell them to work harder or longer. That is never the actionable answer and it is not yours to say.`
 
-const SCHEMA = {
-  type: 'object',
-  properties: {
-    summary: { type: 'string', maxLength: 400 },
-    suggestion: { type: 'string', maxLength: 300 },
-  },
-  required: ['summary', 'suggestion'],
-  additionalProperties: false,
-} as const
+const FORMAT = `
+
+Write exactly two short paragraphs separated by one blank line, and nothing else: first what happened this week (at most 3 sentences), then the one thing to change next week (at most 2 sentences). No headings, no labels, no lists.`
 
 /**
  * Review one sprint.
@@ -81,16 +75,19 @@ export async function reviewSprint(
   supabase: SupabaseClient,
   studentId: string,
   facts: string,
+  onText?: (delta: string) => void,
 ): Promise<{ value: Retro; callId: string | null } | null> {
-  const response = await callStructuredAgentLogged<Retro>(supabase, {
+  // Streamed as two paragraphs so the review appears as it is written.
+  const response = await streamTextAgent(supabase, {
     agentType: 'retro',
-    system: SYSTEM,
+    system: SYSTEM + FORMAT,
     userContent: untrusted('What happened this week', facts),
-    schema: SCHEMA,
     studentId,
     inputForAudit: { kind: 'sprint_retro' },
+    onText,
+    maxTokens: 700,
   })
-
   if (!response) return null
-  return { value: response.value, callId: response.callId }
+  const [summary, ...rest] = response.text.trim().split(/\n\s*\n/)
+  return { value: { summary: summary.trim(), suggestion: rest.join('\n\n').trim() }, callId: response.callId }
 }

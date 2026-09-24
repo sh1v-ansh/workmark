@@ -239,3 +239,91 @@ async function callInternal<T>(
 
   return { value: parsed, callId: (logged?.id as string | undefined) ?? null }
 }
+
+export interface TextCallArgs {
+  agentType: AgentType
+  system: string
+  userContent: string
+  inputForAudit: Record<string, unknown>
+  studentId?: string
+  posterId?: string
+  /** Called with each piece of text as the model writes it. */
+  onText?: (delta: string) => void
+  maxTokens?: number
+}
+
+/**
+ * A plain-text (markdown) call, streamed.
+ *
+ * For output a person reads as it arrives: the structured calls above
+ * return nothing until the whole JSON object is finished, which for a long
+ * answer is ten or twenty seconds of an empty screen. Here every piece of
+ * text is handed to onText as it is written, and the full text is returned
+ * (and logged to agent_calls like every other call) once it ends.
+ *
+ * Null on no key, an API error, a refusal or a truncated answer, the same
+ * failures the structured path treats as no answer.
+ */
+export async function streamTextAgent(
+  supabase: SupabaseClient,
+  args: TextCallArgs,
+): Promise<{ text: string; callId: string | null } | null> {
+  const client = getAnthropic()
+  if (!client) return null
+
+  let message: Anthropic.Message
+  try {
+    const stream = client.messages.stream({
+      model: AGENT_MODEL,
+      max_tokens: args.maxTokens ?? 4000,
+      thinking: { type: 'disabled' },
+      system: [
+        {
+          type: 'text' as const,
+          text: args.system + UNTRUSTED_BOUNDARY,
+          cache_control: { type: 'ephemeral' as const },
+        },
+      ],
+      messages: [{ role: 'user', content: args.userContent }],
+    })
+    if (args.onText) stream.on('text', (delta) => args.onText?.(delta))
+    message = await stream.finalMessage()
+  } catch (err) {
+    if (err instanceof Anthropic.APIError) {
+      console.error(`[agents] ${args.agentType} stream failed: ${err.status} ${err.name} — ${err.message}`)
+    } else {
+      console.error(`[agents] ${args.agentType} stream threw:`, err)
+    }
+    return null
+  }
+
+  if (message.stop_reason === 'refusal' || message.stop_reason === 'max_tokens') {
+    console.error(`[agents] ${args.agentType} stream ended with ${message.stop_reason}`)
+    return null
+  }
+
+  const text = message.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
+
+  const { data: logged, error } = await supabase
+    .from('agent_calls')
+    .insert({
+      agent_type: args.agentType,
+      student_id: args.studentId ?? null,
+      poster_id: args.posterId ?? null,
+      input: { ...args.inputForAudit, system: args.system, user: args.userContent },
+      output: { text },
+      model_version: AGENT_MODEL,
+      input_tokens: message.usage?.input_tokens ?? null,
+      output_tokens: message.usage?.output_tokens ?? null,
+      cache_read_tokens: message.usage?.cache_read_input_tokens ?? null,
+      cache_write_tokens: message.usage?.cache_creation_input_tokens ?? null,
+    })
+    .select('id')
+    .maybeSingle()
+  if (error) console.error('[agents] agent_calls insert failed:', error)
+
+  return { text, callId: (logged?.id as string | undefined) ?? null }
+}

@@ -7,6 +7,7 @@ import AdminShell from '../AdminShell'
 import { Panel, Bar, HealthRow } from '../widgets'
 import { tableStyles as ts } from '../table-styles'
 import { C, state } from '@/lib/theme/dark-tokens'
+import { loadHeardAbout } from '@/lib/admin/heard-about'
 
 export const metadata = { title: 'Growth' }
 
@@ -20,10 +21,11 @@ export const metadata = { title: 'Growth' }
  */
 export default async function AdminGrowthPage() {
   const { admin } = await requireAdmin()
-  const [{ funnel, health, enoughData }, { items }, events] = await Promise.all([
+  const [{ funnel, health, enoughData }, { items }, events, heardAbout] = await Promise.all([
     loadFunnel(admin),
     loadQueue(admin),
     loadFunnelEvents(admin),
+    loadHeardAbout(admin),
   ])
 
   // The measured funnel, as opposed to the one derived from row counts. The
@@ -218,6 +220,32 @@ export default async function AdminGrowthPage() {
           </div>
         </Panel>
       </div>
+
+      {/* Answered on the signup form (accounts.heard_about). */}
+      <Panel title="Where people heard about Workmark">
+        {heardAbout.total === 0 ? (
+          <p style={{ fontSize: 14, color: C.textMuted }}>Nobody has answered yet.</p>
+        ) : (
+          <table style={ts.table}>
+            <tbody>
+              {heardAbout.rows.map((r) => (
+                <tr key={r.label}>
+                  <td style={ts.td}>{r.label}</td>
+                  <td style={{ ...ts.td, textAlign: 'right', width: 60 }}>{r.count}</td>
+                  <td style={{ ...ts.td, textAlign: 'right', width: 60, color: C.textMuted }}>
+                    {Math.round((r.count / heardAbout.total) * 100)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {heardAbout.otherDetails.length > 0 && (
+          <p style={{ fontSize: 13, color: C.textMuted, marginTop: 12, lineHeight: 1.6 }}>
+            &ldquo;Something else&rdquo; answers: {heardAbout.otherDetails.join(' · ')}
+          </p>
+        )}
+      </Panel>
 
       <Panel title="Health">
         <HealthRow

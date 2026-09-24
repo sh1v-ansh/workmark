@@ -39,6 +39,18 @@ export default function SettingsClient({
 }) {
   const router = useRouter()
   const { toast } = useToast()
+  const [refreshing, setRefreshing] = useState(false)
+  // Asks GitHub again which repositories Workmark can see, so a repository
+  // created a minute ago shows up without reconnecting.
+  async function refreshRepos() {
+    setRefreshing(true)
+    try {
+      await fetch('/api/github/repos/sync', { method: 'POST' })
+      router.refresh()
+    } finally {
+      setRefreshing(false)
+    }
+  }
   const [busy, setBusy] = useState<string | null>(null)
   const [invitee, setInvitee] = useState('')
   const [repo, setRepo] = useState(workspace.repoFullName ?? '')
@@ -51,6 +63,7 @@ export default function SettingsClient({
   const isClosed = workspace.status === 'closed'
   const you = workspace.members.find((m) => m.isYou)
   const teamSize = workspace.members.length + workspace.invited.length
+  const solo = teamSize <= 1
 
   async function call(key: string, url: string, init: RequestInit, okMessage?: string) {
     setBusy(key)
@@ -101,6 +114,14 @@ export default function SettingsClient({
     call(`withdraw-${id}`, `/api/workspaces/${workspace.id}/removals/${id}`,
       { method: 'DELETE' }, 'Request withdrawn.')
 
+  async function deleteProject() {
+    const res = await fetch(`/api/workspaces/${workspace.id}`, { method: 'DELETE' }).catch(() => null)
+    const data = await res?.json().catch(() => ({}))
+    if (!res?.ok) { toast(data?.error ?? 'Could not delete the project.', 'error'); return }
+    toast('Project deleted.', 'success')
+    router.push('/workspaces')
+  }
+
   async function closeProject() {
     const ok = await call('close', `/api/workspaces/${workspace.id}/close`, { method: 'POST' })
     if (ok) setClosing(false)
@@ -117,10 +138,20 @@ export default function SettingsClient({
         </p>
 
         {repoOptions.length === 0 ? (
-          <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6 }}>
-            Workmark can&apos;t see any of your repositories yet.{' '}
-            <Link href="/student/github" style={{ color: C.accent }}>Connect GitHub</Link> first.
-          </p>
+          // The empty-GitHub case: most first-years have nothing to pick
+          // yet, so the way forward is to make the repository, not to be
+          // told none exist.
+          <div>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 12 }}>
+              No repositories yet. Create an empty one on GitHub for this project, then refresh.
+              If GitHub asks, give Workmark access to it.
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Button href="https://github.com/new" variant="accent" size="sm">Create a repository on GitHub</Button>
+              <Button variant="outline" size="sm" onClick={refreshRepos} busyLabel={refreshing ? 'Refreshing…' : null}>Refresh</Button>
+              <Link href="/student/github" style={{ fontSize: 13, color: C.accent, alignSelf: 'center' }}>GitHub settings</Link>
+            </div>
+          </div>
         ) : isOwner ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <select
@@ -358,23 +389,32 @@ export default function SettingsClient({
           "6 tasks" is the fact that tells an owner whether they are closing
           too early. */}
       <Modal open={closing} onClose={() => setClosing(false)} title="Close this project?">
-        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 14 }}>
-          {finishedCount === 0
-            ? 'Nothing here has been verified yet, so there is nothing to put on anybody’s record. Submit your finished work and run a check first.'
-            : `${finishedCount} ${finishedCount === 1 ? 'task has' : 'tasks have'} been verified. Closing reads the repository once for each person and writes what they demonstrated to their record.`}
-        </p>
-        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 18 }}>
-          This cannot be undone from here, and the board stops accepting new work.
-        </p>
+        {finishedCount === 0 ? (
+          <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 18 }}>
+            {solo
+              ? 'Nothing here has been checked yet, so there is nothing to add to your record. You can finish a task and run a check first, or delete the project.'
+              : 'Nothing here has been checked yet, so there is nothing to add to anyone’s record. Finish a task and run a check first.'}
+          </p>
+        ) : (
+          <>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 14 }}>
+              {`${finishedCount} ${finishedCount === 1 ? 'task has' : 'tasks have'} been verified. Closing reads the repository once for each person and writes what they demonstrated to their record.`}
+            </p>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.65, marginBottom: 18 }}>
+              This cannot be undone from here, and the board stops accepting new work.
+            </p>
+          </>
+        )}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <Button variant="quiet" onClick={() => setClosing(false)}>Not yet</Button>
-          <Button
-            onClick={closeProject}
-            disabled={finishedCount === 0}
-            busyLabel={busy === 'close' ? 'Closing…' : null}
-          >
-            Close the project
-          </Button>
+          <Button variant="quiet" onClick={() => setClosing(false)}>{finishedCount === 0 ? 'Keep working' : 'Not yet'}</Button>
+          {finishedCount === 0 && solo && (
+            <Button variant="danger" onClick={deleteProject}>Delete the project</Button>
+          )}
+          {finishedCount > 0 && (
+            <Button onClick={closeProject} busyLabel={busy === 'close' ? 'Closing…' : null}>
+              Close the project
+            </Button>
+          )}
         </div>
       </Modal>
     </>

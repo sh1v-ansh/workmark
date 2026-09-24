@@ -47,7 +47,12 @@ export interface FunnelStep {
 export const FUNNEL: { name: string; event: EventName }[] = [
   { name: 'Opened signup', event: 'signup_started' },
   { name: 'Submitted it', event: 'signup_submitted' },
-  { name: 'Finished a profile', event: 'onboarding_completed' },
+  // Only possible after clicking the verification link, so this is also
+  // "verified their email".
+  { name: 'Verified email and signed in', event: 'signin_succeeded' },
+  { name: 'Onboarding 1: profile', event: 'onboarding_completed' },
+  { name: 'Onboarding 2: chose goals', event: 'onboarding_intents_chosen' },
+  { name: 'Onboarding 3: agreed and went to GitHub', event: 'github_connect_started' },
   { name: 'Connected GitHub', event: 'github_connected' },
   { name: 'Ran a scan', event: 'scan_started' },
   { name: 'Got a first skill', event: 'first_evidence' },
