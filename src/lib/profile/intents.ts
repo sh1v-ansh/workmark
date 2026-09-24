@@ -20,8 +20,8 @@
 
 export const INTENTS = {
   build_record: {
-    label: 'Build a work portfolio I can show employers',
-    detail: 'We read the code you choose and turn it into a verified profile of your skills.',
+    label: 'Build my resume and get considered for paid work',
+    detail: 'Your code becomes a verified profile, so we can put you forward for paid projects and send you opportunities that fit.',
   },
   join_project: {
     label: 'Join a project with other students',
