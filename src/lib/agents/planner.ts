@@ -16,7 +16,7 @@
 // "suggest more tasks", so a dormant project costs nothing.
 
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { callStructuredAgent } from './client'
+import { streamTextAgent } from './client'
 import { untrusted, untrustedList } from './untrusted'
 import { WORK_ROLES, type WorkRole } from '@/lib/workspace/membership'
 
@@ -63,71 +63,32 @@ Assign each task a role from the list you are given, or null if any of them coul
 
 Do not include project setup, repository creation, or "read the documentation" as tasks. The repository already exists and the student is already working.
 
-Write plainly, in second person. No preamble, no encouragement.`
+Write plainly, in second person. No preamble, no encouragement.
 
-const SCHEMA = {
-  type: 'object',
-  properties: {
-    tasks: {
-      type: 'array',
-      // Written as real constraints; client.ts runs the whole schema through
-      // the SDK transform, which keeps what structured outputs supports and
-      // turns the rest into description text the model still reads. So these
-      // are honest about the intent and cannot 400.
-      minItems: MIN_TASKS,
-      maxItems: MAX_TASKS,
-      description: `Between ${MIN_TASKS} and ${MAX_TASKS} tasks.`,
-      items: {
-        type: 'object',
-        properties: {
-          title: { type: 'string', description: 'One specific piece of work.' },
-          detail: { type: 'string', description: 'A sentence or two of what it involves.' },
-          acceptance_criteria: {
-            type: 'string',
-            description: 'Observable outcomes that say this is done.',
-          },
-          before_question: {
-            type: 'string',
-            description:
-              'One short question, asked when the student starts this task, about what they will try first. Specific to this task and answerable in fifteen seconds. Not "how will you approach this" — something a person can be concretely wrong about, so it can be compared with what they actually build.',
-          },
-          suggested_role: {
-            type: ['string', 'null'],
-            enum: [...WORK_ROLES, null],
-          },
-          estimate_hours: { type: 'number', minimum: 0.5, maximum: 60 },
-          difficulty: { type: 'integer', minimum: 1, maximum: 10 },
-          verifiable: { type: 'boolean' },
-          depends_on: {
-            type: 'array',
-            items: { type: 'integer', minimum: 0 },
-            description: 'Indexes of earlier tasks in this list that must come first.',
-          },
-        },
-        required: [
-          'title', 'detail', 'acceptance_criteria', 'before_question', 'suggested_role',
-          'estimate_hours', 'difficulty', 'verifiable', 'depends_on',
-        ],
-        additionalProperties: false,
-      },
-    },
-  },
-  required: ['tasks'],
-  additionalProperties: false,
-} as const
+Output format: one task per line, in the order they should be done. Each line is a single JSON object with exactly these keys:
+- title: one specific piece of work
+- detail: a sentence or two of what it involves
+- acceptance_criteria: observable outcomes that say this is done
+- before_question: one short question, asked when the student starts this task, about what they will try first. Specific to this task and answerable in fifteen seconds; something a person can be concretely wrong about, not "how will you approach this"
+- suggested_role: one of the roles you are given, or null
+- estimate_hours: a number from 0.5 to 60
+- difficulty: an integer from 1 to 10
+- verifiable: true or false
+- depends_on: an array of 0-based line numbers of earlier tasks that must come first
 
-interface AgentResponse {
-  tasks: {
-    title: string
-    detail: string
-    acceptance_criteria: string
-    before_question: string
-    suggested_role: string | null
-    estimate_hours: number
-    difficulty: number
-    verifiable: boolean
-    depends_on: number[]
-  }[]
+Between ${MIN_TASKS} and ${MAX_TASKS} lines. Nothing else: no markdown, no code fences, no blank lines, no commentary.`
+
+
+interface RawTask {
+  title: string
+  detail: string
+  acceptance_criteria: string
+  before_question: string
+  suggested_role: string | null
+  estimate_hours: number
+  difficulty: number
+  verifiable: boolean
+  depends_on: number[]
 }
 
 export interface PlanRequest {
@@ -153,6 +114,8 @@ export async function planProject(
   supabase: SupabaseClient,
   studentId: string,
   request: PlanRequest,
+  /** Called once per task as soon as its line is finished. */
+  onTask?: (task: DraftTask) => void,
 ): Promise<PlanResult | null> {
   const roles = request.teamRoles.length > 0 ? request.teamRoles : [...WORK_ROLES]
 
@@ -172,48 +135,90 @@ export async function planProject(
     request.progress ? untrusted('What has happened so far', request.progress) : null,
   ].filter((line): line is string => line !== null).join('\n\n')
 
-  const response = await callStructuredAgent<AgentResponse>(supabase, {
+  // One task per line, so each card can be shown the moment its line ends
+  // instead of after the whole plan. The final text is re-parsed below and
+  // is what gets saved; the live lines are only for the person watching.
+  let buffer = ''
+  let shown = 0
+  const response = await streamTextAgent(supabase, {
     agentType: 'planner',
     system: SYSTEM,
     userContent,
-    schema: SCHEMA,
     inputForAudit: {
       workspace_title: request.title,
       team_size: request.teamSize,
       existing_task_count: request.existingTitles.length,
     },
     studentId,
+    maxTokens: 6000,
+    onText: onTask
+      ? (delta) => {
+          buffer += delta
+          let end = buffer.indexOf('\n')
+          while (end >= 0) {
+            const line = buffer.slice(0, end)
+            buffer = buffer.slice(end + 1)
+            const task = parseLine(line)
+            if (task && shown < MAX_TASKS) { shown++; onTask(task) }
+            end = buffer.indexOf('\n')
+          }
+        }
+      : undefined,
   })
 
-  if (!response || !Array.isArray(response.tasks)) return null
-
-  const tasks = response.tasks.map(normalise).filter((t): t is DraftTask => t !== null)
+  if (!response) return null
+  const tasks = parsePlanLines(response.text)
   if (tasks.length === 0) return null
+  return { tasks, callId: response.callId }
+}
 
-  // The call id lets each stored task point at the plan that proposed it,
-  // which is what makes "of nine suggestions, how many survived" answerable
-  // later. Best-effort: a missing id costs the acceptance rate, not the plan.
-  const { data: call } = await supabase
-    .from('agent_calls')
-    .select('id')
-    .eq('agent_type', 'planner')
-    .eq('student_id', studentId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+function parseLine(line: string): DraftTask | null {
+  const trimmed = line.trim()
+  if (!trimmed.startsWith('{')) return null
+  try {
+    return normalise(JSON.parse(trimmed) as RawTask)
+  } catch {
+    return null
+  }
+}
 
-  return { tasks, callId: (call?.id as string) ?? null }
+/**
+ * The whole plan from the model's text, one task per line.
+ *
+ * depends_on counts lines, so when a line is dropped (bad JSON, empty title)
+ * the indexes after it are renumbered, and any edge pointing at the dropped
+ * line goes with it.
+ */
+export function parsePlanLines(text: string): DraftTask[] {
+  const kept: DraftTask[] = []
+  const newIndex = new Map<number, number>()
+  let lineNo = 0
+  for (const line of text.split('\n')) {
+    if (!line.trim().startsWith('{')) continue
+    const task = parseLine(line)
+    if (task && kept.length < MAX_TASKS) {
+      newIndex.set(lineNo, kept.length)
+      kept.push(task)
+    }
+    lineNo++
+  }
+  return kept.map((task, i) => ({
+    ...task,
+    dependsOn: task.dependsOn
+      .map((d) => newIndex.get(d))
+      .filter((d): d is number => d !== undefined && d < i),
+  }))
 }
 
 /**
  * Re-check what came back.
  *
- * The schema constrains the model, and this constrains the schema being
- * wrong. Structured output is reliable and not a guarantee: a task with an
+ * The prompt constrains the model, and this catches the model being
+ * wrong. It is reliable and not a guarantee: a task with an
  * empty title or an estimate of 400 hours would go straight into the
  * database and then into somebody's evidence.
  */
-function normalise(raw: AgentResponse['tasks'][number]): DraftTask | null {
+function normalise(raw: RawTask): DraftTask | null {
   const title = typeof raw.title === 'string' ? raw.title.trim().slice(0, 200) : ''
   if (title.length < 2) return null
 

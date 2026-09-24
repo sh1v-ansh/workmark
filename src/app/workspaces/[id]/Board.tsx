@@ -67,6 +67,9 @@ const VERDICT_TONE: Record<string, { colour: string; label: string }> = {
   pending: { colour: '#5A6172', label: 'Waiting to be checked' },
 }
 
+/** How many of the queued tasks the backlog shows before "show the rest". */
+const BACKLOG_PREVIEW = 3
+
 export default function Board({
   workspaceId,
   tasks: serverTasks,
@@ -113,6 +116,9 @@ export default function Board({
   const [blocking, setBlocking] = useState<BoardTask | null>(null)
   const [blockReason, setBlockReason] = useState('')
   const [planning, setPlanning] = useState(false)
+  // Tasks the planner has finished writing, shown as they arrive and
+  // replaced by the real cards once the plan is saved.
+  const [drafted, setDrafted] = useState<{ title: string; estimateHours: number }[]>([])
   const [checking, setChecking] = useState(false)
   const [reviewing, setReviewing] = useState<BoardTask | null>(null)
   const [abandoning, setAbandoning] = useState<BoardTask | null>(null)
@@ -215,6 +221,12 @@ export default function Board({
     })),
   })
   const boardTasks = tasks.filter((t) => t.status !== 'abandoned')
+  // Each top-level task's place in the plan, by board order across every
+  // column, so a card can say "Step 3 of 12".
+  const stepOf = new Map(
+    boardTasks.filter((t) => t.parentTaskId === null).sort(byBoardOrder).map((t, i) => [t.id, i + 1] as const),
+  )
+  const [showWholePlan, setShowWholePlan] = useState(false)
 
   // workspace.members is already only the people actually on the team, so
   // every row here is active by construction. Shaped into MemberRow so the
@@ -581,16 +593,27 @@ export default function Board({
 
   async function draftPlan() {
     setPlanning(true)
+    setDrafted([])
     try {
       const res = await fetch(`/api/workspaces/${workspaceId}/plan`, { method: 'POST' })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error ?? 'Could not draft a plan.')
+      // One JSON line per task; only complete lines are read, the one still
+      // being written waits for its newline.
+      const data = await readTextStream<{ count?: number }>(res, (soFar) => {
+        const lines = soFar.split('\n').slice(0, -1)
+        const next: { title: string; estimateHours: number }[] = []
+        for (const line of lines) {
+          try { next.push(JSON.parse(line)) } catch { /* not a task line */ }
+        }
+        setDrafted((prev) => (prev.length === next.length ? prev : next))
+      })
+      if (data.error) throw new Error(data.error)
       toast(`${data.count} tasks drafted — edit or delete whatever does not fit.`, 'success')
       router.refresh()
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
     } finally {
       setPlanning(false)
+      setDrafted([])
     }
   }
 
@@ -728,7 +751,7 @@ export default function Board({
               {`Check my work (${submittedCount})`}
             </Button>
           )}
-          {!readOnly && (
+          {!readOnly && tasks.length > 0 && (
             <Button
               variant="outline"
               size="sm"
@@ -739,7 +762,7 @@ export default function Board({
               // explanation is the most annoying thing an interface can do.
               title={askRefusal ?? undefined}
             >
-              {tasks.length === 0 ? 'Draft a plan' : 'Give me more work'}
+              Give me more work
             </Button>
           )}
           {!readOnly && (
@@ -792,11 +815,42 @@ export default function Board({
       {/* Said once, above the board, rather than on every card. The point is
           that the plan is theirs from the moment it lands — what they keep,
           reshape and throw out is the thing worth measuring. */}
-      {tasks.length === 0 && (
-        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 14, maxWidth: '62ch' }}>
-          Your tech lead can draft a plan and hand you tickets one or two at a time. Edit anything —
-          the plan is yours once it lands.
-        </p>
+      {tasks.length === 0 && !readOnly && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 18, flexWrap: 'wrap',
+          padding: '20px 22px', marginBottom: 16, borderRadius: R.lg,
+          border: '1px solid #E4DCFF',
+          background: 'linear-gradient(145deg, #F4F0FF 0%, #FBFAFF 60%, #FFFFFF 100%)',
+        }}>
+          <div style={{ maxWidth: '52ch' }}>
+            <p style={{ fontSize: T.body, fontWeight: 650, color: C.text, marginBottom: 4 }}>
+              {planning ? 'Your tech lead is writing the plan…' : 'Start with a plan'}
+            </p>
+            <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.55 }}>
+              {planning
+                ? 'Tasks show up in Up next as they are written, in the order to do them.'
+                : 'Your tech lead breaks the project into tasks and hands you one or two at a time. Edit anything — the plan is yours once it lands.'}
+            </p>
+          </div>
+          <motion.button
+            onClick={draftPlan}
+            disabled={planning || askRefusal !== null}
+            title={askRefusal ?? undefined}
+            whileHover={planning || still ? undefined : { y: -2 }}
+            whileTap={planning || still ? undefined : { scale: 0.97 }}
+            style={{
+              border: 'none', cursor: planning ? 'default' : 'pointer',
+              padding: '12px 22px', borderRadius: 999,
+              fontSize: T.body, fontWeight: 650, color: '#fff',
+              background: 'linear-gradient(103deg, #3E1FFF 0%, #7F5CFF 55%, #EC4899 100%)',
+              boxShadow: '0 8px 22px -8px rgba(94, 60, 255, 0.55)',
+              opacity: askRefusal !== null ? 0.5 : 1,
+              flexShrink: 0,
+            }}
+          >
+            {planning ? `Drafting… ${drafted.length > 0 ? `${drafted.length} so far` : ''}` : 'Draft a plan'}
+          </motion.button>
+        </div>
       )}
 
       {/* Everything that is stuck, in one place. This is the list somebody
@@ -1012,12 +1066,17 @@ export default function Board({
         }}
       >
         {BOARD_COLUMNS.map((column) => {
+          // The backlog is the plan's queue, not a pile: the next few, in
+          // order, and the rest one click away. Seeing all twelve at once is
+          // the mountain the ticket queue exists to avoid.
           // Children are drawn under their parent rather than as cards of
           // their own, so a task broken into three does not take four slots
           // in a column and read as four separate pieces of work.
           const inColumn = boardTasks
             .filter((t) => t.status === column && t.parentTaskId === null)
             .sort(byBoardOrder)
+          const hiddenCount = column === 'backlog' && !showWholePlan ? Math.max(0, inColumn.length - BACKLOG_PREVIEW) : 0
+          const shown = hiddenCount > 0 ? inColumn.slice(0, BACKLOG_PREVIEW) : inColumn
           const refusal = dragging
             ? canMoveTo(tasks.find((t) => t.id === dragging)!.status, column)
             : null
@@ -1058,7 +1117,7 @@ export default function Board({
               </p>
 
               <div style={{ display: 'grid', gap: 8 }}>
-                {inColumn.map((task) => (
+                {shown.map((task) => (
                   <motion.article
                     key={task.id}
                     // Same layoutId across columns is what lets Motion see the
@@ -1081,8 +1140,10 @@ export default function Board({
                       borderRadius: R.md,
                       padding: '10px 12px',
                       cursor: readOnly ? 'default' : 'grab',
-                      opacity: optimistic.isPending(task.id) ? 0.55 : 1,
-                      transition: 'opacity .18s ease, box-shadow .12s ease, transform .12s ease',
+                      // No fade while the save is in flight: the card is where
+                      // it was dropped, and dimming it read as lag. A failed
+                      // save puts it back and says so.
+                      transition: 'box-shadow .12s ease, transform .12s ease',
                     }}
                   >
                     <button
@@ -1093,6 +1154,13 @@ export default function Board({
                       }}
                       style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%' }}
                     >
+                      {/* Its place in the plan, so the order is visible on
+                          every card, not only in the backlog. */}
+                      {stepOf.get(task.id) && (
+                        <p style={{ fontSize: 12, fontWeight: 700, color: C.textMuted, letterSpacing: '0.03em', marginBottom: 2 }}>
+                          STEP {stepOf.get(task.id)} OF {stepOf.size}
+                        </p>
+                      )}
                       <p style={{
                         fontSize: 14, fontWeight: 500, color: C.text,
                         lineHeight: 1.4, textWrap: 'pretty',
@@ -1180,6 +1248,17 @@ export default function Board({
                   </motion.article>
                 ))}
 
+                {(hiddenCount > 0 || (column === 'backlog' && showWholePlan && inColumn.length > BACKLOG_PREVIEW)) && (
+                  <button
+                    type="button"
+                    className="wm-mini"
+                    onClick={() => setShowWholePlan((v) => !v)}
+                    style={{ justifySelf: 'start' }}
+                  >
+                    {hiddenCount > 0 ? `Show the rest of the plan (${hiddenCount})` : 'Show less'}
+                  </button>
+                )}
+
                 {/* Where the plan is about to land.
                     A model call takes the better part of ten seconds, and for
                     all of it the board used to look exactly as it had before
@@ -1188,9 +1267,23 @@ export default function Board({
                     progress, and it costs nothing. */}
                 {planning && column === 'backlog' && (
                   <div style={{ display: 'grid', gap: 8 }}>
-                    {[0, 1, 2].map((i) => (
-                      <Bar key={i} height={78} radius={10} style={{ opacity: 1 - i * 0.22 }} />
+                    {drafted.map((d, i) => (
+                      <motion.div
+                        key={i}
+                        initial={still ? false : { opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        style={{
+                          padding: '10px 12px', borderRadius: 10, background: C.surface,
+                          border: `1px dashed ${C.accentBorder}`,
+                        }}
+                      >
+                        <p style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.05em', color: C.textGhost, marginBottom: 3 }}>
+                          STEP {i + 1} · ~{d.estimateHours}h
+                        </p>
+                        <p style={{ fontSize: T.bodySm, fontWeight: 500, color: C.text, lineHeight: 1.4 }}>{d.title}</p>
+                      </motion.div>
                     ))}
+                    <Bar height={60} radius={10} />
                   </div>
                 )}
                 {inColumn.length === 0 && !(planning && column === 'backlog') && (

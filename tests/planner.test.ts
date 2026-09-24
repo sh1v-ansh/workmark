@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalisePlannedTask, MIN_TASKS, MAX_TASKS } from '../src/lib/agents/planner'
+import { normalisePlannedTask, parsePlanLines, MIN_TASKS, MAX_TASKS } from '../src/lib/agents/planner'
 import { WORK_ROLES } from '../src/lib/workspace/membership'
 
 // The shape the schema promises. Each test bends one field.
@@ -109,5 +109,38 @@ describe('re-checking the model', () => {
     expect(task.title.length).toBe(200)
     expect(task.detail.length).toBe(4000)
     expect(task.acceptanceCriteria.length).toBe(4000)
+  })
+})
+
+describe('parsePlanLines', () => {
+  const line = (over: Record<string, unknown> = {}) => JSON.stringify(raw(over))
+
+  it('reads one task per line and skips anything that is not a task', () => {
+    const text = ['Here is the plan:', line({ title: 'First', depends_on: [] }), '', line({ title: 'Second' })].join('\n')
+    expect(parsePlanLines(text).map((t) => t.title)).toEqual(['First', 'Second'])
+  })
+
+  it('renumbers dependencies when a line is dropped', () => {
+    const text = [
+      line({ title: 'Alpha', depends_on: [] }),
+      line({ title: '', depends_on: [] }),
+      '{ not json',
+      line({ title: 'Gamma', depends_on: [0, 1, 2] }),
+    ].join('\n')
+    const tasks = parsePlanLines(text)
+    expect(tasks.map((t) => t.title)).toEqual(['Alpha', 'Gamma'])
+    // 0 still points at Alpha; 1 was the empty title and 2 the broken line.
+    expect(tasks[1].dependsOn).toEqual([0])
+  })
+
+  it('drops self and forward references', () => {
+    const tasks = parsePlanLines([line({ title: 'Alpha', depends_on: [0, 1] }), line({ title: 'Beta', depends_on: [0] })].join('\n'))
+    expect(tasks[0].dependsOn).toEqual([])
+    expect(tasks[1].dependsOn).toEqual([0])
+  })
+
+  it('stops at the task cap', () => {
+    const text = Array.from({ length: MAX_TASKS + 4 }, (_, i) => line({ title: `Task ${i}`, depends_on: [] })).join('\n')
+    expect(parsePlanLines(text)).toHaveLength(MAX_TASKS)
   })
 })

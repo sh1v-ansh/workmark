@@ -49,7 +49,7 @@ export function isOnBoard(status: TaskStatus): status is BoardColumn {
 }
 
 export const COLUMN_LABEL: Record<TaskStatus, string> = {
-  backlog: 'Backlog',
+  backlog: 'Up next',
   planned: 'Planned',
   doing: 'Doing',
   submitted: 'Submitted',
@@ -66,8 +66,8 @@ export const COLUMN_LABEL: Record<TaskStatus, string> = {
  * the work actually works.
  */
 export const COLUMN_HINT: Record<TaskStatus, string> = {
-  backlog: 'Everything that might need doing',
-  planned: 'Committed to, not started',
+  backlog: 'The rest of the plan, in order',
+  planned: 'Your tickets now, one or two at a time',
   doing: 'In progress right now',
   submitted: 'You think it is done — waiting to be checked',
   verified: 'Checked against your acceptance criteria',
