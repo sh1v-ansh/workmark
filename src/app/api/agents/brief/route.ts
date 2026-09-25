@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   const { data: me } = await supabase.from('students').select('career_track, aspiration').eq('id', user.id).maybeSingle()
   const PATH_TO_BRIEF: Record<string, CareerTrack> = {
     backend: 'backend', frontend: 'frontend', mobile: 'mobile', 'ai-ml': 'ml_ai',
-    data: 'data', devops: 'infrastructure', security: 'security', hardware: 'systems',
+    data: 'data', devops: 'infrastructure', security: 'security', robotics: 'systems',
   }
   const careerTrack = (body.careerTrack ?? PATH_TO_BRIEF[(me?.career_track as string) ?? ''] ?? null) as CareerTrack | null
 
