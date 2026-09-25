@@ -4,6 +4,7 @@ import { loadStudentRecord } from '@/lib/profile/record'
 import { loadAcrossProjects } from '@/lib/workspace/across'
 import { suggestHandle } from '@/lib/profile/handle'
 import MyRecordClient from './MyRecordClient'
+import { loadCareer } from '@/lib/careers/load'
 import { lastScanFinishedAt } from '@/lib/github/last-scan'
 
 export const metadata = { title: 'Record' }
@@ -34,9 +35,11 @@ export default async function MyRecordPage() {
   // Rescan lives on this page now, so this page has to know whether there is
   // anything to rescan and when it last happened. Both are single indexed
   // reads and they run alongside each other rather than in sequence.
-  const [{ data: connection }, lastScannedAt] = await Promise.all([
+  const levels = new Map(record.skills.map((s) => [s.skillId, s.bestLevel]))
+  const [{ data: connection }, lastScannedAt, career] = await Promise.all([
     supabase.from('github_connections').select('student_id').eq('student_id', user.id).maybeSingle(),
     lastScanFinishedAt(supabase, user.id),
+    loadCareer(supabase, user.id, levels),
   ])
 
   const artifactIds = Array.from(new Set((evidenceRows ?? []).map((r) => r.artifact_id).filter((id): id is string => !!id)))
@@ -69,6 +72,7 @@ export default async function MyRecordPage() {
 
   return (
     <MyRecordClient
+      career={career}
       studentId={user.id}
       howYouWork={howYouWork}
       record={record}

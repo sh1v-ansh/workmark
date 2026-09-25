@@ -104,6 +104,10 @@ create table students (
   graduation_year           int,
   gpa                       decimal(3,2),
   is_international          boolean default false not null,
+  -- v05_0059: the career they are working toward, and their own words.
+  career_track              text check (career_track in ('backend', 'frontend', 'fullstack', 'mobile', 'ai-ml', 'data', 'devops', 'security')),
+  aspiration                text check (char_length(aspiration) <= 500),
+  career_set_at             timestamptz,
   visa_type                 text,
   skills                    text[],  -- self-reported, display only — never feeds tier_weight
   -- What they said they came for: build_record, join_project, post_project,

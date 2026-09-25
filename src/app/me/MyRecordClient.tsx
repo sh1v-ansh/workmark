@@ -1,5 +1,8 @@
 'use client'
 
+import CareerCard from './CareerCard'
+import type { CareerView } from '@/lib/careers/load'
+
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -68,7 +71,8 @@ const VERIFICATION_LABEL: Record<string, string> = {
   attested: 'Confirmed by a collaborator',
 }
 
-export default function MyRecordClient({ studentId, record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt }: {
+export default function MyRecordClient({ studentId, record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt, career }: {
+  career: CareerView
   studentId: string
   record: StudentRecord
   /** Pooled across every project. Null for somebody who has not been on one. */
@@ -198,6 +202,8 @@ export default function MyRecordClient({ studentId, record, howYouWork, sources,
           )}
           </div>
         </div>
+
+        <CareerCard view={career} />
 
         <div style={{ display: 'grid', gridTemplateColumns: '330px minmax(0, 1fr)', gap: 29, alignItems: 'start' }} className="mob-1col">
 

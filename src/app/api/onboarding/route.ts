@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { enforce } from '@/lib/rate-limit'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { TRACK_IDS } from '@/lib/careers/tracks'
 import { consentFieldsForSignup } from '@/lib/notify/marketing'
 import { record } from '@/lib/analytics/record'
 import { cleanIntents } from '@/lib/profile/intents'
@@ -223,6 +224,11 @@ export async function POST(request: Request) {
     // reads as "not on a visa" only when the form genuinely said no.
     studentProfile.is_international = profile.is_international === true
     delete studentProfile.visa_type
+    // Only a listed track or nothing; the text is capped like the column.
+    studentProfile.career_track = typeof profile.career_track === 'string' && TRACK_IDS.includes(profile.career_track)
+      ? profile.career_track : null
+    studentProfile.aspiration = typeof profile.aspiration === 'string' ? profile.aspiration.trim().slice(0, 500) || null : null
+    if (studentProfile.career_track) studentProfile.career_set_at = now
 
     const { error: profileErr } = await admin.from('students').insert({
       id: user.id,
