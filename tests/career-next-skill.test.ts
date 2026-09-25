@@ -27,7 +27,7 @@ describe('career tracks', () => {
       ...Object.values(SEED_ALIASES),
       ...Object.values(SKILL_IMPLIES).flat(),
       // GitHub language stats, by canonical name.
-      'java', 'kotlin', 'swift', 'dart', 'c', 'cpp', 'assembly', 'dotnet', 'go', 'rust', 'python', 'javascript', 'typescript',
+      'java', 'kotlin', 'swift', 'dart', 'c', 'cpp', 'assembly', 'lua', 'matlab', 'dotnet', 'go', 'rust', 'python', 'javascript', 'typescript',
       // File detectors (detectors.ts, file-plan.ts).
       'docker', 'ci-cd', 'kubernetes', 'terraform', 'sql', 'mysql', 'postgresql', 'database-design', 'serverless', 'graphql', 'config-management',
     ])

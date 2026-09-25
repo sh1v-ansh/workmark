@@ -157,6 +157,14 @@ export function planFiles(tree: TreeEntry[]): FilePlan {
     if (/\.xcodeproj\//.test(path) || base === 'Podfile') addPresence('iOS', path)
     if (base === 'nginx.conf' || /\.service$/.test(base)) addPresence('Linux', path)
     if (/^(openapi|swagger)\.(ya?ml|json)$/i.test(base)) addPresence('openapi', path)
+    // Game and hardware work, from the files it leaves.
+    if (/\.(glsl|hlsl|wgsl|shader|frag|vert)$/i.test(base)) addPresence('shaders', path)
+    if (base === 'package.xml' && /(^|\/)(src|ros|catkin_ws|ros2_ws)\//.test(path) || base === 'CMakeLists.txt' && /ros/i.test(path)) addPresence('ROS', path)
+    if (base === 'platformio.ini') addPresence('PlatformIO', path)
+    if (/\.ino$/i.test(base)) addPresence('Arduino', path)
+    if (base === 'FreeRTOSConfig.h') addPresence('FreeRTOS', path)
+    if (base === 'prj.conf' || base === 'west.yml') addPresence('Zephyr', path)
+    if (/\.scad$/i.test(base)) addPresence('OpenSCAD', path)
   }
 
   return { files, presence }

@@ -190,4 +190,20 @@ export const SEED_ALIASES: Record<string, string> = {
   casbin: 'iam', pycasbin: 'iam',
   scapy: 'networking', paramiko: 'networking', pythonnmap: 'network-security',
   hardhat: 'smart-contracts',
+
+  // Game development.
+  shaders: 'shader-programming',
+  cannon: 'physics-simulation', cannones: 'physics-simulation', rapier3d: 'physics-simulation',
+  rapier2d: 'physics-simulation', matterjs: 'physics-simulation', ammojs: 'physics-simulation',
+  pybullet: 'physics-simulation', pymunk: 'physics-simulation', box2d: 'physics-simulation',
+  colyseus: 'multiplayer-networking', colyseusjs: 'multiplayer-networking', geckosio: 'multiplayer-networking',
+  playroomkit: 'multiplayer-networking',
+  aframe: 'vr-development', webxr: 'vr-development',
+  // Hardware and robotics.
+  ros: 'robotics', rclpy: 'robotics', rclcpp: 'robotics', rospy: 'robotics', roscpp: 'robotics',
+  arduino: 'embedded-systems', platformio: 'embedded-systems', micropython: 'embedded-systems',
+  adafruitblinka: 'embedded-systems', rpigpio: 'embedded-systems', gpiozero: 'embedded-systems',
+  pyserial: 'embedded-systems',
+  freertos: 'real-time-systems', zephyr: 'real-time-systems',
+  cadquery: 'cad', openscad: 'cad',
 }

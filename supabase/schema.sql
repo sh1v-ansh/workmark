@@ -105,7 +105,7 @@ create table students (
   gpa                       decimal(3,2),
   is_international          boolean default false not null,
   -- v05_0059: the career they are working toward, and their own words.
-  career_track              text check (career_track in ('backend', 'frontend', 'fullstack', 'mobile', 'ai-ml', 'data', 'devops', 'security')),
+  career_track              text check (career_track in ('backend', 'frontend', 'fullstack', 'mobile', 'ai-ml', 'data', 'devops', 'security', 'game-dev', 'hardware')),
   aspiration                text check (char_length(aspiration) <= 500),
   career_set_at             timestamptz,
   visa_type                 text,
