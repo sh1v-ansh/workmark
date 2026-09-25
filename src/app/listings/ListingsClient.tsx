@@ -371,7 +371,10 @@ export default function ListingsClient({
                   </p>
                 </Card>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 14.5 }} className="mob-1col">
+                // Two columns that fill top to bottom, so a short card sits
+                // right under the one above it instead of stretching to
+                // match its neighbour. See .wm-masonry.
+                <div className="wm-masonry">
                   {/* Written projects sit in the same grid as posted ones.
                       They were in a section of their own above, behind a
                       heading, a paragraph and a link — three things between

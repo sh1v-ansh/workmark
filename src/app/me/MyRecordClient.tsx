@@ -20,7 +20,6 @@ import SkillChip, { PlainChip } from '@/components/skills/SkillChip'
 import LevelBar, { countLevels } from '@/components/skills/LevelBar'
 import SkillEvidenceModal from '@/components/skills/SkillEvidenceModal'
 import { SELF_EVIDENCED_CAP } from '@/lib/skills/level-names'
-import HowYouWork from './HowYouWork'
 import type { AcrossProjects } from '@/lib/workspace/across'
 import { LAYOUT } from '@/lib/theme/layout'
 
@@ -224,7 +223,8 @@ export default function MyRecordClient({ studentId, record, howYouWork, sources,
                 Not rendered at all for somebody who has never been on a
                 project: a card of "not enough yet" reads as the product being
                 broken rather than as them being new. */}
-            {howYouWork && <HowYouWork data={howYouWork} />}
+            {/* How you work (HowYouWork.tsx) is hidden for now: with one or
+                two projects it was all "Not enough yet". */}
 
             <Card hoverable={false} padding={19.5}>
               <Kicker style={{ marginBottom: 9 }}>Public profile</Kicker>

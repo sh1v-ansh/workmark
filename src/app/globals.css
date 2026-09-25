@@ -2018,3 +2018,13 @@
   .wm-settings-nav { position: static !important; flex-direction: row !important; overflow-x: auto; gap: 4px !important; }
   .wm-settings-nav button { white-space: nowrap; }
 }
+
+/* Masonry: cards flow down two columns at their own heights. Used on Find
+   work, where card lengths vary a lot and a strict grid left big gaps. */
+.wm-masonry { column-count: 2; column-gap: 14.5px; }
+.wm-masonry > * { break-inside: avoid; margin-bottom: 14.5px; width: 100%; display: block; }
+@media (max-width: 760px) { .wm-masonry { column-count: 1; } }
+
+/* Long titles wrap instead of running out of their card. */
+.wm-wrap { overflow-wrap: anywhere; min-width: 0; }
+.wm-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
