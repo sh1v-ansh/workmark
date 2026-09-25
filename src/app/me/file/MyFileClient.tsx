@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
-import { Kicker, Stat } from '@/components/ui/Section'
+import { Kicker } from '@/components/ui/Section'
 import { useToast } from '@/components/Toast'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { tagColor } from '@/lib/theme/tagColors'
@@ -67,20 +67,14 @@ export interface FileData {
 // document about your legal rights should read as sober.
 function Section({ id, title, blurb, children }: { id: string; title: string; blurb: string; children: React.ReactNode }) {
   return (
-    <section id={id} style={{ scrollMarginTop: 85, marginBottom: 35 }}>
-      <Kicker style={{ marginBottom: 6 }}>{title}</Kicker>
-      <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5, marginBottom: 13.5, maxWidth: 540 }}>{blurb}</p>
+    <section id={id}>
+      <h2 style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 5 }}>{title}</h2>
+      <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 16, maxWidth: '62ch' }}>{blurb}</p>
       {children}
     </section>
   )
 }
 
-const INDEX = [
-  { id: 'current', label: 'Current record' },
-  { id: 'shared', label: 'Who has seen it' },
-  { id: 'permissions', label: 'Permissions you gave' },
-  { id: 'disputes', label: 'Disputes' },
-]
 
 export default function MyFileClient({ data }: { data: FileData }) {
   const router = useRouter()
@@ -120,7 +114,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
   }
 
   async function revokeConsent(consentId: string) {
-    if (!confirm('Revoke this consent? Anything already shared stays shared — this stops it being used for anything new.')) return
+    if (!confirm('Revoke this consent? Anything already shared stays shared. This stops it being used for anything new.')) return
     setBusy(true)
     try {
       const res = await fetch(`/api/consents/${consentId}/revoke`, { method: 'POST' })
@@ -140,6 +134,15 @@ export default function MyFileClient({ data }: { data: FileData }) {
   const openDisputes = data.disputes.filter((d) => !isResolved(d.status)).length
   const corrections = data.evidence.filter((e) => e.isCorrection).length
 
+  const tabs = [
+    { id: 'current', label: 'Current record', count: current.length },
+    ...(history.length > 0 ? [{ id: 'history', label: 'History', count: history.length }] : []),
+    { id: 'shared', label: 'Who has seen it', count: data.disclosures.length },
+    { id: 'permissions', label: 'Permissions you gave', count: data.consents.length },
+    { id: 'disputes', label: 'Disputes', count: data.disputes.length },
+  ]
+  const [tab, setTab] = useState('current')
+
   return (
     <div className="wm-app-ground" style={{ minHeight: '100vh', background: C.bg }}>
 
@@ -147,12 +150,12 @@ export default function MyFileClient({ data }: { data: FileData }) {
 
         <Link href="/me" style={{ fontSize: 14, color: C.textFaint, textDecoration: 'none' }}>← Your record</Link>
 
-        <div style={{ margin: '13px 0 20px' }}>
-          <h1 style={{ fontFamily: F.display, fontSize: 24, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 9 }}>
+        <div style={{ margin: '14px 0 22px' }}>
+          <h1 style={{ fontFamily: F.display, fontSize: 26, fontWeight: 600, letterSpacing: '-0.022em', color: C.text, marginBottom: 8 }}>
             Your file
           </h1>
-          <p style={{ fontSize: 15, color: C.textMuted, lineHeight: 1.6, maxWidth: 630 }}>
-            Everything we hold about you, where each piece came from, and everyone we&apos;ve shared it with. If something here is wrong, dispute it — most are settled by rescanning the code within seconds.
+          <p style={{ fontSize: 15.5, color: C.textMuted, lineHeight: 1.6, maxWidth: 640 }}>
+            Everything we hold about you, where each piece came from, and everyone we&apos;ve shared it with. If something is wrong, dispute it. Most are settled in seconds by re-reading your code.
           </p>
           {/* The same file, as a file. Reading it on screen is one right;
               being able to take it somewhere else is a different one, and
@@ -167,32 +170,54 @@ export default function MyFileClient({ data }: { data: FileData }) {
         </div>
 
         {/* Answers "is anything wrong with my file" before any reading. */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 13, marginBottom: 30 }} className="mob-1col">
-          <Card hoverable={false} padding={18}>
-            <Stat value={data.disclosures.length} label={data.disclosures.length === 1 ? 'person has seen your record' : 'people have seen your record'} />
-          </Card>
-          <Card hoverable={false} padding={18}>
-            <Stat value={openDisputes} label={openDisputes === 1 ? 'dispute currently open' : 'disputes currently open'} />
-          </Card>
-          <Card hoverable={false} padding={18}>
-            <Stat value={corrections} label={corrections === 1 ? 'correction on your record' : 'corrections on your record'} />
-          </Card>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14, marginBottom: 30 }} className="mob-1col">
+          {([
+            ['shared', data.disclosures.length, data.disclosures.length === 1 ? 'person has seen your record' : 'people have seen your record'],
+            ['disputes', openDisputes, openDisputes === 1 ? 'dispute open' : 'disputes open'],
+            ['history', corrections, corrections === 1 ? 'correction on your record' : 'corrections on your record'],
+          ] as const).map(([id, value, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(tabs.some((t) => t.id === id) ? id : 'current')}
+              className="nb-card"
+              style={{ textAlign: 'left', cursor: 'pointer', padding: '18px 20px', fontFamily: 'inherit', border: `1px solid ${C.border}`, borderRadius: R.lg, background: C.surface }}
+            >
+              <span style={{ display: 'block', fontFamily: F.display, fontSize: 28, fontWeight: 600, color: value > 0 ? C.text : C.textFaint, lineHeight: 1.1 }}>{value}</span>
+              <span style={{ display: 'block', fontSize: 14.5, color: C.textMuted, marginTop: 4 }}>{label}</span>
+            </button>
+          ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '200px minmax(0, 1fr)', gap: 29, alignItems: 'start' }} className="mob-1col">
+        <div style={{ display: 'grid', gridTemplateColumns: '220px minmax(0, 1fr)', gap: 34, alignItems: 'start' }} className="wm-settings">
 
-          <nav aria-label="Sections" className="mob-hide" style={{ position: 'sticky', top: 85, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {INDEX.map((item) => (
-              <a key={item.id} href={`#${item.id}`} style={{ fontSize: 13.5, color: C.textMuted, textDecoration: 'none', padding: '7.5px 11.5px', borderRadius: R.sm }}>
-                {item.label}
-              </a>
-            ))}
+          <nav aria-label="Sections" className="wm-settings-nav" style={{ position: 'sticky', top: 85, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {tabs.map((t) => {
+              const on = t.id === tab
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(t.id)}
+                  aria-current={on ? 'page' : undefined}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', gap: 10, textAlign: 'left',
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '9px 12px',
+                    borderRadius: R.md, fontSize: 14.5, fontWeight: on ? 600 : 500,
+                    color: on ? C.text : C.textMuted, background: on ? C.surfaceAlt : 'transparent',
+                  }}
+                >
+                  <span>{t.label}</span>
+                  <span style={{ color: C.textFaint, fontWeight: 500 }}>{t.count}</span>
+                </button>
+              )
+            })}
           </nav>
 
-          <div style={{ maxWidth: 670 }}>
+          <div style={{ maxWidth: 700, minWidth: 0 }}>
 
             {/* Current evidence, each disputable */}
-            <Section id="current" title={`Current record · ${current.length}`} blurb="What your record says today. Each line came from a specific repository.">
+            {tab === 'current' && <Section id="current" title="Current record" blurb="What your record says today. Each line came from a specific repository.">
               {current.length === 0 ? (
                 <Card hoverable={false} padding={19.5}><p style={{ fontSize: 14, color: C.textFaint }}>Nothing on your record yet.</p></Card>
               ) : (
@@ -204,14 +229,14 @@ export default function MyFileClient({ data }: { data: FileData }) {
                       <div key={e.id} style={{ padding: '13.5px 0', borderBottom: i < current.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 13, fontWeight: 600, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
+                            <span style={{ fontSize: 14, fontWeight: 600, padding: '3.5px 9.5px', borderRadius: R.pill, background: c.bg, border: `1px solid ${c.border}`, color: c.text }}>
                               {e.skillName}
                             </span>
-                            <LevelTag level={e.level} style={{ fontSize: 13, color: C.textMuted }} />
+                            <LevelTag level={e.level} style={{ fontSize: 14, color: C.textMuted }} />
                             {e.isCorrection && <Badge>corrected</Badge>}
                           </div>
                           {existing ? (
-                            <span style={{ fontSize: 13, color: C.textGhost }}>{STATUS_LABEL[existing.status]}</span>
+                            <span style={{ fontSize: 14, color: C.textGhost }}>{STATUS_LABEL[existing.status]}</span>
                           ) : (
                             <Button variant="quiet" size="sm" onClick={() => { setDisputingId(disputingId === e.id ? null : e.id); setDetail('') }}>
                               Dispute
@@ -219,7 +244,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                           )}
                         </div>
 
-                        <p style={{ fontSize: 13, color: C.textGhost, marginTop: 6.5 }}>
+                        <p style={{ fontSize: 14, color: C.textGhost, marginTop: 6.5 }}>
                           {[e.repoFullName, e.verificationMethod, e.source, new Date(e.createdAt).toLocaleDateString()].filter(Boolean).join(' · ')}
                         </p>
 
@@ -228,7 +253,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                             nothing to check it against — which is also what a
                             dispute needs in order to be about anything. */}
                         {e.foundIn && (
-                          <p style={{ fontSize: 13, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
+                          <p style={{ fontSize: 14, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
                             <span style={{ color: C.textGhost }}>Found in: </span>{e.foundIn}
                           </p>
                         )}
@@ -238,13 +263,13 @@ export default function MyFileClient({ data }: { data: FileData }) {
                             work, checked afterwards — is the difference
                             between a number and a claim you can argue with. */}
                         {e.projectBasis && (
-                          <p style={{ fontSize: 13, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
+                          <p style={{ fontSize: 14, color: C.textFaint, marginTop: 4, lineHeight: 1.5 }}>
                             <span style={{ color: C.textGhost }}>From a project: </span>{e.projectBasis}
                           </p>
                         )}
 
                         {existing?.resolutionNote && (
-                          <p style={{ fontSize: 13, color: C.textMuted, marginTop: 8.5, lineHeight: 1.5, paddingTop: 8.5, borderTop: `1px solid ${C.borderFaint}` }}>
+                          <p style={{ fontSize: 14, color: C.textMuted, marginTop: 8.5, lineHeight: 1.5, paddingTop: 8.5, borderTop: `1px solid ${C.borderFaint}` }}>
                             {existing.resolutionNote}
                           </p>
                         )}
@@ -256,7 +281,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                                 <option key={cc.value} value={cc.value}>{cc.label}</option>
                               ))}
                             </select>
-                            <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5 }}>
+                            <p style={{ fontSize: 14, color: C.textGhost, lineHeight: 1.5 }}>
                               {DISPUTE_CATEGORIES.find((cc) => cc.value === category)?.help}
                             </p>
                             <textarea
@@ -275,18 +300,18 @@ export default function MyFileClient({ data }: { data: FileData }) {
                   })}
                 </Card>
               )}
-            </Section>
+            </Section>}
 
             {/* Superseded / retracted history */}
-            {history.length > 0 && (
-              <Section id="history" title={`History · ${history.length}`} blurb="Values your record used to carry. Kept so you can see what changed and when — nothing is ever deleted.">
+            {tab === 'history' && history.length > 0 && (
+              <Section id="history" title="History" blurb="Values your record used to carry. Kept so you can see what changed and when. Nothing is ever deleted.">
                 <Card hoverable={false} padding="3.5px 18px 7px">
                   {history.map((e, i) => (
                     <div key={e.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 0', borderBottom: i < history.length - 1 ? `1px solid ${C.borderFaint}` : 'none', flexWrap: 'wrap', opacity: 0.7 }}>
-                      <span style={{ fontSize: 13, color: C.textMuted, textDecoration: 'line-through' }}>
+                      <span style={{ fontSize: 14, color: C.textMuted, textDecoration: 'line-through' }}>
                         {e.skillName} · {LEVEL_NAMES[e.level] ?? e.level}
                       </span>
-                      <span style={{ fontSize: 13, color: C.textGhost }}>
+                      <span style={{ fontSize: 14, color: C.textGhost }}>
                         {e.retracted ? 'retracted' : 'superseded'} · {new Date(e.createdAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -296,7 +321,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
             )}
 
             {/* Disclosures */}
-            <Section id="shared" title={`Who has seen your record · ${data.disclosures.length}`} blurb="Every time your record was furnished to someone else, and exactly which values were sent.">
+            {tab === 'shared' && <Section id="shared" title="Who has seen your record" blurb="Every time your record was furnished to someone else, and exactly which values were sent.">
               {data.disclosures.length === 0 ? (
                 <Card hoverable={false} padding={19.5}><p style={{ fontSize: 14, color: C.textFaint }}>Your record has never been shared with anyone.</p></Card>
               ) : (
@@ -305,8 +330,8 @@ export default function MyFileClient({ data }: { data: FileData }) {
                     <div key={d.id} style={{ padding: '13.5px 0', borderBottom: i < data.disclosures.length - 1 ? `1px solid ${C.borderFaint}` : 'none' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
                         <div>
-                          <p style={{ fontSize: 14.5, fontWeight: 600, color: C.text, marginBottom: 2 }}>{d.recipientName}</p>
-                          <p style={{ fontSize: 13, color: C.textGhost }}>
+                          <p style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 2 }}>{d.recipientName}</p>
+                          <p style={{ fontSize: 14, color: C.textGhost }}>
                             {new Date(d.disclosedAt).toLocaleString()} · {d.fieldsDisclosed.join(', ')}
                           </p>
                         </div>
@@ -315,7 +340,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                         </Button>
                       </div>
                       {expandedDisclosure === d.id && (
-                        <pre style={{ marginTop: 11, padding: 13, background: C.surfaceAlt, borderRadius: R.md, fontSize: 13, color: C.textMuted, overflowX: 'auto', lineHeight: 1.5, fontFamily: 'ui-monospace, Menlo, monospace' }}>
+                        <pre style={{ marginTop: 11, padding: 13, background: C.surfaceAlt, borderRadius: R.md, fontSize: 14, color: C.textMuted, overflowX: 'auto', lineHeight: 1.5, fontFamily: 'ui-monospace, Menlo, monospace' }}>
                           {JSON.stringify(d.payloadSnapshot, null, 2)}
                         </pre>
                       )}
@@ -323,10 +348,10 @@ export default function MyFileClient({ data }: { data: FileData }) {
                   ))}
                 </Card>
               )}
-            </Section>
+            </Section>}
 
             {/* Consents */}
-            <Section id="permissions" title={`Permissions you gave · ${data.consents.length}`} blurb="Revoking stops a permission being used for anything new. It can't un-send what was already shared, and we won't pretend otherwise.">
+            {tab === 'permissions' && <Section id="permissions" title="Permissions you gave" blurb="Revoking stops a permission being used for anything new. It can't un-send what was already shared, and we won't pretend otherwise.">
               {data.consents.length === 0 ? (
                 <Card hoverable={false} padding={19.5}><p style={{ fontSize: 14, color: C.textFaint }}>None yet.</p></Card>
               ) : (
@@ -335,7 +360,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                     <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '12.5px 0', borderBottom: i < data.consents.length - 1 ? `1px solid ${C.borderFaint}` : 'none', flexWrap: 'wrap' }}>
                       <div>
                         <p style={{ fontSize: 14, color: C.textSub }}>{c.scope}</p>
-                        <p style={{ fontSize: 13, color: C.textGhost }}>
+                        <p style={{ fontSize: 14, color: C.textGhost }}>
                           {c.textVersion} · granted {new Date(c.grantedAt).toLocaleDateString()}
                           {c.revokedAt ? ` · revoked ${new Date(c.revokedAt).toLocaleDateString()}` : ''}
                         </p>
@@ -347,10 +372,10 @@ export default function MyFileClient({ data }: { data: FileData }) {
                   ))}
                 </Card>
               )}
-            </Section>
+            </Section>}
 
             {/* Disputes */}
-            <Section id="disputes" title={`Disputes · ${data.disputes.length}`} blurb="We have 30 days to reinvestigate. Most are settled in seconds because your record is computed from code we can simply re-read.">
+            {tab === 'disputes' && <Section id="disputes" title="Disputes" blurb="We have 30 days to reinvestigate. Most are settled in seconds because your record is computed from code we can simply re-read.">
               {data.disputes.length === 0 ? (
                 <Card hoverable={false} padding={19.5}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
@@ -370,19 +395,19 @@ export default function MyFileClient({ data }: { data: FileData }) {
                           <p style={{ fontSize: 14.5, fontWeight: 600, color: C.text }}>
                             {DISPUTE_CATEGORIES.find((cc) => cc.value === d.category)?.label ?? d.category}
                           </p>
-                          <span style={{ fontSize: 13, color: isResolved(d.status) ? C.textGhost : C.accent, fontWeight: 600 }}>
+                          <span style={{ fontSize: 14, color: isResolved(d.status) ? C.textGhost : C.accent, fontWeight: 600 }}>
                             {STATUS_LABEL[d.status]}
                           </span>
                         </div>
-                        <p style={{ fontSize: 13.5, color: C.textMuted, marginTop: 5.5, lineHeight: 1.5 }}>{d.detail}</p>
-                        <p style={{ fontSize: 13, color: days < 0 && !isResolved(d.status) ? '#B91C1C' : C.textGhost, marginTop: 9 }}>
+                        <p style={{ fontSize: 14.5, color: C.textMuted, marginTop: 5.5, lineHeight: 1.5 }}>{d.detail}</p>
+                        <p style={{ fontSize: 14, color: days < 0 && !isResolved(d.status) ? '#B91C1C' : C.textGhost, marginTop: 9 }}>
                           Filed {new Date(d.filedAt).toLocaleDateString()}
                           {isResolved(d.status)
                             ? d.resolvedAt ? ` · resolved ${new Date(d.resolvedAt).toLocaleDateString()}` : ''
                             : days < 0 ? ` · overdue by ${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'}` : ` · ${days} day${days === 1 ? '' : 's'} left to reinvestigate`}
                         </p>
                         {d.resolutionNote && (
-                          <p style={{ fontSize: 13, color: C.textSub, marginTop: 8.5, lineHeight: 1.5, paddingTop: 8.5, borderTop: `1px solid ${C.borderFaint}` }}>
+                          <p style={{ fontSize: 14, color: C.textSub, marginTop: 8.5, lineHeight: 1.5, paddingTop: 8.5, borderTop: `1px solid ${C.borderFaint}` }}>
                             {d.resolutionNote}
                           </p>
                         )}
@@ -391,11 +416,18 @@ export default function MyFileClient({ data }: { data: FileData }) {
                   })}
                 </Card>
               )}
-            </Section>
+              {data.disputes.length > 0 && disputingId !== 'general' && (
+                <div style={{ marginTop: 14 }}>
+                  <Button variant="outline" size="sm" onClick={() => { setDisputingId('general'); setCategory('other'); setDetail('') }}>
+                    Dispute something else
+                  </Button>
+                </div>
+              )}
+            </Section>}
 
             {/* General dispute form */}
-            {disputingId === 'general' && (
-              <Card hoverable={false} padding={21}>
+            {tab === 'disputes' && disputingId === 'general' && (
+              <Card hoverable={false} padding={21} style={{ marginTop: 14 }}>
                 <Kicker style={{ marginBottom: 11 }}>File a dispute</Kicker>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <select value={category} onChange={(e) => setCategory(e.target.value as DisputeCategory)} className="dk-select" aria-label="What's wrong">
@@ -403,7 +435,7 @@ export default function MyFileClient({ data }: { data: FileData }) {
                       <option key={c.value} value={c.value}>{c.label}</option>
                     ))}
                   </select>
-                  <p style={{ fontSize: 13, color: C.textGhost, lineHeight: 1.5 }}>
+                  <p style={{ fontSize: 14, color: C.textGhost, lineHeight: 1.5 }}>
                     {DISPUTE_CATEGORIES.find((c) => c.value === category)?.help}
                   </p>
                   <textarea

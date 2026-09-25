@@ -100,7 +100,7 @@ export default function SettingsClient({
   // Old links (#email from unsubscribe mail) open the matching pane.
   useEffect(() => {
     const hash = window.location.hash.slice(1)
-    if (hash === 'opportunities') { router.replace('/me#opportunities'); return }
+    if (hash === 'opportunities') { router.replace('/me/opportunities'); return }
     if (tabs.some((t) => t.id === hash)) setTab(hash)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

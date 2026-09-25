@@ -5,7 +5,6 @@ import { loadAcrossProjects } from '@/lib/workspace/across'
 import { suggestHandle } from '@/lib/profile/handle'
 import MyRecordClient from './MyRecordClient'
 import { lastScanFinishedAt } from '@/lib/github/last-scan'
-import { EMPTY_ELIGIBILITY } from '@/lib/profile/eligibility'
 
 export const metadata = { title: 'Record' }
 
@@ -35,19 +34,10 @@ export default async function MyRecordPage() {
   // Rescan lives on this page now, so this page has to know whether there is
   // anything to rescan and when it last happened. Both are single indexed
   // reads and they run alongside each other rather than in sequence.
-  const [{ data: connection }, lastScannedAt, { data: eligibilityRow }] = await Promise.all([
+  const [{ data: connection }, lastScannedAt] = await Promise.all([
     supabase.from('github_connections').select('student_id').eq('student_id', user.id).maybeSingle(),
     lastScanFinishedAt(supabase, user.id),
-    // Owner-only table; this is the student reading their own answers.
-    supabase
-      .from('student_eligibility')
-      .select('use_for_opportunities, first_gen, military, gender, gender_self, race_ethnicity, disability, lgbtq, low_income, us_state, transfer, citizenship')
-      .eq('student_id', user.id)
-      .maybeSingle(),
   ])
-  const eligibility = eligibilityRow
-    ? { ...EMPTY_ELIGIBILITY, ...eligibilityRow, race_ethnicity: eligibilityRow.race_ethnicity ?? [] }
-    : EMPTY_ELIGIBILITY
 
   const artifactIds = Array.from(new Set((evidenceRows ?? []).map((r) => r.artifact_id).filter((id): id is string => !!id)))
   const { data: artifactRows } = artifactIds.length
@@ -79,7 +69,6 @@ export default async function MyRecordPage() {
 
   return (
     <MyRecordClient
-      eligibility={eligibility}
       studentId={user.id}
       howYouWork={howYouWork}
       record={record}

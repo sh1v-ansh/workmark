@@ -112,7 +112,7 @@ export default function FinishProfile() {
         </Button>
         {/* On your own profile page, in a private section nobody else sees:
             these answers only decide which programs are shown. */}
-        <a href="/me#opportunities" style={{ fontSize: 13, color: C.accent }}>
+        <a href="/me/opportunities" style={{ fontSize: 13, color: C.accent }}>
           Some programs are only for certain groups. Check if you qualify
         </a>
       </div>

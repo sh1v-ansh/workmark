@@ -72,6 +72,7 @@ const FACULTY_TABS: Tab[] = [
 // that belong to you rather than to the page you are on.
 const STUDENT_MENU: MenuItem[] = [
   { href: '/listings?tab=people', label: 'Find people', icon: 'users' },
+  { href: '/me/opportunities', label: 'Opportunities for you', icon: 'spark' },
   { href: '/me/file', label: 'Your file & disputes', icon: 'inbox' },
   { href: '/account/settings', label: 'Settings', icon: 'settings' },
 ]
@@ -213,17 +214,36 @@ export default function Navbar({ role, userName, isAdmin }: NavbarProps) {
                     place in the product that answers "which account am I in",
                     which matters to anyone with a staff account and a real
                     one. */}
-                <div className="nb-menu-row" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 14px 12px' }}>
-                  <span className="nb-avatar nb-avatar-lg" aria-hidden="true">{initials(name)}</span>
-                  <span style={{ minWidth: 0 }}>
-                    <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {name ?? 'Your account'}
+                {/* For students, the name opens their own profile. */}
+                {effectiveRole === 'student' ? (
+                  <Link
+                    href="/me/profile"
+                    role="menuitem"
+                    onClick={() => setMenuOpen(false)}
+                    className="nb-menu-row nb-menu-item"
+                    style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 14px 12px', textDecoration: 'none' }}
+                  >
+                    <span className="nb-avatar nb-avatar-lg" aria-hidden="true">{initials(name)}</span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {name ?? 'Your account'}
+                      </span>
+                      <span style={{ display: 'block', fontSize: 13, color: C.accent }}>View my profile</span>
                     </span>
-                    <span style={{ display: 'block', fontSize: 13, color: C.textGhost, textTransform: 'capitalize' }}>
-                      {showAdmin ? 'Staff' : effectiveRole}
+                  </Link>
+                ) : (
+                  <div className="nb-menu-row" style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '13px 14px 12px' }}>
+                    <span className="nb-avatar nb-avatar-lg" aria-hidden="true">{initials(name)}</span>
+                    <span style={{ minWidth: 0 }}>
+                      <span style={{ display: 'block', fontSize: 14, fontWeight: 600, color: C.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {name ?? 'Your account'}
+                      </span>
+                      <span style={{ display: 'block', fontSize: 13, color: C.textGhost, textTransform: 'capitalize' }}>
+                        {showAdmin ? 'Staff' : effectiveRole}
+                      </span>
                     </span>
-                  </span>
-                </div>
+                  </div>
+                )}
 
                 <div className="nb-menu-rule" />
 
