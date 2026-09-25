@@ -177,6 +177,7 @@ export default async function StudentDashboardPage() {
     lastScannedAt,
     topGap,
     careerNext,
+    career,
     trackRecord,
     skills: skillIds
       .map((id) => ({ skillId: id, name: nameById.get(id) ?? id, bestLevel: bestBySkill.get(id) ?? 0 }))

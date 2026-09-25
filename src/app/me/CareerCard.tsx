@@ -6,7 +6,7 @@ import Card from '@/components/Card'
 import Button from '@/components/ui/Button'
 import { useToast } from '@/components/Toast'
 import { C, F, R } from '@/lib/theme/dark-tokens'
-import { CAREER_TRACKS, trackById } from '@/lib/careers/tracks'
+import { CAREER_TRACKS, STAGE_NAMES, trackById } from '@/lib/careers/tracks'
 import { buildLink, type CareerView } from '@/lib/careers/load'
 import { levelName } from '@/lib/skills/level-names'
 
@@ -75,7 +75,7 @@ export default function CareerCard({ view, formOnly = false }: { view: CareerVie
   }
 
   const pct = Math.round((p.done / p.total) * 100)
-  const stages = [1, 2, 3].map((n) => p.slots.filter((s) => s.slot.stage === n)).filter((g) => g.length > 0)
+  const stages = [1, 2, 3, 4].map((n) => ({ n, group: p.slots.filter((s) => s.slot.stage === n) })).filter((g) => g.group.length > 0)
 
   return (
     <Card hoverable={false} padding="20px 22px" style={{ marginBottom: 22 }}>
@@ -117,9 +117,11 @@ export default function CareerCard({ view, formOnly = false }: { view: CareerVie
       )}
 
       <div style={{ display: 'grid', gap: 12 }}>
-        {stages.map((group, i) => (
-          <div key={i}>
-            <p style={{ fontSize: 13, fontWeight: 600, color: C.textFaint, marginBottom: 6 }}>Step {i + 1}</p>
+        {stages.map(({ n, group }) => (
+          <div key={n}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: C.textFaint, marginBottom: 6 }}>
+              {n}. {STAGE_NAMES[n]} · {group.filter((s) => s.done).length} of {group.length}
+            </p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {group.map((s) => {
                 const partial = !s.done && s.level > 0

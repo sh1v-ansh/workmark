@@ -25,7 +25,7 @@ describe('career tracks', () => {
 describe('trackProgress', () => {
   it('starts an empty record at the first stage, most important first', () => {
     const p = trackProgress(backend, levels({}))
-    expect(p.next).toMatchObject({ skillId: 'python', stage: 1, currentLevel: 0, targetLevel: 2 })
+    expect(p.next).toMatchObject({ skillId: 'python', stage: 1, currentLevel: 0, targetLevel: 3 })
     expect(p.done).toBe(0)
   })
 
@@ -46,7 +46,7 @@ describe('trackProgress', () => {
   })
 
   it('any skill in a slot counts', () => {
-    const p = trackProgress(backend, levels({ go: 2, sql: 2 }))
+    const p = trackProgress(backend, levels({ go: 3, sql: 2 }))
     expect(p.slots[0].done).toBe(true)
   })
 

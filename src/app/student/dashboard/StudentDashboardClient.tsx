@@ -1,6 +1,7 @@
 'use client'
 
-import { buildLink } from '@/lib/careers/load'
+import { buildLink, type CareerView } from '@/lib/careers/load'
+import CareerCard from '@/app/me/CareerCard'
 import { levelName } from '@/lib/skills/level-names'
 
 import { useState } from 'react'
@@ -48,6 +49,7 @@ export interface DashboardData {
   /** The skill open listings ask for most that this student cannot show.
    *  Null when there are no listings, or nothing they are missing. */
   topGap: { skillName: string; listingCount: number } | null
+  career: CareerView
   /** The next skill on the student's chosen career path, when they picked one. */
   careerNext: {
     skillId: string; skillName: string; currentLevel: number; targetLevel: number
@@ -137,7 +139,7 @@ const ICON_BG: Record<Todo['kind'], string> = {
 }
 
 export default function StudentDashboardClient({ data }: { data: DashboardData }) {
-  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, careerNext, trackRecord, intents, repoCount, openToCollab, studentId } = data
+  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, careerNext, career, trackRecord, intents, repoCount, openToCollab, studentId } = data
   const router = useRouter()
   const { toast } = useToast()
   const [withdrawing, setWithdrawing] = useState<string | null>(null)
@@ -320,7 +322,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         <Link href={buildLink(careerNext.skillId, careerNext.skillName, careerNext.currentLevel)} className="nb-btn nb-btn-sm nb-nudge-btn">
           Get a project for {careerNext.skillName}
         </Link>
-        <Link href="/me" style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.88)' }}>See your path</Link>
+        <a href="#career-path" style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.88)' }}>See your path</a>
       </div>
     </div>
   ) : (
@@ -335,9 +337,9 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
         </p>
       </div>
       <div style={{ position: 'relative', marginTop: 17 }}>
-        <Link href="/me" className="nb-btn nb-btn-sm nb-nudge-btn">
+        <a href="#career-path" className="nb-btn nb-btn-sm nb-nudge-btn">
           Choose my career path
-        </Link>
+        </a>
       </div>
     </div>
   )
@@ -529,6 +531,11 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           </Card>
 
           {!(lead && rail.length === 0) && nudge}
+        </div>
+
+        {/* Your career path: progress and what comes next. */}
+        <div id="career-path" style={{ scrollMarginTop: 90 }}>
+          <CareerCard view={career} />
         </div>
 
 
