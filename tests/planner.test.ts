@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalisePlannedTask, parsePlanLines, MIN_TASKS, MAX_TASKS } from '../src/lib/agents/planner'
+import { normalisePlannedTask, parsePlanLines, jsonObjects, MIN_TASKS, MAX_TASKS } from '../src/lib/agents/planner'
 import { WORK_ROLES } from '../src/lib/workspace/membership'
 
 // The shape the schema promises. Each test bends one field.
@@ -142,5 +142,24 @@ describe('parsePlanLines', () => {
   it('stops at the task cap', () => {
     const text = Array.from({ length: MAX_TASKS + 4 }, (_, i) => line({ title: `Task ${i}`, depends_on: [] })).join('\n')
     expect(parsePlanLines(text)).toHaveLength(MAX_TASKS)
+  })
+})
+
+describe('jsonObjects', () => {
+  it('reads objects broken across lines and raw line breaks inside strings', () => {
+    const text = 'Here you go:\n{"title": "Build the kernel",\n "detail": "Tile it.\nNew to this? Read the CUDA guide.", "n": {"x": 1}}\n{"title": "Benchmark it"}'
+    const objects = jsonObjects(text)
+    expect(objects).toHaveLength(2)
+    expect(JSON.parse(objects[0]).detail).toBe('Tile it.\nNew to this? Read the CUDA guide.')
+    expect(JSON.parse(objects[1]).title).toBe('Benchmark it')
+  })
+
+  it('keeps braces and escaped quotes inside strings', () => {
+    const [one] = jsonObjects('{"title": "Use a {template} and a \\"quote\\""}')
+    expect(JSON.parse(one).title).toBe('Use a {template} and a "quote"')
+  })
+
+  it('leaves an unfinished object for later', () => {
+    expect(jsonObjects('{"title": "done"} {"title": "still wri')).toHaveLength(1)
   })
 })

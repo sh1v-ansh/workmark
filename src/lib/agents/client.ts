@@ -17,6 +17,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { transformJSONSchema } from '@anthropic-ai/sdk/lib/transform-json-schema'
 import { UNTRUSTED_BOUNDARY } from './untrusted'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { checkBudget } from './budget'
 
 // These agents are I/O adapters (draft a listing, write a brief) with a
 // fixed output schema — structured extraction/generation, not open-ended
@@ -111,6 +112,12 @@ async function callInternal<T>(
 ): Promise<{ value: T; callId: string | null } | null> {
   const client = getAnthropic()
   if (!client) return null
+  // The hard spending ceiling. See budget.ts.
+  const budget = await checkBudget(supabase, args)
+  if (!budget.allowed) {
+    console.warn(`[agents] ${args.agentType} refused by budget: ${budget.message}`)
+    return null
+  }
 
   // Every failure mode of this call has to come back as null rather than as a
   // throw. An Anthropic error escaping here propagates out of whatever route
@@ -270,6 +277,11 @@ export async function streamTextAgent(
 ): Promise<{ text: string; callId: string | null } | null> {
   const client = getAnthropic()
   if (!client) return null
+  const budget = await checkBudget(supabase, args)
+  if (!budget.allowed) {
+    console.warn(`[agents] ${args.agentType} refused by budget: ${budget.message}`)
+    return null
+  }
 
   let message: Anthropic.Message
   try {

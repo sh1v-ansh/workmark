@@ -61,7 +61,7 @@ Most tasks produce code. Set verifiable to false only for work that genuinely le
 
 Assign each task a role from the list you are given, or null if any of them could do it. Match the roles the team actually has: do not propose six machine-learning tasks to a team of two frontend students.
 
-Assume the student may not know every tool or idea a task names. When a task depends on a concept or technology a student at their level might not have used (for example JWT, database migrations, WebSockets, Docker, a specific library), end its detail with a new line starting "New to this?" that says in one plain sentence what it is and where to start: the official documentation or tutorial by name, and a link only if it is the official site you are certain of (for example https://react.dev/learn). Never invent links, blog posts or videos. Skip this line when the task uses nothing a beginner would need to look up.
+Assume the student may not know every tool or idea a task names. When a task depends on a concept or technology a student at their level might not have used (for example JWT, database migrations, WebSockets, Docker, a specific library), end its detail with a sentence starting "New to this?" that says in one plain sentence what it is and where to start: the official documentation or tutorial by name, and a link only if it is the official site you are certain of (for example https://react.dev/learn). Never invent links, blog posts or videos. Skip this line when the task uses nothing a beginner would need to look up.
 
 Do not include project setup, repository creation, or "read the documentation" as tasks. The repository already exists and the student is already working.
 
@@ -69,7 +69,7 @@ Write plainly, in second person. No preamble, no encouragement.
 
 Output format: one task per line, in the order they should be done. Each line is a single JSON object with exactly these keys:
 - title: one specific piece of work
-- detail: a sentence or two of what it involves, plus the "New to this?" line when it applies (write the line break as \\n inside the JSON string)
+- detail: a sentence or two of what it involves, then " New to this? ..." on the same line when it applies
 - acceptance_criteria: observable outcomes that say this is done
 - before_question: one short question, asked when the student starts this task, about what they will try first. Specific to this task and answerable in fifteen seconds; something a person can be concretely wrong about, not "how will you approach this"
 - suggested_role: one of the roles you are given, or null
@@ -142,6 +142,7 @@ export async function planProject(
   // is what gets saved; the live lines are only for the person watching.
   let buffer = ''
   let shown = 0
+  let scanned = 0
   const response = await streamTextAgent(supabase, {
     agentType: 'planner',
     system: SYSTEM,
@@ -152,18 +153,16 @@ export async function planProject(
       existing_task_count: request.existingTitles.length,
     },
     studentId,
-    maxTokens: 6000,
+    maxTokens: 10000,
     onText: onTask
       ? (delta) => {
           buffer += delta
-          let end = buffer.indexOf('\n')
-          while (end >= 0) {
-            const line = buffer.slice(0, end)
-            buffer = buffer.slice(end + 1)
-            const task = parseLine(line)
+          const objects = jsonObjects(buffer)
+          for (const raw of objects.slice(scanned)) {
+            const task = parseObject(raw)
             if (task && shown < MAX_TASKS) { shown++; onTask(task) }
-            end = buffer.indexOf('\n')
           }
+          scanned = objects.length
         }
       : undefined,
   })
@@ -174,11 +173,56 @@ export async function planProject(
   return { tasks, callId: response.callId }
 }
 
-function parseLine(line: string): DraftTask | null {
-  const trimmed = line.trim()
-  if (!trimmed.startsWith('{')) return null
+/**
+ * Every complete top-level {...} in the text, in order.
+ *
+ * Read by brace depth rather than by line: a model asked for one object per
+ * line still sometimes breaks one across lines, or puts a real line break
+ * inside a string, and splitting on newlines then lost both halves. Raw
+ * line breaks inside strings are escaped so JSON.parse accepts them.
+ */
+export function jsonObjects(text: string): string[] {
+  const out: string[] = []
+  let depth = 0
+  let inString = false
+  let escaped = false
+  let current = ''
+  let prev = '\n'
+  for (const ch of text) {
+    const lineStart = prev === '\n'
+    prev = ch
+    // A "{" in the first column outside a string starts a new task, even if
+    // the last one never closed: a broken object must not swallow the next.
+    if (depth > 0 && !inString && lineStart && ch === '{') {
+      depth = 1
+      current = '{'
+      continue
+    }
+    if (depth === 0) {
+      if (ch === '{') { depth = 1; current = '{' }
+      continue
+    }
+    if (inString) {
+      if (escaped) { escaped = false; current += ch; continue }
+      if (ch === '\\') { escaped = true; current += ch; continue }
+      if (ch === '"') inString = false
+      current += ch === '\n' ? '\\n' : ch === '\r' ? '' : ch === '\t' ? '\\t' : ch
+      continue
+    }
+    current += ch
+    if (ch === '"') inString = true
+    else if (ch === '{') depth++
+    else if (ch === '}') {
+      depth--
+      if (depth === 0) { out.push(current); current = '' }
+    }
+  }
+  return out
+}
+
+function parseObject(raw: string): DraftTask | null {
   try {
-    return normalise(JSON.parse(trimmed) as RawTask)
+    return normalise(JSON.parse(raw) as RawTask)
   } catch {
     return null
   }
@@ -194,16 +238,13 @@ function parseLine(line: string): DraftTask | null {
 export function parsePlanLines(text: string): DraftTask[] {
   const kept: DraftTask[] = []
   const newIndex = new Map<number, number>()
-  let lineNo = 0
-  for (const line of text.split('\n')) {
-    if (!line.trim().startsWith('{')) continue
-    const task = parseLine(line)
+  jsonObjects(text).forEach((raw, lineNo) => {
+    const task = parseObject(raw)
     if (task && kept.length < MAX_TASKS) {
       newIndex.set(lineNo, kept.length)
       kept.push(task)
     }
-    lineNo++
-  }
+  })
   return kept.map((task, i) => ({
     ...task,
     dependsOn: task.dependsOn
