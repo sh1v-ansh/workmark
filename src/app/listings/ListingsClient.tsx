@@ -1,5 +1,7 @@
 'use client'
 
+import React from 'react'
+
 import SkillTag from '@/components/skills/SkillTag'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -371,20 +373,16 @@ export default function ListingsClient({
                   </p>
                 </Card>
               ) : (
-                // Two columns that fill top to bottom, so a short card sits
-                // right under the one above it instead of stretching to
-                // match its neighbour. See .wm-masonry.
-                <div className="wm-masonry">
+                // Two columns, cards alternating left and right in reading
+                // order. Each column stacks its own cards with the same gap,
+                // so a short card is never stretched to match its neighbour
+                // and the rows drift a little, which reads as organic rather
+                // than as a spreadsheet. On a phone it is one column, in order.
+                <CardColumns>
                   {/* Written projects sit in the same grid as posted ones.
-                      They were in a section of their own above, behind a
-                      heading, a paragraph and a link — three things between
-                      somebody and the postings they came for, and a layout
-                      that said these are a different feature rather than a
-                      different kind of project.
-
                       They lead because nothing is waiting on them: a student
                       can start one now, where a posting needs somebody to
-                      reply. The rule down the left says which is which. */}
+                      reply. */}
                   {signedIn && aiProjects.map((project) => (
                     <AiProjectCard key={project.id} project={project} />
                   ))}
@@ -433,7 +431,7 @@ export default function ListingsClient({
                       </div>
                     </Card>
                   ))}
-                </div>
+                </CardColumns>
               )}
             </div>
           </div>
@@ -442,4 +440,15 @@ export default function ListingsClient({
       </main>
     </div>
   )
+}
+
+/** Two stacks of cards, alternating, each at its own height. See .wm-stacks. */
+function CardColumns({ children }: { children: React.ReactNode }) {
+  const items = React.Children.toArray(children)
+  const column = (side: 0 | 1) => (
+    <div className="wm-stack">
+      {items.map((item, i) => (i % 2 === side ? <div key={i} style={{ order: i }}>{item}</div> : null))}
+    </div>
+  )
+  return <div className="wm-stacks">{column(0)}{column(1)}</div>
 }

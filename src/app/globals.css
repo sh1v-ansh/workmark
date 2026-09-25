@@ -2019,11 +2019,15 @@
   .wm-settings-nav button { white-space: nowrap; }
 }
 
-/* Masonry: cards flow down two columns at their own heights. Used on Find
-   work, where card lengths vary a lot and a strict grid left big gaps. */
-.wm-masonry { column-count: 2; column-gap: 14.5px; }
-.wm-masonry > * { break-inside: avoid; margin-bottom: 14.5px; width: 100%; display: block; }
-@media (max-width: 760px) { .wm-masonry { column-count: 1; } }
+/* Two card columns (Find work). Each column is its own stack with an even
+   gap, so cards keep their natural height. On a phone the stacks dissolve
+   and the cards fall back into one column in their original order. */
+.wm-stacks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14.5px; align-items: start; }
+.wm-stack { display: flex; flex-direction: column; gap: 14.5px; min-width: 0; }
+@media (max-width: 760px) {
+  .wm-stacks { display: flex; flex-direction: column; }
+  .wm-stack { display: contents; }
+}
 
 /* Long titles wrap instead of running out of their card. */
 .wm-wrap { overflow-wrap: anywhere; min-width: 0; }
