@@ -1805,6 +1805,10 @@ create table workspaces (
   -- fact is whether one person is doing it or several. See v05_0029.
 
   created_by      uuid references accounts(id) on delete cascade not null,
+  -- v05_0061: daily tasks. pace is null until a plan is drafted.
+  pace            text check (pace in ('daily', 'all_at_once')),
+  timezone        text,
+  last_batch_on   date,
   deadline        date,
 
   -- Mirrors engagements.stage deliberately, including 'abandoned'. A

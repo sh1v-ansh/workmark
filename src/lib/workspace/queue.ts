@@ -151,6 +151,12 @@ export async function releaseTickets(
     dependsOn.set(d.task_id, list)
   }
 
+  // On a daily pace, tasks arrive with the morning batch (daily.ts), not
+  // one by one as others finish. The day-one ticket is the exception: it is
+  // how the first batch starts.
+  const { data: ws } = await admin.from('workspaces').select('pace').eq('id', workspaceId).maybeSingle()
+  if (ws?.pace === 'daily') return []
+
   const people = Math.max(1, (memberRows ?? []).length)
   const justFinished = justFinishedId ? tasks.find((t) => t.id === justFinishedId) ?? null : null
   const releases = ticketsToRelease(tasks, dependsOn, people * WIP_PER_PERSON, justFinished)
