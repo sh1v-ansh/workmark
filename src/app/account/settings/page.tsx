@@ -39,7 +39,7 @@ export default async function SettingsPage({
   const [{ data: student }, { data: account }, { data: connection }] = await Promise.all([
     supabase
       .from('students')
-      .select('full_name, university, major, degree_type, graduation_year, github_username, is_international')
+      .select('full_name, university, major, degree_type, graduation_year, github_username, is_international, career_track, aspiration')
       .eq('id', user.id)
       .maybeSingle(),
     supabase
@@ -67,6 +67,7 @@ export default async function SettingsPage({
       }}
       hasStudentProfile={!!student}
       github={connection ? { login: connection.github_login, connectedAt: connection.connected_at } : null}
+      career={student ? { trackId: (student.career_track as string | null) ?? null, aspiration: (student.aspiration as string | null) ?? null, progress: null, names: {} } : null}
       initialPrefs={(account?.notification_prefs ?? {}) as Record<string, boolean>}
       initialUnsubscribedAll={!!account?.email_unsubscribed_at}
       initialMarketing={mayEmail({ optedInAt: account?.marketing_opted_in_at ?? null, optedOutAt: account?.marketing_opted_out_at ?? null })}

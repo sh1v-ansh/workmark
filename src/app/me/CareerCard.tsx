@@ -14,12 +14,12 @@ import { levelName } from '@/lib/skills/level-names'
  * Your career path: pick a track, see how far along it you are and the one
  * skill to build next. Everything here comes from verified work.
  */
-export default function CareerCard({ view }: { view: CareerView }) {
+export default function CareerCard({ view, formOnly = false }: { view: CareerView; formOnly?: boolean }) {
   const router = useRouter()
   const { toast } = useToast()
   const [track, setTrack] = useState(view.trackId ?? '')
   const [aspiration, setAspiration] = useState(view.aspiration ?? '')
-  const [editing, setEditing] = useState(!view.trackId)
+  const [editing, setEditing] = useState(formOnly || !view.trackId)
   const [saving, setSaving] = useState(false)
 
   async function save() {
@@ -32,7 +32,8 @@ export default function CareerCard({ view }: { view: CareerView }) {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error ?? 'Could not save.')
-      setEditing(false)
+      if (formOnly) toast('Saved.', 'success')
+      else setEditing(false)
       router.refresh()
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Could not save.', 'error')
@@ -45,10 +46,10 @@ export default function CareerCard({ view }: { view: CareerView }) {
   const p = view.progress
   const name = (id: string) => view.names[id] ?? id
 
-  if (editing || !current || !p) {
+  if (formOnly || editing || !current || !p) {
     return (
-      <Card hoverable={false} padding="20px 22px" style={{ marginBottom: 22 }}>
-        <h2 style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 4 }}>Your career path</h2>
+      <Card hoverable={false} padding="20px 22px" style={{ marginBottom: formOnly ? 0 : 22 }}>
+        {!formOnly && <h2 style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, color: C.text, marginBottom: 4 }}>Your career path</h2>}
         <p style={{ fontSize: 14.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 16, maxWidth: '60ch' }}>
           Pick where you are headed and we&apos;ll point you to the next skill to build, based on your verified work.
         </p>
@@ -66,7 +67,7 @@ export default function CareerCard({ view }: { view: CareerView }) {
           />
           <div style={{ display: 'flex', gap: 8 }}>
             <Button size="sm" onClick={save} busyLabel={saving ? 'Saving…' : null}>Save</Button>
-            {view.trackId && <Button size="sm" variant="quiet" onClick={() => setEditing(false)}>Cancel</Button>}
+            {view.trackId && !formOnly && <Button size="sm" variant="quiet" onClick={() => setEditing(false)}>Cancel</Button>}
           </div>
         </div>
       </Card>
