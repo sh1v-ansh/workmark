@@ -150,4 +150,44 @@ export const SEED_ALIASES: Record<string, string> = {
   databaseschemadesign: 'database-design', databaseindexing: 'database-design',
   datamodelling: 'database-design', storedprocedures: 'database-design',
   protocolbuffers2: 'distributed-systems',
+
+  // ── Career-path coverage ─────────────────────────────────────────────────
+  // Skills on the career paths (src/lib/careers/tracks.ts) that had no
+  // package or file pointing at them, so nobody could ever earn them.
+  // Deploy platforms, from their config files and GitHub deployment records.
+  render: 'render', railway: 'railway', 'fly.io': 'flyio', flyio: 'flyio', heroku: 'heroku',
+  wrangler: 'cloudflare',
+  // Mobile platforms, from AndroidManifest.xml and Xcode projects.
+  android: 'android-development', ios: 'ios-development',
+  // Linux servers, from nginx and systemd config.
+  linux: 'linux-admin',
+  // Cloud SDKs.
+  googlecloudstorage: 'gcp', googlecloudpubsub: 'gcp', googlecloudaiplatform: 'gcp', googleauth: 'gcp',
+  azureidentity: 'azure', azurestorageblob: 'azure', azurefunctions: 'azure', azurecosmos: 'azure',
+  // Databases.
+  clientdynamodb: 'dynamodb', libdynamodb: 'dynamodb', dynamoose: 'dynamodb', pynamodb: 'dynamodb',
+  cassandradriver: 'cassandra',
+  // Data.
+  pyspark: 'big-data', hadoop: 'big-data',
+  snowflakeconnectorpython: 'data-warehousing', snowflakesdk: 'data-warehousing',
+  googlecloudbigquery: 'data-warehousing', dbtcore: 'data-warehousing', redshiftconnector: 'data-warehousing',
+  prophet: 'time-series-analysis', sktime: 'time-series-analysis', darts: 'time-series-analysis',
+  pmdarima: 'time-series-analysis',
+  // ML.
+  featuretools: 'feature-engineering', categoryencoders: 'feature-engineering',
+  peft: 'fine-tuning', trl: 'fine-tuning', unsloth: 'fine-tuning',
+  dspy: 'prompt-engineering', promptfoo: 'prompt-engineering',
+  scikitsurprise: 'recommender-systems', implicit: 'recommender-systems', lightfm: 'recommender-systems',
+  // Web and quality.
+  swagger: 'api-design', swaggeruiexpress: 'api-design', swaggerjsdoc: 'api-design',
+  drfspectacular: 'api-design', drfyasg: 'api-design', openapi: 'api-design',
+  locust: 'performance-testing', k6: 'performance-testing', artillery: 'performance-testing',
+  axecore: 'web-accessibility', jestaxe: 'web-accessibility', eslintpluginjsxa11y: 'web-accessibility',
+  i18next: 'i18n', reacti18next: 'i18n', nexti18next: 'i18n', nextintl: 'i18n', vuei18n: 'i18n',
+  nextpwa: 'pwa', vitepluginpwa: 'pwa', workboxwebpackplugin: 'pwa',
+  // Security.
+  helmet: 'app-security', csurf: 'app-security', bandit: 'app-security', djangocsp: 'app-security',
+  casbin: 'iam', pycasbin: 'iam',
+  scapy: 'networking', paramiko: 'networking', pythonnmap: 'network-security',
+  hardhat: 'smart-contracts',
 }

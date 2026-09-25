@@ -145,6 +145,18 @@ export function planFiles(tree: TreeEntry[]): FilePlan {
     if (/\.ipynb$/.test(path)) addPresence('Jupyter', path)
     if (/\.proto$/.test(path)) addPresence('Protocol Buffers', path)
     if (/\.graphql$/.test(path) || base === 'schema.gql') addPresence('GraphQL', path)
+    // Where it is deployed, and what it runs on.
+    if (base === 'vercel.json') addPresence('Vercel', path)
+    if (base === 'netlify.toml') addPresence('Netlify', path)
+    if (base === 'render.yaml') addPresence('Render', path)
+    if (base === 'fly.toml') addPresence('Fly.io', path)
+    if (base === 'railway.json' || base === 'railway.toml') addPresence('Railway', path)
+    if (base === 'Procfile') addPresence('Heroku', path)
+    if (base === 'wrangler.toml' || base === 'wrangler.jsonc') addPresence('wrangler', path)
+    if (base === 'AndroidManifest.xml') addPresence('Android', path)
+    if (/\.xcodeproj\//.test(path) || base === 'Podfile') addPresence('iOS', path)
+    if (base === 'nginx.conf' || /\.service$/.test(base)) addPresence('Linux', path)
+    if (/^(openapi|swagger)\.(ya?ml|json)$/i.test(base)) addPresence('openapi', path)
   }
 
   return { files, presence }

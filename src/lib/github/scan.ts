@@ -210,11 +210,12 @@ export async function scanRepo(
   // the important addition — one call returns the repo's whole file list, so
   // what gets read next is chosen from what's actually there instead of
   // guessing at fixed paths and eating a 404 for each miss.
-  const [languages, contributorStats, studentCommits, tree] = await Promise.all([
+  const [languages, contributorStats, studentCommits, tree, deployedBy] = await Promise.all([
     fetchLanguages(octokit, owner, repo, problems),
     getContributorStats(octokit, owner, repo, githubLogin),
     fetchStudentCommits(octokit, owner, repo, identity, problems),
     fetchTree(octokit, owner, repo, repoMeta.default_branch, problems),
+    fetchDeployPlatforms(octokit, owner, repo),
   ])
 
   const plan = planFiles(tree)
@@ -231,6 +232,7 @@ export async function scanRepo(
   const detections: Detection[] = [
     ...Object.keys(languages).map((l) => detection(l, 'language', 'GitHub language stats')),
     ...plan.presence.map((p) => detection(p.raw, 'file', p.where)),
+    ...deployedBy.map((platform) => detection(platform, 'deployment', 'GitHub deployments')),
     ...planned,
     ...sampledSources.flatMap((f) => extractImports(f.content, f.path)),
     // Who else worked here. Reads the contributor list, the student's own
@@ -651,7 +653,7 @@ export async function getFileContent(octokit: Octokit, owner: string, repo: stri
 // the tree listing for free, and unlike the old check they find a Dockerfile
 // that isn't at the repo root.
 
-const CONFIG_CHECK_SOURCES = new Set(['dockerfile', 'compose', 'workflow', 'prisma', 'orm-config'])
+const CONFIG_CHECK_SOURCES = new Set(['dockerfile', 'compose', 'workflow', 'prisma', 'orm-config', 'file'])
 const MAX_CONFIG_CHECKS = 6
 
 async function confirmConfigAuthorship(
@@ -678,4 +680,39 @@ async function confirmConfigAuthorship(
     }
   }))
   return confirmed.filter((p): p is string => p !== null)
+}
+
+// Who wrote a deployment back to the repo. Vercel, Netlify, Render and
+// Railway record every deploy on GitHub, so a repo deployed from its
+// dashboard shows up here even with no config file in the tree.
+const DEPLOY_BOTS: [RegExp, string][] = [
+  [/^vercel/i, 'Vercel'], [/^netlify/i, 'Netlify'], [/^render/i, 'Render'],
+  [/^railway/i, 'Railway'], [/^heroku/i, 'Heroku'], [/^cloudflare/i, 'Cloudflare'], [/^fly/i, 'Fly.io'],
+]
+const DEPLOY_HOSTS: [RegExp, string][] = [
+  [/\.vercel\.app$/i, 'Vercel'], [/\.netlify\.app$/i, 'Netlify'], [/\.onrender\.com$/i, 'Render'],
+  [/\.up\.railway\.app$/i, 'Railway'], [/\.herokuapp\.com$/i, 'Heroku'], [/\.pages\.dev$/i, 'Cloudflare'],
+  [/\.fly\.dev$/i, 'Fly.io'],
+]
+
+async function fetchDeployPlatforms(octokit: Octokit, owner: string, repo: string): Promise<string[]> {
+  try {
+    const { data } = await octokit.rest.repos.listDeployments({ owner, repo, per_page: 20 })
+    const found = new Set<string>()
+    for (const d of data) {
+      const login = d.creator?.login ?? ''
+      for (const [re, name] of DEPLOY_BOTS) if (re.test(login)) found.add(name)
+      const url = typeof d.payload === 'object' && d.payload && 'web_url' in d.payload ? String((d.payload as { web_url?: unknown }).web_url ?? '') : ''
+      if (url) {
+        try {
+          const host = new URL(url).hostname
+          for (const [re, name] of DEPLOY_HOSTS) if (re.test(host)) found.add(name)
+        } catch { /* not a URL */ }
+      }
+    }
+    return Array.from(found)
+  } catch {
+    // No deployments, or no access to them. Not worth a problem line.
+    return []
+  }
 }

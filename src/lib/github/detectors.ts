@@ -25,6 +25,7 @@ export type DetectionSource =
   | 'import'        // an import/require/include line in the student's own code
   | 'file'          // the mere presence of a file or directory
   | 'collaboration' // who or what else committed here — see agentic-tools.ts
+  | 'deployment'    // a platform that deployed this repo, from GitHub's deployment records
 
 export interface Detection {
   /** The raw token to canonicalize — 'postgres', 'gin', 'PostgreSQL'. */

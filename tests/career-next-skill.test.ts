@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { CAREER_TRACKS, trackById } from '../src/lib/careers/tracks'
 import { trackProgress } from '../src/lib/careers/next-skill'
+import { SEED_ALIASES } from '../src/lib/skills/seed-aliases'
+import { SKILL_IMPLIES } from '../src/lib/skills/implications'
 
 const backend = trackById('backend')!
 const levels = (o: Record<string, number>) => new Map(Object.entries(o))
@@ -13,6 +15,25 @@ describe('career tracks', () => {
     for (const track of CAREER_TRACKS) {
       for (const slot of track.slots) {
         for (const id of slot.skills) expect(seed, `${track.id}: ${id}`).toContain(`'${id}'`)
+      }
+    }
+  })
+
+  // Every path skill needs something in a repo that points at it: a package
+  // alias, a skill it is implied by, GitHub's language stats, or one of the
+  // file detectors. Otherwise it sits on the path forever, unearnable.
+  it('only uses skills the scanner can detect', () => {
+    const reachable = new Set<string>([
+      ...Object.values(SEED_ALIASES),
+      ...Object.values(SKILL_IMPLIES).flat(),
+      // GitHub language stats, by canonical name.
+      'java', 'kotlin', 'swift', 'dart', 'c', 'cpp', 'assembly', 'dotnet', 'go', 'rust', 'python', 'javascript', 'typescript',
+      // File detectors (detectors.ts, file-plan.ts).
+      'docker', 'ci-cd', 'kubernetes', 'terraform', 'sql', 'mysql', 'postgresql', 'database-design', 'serverless', 'graphql', 'config-management',
+    ])
+    for (const track of CAREER_TRACKS) {
+      for (const slot of track.slots) {
+        expect(slot.skills.some((id) => reachable.has(id)), `${track.id}: ${slot.label}`).toBe(true)
       }
     }
   })
