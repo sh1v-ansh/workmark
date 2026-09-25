@@ -932,8 +932,11 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: linear-gradient(118deg, #FF7A18 0%, #FF3D77 32%, #A445FF 66%, #3D7BFF 100%);
-  box-shadow: 0 2px 4px rgba(164, 69, 255, 0.18), 0 18px 40px -18px rgba(255, 61, 119, 0.55);
+  /* Deep purple, with a warm orange-pink glow in one corner. */
+  background:
+    radial-gradient(90% 120% at 100% 100%, rgba(255, 112, 67, 0.42) 0%, rgba(255, 112, 67, 0) 55%),
+    linear-gradient(150deg, #1A1242 0%, #2B1868 45%, #4A26B0 80%, #6A2FC0 100%);
+  box-shadow: 0 2px 4px rgba(36, 27, 87, 0.22), 0 18px 40px -18px rgba(97, 66, 245, 0.6);
 }
 .nb-nudge::before {
   content: '';
@@ -944,7 +947,7 @@
   top: -160px;
   border-radius: 999px;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 70%);
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.32) 0%, rgba(236, 72, 153, 0) 70%);
 }
 .nb-nudge-eyebrow {
   display: inline-block;

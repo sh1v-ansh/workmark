@@ -244,6 +244,17 @@ export async function scanRepo(
     }),
   ]
 
+  // Setup files the commit sample missed. filesTouched comes from a sample
+  // of commits, so the one commit that added a Dockerfile is often not in
+  // it, and Docker was then read as "in the repo, not yours". One cheap
+  // call per file asks GitHub which commits changed it and checks whether
+  // any of them are the student's.
+  const touched = new Set(studentCommits.filesTouched)
+  const configTouched = await confirmConfigAuthorship(
+    octokit, owner, repo, detections, touched, new Set(studentCommits.commits), problems,
+  )
+  const filesTouchedByStudent = [...studentCommits.filesTouched, ...configTouched]
+
   const hasDockerfile = detections.some((d) => d.source === 'dockerfile')
   const hasCi = detections.some((d) => d.source === 'workflow')
 
@@ -272,7 +283,7 @@ export async function scanRepo(
     distinctContributors: contributorStats?.distinctContributors ?? null,
     firstCommitAt: studentCommits.firstAt,
     lastCommitAt: studentCommits.lastAt,
-    filesTouchedByStudent: studentCommits.filesTouched,
+    filesTouchedByStudent,
     hasTests,
     hasCi,
     hasDockerfile,
@@ -639,3 +650,32 @@ export async function getFileContent(octokit: Octokit, owner: string, repo: stri
 // `Dockerfile` with two speculative requests. Both facts now fall out of
 // the tree listing for free, and unlike the old check they find a Dockerfile
 // that isn't at the repo root.
+
+const CONFIG_CHECK_SOURCES = new Set(['dockerfile', 'compose', 'workflow', 'prisma', 'orm-config'])
+const MAX_CONFIG_CHECKS = 6
+
+async function confirmConfigAuthorship(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  detections: Detection[],
+  touched: Set<string>,
+  studentShas: Set<string>,
+  problems: string[],
+): Promise<string[]> {
+  if (studentShas.size === 0) return []
+  const paths = Array.from(new Set(
+    detections.filter((d) => CONFIG_CHECK_SOURCES.has(d.source) && !touched.has(d.where)).map((d) => d.where),
+  )).slice(0, MAX_CONFIG_CHECKS)
+
+  const confirmed = await Promise.all(paths.map(async (path) => {
+    try {
+      const { data } = await octokit.rest.repos.listCommits({ owner, repo, path, per_page: 50 })
+      return data.some((c) => studentShas.has(c.sha)) ? path : null
+    } catch (err) {
+      if (isRealFailure(err)) problems.push(`config history ${path}: ${(err as Error).message}`)
+      return null
+    }
+  }))
+  return confirmed.filter((p): p is string => p !== null)
+}
