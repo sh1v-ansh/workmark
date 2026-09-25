@@ -14,6 +14,7 @@
 // solving one problem by causing another.
 
 import { createClient as createServiceClient } from '@supabase/supabase-js'
+import { isUnlimited } from '@/lib/agents/budget'
 
 export interface LimitResult {
   allowed: boolean
@@ -152,6 +153,12 @@ export async function enforce(
   const { limit, windowSeconds } = LIMITS[name]
   const result = await checkRateLimit({ key: `${name}:${subject}`, limit, windowSeconds })
   if (result.allowed) return null
+  // Accounts with unlimited AI (budget.ts) skip the AI request cap. Checked
+  // only after the limit is hit, so nobody else pays for the lookup.
+  if (name === 'agent' && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const admin = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    if (await isUnlimited(admin, subject)) return null
+  }
 
   const minutes = Math.ceil(result.retryAfter / 60)
   return new Response(

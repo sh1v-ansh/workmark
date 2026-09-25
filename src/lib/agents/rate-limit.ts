@@ -14,7 +14,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { AgentType } from './client'
-import { checkBudget } from './budget'
+import { checkBudget, isUnlimited } from './budget'
 
 export interface RateLimit {
   /** Calls allowed in the window. */
@@ -79,6 +79,7 @@ export async function checkAgentRateLimit(
   userColumn: 'student_id' | 'poster_id',
 ): Promise<RateLimitResult> {
   const limit = AGENT_LIMITS[agentType]
+  if (await isUnlimited(supabase, userId)) return { allowed: true, used: 0, max: limit.max }
   const since = new Date(Date.now() - limit.windowHours * 60 * 60 * 1000).toISOString()
 
   const { count, error } = await supabase
