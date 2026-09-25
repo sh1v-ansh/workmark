@@ -1,5 +1,9 @@
 'use client'
 
+import { buildLink, type CareerView } from '@/lib/careers/load'
+import CareerCard from '@/app/me/CareerCard'
+import { levelName } from '@/lib/skills/level-names'
+
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -45,6 +49,12 @@ export interface DashboardData {
   /** The skill open listings ask for most that this student cannot show.
    *  Null when there are no listings, or nothing they are missing. */
   topGap: { skillName: string; listingCount: number } | null
+  career: CareerView
+  /** The next skill on the student's chosen career path, when they picked one. */
+  careerNext: {
+    skillId: string; skillName: string; currentLevel: number; targetLevel: number
+    trackName: string; done: number; total: number
+  } | null
   trackRecord: TrackRecord
   skills: { skillId: string; name: string; bestLevel: number }[]
   applications: {
@@ -129,7 +139,7 @@ const ICON_BG: Record<Todo['kind'], string> = {
 }
 
 export default function StudentDashboardClient({ data }: { data: DashboardData }) {
-  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, topGap, trackRecord, intents, repoCount, openToCollab, studentId } = data
+  const { student, skills, applications, listings, engagements, githubConnected, lastScannedAt, careerNext, career, trackRecord, intents, repoCount, openToCollab, studentId } = data
   const router = useRouter()
   const { toast } = useToast()
   const [withdrawing, setWithdrawing] = useState<string | null>(null)
@@ -295,25 +305,41 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
   // nothing. It is a project recommender, so it says so — and when we know
   // which skill open projects keep asking for that they cannot show, it
   // leads with that number, because the number is what does the persuading.
-  const nudge = (
+  const nudge = careerNext ? (
     <div className="nb-nudge">
       <div style={{ position: 'relative' }}>
-        <span className="nb-nudge-eyebrow">Your next project</span>
+        <span className="nb-nudge-eyebrow">Your next skill · {careerNext.trackName}</span>
         <p style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.28, margin: '9px 0 8px' }}>
-          {topGap
-            ? (topGap.listingCount === 1
-              ? `1 open project wants ${topGap.skillName}, and your profile doesn't have it yet.`
-              : `${topGap.listingCount} open projects want ${topGap.skillName}, and your profile doesn't have it yet.`)
-            : 'We can tell you what to build next'}
+          {careerNext.currentLevel > 0
+            ? `${careerNext.skillName}: you're ${levelName(careerNext.currentLevel)}, the path needs ${levelName(careerNext.targetLevel)}.`
+            : `${careerNext.skillName} is next on your path.`}
         </p>
-        <p style={{ fontSize: 13.5, color: '#C6C2E4', lineHeight: 1.55 }}>
-          We&apos;ll write you a project that closes your biggest gap.
+        <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.88)', lineHeight: 1.55 }}>
+          {careerNext.done} of {careerNext.total} skills on your path verified. We&apos;ll write you a project that builds this one.
+        </p>
+      </div>
+      <div style={{ position: 'relative', marginTop: 17, display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <Link href={buildLink(careerNext.skillId, careerNext.skillName, careerNext.currentLevel)} className="nb-btn nb-btn-sm nb-nudge-btn">
+          Get a project for {careerNext.skillName}
+        </Link>
+        <a href="#career-path" style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.88)' }}>See your path</a>
+      </div>
+    </div>
+  ) : (
+    <div className="nb-nudge">
+      <div style={{ position: 'relative' }}>
+        <span className="nb-nudge-eyebrow">Your next skill</span>
+        <p style={{ fontFamily: F.display, fontSize: 18, fontWeight: 600, letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.28, margin: '9px 0 8px' }}>
+          Pick your career path and we&apos;ll show you the next skill to build.
+        </p>
+        <p style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.88)', lineHeight: 1.55 }}>
+          Based on your verified work, one skill at a time.
         </p>
       </div>
       <div style={{ position: 'relative', marginTop: 17 }}>
-        <Link href="/goals" className="nb-btn nb-btn-sm nb-nudge-btn">
-          {topGap ? `Get a project that proves ${topGap.skillName}` : 'Show me what to build'}
-        </Link>
+        <a href="#career-path" className="nb-btn nb-btn-sm nb-nudge-btn">
+          Choose my career path
+        </a>
       </div>
     </div>
   )
@@ -505,6 +531,11 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           </Card>
 
           {!(lead && rail.length === 0) && nudge}
+        </div>
+
+        {/* Your career path: progress and what comes next. */}
+        <div id="career-path" style={{ scrollMarginTop: 90 }}>
+          <CareerCard view={career} />
         </div>
 
 

@@ -23,8 +23,8 @@ const CLOSING: Record<Audience, { headline: string; body: string; note: string }
     note: 'Free with a .edu email. You pick the repositories and can disconnect any time.',
   },
   businesses: {
-    headline: 'Start with a paid project and see real output',
-    body: 'Describe the work in a few lines. Every candidate has a verified work history and has opted in as open to work.',
+    headline: 'Your next hire has already done the work. Now you can see it.',
+    body: 'Describe the work in a few lines and see verified candidates who fit. Every one has opted in as open to work.',
     note: 'Free to post. No contract.',
   },
 }

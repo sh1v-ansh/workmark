@@ -8,6 +8,8 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/Card'
 import { Icon } from '@/components/Icon'
 import EmailSection from './EmailSection'
+import CareerCard from '@/app/me/CareerCard'
+import type { CareerView } from '@/lib/careers/load'
 import { C, F, R } from '@/lib/theme/dark-tokens'
 import { LAYOUT } from '@/lib/theme/layout'
 import { DEGREE_TYPES, GRAD_YEAR_MIN, GRAD_YEAR_MAX } from '@/lib/profile/details'
@@ -73,6 +75,7 @@ export default function SettingsClient({
   hasStudentProfile,
   github,
   initialPrefs,
+  career,
   initialUnsubscribedAll,
   initialMarketing,
   notice,
@@ -82,6 +85,7 @@ export default function SettingsClient({
   hasStudentProfile: boolean
   github: { login: string | null; connectedAt: string | null } | null
   initialPrefs: Record<string, boolean>
+  career: CareerView | null
   initialUnsubscribedAll: boolean
   initialMarketing: boolean
   notice: string | null
@@ -91,6 +95,7 @@ export default function SettingsClient({
 
   const tabs = [
     { id: 'profile', label: 'Your details' },
+    ...(hasStudentProfile ? [{ id: 'career', label: 'Career path' }] : []),
     { id: 'email', label: 'Email' },
     ...(hasStudentProfile ? [{ id: 'github', label: 'GitHub' }] : []),
     { id: 'data', label: 'Your data' },
@@ -100,7 +105,7 @@ export default function SettingsClient({
   // Old links (#email from unsubscribe mail) open the matching pane.
   useEffect(() => {
     const hash = window.location.hash.slice(1)
-    if (hash === 'opportunities') { router.replace('/me#opportunities'); return }
+    if (hash === 'opportunities') { router.replace('/me/opportunities'); return }
     if (tabs.some((t) => t.id === hash)) setTab(hash)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -292,6 +297,18 @@ export default function SettingsClient({
               </p>
             </Section>
           ))}
+
+          {tab === 'career' && career && (
+            <section id="career">
+              <h2 style={{ fontFamily: F.display, fontSize: 17, fontWeight: 600, letterSpacing: '-0.015em', color: C.text, marginBottom: 5 }}>
+                Career path
+              </h2>
+              <p style={{ fontSize: 13.5, color: C.textMuted, lineHeight: 1.6, marginBottom: 15, maxWidth: '62ch' }}>
+                Decides the next skill we suggest and the project ideas you get. Your progress on it is on your record page.
+              </p>
+              <CareerCard view={career} formOnly />
+            </section>
+          )}
 
           {/* ── Email ───────────────────────────────────────────────────── */}
           {tab === 'email' && <Section

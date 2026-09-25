@@ -94,6 +94,13 @@ export function computeSkillRelevance(args: {
     return { relevance: 0.25, reason: 'in the repo, but not in files you changed' }
   }
 
+  // A platform deployed this repo, and the student wrote code in it. The
+  // deploy record is GitHub's, so it is as strong as a config file they
+  // edited themselves.
+  if (detections.some((d) => d.source === 'deployment') && filesTouched.size > 0) {
+    return { relevance: 0.7, reason: 'deployed from this repo' }
+  }
+
   // Config and setup files. Much stronger if they edited the file themselves.
   const configDetections = detections.filter((d) => CONFIG_SOURCES.has(d.source))
   if (configDetections.length > 0) {

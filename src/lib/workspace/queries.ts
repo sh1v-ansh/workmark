@@ -57,6 +57,10 @@ export interface WorkspaceDetail extends WorkspaceSummary {
   listingId: string | null
   /** Whether that posting is open for applications right now. */
   listingOpen: boolean
+  /** How tasks arrive: a batch each morning, or the whole plan. Null until chosen. */
+  pace: 'daily' | 'all_at_once' | null
+  timezone: string | null
+  lastBatchOn: string | null
 }
 
 /**
@@ -187,7 +191,7 @@ export async function loadWorkspace(
 ): Promise<WorkspaceDetail | null> {
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('id, title, summary, status, deadline, created_at, started_at, evidence_minted_at, listing_id')
+    .select('id, title, summary, status, deadline, created_at, started_at, evidence_minted_at, listing_id, pace, timezone, last_batch_on')
     .eq('id', workspaceId)
     .maybeSingle()
   if (!workspace) return null
@@ -249,6 +253,9 @@ export async function loadWorkspace(
     removals: await loadRemovals(supabase, workspaceId, userId, members, names),
     listingId,
     listingOpen: listing?.status === 'open',
+    pace: (workspace.pace as 'daily' | 'all_at_once' | null) ?? null,
+    timezone: (workspace.timezone as string | null) ?? null,
+    lastBatchOn: (workspace.last_batch_on as string | null) ?? null,
   }
 }
 

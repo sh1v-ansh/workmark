@@ -61,11 +61,11 @@ const FRAMING: Record<Audience, { eyebrow: string; headline: string; lede: strin
     ],
   },
   businesses: {
-    eyebrow: 'What you see',
-    headline: 'Verified work instead of a resume',
-    lede: 'Every skill shows the project it came from and how it was checked. You judge the work, not how well someone writes about it.',
+    eyebrow: 'What a resume hides',
+    headline: 'Tell apart candidates who look the same on paper',
+    lede: 'Every resume says “built scalable full-stack apps.” Workmark shows the project behind each skill and how it was checked, so you judge the work, not the writing.',
     points: [
-      ['Read from code, not a form', 'Dependencies, commit authorship and tests. No self-assessment.'],
+      ['Read from code, not a form', 'Dependencies, commit authorship and tests. Nobody rates themselves.'],
       ['Levels you can compare', 'Levels are set across all candidates, so two Advanced profiles really are equal.'],
       ['Gaps are visible too', 'You see what a candidate cannot do yet. A resume never shows you that.'],
     ],

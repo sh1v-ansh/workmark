@@ -15,6 +15,7 @@ import { CONSENT_TEXT } from '@/lib/notify/marketing'
 import { universityFromEmail } from '@/lib/profile/university-from-email'
 import { track, currentSessionId } from '@/lib/analytics/track'
 import IntentStep from './IntentStep'
+import { CAREER_TRACKS } from '@/lib/careers/tracks'
 import GithubStep from './GithubStep'
 import type { Intent } from '@/lib/profile/intents'
 
@@ -131,6 +132,9 @@ function StudentForm({ onSubmit, loading, email, role }: {
   // Required for students: paid roles have work authorization (CPT) rules
   // for students on a visa, so this decides whether paid roles are shown.
   const [international, setInternational] = useState<'yes' | 'no' | ''>('')
+  // Decides the "next skill" on the dashboard. Changeable later on /me.
+  const [careerTrack, setCareerTrack] = useState('')
+  const [aspiration, setAspiration] = useState('')
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -147,6 +151,10 @@ function StudentForm({ onSubmit, loading, email, role }: {
       university, major, degree_type: degreeType,
       graduation_year: graduationYear ? parseInt(graduationYear) : null,
       is_international: international === 'yes',
+      ...(isStudent ? {
+        career_track: careerTrack && careerTrack !== 'unsure' ? careerTrack : null,
+        aspiration: aspiration.trim() || null,
+      } : {}),
       // GPA is gone. It was the one number on this page nobody could check,
       // and a product whose whole claim is "this is verified" should not be
       // collecting a self-reported grade beside it.
@@ -221,6 +229,28 @@ function StudentForm({ onSubmit, loading, email, role }: {
               ))}
             </div>
           </fieldset>
+        )}
+        {isStudent && (
+          <div style={{ ...gap, gridColumn: '1 / -1' }}>
+            <FieldLabel htmlFor="student-career">Which career are you working toward? <span aria-hidden="true" style={{ color: C.accent }}>*</span><span className="sr-only"> (required)</span></FieldLabel>
+            <select id="student-career" required value={careerTrack} onChange={(e) => setCareerTrack(e.target.value)} className="dk-select">
+              <option value="">Select…</option>
+              {CAREER_TRACKS.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+              <option value="unsure">Not sure yet</option>
+            </select>
+            <p style={{ fontSize: 13, color: C.textGhost, marginTop: 6 }}>We use this to suggest the next skill to build. You can change it any time.</p>
+          </div>
+        )}
+        {isStudent && (
+          <div style={{ ...gap, gridColumn: '1 / -1' }}>
+            <FieldLabel htmlFor="student-aspiration">What do you want to become? <span style={{ fontWeight: 400, color: C.textGhost }}>Optional</span></FieldLabel>
+            <textarea
+              id="student-aspiration" value={aspiration} onChange={(e) => setAspiration(e.target.value)}
+              className="dk-input" rows={2} maxLength={500}
+              placeholder="For example: I want to build ML tools for healthcare."
+              style={{ resize: 'vertical' }}
+            />
+          </div>
         )}
         {!isStudent && <div style={{ ...gap, gridColumn: '1 / -1' }}>
           <FieldLabel htmlFor="student-major">Department</FieldLabel>

@@ -932,8 +932,11 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  background: linear-gradient(155deg, #241B57 0%, #3B1F86 47%, #5B3EE8 100%);
-  box-shadow: 0 2px 4px rgba(36, 27, 87, 0.20), 0 18px 40px -18px rgba(97, 66, 245, 0.65);
+  /* Deep purple, with a warm orange-pink glow in one corner. */
+  background:
+    radial-gradient(90% 120% at 100% 100%, rgba(255, 112, 67, 0.42) 0%, rgba(255, 112, 67, 0) 55%),
+    linear-gradient(150deg, #1A1242 0%, #2B1868 45%, #4A26B0 80%, #6A2FC0 100%);
+  box-shadow: 0 2px 4px rgba(36, 27, 87, 0.22), 0 18px 40px -18px rgba(97, 66, 245, 0.6);
 }
 .nb-nudge::before {
   content: '';
@@ -944,7 +947,7 @@
   top: -160px;
   border-radius: 999px;
   pointer-events: none;
-  background: radial-gradient(circle, rgba(167, 139, 250, 0.55) 0%, rgba(167, 139, 250, 0) 70%);
+  background: radial-gradient(circle, rgba(236, 72, 153, 0.32) 0%, rgba(236, 72, 153, 0) 70%);
 }
 .nb-nudge-eyebrow {
   display: inline-block;
@@ -952,7 +955,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #C7B8FF;
+  color: rgba(255, 255, 255, 0.85);
 }
 /* White on violet. The inverse of every other button in the app, because
    this is the only button that ever sits on a dark card. */
@@ -2015,3 +2018,17 @@
   .wm-settings-nav { position: static !important; flex-direction: row !important; overflow-x: auto; gap: 4px !important; }
   .wm-settings-nav button { white-space: nowrap; }
 }
+
+/* Two card columns (Find work). Each column is its own stack with an even
+   gap, so cards keep their natural height. On a phone the stacks dissolve
+   and the cards fall back into one column in their original order. */
+.wm-stacks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14.5px; align-items: start; }
+.wm-stack { display: flex; flex-direction: column; gap: 14.5px; min-width: 0; }
+@media (max-width: 760px) {
+  .wm-stacks { display: flex; flex-direction: column; }
+  .wm-stack { display: contents; }
+}
+
+/* Long titles wrap instead of running out of their card. */
+.wm-wrap { overflow-wrap: anywhere; min-width: 0; }
+.wm-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }

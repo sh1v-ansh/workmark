@@ -61,6 +61,8 @@ export default async function BoardPage({ params }: { params: Promise<{ id: stri
         members={workspace.members}
         workspaceStatus={workspace.status}
         workspaceDeadline={workspace.deadline}
+        pace={workspace.pace}
+        isOwner={workspace.yourRole === 'owner'}
         sprints={sprints}
         messages={Array.from(messages.entries())}
         checkpoints={Array.from(checkpoints.entries())}

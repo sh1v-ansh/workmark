@@ -1,7 +1,6 @@
 'use client'
 
-import EligibilitySection from '@/app/account/settings/EligibilitySection'
-import type { Eligibility } from '@/lib/profile/eligibility'
+
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
@@ -21,7 +20,6 @@ import SkillChip, { PlainChip } from '@/components/skills/SkillChip'
 import LevelBar, { countLevels } from '@/components/skills/LevelBar'
 import SkillEvidenceModal from '@/components/skills/SkillEvidenceModal'
 import { SELF_EVIDENCED_CAP } from '@/lib/skills/level-names'
-import HowYouWork from './HowYouWork'
 import type { AcrossProjects } from '@/lib/workspace/across'
 import { LAYOUT } from '@/lib/theme/layout'
 
@@ -70,8 +68,7 @@ const VERIFICATION_LABEL: Record<string, string> = {
   attested: 'Confirmed by a collaborator',
 }
 
-export default function MyRecordClient({ studentId, record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt, eligibility }: {
-  eligibility: Eligibility
+export default function MyRecordClient({ studentId, record, howYouWork, sources, suggestedHandle, githubConnected, lastScannedAt }: {
   studentId: string
   record: StudentRecord
   /** Pooled across every project. Null for somebody who has not been on one. */
@@ -226,7 +223,8 @@ export default function MyRecordClient({ studentId, record, howYouWork, sources,
                 Not rendered at all for somebody who has never been on a
                 project: a card of "not enough yet" reads as the product being
                 broken rather than as them being new. */}
-            {howYouWork && <HowYouWork data={howYouWork} />}
+            {/* How you work (HowYouWork.tsx) is hidden for now: with one or
+                two projects it was all "Not enough yet". */}
 
             <Card hoverable={false} padding={19.5}>
               <Kicker style={{ marginBottom: 9 }}>Public profile</Kicker>
@@ -517,19 +515,6 @@ export default function MyRecordClient({ studentId, record, howYouWork, sources,
               </div>
             )}
 
-            {/* Private: only ever shown here, to the student. */}
-            <section id="opportunities" style={{ scrollMarginTop: 90 }}>
-              <Kicker style={{ marginBottom: 5.5, paddingLeft: 20.5 }}>Opportunities just for you</Kicker>
-              <p style={{ fontSize: 13, color: C.textGhost, marginBottom: 12, maxWidth: '64ch' }}>
-                Some scholarships, programs and internships are only open to certain groups. Tell us if
-                any apply and we&apos;ll show you the ones you qualify for. Only you can see this, it is
-                never shown to employers, and it never affects how your work is judged. Every question
-                is optional.
-              </p>
-              <Card hoverable={false} padding="19px 21px">
-                <EligibilitySection initial={eligibility} />
-              </Card>
-            </section>
           </div>
         </div>
       </main>

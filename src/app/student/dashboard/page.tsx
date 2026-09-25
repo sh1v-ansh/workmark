@@ -1,4 +1,6 @@
 import { redirect } from 'next/navigation'
+import { loadCareer } from '@/lib/careers/load'
+import { trackById } from '@/lib/careers/tracks'
 import { createClient } from '@/lib/supabase/server'
 import StudentDashboardClient, { type DashboardData } from './StudentDashboardClient'
 import { computeTrackRecord, type Stage } from '@/lib/engagements/lifecycle'
@@ -126,6 +128,21 @@ export default async function StudentDashboardPage() {
     if (bestBySkill.has(row.skill_id)) continue
     demand.set(row.skill_id, (demand.get(row.skill_id) ?? 0) + 1)
   }
+  // The career track comes first: the next skill on their chosen path.
+  // Open-project demand is the fallback for students who have not picked one.
+  const career = await loadCareer(supabase, user.id, bestBySkill)
+  const careerNext = career.progress?.next && trackById(career.trackId)
+    ? {
+        skillId: career.progress.next.skillId,
+        skillName: career.names[career.progress.next.skillId] ?? career.progress.next.skillId,
+        currentLevel: career.progress.next.currentLevel,
+        targetLevel: career.progress.next.targetLevel,
+        trackName: trackById(career.trackId)!.name,
+        done: career.progress.done,
+        total: career.progress.total,
+      }
+    : null
+
   let topGap: { skillName: string; listingCount: number } | null = null
   if (demand.size > 0) {
     const [gapSkillId, listingCount] = Array.from(demand.entries())
@@ -159,6 +176,8 @@ export default async function StudentDashboardPage() {
     studentId: user.id,
     lastScannedAt,
     topGap,
+    careerNext,
+    career,
     trackRecord,
     skills: skillIds
       .map((id) => ({ skillId: id, name: nameById.get(id) ?? id, bestLevel: bestBySkill.get(id) ?? 0 }))

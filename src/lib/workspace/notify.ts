@@ -18,7 +18,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
-  emailAvailable, workspaceInvited, workspaceTaskAssigned,
+  emailAvailable, workspaceInvited, workspaceTaskAssigned, workspaceDailyTasks,
   workspaceVerdicts, workspaceReviewNeeded, workspaceClosed,
   workspaceReviewStale, workspaceBoardDry,
 } from '@/lib/notify/email'
@@ -425,4 +425,37 @@ export async function sweepAttention(admin: SupabaseClient): Promise<{
   }
 
   return { chased, nudged }
+}
+
+/**
+ * Tell each person on the project what arrived this morning: their own
+ * tasks and any nobody holds yet. Best effort, like every email here.
+ */
+export async function notifyDailyBatch(
+  admin: SupabaseClient,
+  args: { workspaceId: string; released: { title: string; assigneeId: string | null }[]; remaining: number },
+): Promise<void> {
+  if (!emailAvailable() || args.released.length === 0) return
+  try {
+    const [{ data: workspace }, { data: members }] = await Promise.all([
+      admin.from('workspaces').select('title').eq('id', args.workspaceId).maybeSingle(),
+      admin.from('workspace_members').select('account_id').eq('workspace_id', args.workspaceId)
+        .not('accepted_at', 'is', null).is('removed_at', null),
+    ])
+    const ids = (members ?? []).map((m) => m.account_id as string)
+    const people = await recipients(admin, ids)
+    for (const id of ids) {
+      const person = people.get(id)
+      if (!person) continue
+      const mine = args.released.filter((t) => !t.assigneeId || t.assigneeId === id).map((t) => t.title)
+      if (mine.length === 0) continue
+      await workspaceDailyTasks({
+        studentId: id, studentEmail: person.email,
+        projectTitle: (workspace?.title as string) ?? 'your project',
+        workspaceId: args.workspaceId, taskTitles: mine, remaining: args.remaining,
+      })
+    }
+  } catch (err) {
+    console.error('[workspace/notify] daily batch email failed:', err)
+  }
 }

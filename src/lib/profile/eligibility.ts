@@ -55,7 +55,6 @@ export const SINGLE_QUESTIONS: SingleQuestion[] = [
     options: [
       { value: 'citizen', label: 'US citizen' },
       { value: 'permanent_resident', label: 'Permanent resident' },
-      { value: 'international', label: 'International student' },
       { value: 'other', label: 'Other' },
     ],
   },

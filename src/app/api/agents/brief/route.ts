@@ -6,7 +6,7 @@ import { generateBrief } from '@/lib/agents/brief'
 import { textStreamResponse } from '@/lib/http/text-stream'
 import { agentsAvailable } from '@/lib/agents/client'
 import { checkAgentRateLimit } from '@/lib/agents/rate-limit'
-import { isCareerTrack, isSkillLevel } from '@/lib/agents/tracks'
+import { isCareerTrack, isSkillLevel, type CareerTrack } from '@/lib/agents/tracks'
 
 // This route does slow third-party work — a Claude generation of up to 16k tokens. Without an explicit
 // maxDuration it inherits the platform default and gets killed mid-flight.
@@ -68,7 +68,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unknown career track.' }, { status: 400 })
   }
   const skillLevel = body.skillLevel ?? null
-  const careerTrack = body.careerTrack ?? null
+  // Unless the form says otherwise, ideas lean toward the career the
+  // student picked, and their own words about what they want to become.
+  const { data: me } = await supabase.from('students').select('career_track, aspiration').eq('id', user.id).maybeSingle()
+  const PATH_TO_BRIEF: Record<string, CareerTrack> = {
+    backend: 'backend', frontend: 'frontend', mobile: 'mobile', 'ai-ml': 'ml_ai',
+    data: 'data', devops: 'infrastructure', security: 'security', robotics: 'systems',
+  }
+  const careerTrack = (body.careerTrack ?? PATH_TO_BRIEF[(me?.career_track as string) ?? ''] ?? null) as CareerTrack | null
 
   const { count } = await supabase
     .from('project_briefs')
@@ -99,8 +106,10 @@ export async function POST(request: Request) {
   // as JSON. See lib/briefs/stream.ts for the reader.
   const skillId = body.skillId
   const targetRole = body.targetRole?.trim() || null
+  // Only for the prompt; what is saved is what they typed on the form.
+  const promptRole = targetRole || (me?.aspiration as string | null) || null
   return textStreamResponse(async (emit) => {
-    const brief = await generateBrief(admin, user.id, skillId, { targetRole, skillLevel, careerTrack }, emit)
+    const brief = await generateBrief(admin, user.id, skillId, { targetRole: promptRole, skillLevel, careerTrack }, emit)
     if (!brief) return { error: 'Could not generate a project idea. Try again.' }
 
     const { data: saved, error } = await supabase

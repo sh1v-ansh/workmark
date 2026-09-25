@@ -351,6 +351,26 @@ export function workspaceTaskAssigned(args: {
   })
 }
 
+/** The morning batch on a daily-pace project. One email per person. */
+export function workspaceDailyTasks(args: {
+  studentId: string; studentEmail: string; projectTitle: string; workspaceId: string
+  taskTitles: string[]; remaining: number
+}) {
+  const list = args.taskTitles.map((t) => `- ${t}`).join('\n')
+  const rest = args.remaining > 0
+    ? `\n\n${args.remaining} more ${args.remaining === 1 ? 'task' : 'tasks'} left in the plan after these.`
+    : '\n\nThis is the last batch in the plan.'
+  return sendEmail({
+    to: args.studentEmail,
+    userId: args.studentId,
+    kind: 'workspace_daily_tasks',
+    subject: `Today on ${args.projectTitle}: ${args.taskTitles.length} ${args.taskTitles.length === 1 ? 'task' : 'tasks'}`,
+    body: `Good morning. Here is today's work on ${args.projectTitle}:\n\n${list}${rest}\n\nStuck on one? Ask your tech lead on the card.`,
+    linkPath: `/workspaces/${args.workspaceId}`,
+    linkLabel: 'Open the board',
+  })
+}
+
 /**
  * One digest per check, never one per task.
  *

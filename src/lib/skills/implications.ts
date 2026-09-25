@@ -30,6 +30,11 @@ export const SKILL_IMPLIES: Record<string, string[]> = {
 
   // Orchestration implies the thing being orchestrated.
   'kubernetes': ['docker'],
+
+  // The deep learning frameworks are deep learning; nothing else in a
+  // repo names it.
+  'pytorch': ['deep-learning'],
+  'tensorflow': ['deep-learning'],
 }
 
 /**

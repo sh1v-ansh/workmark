@@ -83,6 +83,8 @@ export default function Board({
   userId,
   workspaceStatus,
   workspaceDeadline,
+  pace = null,
+  isOwner = false,
   view,
   readOnly = false,
 }: {
@@ -100,6 +102,9 @@ export default function Board({
   workspaceStatus: string
   /** The project's own end date, marked on the calendar. */
   workspaceDeadline: string | null
+  /** Daily batches or the whole plan. Null until a plan is drafted. */
+  pace?: 'daily' | 'all_at_once' | null
+  isOwner?: boolean
   /** Which view the project's tabs have selected. */
   view: 'board' | 'calendar'
   /** A closed project. The board becomes the record of what happened. */
@@ -226,7 +231,16 @@ export default function Board({
   const stepOf = new Map(
     boardTasks.filter((t) => t.parentTaskId === null).sort(byBoardOrder).map((t, i) => [t.id, i + 1] as const),
   )
-  const [showWholePlan, setShowWholePlan] = useState(false)
+  const [showWholePlan, setShowWholePlan] = useState(pace === 'all_at_once')
+  const [choosingPace, setChoosingPace] = useState(false)
+  const [removingPlan, setRemovingPlan] = useState(false)
+  const [batching, setBatching] = useState(false)
+  // Drafted tasks nobody has started: what "Remove plan" would take away.
+  const removablePlan = serverTasks.filter((t) =>
+    t.parentTaskId === null && (t.origin === 'ai_proposed' || t.origin === 'ai_edited')
+    && (t.status === 'backlog' || t.status === 'planned')).length
+  const daily = pace === 'daily'
+  const waitingInPlan = serverTasks.filter((t) => t.parentTaskId === null && t.status === 'backlog').length
 
   // workspace.members is already only the people actually on the team, so
   // every row here is active by construction. Shaped into MemberRow so the
@@ -591,11 +605,18 @@ export default function Board({
     if (ok) setReviewing(null)
   }
 
-  async function draftPlan() {
+  async function draftPlan(choice?: 'daily' | 'all_at_once') {
+    setChoosingPace(false)
     setPlanning(true)
     setDrafted([])
     try {
-      const res = await fetch(`/api/workspaces/${workspaceId}/plan`, { method: 'POST' })
+      let timezone: string | undefined
+      try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone } catch { /* server falls back to UTC */ }
+      const res = await fetch(`/api/workspaces/${workspaceId}/plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pace: choice, timezone }),
+      })
       // One JSON line per task; only complete lines are read, the one still
       // being written waits for its newline.
       const data = await readTextStream<{ count?: number }>(res, (soFar) => {
@@ -607,7 +628,12 @@ export default function Board({
         setDrafted((prev) => (prev.length === next.length ? prev : next))
       })
       if (data.error) throw new Error(data.error)
-      toast(`${data.count} tasks drafted — edit or delete whatever does not fit.`, 'success')
+      toast(
+        choice === 'daily'
+          ? `${data.count} tasks planned. Today's batch is on your board; the next arrives tomorrow at 8:00.`
+          : `${data.count} tasks drafted. Edit or delete whatever does not fit.`,
+        'success',
+      )
       router.refresh()
     } catch (err) {
       toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
@@ -615,6 +641,42 @@ export default function Board({
       setPlanning(false)
       setDrafted([])
     }
+  }
+
+  async function removePlan() {
+    setRemovingPlan(false)
+    const res = await fetch(`/api/workspaces/${workspaceId}/plan`, { method: 'DELETE' }).catch(() => null)
+    const data = await res?.json().catch(() => ({}))
+    if (!res?.ok) { toast(data?.error ?? 'Could not remove the plan.', 'error'); return }
+    toast(data.removed > 0 ? `Plan removed (${data.removed} tasks). Anything you started is still here.` : 'Nothing left to remove.', 'success')
+    router.refresh()
+  }
+
+  async function nextBatch() {
+    setBatching(true)
+    try {
+      const res = await fetch(`/api/workspaces/${workspaceId}/next-batch`, { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error ?? 'Could not start the next batch.')
+      toast(`${data.count} new ${data.count === 1 ? 'task' : 'tasks'} on your board.`, 'success')
+      router.refresh()
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Something went wrong.', 'error')
+    } finally {
+      setBatching(false)
+    }
+  }
+
+  async function switchPace(next: 'daily' | 'all_at_once') {
+    let timezone: string | undefined
+    try { timezone = Intl.DateTimeFormat().resolvedOptions().timeZone } catch { /* keep the saved one */ }
+    const res = await fetch(`/api/workspaces/${workspaceId}/pace`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pace: next, timezone }),
+    }).catch(() => null)
+    if (!res?.ok) { toast('Could not change that.', 'error'); return }
+    setShowWholePlan(next === 'all_at_once')
+    toast(next === 'daily' ? 'Daily tasks on. Your next batch arrives at 8:00.' : 'Showing the whole plan.', 'success')
+    router.refresh()
   }
 
   async function checkWork() {
@@ -755,7 +817,7 @@ export default function Board({
             <Button
               variant="outline"
               size="sm"
-              onClick={draftPlan}
+              onClick={() => draftPlan()}
               disabled={askRefusal !== null}
               busyLabel={planning ? 'Thinking…' : null}
               // The reason, on the control itself. A disabled button with no
@@ -764,6 +826,9 @@ export default function Board({
             >
               Give me more work
             </Button>
+          )}
+          {!readOnly && isOwner && removablePlan > 0 && (
+            <Button variant="quiet" size="sm" onClick={() => setRemovingPlan(true)}>Remove plan</Button>
           )}
           {!readOnly && (
             <Button size="sm" onClick={() => { setDraft(EMPTY); setCreating(true) }}>Add task</Button>
@@ -812,6 +877,25 @@ export default function Board({
         </div>
       )}
 
+      {/* How tasks arrive on this project, and a way to change it. */}
+      {tasks.length > 0 && pace && !readOnly && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12, fontSize: T.meta, color: C.textMuted }}>
+          <span style={{ padding: '3px 10px', borderRadius: 99, background: daily ? '#F4F0FF' : C.surfaceAlt, color: daily ? '#5B3FD9' : C.textMuted, fontWeight: 600 }}>
+            {daily ? 'Daily tasks' : 'Whole plan'}
+          </span>
+          <span>
+            {daily
+              ? `A new batch every morning at 8:00${waitingInPlan > 0 ? ` · ${waitingInPlan} left in the plan` : ' · the plan is fully handed out'}`
+              : 'Everything in the plan is on the board, in order.'}
+          </span>
+          {isOwner && (
+            <button type="button" className="wm-mini" onClick={() => switchPace(daily ? 'all_at_once' : 'daily')}>
+              {daily ? 'Show me the whole plan instead' : 'Switch to daily tasks'}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Said once, above the board, rather than on every card. The point is
           that the plan is theirs from the moment it lands — what they keep,
           reshape and throw out is the thing worth measuring. */}
@@ -829,11 +913,11 @@ export default function Board({
             <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.55 }}>
               {planning
                 ? 'Tasks show up in Up next as they are written, in the order to do them.'
-                : 'Your tech lead breaks the project into tasks and hands you one or two at a time. Edit anything — the plan is yours once it lands.'}
+                : 'Your tech lead breaks the project into tasks. Get a new batch every morning like an internship, or see the whole plan at once. Edit anything; the plan is yours once it lands.'}
             </p>
           </div>
           <motion.button
-            onClick={draftPlan}
+            onClick={() => setChoosingPace(true)}
             disabled={planning || askRefusal !== null}
             title={askRefusal ?? undefined}
             whileHover={planning || still ? undefined : { y: -2 }}
@@ -848,7 +932,7 @@ export default function Board({
               flexShrink: 0,
             }}
           >
-            {planning ? `Drafting… ${drafted.length > 0 ? `${drafted.length} so far` : ''}` : 'Draft a plan'}
+            {planning ? `Drafting… ${drafted.length > 0 ? `${drafted.length} so far` : ''}` : 'Draft my plan'}
           </motion.button>
         </div>
       )}
@@ -1075,8 +1159,11 @@ export default function Board({
           const inColumn = boardTasks
             .filter((t) => t.status === column && t.parentTaskId === null)
             .sort(byBoardOrder)
-          const hiddenCount = column === 'backlog' && !showWholePlan ? Math.max(0, inColumn.length - BACKLOG_PREVIEW) : 0
-          const shown = hiddenCount > 0 ? inColumn.slice(0, BACKLOG_PREVIEW) : inColumn
+          // On daily tasks the rest of the plan stays sealed until its
+          // morning; the column says how much is left instead.
+          const sealed = daily && column === 'backlog' && !planning
+          const hiddenCount = sealed ? 0 : column === 'backlog' && !showWholePlan ? Math.max(0, inColumn.length - BACKLOG_PREVIEW) : 0
+          const shown = sealed ? [] : hiddenCount > 0 ? inColumn.slice(0, BACKLOG_PREVIEW) : inColumn
           const refusal = dragging
             ? canMoveTo(tasks.find((t) => t.id === dragging)!.status, column)
             : null
@@ -1248,7 +1335,22 @@ export default function Board({
                   </motion.article>
                 ))}
 
-                {(hiddenCount > 0 || (column === 'backlog' && showWholePlan && inColumn.length > BACKLOG_PREVIEW)) && (
+                {sealed && inColumn.length > 0 && (
+                  <div style={{ padding: '14px 13px', borderRadius: 10, background: C.surface, border: `1px dashed ${C.accentBorder}` }}>
+                    <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text, marginBottom: 3 }}>
+                      {inColumn.length} {inColumn.length === 1 ? 'task' : 'tasks'} left in the plan
+                    </p>
+                    <p style={{ fontSize: T.meta, color: C.textMuted, lineHeight: 1.5, marginBottom: 10 }}>
+                      Your next batch arrives tomorrow at 8:00, with an email.
+                    </p>
+                    {!readOnly && (
+                      <button type="button" className="wm-mini" onClick={nextBatch} disabled={batching}>
+                        {batching ? 'Starting…' : 'Start tomorrow’s batch now'}
+                      </button>
+                    )}
+                  </div>
+                )}
+                {!sealed && (hiddenCount > 0 || (column === 'backlog' && showWholePlan && inColumn.length > BACKLOG_PREVIEW)) && (
                   <button
                     type="button"
                     className="wm-mini"
@@ -1390,7 +1492,47 @@ export default function Board({
           own context — the card, its criteria, what the checker said — which
           is both a better answer and a cheaper one than handing a model the
           whole board to answer something specific. */}
-      <Modal
+      {/* How should the plan arrive? Asked once, before the first draft. */}
+      <Modal open={choosingPace} onClose={() => setChoosingPace(false)} title="How do you want to work?">
+        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 16 }}>
+          Your tech lead plans the whole project either way. This decides how you see it. You can switch later.
+        </p>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {([
+            ['daily', 'Daily tasks', 'Like an internship. A new batch of tasks every morning at 8:00, due that day, with an email. The rest of the plan stays hidden until its day.'],
+            ['all_at_once', 'The whole project at once', 'See every task now, in order, and work through them at your own speed.'],
+          ] as const).map(([value, title, body]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => draftPlan(value)}
+              style={{
+                textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', padding: '14px 16px',
+                borderRadius: R.lg, border: `1px solid ${value === 'daily' ? '#D9CCFF' : C.border}`,
+                background: value === 'daily' ? '#F7F4FF' : C.surface,
+              }}
+            >
+              <span style={{ display: 'block', fontSize: T.body, fontWeight: 650, color: C.text, marginBottom: 3 }}>
+                {title}{value === 'daily' && <span style={{ fontSize: T.meta, fontWeight: 600, color: '#6D4AFF', marginLeft: 8 }}>Recommended</span>}
+              </span>
+              <span style={{ display: 'block', fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.55 }}>{body}</span>
+            </button>
+          ))}
+        </div>
+      </Modal>
+
+      <Modal open={removingPlan} onClose={() => setRemovingPlan(false)} title="Remove the plan?">
+        <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 18 }}>
+          This deletes the {removablePlan} drafted {removablePlan === 1 ? 'task' : 'tasks'} nobody has started.
+          Anything in progress, submitted or finished stays. You can draft a new plan afterwards.
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="quiet" onClick={() => setRemovingPlan(false)}>Cancel</Button>
+          <Button variant="danger" onClick={removePlan}>Remove plan</Button>
+        </div>
+      </Modal>
+
+            <Modal
         open={talking !== null}
         onClose={() => { setTalking(null); setDraftMessage('') }}
         title="Discussion"

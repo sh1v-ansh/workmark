@@ -62,6 +62,11 @@ export const EMAIL_KINDS = {
     detail: 'Somebody put a piece of work on your name.',
     essential: false,
   },
+  workspace_daily_tasks: {
+    label: 'Your tasks for the day are ready',
+    detail: 'On projects set to daily tasks: the morning batch, at 8:00.',
+    essential: false,
+  },
   workspace_verdict: {
     label: 'Your submitted work is checked',
     detail: 'One digest per check, not one per task.',

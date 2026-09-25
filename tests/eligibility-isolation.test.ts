@@ -15,7 +15,7 @@ const ALLOWED = new Set([
   'src/lib/profile/eligibility.ts',
   'src/app/api/account/eligibility/route.ts',
   'src/app/api/account/export/route.ts',
-  'src/app/me/page.tsx',
+  'src/app/me/opportunities/page.tsx',
   'src/app/account/settings/EligibilitySection.tsx',
 ])
 

@@ -12,6 +12,7 @@ import { releaseTickets, RAMP_UP_TICKET } from '@/lib/workspace/queue'
 import { requireUuid, ValidationError } from '@/lib/http/validate'
 import { loadProjectState, canAskForMore, progressBrief } from '@/lib/workspace/project-state'
 import { textStreamResponse } from '@/lib/http/text-stream'
+import { localNow, releaseDailyBatch, validTimezone } from '@/lib/workspace/daily'
 
 export const maxDuration = 60
 
@@ -66,6 +67,12 @@ async function draftPlan(request: Request, params: Promise<{ id: string }>) {
     )
   }
 
+  // How tasks should arrive, chosen alongside the first draft. Optional on
+  // a top-up, where the project already has a pace.
+  const body = (await request.json().catch(() => null)) as { pace?: unknown; timezone?: unknown } | null
+  const chosenPace = body?.pace === 'daily' || body?.pace === 'all_at_once' ? body.pace : null
+  const chosenTimezone = validTimezone(body?.timezone)
+
   const workspaceLimited = await enforce('workspace', user.id)
   if (workspaceLimited) return workspaceLimited
   const agentLimited = await enforce('agent', user.id)
@@ -83,7 +90,7 @@ async function draftPlan(request: Request, params: Promise<{ id: string }>) {
   // back empty, and there is nothing to tell them about it.
   const { data: workspace } = await supabase
     .from('workspaces')
-    .select('id, title, summary, deadline, status')
+    .select('id, title, summary, deadline, status, pace, timezone')
     .eq('id', workspaceId)
     .maybeSingle()
 
@@ -215,18 +222,85 @@ async function draftPlan(request: Request, params: Promise<{ id: string }>) {
       if (rampErr) console.error('[api/workspaces/:id/plan] ramp-up insert failed:', rampErr)
     }
 
-    // Everything just landed in the backlog; the queue decides what arrives
-    // in Planned. Best-effort — a failure leaves the plan in the backlog,
-    // where it can still be dragged out by hand.
+    // Save the pace first: releaseTickets reads it.
+    const pace = chosenPace ?? (workspace.pace as string | null) ?? 'all_at_once'
+    const timezone = chosenTimezone ?? (workspace.timezone as string | null)
+    if (chosenPace || chosenTimezone) {
+      const { error: paceErr } = await admin.from('workspaces')
+        .update({ pace, ...(timezone ? { timezone } : {}) }).eq('id', workspaceId)
+      if (paceErr) console.error('[api/workspaces/:id/plan] pace save failed:', paceErr)
+    }
+
+    // Everything just landed in the backlog. On a daily pace the first
+    // day's batch goes out now, the rest at 8:00 each morning; otherwise the
+    // queue decides what arrives in Planned. Best-effort — a failure leaves
+    // the plan in the backlog, where it can still be dragged out by hand.
     let released = 0
     try {
-      released = (await releaseTickets(admin, workspaceId)).length
+      released = pace === 'daily'
+        ? (await releaseDailyBatch(admin, workspaceId, localNow(timezone).date)).length
+        : (await releaseTickets(admin, workspaceId)).length
     } catch (err) {
       console.error('[api/workspaces/:id/plan] release failed:', err)
     }
 
-    return { ok: true, count: rows.length, dependencies, released }
+    return { ok: true, count: rows.length, dependencies, released, pace }
   })
+}
+
+/**
+ * DELETE /api/workspaces/[id]/plan — remove the drafted plan.
+ *
+ * Deletes the AI-drafted tasks nobody has started: still in the backlog or
+ * Planned, with no submission. Anything in progress, submitted or finished
+ * stays, because it is work somebody did. The pace resets so the next draft
+ * asks again.
+ */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
+  const limited = await enforce('workspace', user.id)
+  if (limited) return limited
+
+  let workspaceId: string
+  try {
+    workspaceId = requireUuid((await params).id, 'Project')
+  } catch (err) {
+    if (err instanceof ValidationError) return NextResponse.json({ error: err.message }, { status: 400 })
+    throw err
+  }
+
+  const { data: me } = await supabase.from('workspace_members').select('role')
+    .eq('workspace_id', workspaceId).eq('account_id', user.id).is('removed_at', null).maybeSingle()
+  if (me?.role !== 'owner') return NextResponse.json({ error: 'Only the project owner can remove the plan.' }, { status: 403 })
+
+  const admin = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+  const { data: candidates } = await admin
+    .from('tasks')
+    .select('id')
+    .eq('workspace_id', workspaceId)
+    .in('origin', ['ai_proposed', 'ai_edited'])
+    .in('status', ['backlog', 'planned'])
+  const ids = (candidates ?? []).map((t) => t.id as string)
+  if (ids.length === 0) return NextResponse.json({ ok: true, removed: 0 })
+
+  // Never a task with a submission against it, whatever its status says.
+  const { data: submitted } = await admin.from('task_submissions').select('task_id').in('task_id', ids)
+  const keep = new Set((submitted ?? []).map((s) => s.task_id as string))
+  const remove = ids.filter((id) => !keep.has(id))
+
+  if (remove.length > 0) {
+    // Subtasks of removed tasks go with them.
+    await admin.from('tasks').delete().in('parent_task_id', remove)
+    const { error } = await admin.from('tasks').delete().in('id', remove)
+    if (error) {
+      console.error('[api/workspaces/:id/plan] remove failed:', error)
+      return NextResponse.json({ error: 'Could not remove the plan.' }, { status: 500 })
+    }
+  }
+  await admin.from('workspaces').update({ pace: null, last_batch_on: null }).eq('id', workspaceId)
+  return NextResponse.json({ ok: true, removed: remove.length })
 }
 
 /**

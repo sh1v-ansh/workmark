@@ -11,6 +11,7 @@ import Modal from '@/components/ui/Modal'
 import { C, F, R, T } from '@/lib/theme/dark-tokens'
 import { LAYOUT } from '@/lib/theme/layout'
 import type { WorkspaceSummary, PendingInvitation, WorkspaceStatus } from '@/lib/workspace/queries'
+import { briefSummary } from '@/lib/briefs/parse'
 
 const STATUS_LABEL: Record<WorkspaceStatus, string> = {
   draft: 'Being set up',
@@ -160,7 +161,7 @@ export default function WorkspacesClient({
             {workspaces.filter((w) => !hidden.has(w.id)).map((w) => (
               <Card key={w.id} href={`/workspaces/${w.id}`} hoverable>
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 5 }}>
-                  <p style={{ fontSize: T.h3, fontWeight: 600, color: C.text }}>{w.title}</p>
+                  <p className="wm-wrap" style={{ fontSize: T.h3, fontWeight: 600, color: C.text }}>{w.title}</p>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: T.meta, color: w.status === 'draft' ? C.textFaint : C.textMuted, whiteSpace: 'nowrap' }}>
                       {STATUS_LABEL[w.status]}
@@ -182,7 +183,11 @@ export default function WorkspacesClient({
                   </span>
                 </div>
                 {w.summary && (
-                  <p style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 10 }}>{w.summary}</p>
+                  // Summaries made from a project idea are markdown; show
+                  // the plain "what you'll build" part, three lines at most.
+                  <p className="wm-clamp-3 wm-wrap" style={{ fontSize: T.bodySm, color: C.textMuted, lineHeight: 1.6, marginBottom: 10 }}>
+                    {/(^|\n)#{1,3}\s|\*\*/.test(w.summary) ? briefSummary(w.summary) : w.summary}
+                  </p>
                 )}
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: T.meta, color: C.textFaint }}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
