@@ -1896,15 +1896,65 @@ export default function Board({
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
-    <div style={{ marginBottom: 13 }}>
-      <label style={{ display: 'block', fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 5 }}>
-        {label}
-        {hint && <span style={{ fontWeight: 400, color: C.textGhost }}> — {hint}</span>}
+    <div style={{ marginBottom: 14 }}>
+      <label style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, fontSize: T.meta, fontWeight: 600, color: C.textSub, marginBottom: 6 }}>
+        <span>{label}</span>
+        {hint && <span style={{ fontWeight: 400, color: C.textGhost }}>{hint}</span>}
       </label>
       {children}
     </div>
   )
 }
+
+/** One compact property: label above, control below, all the same height. */
+function Prop({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <p style={{ fontSize: T.meta, fontWeight: 600, color: C.textFaint, marginBottom: 5 }}>{label}</p>
+      {children}
+    </div>
+  )
+}
+
+/** Low / Normal / High as three buttons instead of a dropdown. */
+function Segmented({ value, options, onChange, disabled }: {
+  value: string
+  options: { value: string; label: string }[]
+  onChange: (v: string) => void
+  disabled?: boolean
+}) {
+  return (
+    <div role="radiogroup" style={{ display: 'grid', gridTemplateColumns: `repeat(${options.length}, 1fr)`, gap: 2, padding: 2, borderRadius: 10, background: C.surfaceAlt, height: 42, boxSizing: 'border-box' }}>
+      {options.map((o) => {
+        const on = o.value === value
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            disabled={disabled}
+            onClick={() => onChange(o.value)}
+            style={{
+              border: 'none', borderRadius: 8, cursor: disabled ? 'default' : 'pointer', fontFamily: 'inherit',
+              fontSize: T.bodySm, fontWeight: on ? 600 : 500,
+              color: on ? C.text : C.textMuted,
+              background: on ? C.surface : 'transparent',
+              boxShadow: on ? '0 1px 2px rgba(25, 30, 46, 0.08)' : 'none',
+            }}
+          >
+            {o.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// Every property control is exactly this tall, so the grid lines up.
+const CONTROL: React.CSSProperties = { height: 42, padding: '0 12px', fontSize: T.bodySm, boxSizing: 'border-box' }
+// Dropdowns keep room on the right for their arrow.
+const SELECT_CONTROL: React.CSSProperties = { ...CONTROL, paddingRight: 34, backgroundPosition: 'right 12px center' }
 
 function TaskDialog({
   open, title, draft, setDraft, members, busy, onClose, onSave, saveLabel,
@@ -1933,62 +1983,85 @@ function TaskDialog({
   nameOf?: (id: string | null) => string | null
 }) {
   const set = <K extends keyof Draft>(key: K, value: Draft[K]) => setDraft({ ...draft, [key]: value })
+  const [showHistory, setShowHistory] = useState(false)
 
   return (
-    <Modal open={open} onClose={onClose} title={title}>
-      <Field label="What needs doing">
-        <input className="dk-input" value={draft.title} maxLength={200}
-          onChange={(e) => set('title', e.target.value)} placeholder="Implement Google sign-in" />
+    <Modal open={open} onClose={onClose} title={title} width={640}>
+      <input
+        className="dk-input"
+        aria-label="What needs doing"
+        value={draft.title}
+        maxLength={200}
+        readOnly={readOnly}
+        onChange={(e) => set('title', e.target.value)}
+        placeholder="What needs doing"
+        style={{ fontSize: 18, fontWeight: 600, marginBottom: 14 }}
+      />
+
+      <Field label="Description">
+        <textarea className="dk-input" value={draft.detail} rows={4} maxLength={4000} readOnly={readOnly}
+          onChange={(e) => set('detail', e.target.value)}
+          placeholder="What it involves, and anything worth knowing before you start."
+          style={{ resize: 'vertical', lineHeight: 1.55 }} />
       </Field>
 
-      <Field label="Done means" hint="what the check will look for">
-        <textarea className="dk-input" value={draft.acceptanceCriteria} rows={2} maxLength={4000}
+      <Field label="Done means" hint="what the check looks for">
+        <textarea className="dk-input" value={draft.acceptanceCriteria} rows={3} maxLength={4000} readOnly={readOnly}
           onChange={(e) => set('acceptanceCriteria', e.target.value)}
           placeholder="A user can sign in with Google and stays signed in after a refresh. Tests cover the callback."
-          style={{ resize: 'vertical' }} />
+          style={{ resize: 'vertical', lineHeight: 1.55 }} />
       </Field>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <Field label="Estimate" hint="hours">
-          <input className="dk-input" type="number" min={0.25} max={200} step={0.25}
-            value={draft.estimateHours} onChange={(e) => set('estimateHours', e.target.value)} placeholder="4" />
-        </Field>
-        <Field label="How hard" hint="1–10">
-          <input className="dk-input" type="number" min={1} max={10} step={1}
-            value={draft.difficulty} onChange={(e) => set('difficulty', e.target.value)} placeholder="6" />
-        </Field>
-        <Field label="Due">
-          <input className="dk-input" type="date" value={draft.dueOn} onChange={(e) => set('dueOn', e.target.value)} />
-        </Field>
-        <Field label="Priority">
-          <select className="dk-input" value={draft.priority} onChange={(e) => set('priority', e.target.value)}>
-            <option value="low">Low</option>
-            <option value="normal">Normal</option>
-            <option value="high">High</option>
-          </select>
-        </Field>
-        <Field label="Who">
-          <select className="dk-input" value={draft.assigneeId} onChange={(e) => set('assigneeId', e.target.value)}>
-            <option value="">Nobody yet</option>
-            {members.map((m) => (
-              <option key={m.accountId} value={m.accountId}>{m.name ?? m.handle ?? 'Teammate'}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="Kind of work">
-          <select className="dk-input" value={draft.suggestedRole} onChange={(e) => set('suggestedRole', e.target.value)}>
-            <option value="">Any</option>
-            {WORK_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
-          </select>
-        </Field>
+      {/* Properties: two even rows of three, every control the same height. */}
+      <div style={{ padding: 14, borderRadius: R.lg, background: '#FAFAFC', border: `1px solid ${C.borderFaint}`, marginBottom: 14 }}>
+        <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12, marginBottom: 12 }}>
+          <Prop label="Who">
+            <select className="dk-select" style={SELECT_CONTROL} value={draft.assigneeId} disabled={readOnly}
+              onChange={(e) => set('assigneeId', e.target.value)}>
+              <option value="">Nobody yet</option>
+              {members.map((m) => (
+                <option key={m.accountId} value={m.accountId}>{m.name ?? m.handle ?? 'Teammate'}</option>
+              ))}
+            </select>
+          </Prop>
+          <Prop label="Kind of work">
+            <select className="dk-select" style={SELECT_CONTROL} value={draft.suggestedRole} disabled={readOnly}
+              onChange={(e) => set('suggestedRole', e.target.value)}>
+              <option value="">Any</option>
+              {WORK_ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+            </select>
+          </Prop>
+          <Prop label="Due">
+            <input className="dk-input" style={CONTROL} type="date" value={draft.dueOn} readOnly={readOnly}
+              onChange={(e) => set('dueOn', e.target.value)} />
+          </Prop>
+        </div>
+        <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 12 }}>
+          <Prop label="Priority">
+            <Segmented
+              value={draft.priority}
+              disabled={readOnly}
+              onChange={(v) => set('priority', v)}
+              options={[{ value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }]}
+            />
+          </Prop>
+          <Prop label="Estimate (hours)">
+            <input className="dk-input" style={CONTROL} type="number" min={0.25} max={200} step={0.25} readOnly={readOnly}
+              value={draft.estimateHours} onChange={(e) => set('estimateHours', e.target.value)} placeholder="4" />
+          </Prop>
+          <Prop label="Difficulty (1–10)">
+            <input className="dk-input" style={CONTROL} type="number" min={1} max={10} step={1} readOnly={readOnly}
+              value={draft.difficulty} onChange={(e) => set('difficulty', e.target.value)} placeholder="6" />
+          </Prop>
+        </div>
       </div>
 
       {/* Without this, the checker looks for commits on a task that was never
           going to have any and fails honest work for having no code. */}
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: T.bodySm, color: C.textMuted, marginBottom: 14 }}>
-        <input type="checkbox" checked={!draft.verifiable}
+      <label style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: T.bodySm, color: C.textMuted, marginBottom: 16, cursor: 'pointer' }}>
+        <input type="checkbox" className="dk-checkbox" checked={!draft.verifiable} disabled={readOnly}
           onChange={(e) => set('verifiable', !e.target.checked)} />
-        This one has no code — research, design, talking to someone
+        No code in this one (research, design, talking to someone)
       </label>
 
       {askReason && setReason && (
@@ -2056,11 +2129,13 @@ function TaskDialog({
       )}
 
       {history.length > 0 && (
-        <div style={{ borderTop: `1px solid ${C.borderFaint}`, paddingTop: 13, marginBottom: 14 }}>
-          <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.textSub, marginBottom: 8 }}>
-            How this was decided
-          </p>
-          <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 9 }}>
+        <div style={{ borderTop: `1px solid ${C.borderFaint}`, paddingTop: 12, marginBottom: 14 }}>
+          <button type="button" onClick={() => setShowHistory((v) => !v)}
+            style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: T.bodySm, fontWeight: 600, color: C.textSub }}>
+            {showHistory ? '▾' : '▸'} How this was decided ({history.length})
+          </button>
+          {showHistory && <>
+          <ol style={{ listStyle: 'none', margin: '10px 0 0', padding: 0, display: 'grid', gap: 9 }}>
             {history.map((d, i) => (
               <li key={`${d.decidedAt}-${i}`} style={{ fontSize: T.meta, lineHeight: 1.55 }}>
                 <span style={{ color: C.text, fontWeight: 500 }}>
@@ -2085,10 +2160,11 @@ function TaskDialog({
             If something here is wrong, you can challenge it from{' '}
             <Link href="/me/file" style={{ color: C.textMuted }}>your file</Link>.
           </p>
+          </>}
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+      <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 6, paddingTop: 14, borderTop: `1px solid ${C.borderFaint}` }}>
         <Button variant="quiet" onClick={onClose}>{readOnly ? 'Close' : 'Cancel'}</Button>
         {!readOnly && (
           <Button onClick={onSave} disabled={busy || draft.title.trim().length < 2}>{saveLabel}</Button>

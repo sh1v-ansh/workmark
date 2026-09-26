@@ -155,7 +155,7 @@ export default function SettingsClient({
         ) : isOwner ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <select
-              className="dk-input"
+              className="dk-select"
               value={repo}
               onChange={(e) => setRepo(e.target.value)}
               aria-label="Repository"
@@ -194,7 +194,7 @@ export default function SettingsClient({
           person when it drafts a plan — and anyone can move a task afterwards.
         </p>
         <select
-          className="dk-input"
+          className="dk-select"
           // Working alone with nothing chosen reads as Everything, because
           // that is what it means: every task comes to you.
           value={you?.workRole ?? (workspace.members.length === 1 ? 'fullstack' : '')}
