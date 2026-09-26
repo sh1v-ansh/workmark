@@ -41,7 +41,7 @@ export async function loadPeople(
 ): Promise<PersonCard[]> {
   const { data: rows } = await supabase
     .from('students')
-    .select('id, full_name, university, major, degree_type, graduation_year, availability, github_url, linkedin_url, handle')
+    .select('id, full_name, university, major, degree_type, graduation_year, availability, github_url, github_username, linkedin_url, handle')
     .eq('open_to_collab', true)
     .neq('id', viewerId)
     .order('created_at', { ascending: false })
@@ -73,7 +73,8 @@ export async function loadPeople(
     ].filter(Boolean).join(' · '),
     availability: p.availability ?? null,
     handle: p.handle ?? null,
-    githubUrl: p.github_url ?? null,
+    // The connected account, not the old self-typed link, which nothing fills in any more.
+    githubUrl: p.github_username ? `https://github.com/${p.github_username}` : (p.github_url ?? null),
     linkedinUrl: p.linkedin_url ?? null,
     topSkills: Array.from(best.get(p.id)?.values() ?? [])
       .sort((a, b) => b.level - a.level || a.name.localeCompare(b.name))
