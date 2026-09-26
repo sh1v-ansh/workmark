@@ -25,17 +25,11 @@ export interface Student {
   major: string | null
   degree_type: string | null
   graduation_year: number | null
-  gpa: number | null
   is_international: boolean
-  visa_type: string | null
-  /** Self-reported, display only — never feeds tier_weight. */
-  skills: string[] | null
-  github_url: string | null
   github_username: string | null
   linkedin_url: string | null
   availability: string | null
   hours_per_week: number | null
-  available_from: string | null
   open_to_collab: boolean
   handle: string | null
   active_application_count: number

@@ -102,26 +102,21 @@ create table students (
   major                     text,
   degree_type               text,
   graduation_year           int,
-  gpa                       decimal(3,2),
   is_international          boolean default false not null,
   -- v05_0059: the career they are working toward, and their own words.
   career_track              text check (career_track in ('backend', 'frontend', 'fullstack', 'mobile', 'ai-ml', 'data', 'devops', 'security', 'game-dev', 'robotics')),
   aspiration                text check (char_length(aspiration) <= 500),
   career_set_at             timestamptz,
-  visa_type                 text,
-  skills                    text[],  -- self-reported, display only — never feeds tier_weight
   -- What they said they came for: build_record, join_project, post_project,
   -- guided_project. Orders their dashboard, and is the only honest read on
   -- whether students want to work alone or with other people — the
   -- alternative was inferring it from behaviour, which measures what the
   -- product made easy rather than what anybody wanted. See v05_0051.
   intents                   text[] not null default '{}',
-  github_url                text,
   github_username           text,
   linkedin_url               text,
   availability               text,
   hours_per_week            int,
-  available_from            date,
   open_to_collab             boolean default false not null,  -- opt-in: /students directory
   handle                     text unique,                      -- /p/[handle]
   active_application_count  int default 0 not null,            -- maintained by sync_application_counters()
@@ -1055,15 +1050,10 @@ grant update (
   major,
   degree_type,
   graduation_year,
-  gpa,
   is_international,
-  visa_type,
-  skills,
-  github_url,
   linkedin_url,
   availability,
   hours_per_week,
-  available_from,
   open_to_collab,
   handle
 ) on public.students to authenticated;
@@ -3140,3 +3130,109 @@ create policy "Students: own eligibility"
   on student_eligibility for all
   using (auth.uid() = student_id)
   with check (auth.uid() = student_id);
+
+-- ─── Admin read views (v05_0063) ──────────────────────────────────────────
+-- evidence_audit with who and what. A view rather than a name column: names
+-- change and accounts get deleted, and a copied name would go stale.
+create or replace view admin_evidence_audit with (security_invoker = true) as
+select
+  ea.id,
+  ea.extracted_at,
+  st.full_name       as student_name,
+  se.student_id,
+  sk.canonical_name  as skill,
+  se.difficulty_cleared as level,
+  a.repo_full_name,
+  ea.source,
+  ea.raw_input,
+  ea.evidence_id
+from evidence_audit ea
+join skill_evidence se on se.id = ea.evidence_id
+left join students st on st.id = se.student_id
+left join skills sk on sk.id = se.skill_id
+left join artifacts a on a.id = se.artifact_id;
+
+-- Who has what: one row per student per current skill, best level first.
+create or replace view admin_student_skills with (security_invoker = true) as
+select
+  st.full_name       as student_name,
+  cse.student_id,
+  sk.canonical_name  as skill,
+  max(cse.difficulty_cleared) as best_level,
+  count(distinct cse.artifact_id) as repos,
+  string_agg(distinct a.repo_full_name, ', ') as found_in,
+  max(cse.created_at) as last_updated
+from current_skill_evidence cse
+join students st on st.id = cse.student_id
+left join skills sk on sk.id = cse.skill_id
+left join artifacts a on a.id = cse.artifact_id
+group by st.full_name, cse.student_id, sk.canonical_name;
+
+-- Scan status: one row per student, with a plain-words answer to "did the
+-- scan fail, or is their GitHub just empty?"
+create or replace view admin_scan_status with (security_invoker = true) as
+with last_job as (
+  select distinct on (student_id)
+    student_id, status, created_at as started_at, finished_at, error, total_steps, completed_steps, steps
+  from jobs
+  where kind = 'github_scan'
+  order by student_id, created_at desc
+),
+step_counts as (
+  select
+    j.student_id,
+    count(*) filter (where s->>'status' = 'failed')                          as repos_failed,
+    count(*) filter (where s->>'status' = 'done' and s->>'detail' ilike 'skipped%') as repos_skipped,
+    count(*) filter (where s->>'status' = 'done' and s->>'detail' not ilike 'skipped%') as repos_read
+  from last_job j, jsonb_array_elements(j.steps) s
+  group by j.student_id
+),
+grants as (
+  select student_id,
+    count(*) filter (where revoked_at is null)                  as repos_shared,
+    count(*) filter (where revoked_at is null and scan_enabled) as repos_enabled
+  from github_repo_grants
+  group by student_id
+),
+skills as (
+  select student_id, count(distinct skill_id) as verified_skills
+  from current_skill_evidence
+  group by student_id
+)
+select
+  st.full_name as student_name,
+  st.id        as student_id,
+  gc.github_login,
+  gc.connected_at,
+  coalesce(g.repos_shared, 0)  as repos_shared,
+  coalesce(g.repos_enabled, 0) as repos_enabled,
+  j.status     as last_scan_status,
+  j.started_at as last_scan_started,
+  j.finished_at as last_scan_finished,
+  coalesce(sc.repos_read, 0)    as repos_read,
+  coalesce(sc.repos_skipped, 0) as repos_skipped,
+  coalesce(sc.repos_failed, 0)  as repos_failed,
+  coalesce(sk.verified_skills, 0) as verified_skills,
+  j.error as last_scan_error,
+  case
+    when gc.student_id is null then 'GitHub not connected'
+    when coalesce(g.repos_shared, 0) = 0 then 'Connected, but shared no repositories'
+    when coalesce(g.repos_enabled, 0) = 0 then 'Shared only private repos and switched none on'
+    when j.status is null then 'Never scanned'
+    when j.status in ('queued', 'running') then 'Scan running now'
+    when j.status = 'failed' then 'Last scan failed (see last_scan_error)'
+    when j.status = 'cancelled' then 'Last scan was stopped'
+    when coalesce(sk.verified_skills, 0) > 0 and coalesce(sc.repos_failed, 0) > 0 then 'Has skills; some repos failed to read'
+    when coalesce(sk.verified_skills, 0) > 0 then 'Has skills'
+    when coalesce(sc.repos_failed, 0) > 0 then 'Scanned, repos failed and nothing found'
+    else 'Scanned, nothing found (empty repos, forks, or no commits of theirs)'
+  end as summary
+from students st
+left join github_connections gc on gc.student_id = st.id
+left join grants g on g.student_id = st.id
+left join last_job j on j.student_id = st.id
+left join step_counts sc on sc.student_id = st.id
+left join skills sk on sk.student_id = st.id;
+
+revoke all on admin_evidence_audit, admin_student_skills, admin_scan_status from anon, authenticated;
+

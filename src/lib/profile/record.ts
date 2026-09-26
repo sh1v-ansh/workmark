@@ -51,7 +51,7 @@ export async function loadStudentRecord(
 ): Promise<StudentRecord | null> {
   const { data: student } = await supabase
     .from('students')
-    .select('id, full_name, university, major, degree_type, graduation_year, handle, github_username, linkedin_url, skills')
+    .select('id, full_name, university, major, degree_type, graduation_year, handle, github_username, linkedin_url')
     .eq('id', studentId)
     .maybeSingle()
   if (!student) return null
@@ -112,7 +112,8 @@ export async function loadStudentRecord(
       handle: student.handle,
       githubUsername: student.github_username,
       linkedinUrl: student.linkedin_url,
-      selfReportedSkills: student.skills ?? [],
+      // Self-reported skills were dropped in v05_0063; only verified ones remain.
+      selfReportedSkills: [],
     },
     skills,
     // Includes hidden engagements by design — see visibility.ts on why
