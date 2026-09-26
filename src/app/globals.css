@@ -402,6 +402,9 @@
 /* The one action a page most wants pressed (Scan, Draft my plan). */
 .nb-btn-gradient {
   background: linear-gradient(103deg, #3E1FFF 0%, #7F5CFF 55%, #EC4899 100%);
+  /* Painted under the border too; otherwise the gradient restarts in the
+     1px border and shows a seam at both ends. */
+  background-origin: border-box;
   color: #FFFFFF; border-color: transparent;
   box-shadow: 0 8px 22px -8px rgba(94, 60, 255, 0.55);
   transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
