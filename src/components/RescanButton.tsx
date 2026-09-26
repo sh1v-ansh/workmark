@@ -43,10 +43,12 @@ interface RescanButtonProps {
   /** ISO timestamp of the last scan that finished, or null. */
   lastScannedAt?: string | null
   size?: 'sm' | 'md'
-  variant?: 'ink' | 'outline' | 'quiet'
+  variant?: 'ink' | 'outline' | 'quiet' | 'gradient'
   fullWidth?: boolean
   /** Shows "Scanned 3 days ago" under the button. Off where the caller says it already. */
   showLastScan?: boolean
+  /** The button's words. "Scan" everywhere unless a caller says more. */
+  label?: string
 }
 
 export default function RescanButton({
@@ -56,6 +58,7 @@ export default function RescanButton({
   variant = 'outline',
   fullWidth,
   showLastScan = true,
+  label = 'Scan',
 }: RescanButtonProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -238,7 +241,7 @@ export default function RescanButton({
       >
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6.5 }}>
           <Icon name="refresh" size={12.5} />
-          Rescan
+          {label}
         </span>
       </Button>
 

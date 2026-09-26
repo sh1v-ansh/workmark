@@ -111,6 +111,17 @@ describe('nextStepFor', () => {
       .toBe('start_guided_project')
   })
 
+  it('asks for the first scan before anything else once connected', () => {
+    expect(nextStepFor({ ...base, evidenceCount: 0, lastScannedAt: null, profileComplete: false, intents: ['guided_project'] }))
+      .toBe('scan')
+  })
+
+  it('asks to finish the profile after the scan', () => {
+    expect(nextStepFor({ ...base, lastScannedAt: '2026-09-25', profileComplete: false, intents: ['post_project'] }))
+      .toBe('finish_profile')
+    expect(nextStepFor({ ...base, repoCount: 0, evidenceCount: 0, profileComplete: false })).toBe('finish_profile')
+  })
+
   it('asks for a scan when there are repositories but no record yet', () => {
     expect(nextStepFor({ ...base, evidenceCount: 0 })).toBe('scan')
   })

@@ -8,6 +8,8 @@ import { useToast } from '@/components/Toast'
 import Button from '@/components/ui/Button'
 import { C, F, T } from '@/lib/theme/dark-tokens'
 import { nextStepFor, type Intent, type NextStep } from '@/lib/profile/intents'
+import RescanButton from '@/components/RescanButton'
+import FinishProfile from './FinishProfile'
 
 /**
  * The one thing to do next, decided rather than listed.
@@ -51,11 +53,18 @@ const COPY: Record<Exclude<NextStep, 'nothing'>, {
     href: '/goals',
   },
   scan: {
-    eyebrow: 'Nearly there',
-    headline: 'Read your repositories',
-    body: 'Takes a few minutes. You can leave the page while it runs.',
-    cta: 'Choose what to scan',
+    eyebrow: 'Start here',
+    headline: 'Scan your GitHub',
+    body: 'Connecting was step one. The scan reads your code and builds your verified record. You can leave the page while it runs.',
+    cta: 'Scan',
     href: '/student/github',
+  },
+  finish_profile: {
+    eyebrow: 'Next step',
+    headline: 'Pick your career path',
+    body: 'Tell us where you’re headed and we’ll show you the next skill to build and projects that get you there.',
+    cta: 'Choose my career path',
+    href: '#career-path',
   },
   be_discoverable: {
     eyebrow: 'Next step',
@@ -88,6 +97,9 @@ export default function NextStepCard({
   openToCollab,
   postedCount,
   studentId,
+  lastScannedAt,
+  major,
+  careerTrack,
 }: {
   intents: Intent[]
   githubConnected: boolean
@@ -96,13 +108,21 @@ export default function NextStepCard({
   openToCollab: boolean
   postedCount: number
   studentId: string
+  lastScannedAt: string | null
+  major: string | null
+  careerTrack: string | null
 }) {
   const router = useRouter()
   const { toast } = useToast()
   const [busy, setBusy] = useState(false)
 
-  const step = nextStepFor({ intents, githubConnected, repoCount, evidenceCount, openToCollab, postedCount })
+  const step = nextStepFor({
+    intents, githubConnected, repoCount, evidenceCount, openToCollab, postedCount,
+    lastScannedAt, profileComplete: !!major && !!careerTrack,
+  })
   if (step === 'nothing') return null
+  // Major first, in its own small form; then the career path card below.
+  if (step === 'finish_profile' && !major) return <FinishProfile prominent />
 
   // Done in place, not by sending them to the directory to find a switch.
   async function makeFindable() {
@@ -122,7 +142,11 @@ export default function NextStepCard({
   return (
     // A slim row under the greeting, not a banner over it: it is a pointer
     // to the next thing, and the page's own content should still lead.
-    <Card hoverable={false} padding="12px 16px" style={{ marginBottom: 12 }}>
+    <Card
+      hoverable={false}
+      padding="12px 16px"
+      style={{ marginBottom: 12, ...(step === 'scan' || step === 'finish_profile' ? { border: '1px solid #D9CCFF', background: '#FAF8FF' } : {}) }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <p style={{ fontSize: T.bodySm, color: C.textSub, minWidth: 0 }}>
           <span style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.accent, marginRight: 8 }}>
@@ -131,7 +155,11 @@ export default function NextStepCard({
           <strong style={{ fontWeight: 600, color: C.text }}>{copy.headline}</strong>
           <span style={{ color: C.textMuted }}> · {copy.body}</span>
         </p>
-        {step === 'be_discoverable' ? (
+        {step === 'scan' ? (
+          <RescanButton githubConnected variant="gradient" size="sm" showLastScan={false} label="Scan my GitHub" />
+        ) : step === 'finish_profile' ? (
+          <Button href={copy.href} variant="gradient" size="sm">{copy.cta}</Button>
+        ) : step === 'be_discoverable' ? (
           <Button variant="accent" size="sm" onClick={makeFindable} busyLabel={busy ? 'Saving…' : null}>{copy.cta}</Button>
         ) : (
           <Button href={copy.href} variant="accent" size="sm">{copy.cta}</Button>

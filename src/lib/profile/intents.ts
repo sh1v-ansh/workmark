@@ -80,12 +80,17 @@ export interface NextStepInput {
   openToCollab?: boolean
   /** Projects they have posted. */
   postedCount?: number
+  /** When their last scan finished. Null: never scanned. Omitted: unknown. */
+  lastScannedAt?: string | null
+  /** Major and career track filled in. Omitted means yes. */
+  profileComplete?: boolean
 }
 
 export type NextStep =
   | 'connect_github'
   | 'start_guided_project'
   | 'scan'
+  | 'finish_profile'
   | 'be_discoverable'
   | 'post_project'
   | 'find_work'
@@ -93,6 +98,15 @@ export type NextStep =
 
 export function nextStepFor(input: NextStepInput): NextStep {
   if (!input.githubConnected) return 'connect_github'
+
+  // Connected but never scanned: the scan comes first, before anything they
+  // picked. Connecting feels like the finish line and is not, so this is
+  // the step people most often stop at.
+  if (input.repoCount > 0 && input.evidenceCount === 0 && input.lastScannedAt === null) return 'scan'
+
+  // Then the profile: major and career, which decide the next skill and the
+  // projects we suggest.
+  if (input.profileComplete === false) return 'finish_profile'
 
   // Connected, and there is genuinely nothing there. Not a failure state —
   // it is most first-years, and it is the case the guided projects feature

@@ -24,7 +24,7 @@ import { C, T } from '@/lib/theme/dark-tokens'
  * Every field is optional, because an incomplete profile with a real record
  * is worth far more than a complete one without.
  */
-export default function FinishProfile() {
+export default function FinishProfile({ prominent = false }: { prominent?: boolean }) {
   const router = useRouter()
   const { toast } = useToast()
   const [major, setMajor] = useState('')
@@ -65,13 +65,22 @@ export default function FinishProfile() {
 
   if (!open) {
     return (
-      <Card hoverable={false} padding="12px 16px" style={{ marginBottom: 12 }}>
+      <Card
+        hoverable={false}
+        padding="12px 16px"
+        style={{ marginBottom: 12, ...(prominent ? { border: '1px solid #D9CCFF', background: '#FAF8FF' } : {}) }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           <p style={{ fontSize: T.bodySm, color: C.textSub }}>
+            {prominent && (
+              <span style={{ fontSize: T.meta, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: C.accent, marginRight: 8 }}>
+                Next step
+              </span>
+            )}
             <strong style={{ fontWeight: 600, color: C.text }}>Finish your profile</strong>
-            <span style={{ color: C.textMuted }}> · major, availability and LinkedIn help posters find you</span>
+            <span style={{ color: C.textMuted }}> · your major, availability and LinkedIn help posters find you. Takes a minute.</span>
           </p>
-          <Button variant="outline" size="sm" onClick={() => setOpen(true)}>Add details</Button>
+          <Button variant={prominent ? 'gradient' : 'outline'} size="sm" onClick={() => setOpen(true)}>Finish my profile</Button>
         </div>
       </Card>
     )

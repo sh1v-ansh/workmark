@@ -24,7 +24,6 @@ import { LAYOUT } from '@/lib/theme/layout'
 import type { Intent } from '@/lib/profile/intents'
 import NextStepCard from './NextStep'
 import GithubConnectNotice from '@/components/GithubConnectNotice'
-import FinishProfile from './FinishProfile'
 
 export interface DashboardData {
   student: {
@@ -388,9 +387,10 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
           openToCollab={openToCollab}
           postedCount={listings.length}
           studentId={studentId}
+          lastScannedAt={lastScannedAt}
+          major={student.major}
+          careerTrack={career.trackId}
         />
-        {/* After the first record lands, not before — see FinishProfile. */}
-        {skills.length > 0 && !student.major && <FinishProfile />}
 
         {/* Focal band. The lead item is roughly four times the area of a
             supporting tile, so the eye lands rather than searches. When the
@@ -487,7 +487,7 @@ export default function StudentDashboardClient({ data }: { data: DashboardData }
                   <RescanButton
                     githubConnected
                     lastScannedAt={lastScannedAt}
-                    variant="outline"
+                    variant="gradient"
                     size="sm"
                     showLastScan={false}
                   />

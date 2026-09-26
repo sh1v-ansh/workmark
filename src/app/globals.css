@@ -399,6 +399,15 @@
 }
 .nb-btn-accent:disabled,
 .nb-btn-accent[aria-disabled='true'] { box-shadow: none; }
+/* The one action a page most wants pressed (Scan, Draft my plan). */
+.nb-btn-gradient {
+  background: linear-gradient(103deg, #3E1FFF 0%, #7F5CFF 55%, #EC4899 100%);
+  color: #FFFFFF; border-color: transparent;
+  box-shadow: 0 8px 22px -8px rgba(94, 60, 255, 0.55);
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+.nb-btn-gradient:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 12px 26px -8px rgba(94, 60, 255, 0.6); }
+.nb-btn-gradient:disabled, .nb-btn-gradient[aria-disabled='true'] { box-shadow: none; filter: saturate(0.6); }
 
 .nb-btn-outline  { background: #FFFFFF; color: #191E2E; border-color: #DDDCE8; }
 .nb-btn-outline:not(:disabled):hover { border-color: #191E2E; }
