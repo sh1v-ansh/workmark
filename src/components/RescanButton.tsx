@@ -194,7 +194,7 @@ export default function RescanButton({
       toastRef.current(
         json.alreadyRunning
           ? 'A scan is already running — showing its progress.'
-          : `Reading ${json.totalSteps} repositor${json.totalSteps === 1 ? 'y' : 'ies'}. You can carry on using the site.`,
+          : `Reading ${json.totalSteps} repositor${json.totalSteps === 1 ? 'y' : 'ies'}. You can close this tab; the scan keeps running.`,
         'info',
       )
     } catch (err: unknown) {
@@ -285,7 +285,7 @@ export default function RescanButton({
             {' '}
             {/* Said once, plainly. Otherwise somebody sits on the page
                 waiting, which is exactly what we do not need them to do. */}
-            Scans can take up to an hour with many repositories. It keeps running if you leave.
+            You can close this tab. The scan keeps running on our servers and your record fills in as it goes.
           </span>
         </div>
       )}

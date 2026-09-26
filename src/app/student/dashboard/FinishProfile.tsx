@@ -78,7 +78,7 @@ export default function FinishProfile({ prominent = false }: { prominent?: boole
               </span>
             )}
             <strong style={{ fontWeight: 600, color: C.text }}>Finish your profile</strong>
-            <span style={{ color: C.textMuted }}> · your major, availability and LinkedIn help posters find you. Takes a minute.</span>
+            <span style={{ color: C.textMuted }}> · so people starting projects can find you and know what you can take on. Takes a minute.</span>
           </p>
           <Button variant={prominent ? 'gradient' : 'outline'} size="sm" onClick={() => setOpen(true)}>Finish my profile</Button>
         </div>
@@ -88,14 +88,18 @@ export default function FinishProfile({ prominent = false }: { prominent?: boole
 
   return (
     <Card hoverable={false} padding={18} style={{ marginBottom: 12 }}>
-      <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text, marginBottom: 12 }}>
-        Finish your profile <span style={{ fontWeight: 400, color: C.textMuted }}>· all optional</span>
+      <p style={{ fontSize: T.bodySm, fontWeight: 600, color: C.text, marginBottom: 3 }}>
+        Finish your profile
+      </p>
+      <p style={{ fontSize: T.meta, color: C.textMuted, marginBottom: 14 }}>
+        Each one changes what you get here. Skip any you like.
       </p>
 
       <div className="mob-1col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
         <div style={{ gridColumn: '1 / -1' }}>
           <label htmlFor="fp-major" style={label}>Major</label>
           <Combobox id="fp-major" value={major} onChange={setMajor} options={MAJORS} placeholder="Search majors…" />
+          <p style={{ fontSize: 12.5, color: C.textFaint, marginTop: 5, lineHeight: 1.45 }}>Shown on your profile and your card in Find people, so teammates and posters know your background.</p>
         </div>
         <div>
           <label htmlFor="fp-availability" style={label}>Availability</label>
@@ -104,14 +108,17 @@ export default function FinishProfile({ prominent = false }: { prominent?: boole
             <option value="part-time">Part-time</option>
             <option value="full-time">Full-time</option>
           </select>
+          <p style={{ fontSize: 12.5, color: C.textFaint, marginTop: 5, lineHeight: 1.45 }}>Shown on your card, so people starting projects know whether you can join.</p>
         </div>
         <div>
           <label htmlFor="fp-hours" style={label}>Hours a week</label>
           <input id="fp-hours" type="number" min={1} max={60} value={hours} onChange={(e) => setHours(e.target.value)} className="dk-input" placeholder="10" />
+          <p style={{ fontSize: 12.5, color: C.textFaint, marginTop: 5, lineHeight: 1.45 }}>Tells people how much you can take on before they invite you.</p>
         </div>
         <div style={{ gridColumn: '1 / -1' }}>
           <label htmlFor="fp-linkedin" style={label}>LinkedIn</label>
           <input id="fp-linkedin" type="url" value={linkedin} onChange={(e) => setLinkedin(e.target.value)} className="dk-input" placeholder="https://linkedin.com/in/you" />
+          <p style={{ fontSize: 12.5, color: C.textFaint, marginTop: 5, lineHeight: 1.45 }}>Linked from your profile, next to your verified record.</p>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { startScan } from '@/lib/github/start-scan'
 import { getInstallationOctokit } from '@/lib/github/app'
 import { syncRepoGrants } from '@/lib/github/sync-grants'
 import { record } from '@/lib/analytics/record'
@@ -93,8 +94,20 @@ export async function GET(request: Request) {
     // student who has just connected needs is to see which repositories are
     // switched on and press scan; landing them on the dashboard put that four
     // clicks away at exactly the moment they were most likely to do it.
+    // And start the first scan straight away. Connecting felt like the
+    // finish line and most people stopped there. Only repos already
+    // switched on are read (public by default; private only by choice).
+    // Best effort: if it cannot start, the Scan button is on the next page.
+    let scanStarted = false
+    try {
+      scanStarted = (await startScan(admin, cookieUserId, 'connect')).ok
+    } catch (err) {
+      console.error('GitHub App callback: auto-scan failed to start:', err)
+    }
+
     const reposUrl = new URL('/student/github', url)
     reposUrl.searchParams.set('gh_connected', '1')
+    if (scanStarted) reposUrl.searchParams.set('scan', 'started')
     const done = NextResponse.redirect(reposUrl)
     done.cookies.delete('gh_app_state')
     done.cookies.delete('gh_app_user')

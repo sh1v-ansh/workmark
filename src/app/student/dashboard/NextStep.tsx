@@ -55,7 +55,7 @@ const COPY: Record<Exclude<NextStep, 'nothing'>, {
   scan: {
     eyebrow: 'Start here',
     headline: 'Scan your GitHub',
-    body: 'Connecting was step one. The scan reads your code and builds your verified record. You can leave the page while it runs.',
+    body: 'Connecting was step one. The scan reads your code and builds your verified record. It keeps running even if you close the tab.',
     cta: 'Scan',
     href: '/student/github',
   },

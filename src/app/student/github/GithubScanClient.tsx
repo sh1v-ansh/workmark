@@ -146,8 +146,12 @@ export default function GithubScanClient({ studentName, connection, grants, prio
   // Just back from connecting: the repositories are the next thing, whatever
   // the default would otherwise be. Read after mount, like the notice, so
   // the page does not need a Suspense boundary for one flag.
+  // Set when the connect callback started the first scan by itself.
+  const [autoStarted, setAutoStarted] = useState(false)
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('gh_connected')) setTab('repos')
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('gh_connected')) setTab('repos')
+    if (params.get('scan') === 'started') setAutoStarted(true)
   }, [])
 
   /** Narrows a long repository list. Thirty-three rows needs it; three hundred demands it. */
@@ -315,7 +319,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
       toast(
         json.alreadyRunning
           ? 'A scan is already running — showing its progress.'
-          : `Scanning ${json.totalSteps} repo(s). A scan can take up to an hour, depending on how many repositories you have. You can leave this page; it keeps running.`,
+          : `Scanning ${json.totalSteps} repo(s). You can close this tab. The scan keeps running on our servers and your record fills in as each repository is read.`,
         'info',
       )
     } catch (err: unknown) {
@@ -370,11 +374,20 @@ export default function GithubScanClient({ studentName, connection, grants, prio
           {/* Up here rather than in the side panel, which stacks below
               every repository on a phone. */}
           {connection && grants.length > 0 && (
-            <Button variant="accent" onClick={runScan} busyLabel={scanning ? 'Scanning…' : null}>
-              Scan now
+            <Button variant="gradient" onClick={runScan} busyLabel={scanning ? 'Scanning…' : null}>
+              Scan
             </Button>
           )}
         </div>
+
+        {autoStarted && (
+          <div style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid #D9CCFF', background: '#FAF8FF', marginBottom: 16 }}>
+            <p style={{ fontSize: 15, fontWeight: 600, color: C.text, marginBottom: 3 }}>GitHub connected. Your first scan has started.</p>
+            <p style={{ fontSize: 14, color: C.textMuted, lineHeight: 1.55 }}>
+              You can close this tab. The scan keeps running on our servers and your record fills in as each repository is read. Private repositories are only read if you switch them on below.
+            </p>
+          </div>
+        )}
 
         {/* Above the tabs, because it is the answer to the question
             somebody arrives with — "why is my work not showing up" — and
@@ -679,7 +692,7 @@ export default function GithubScanClient({ studentName, connection, grants, prio
                       </p>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 3 }}>
                         <p style={{ fontSize: 13, color: C.textFaint }}>
-                          Can take up to an hour with many repositories. You can leave this page.
+                          You can close this tab. The scan keeps running on our servers and your record fills in as each repository is read.
                         </p>
                         <Button type="button" variant="danger" size="sm" onClick={stopScan}>
                           Stop scan
